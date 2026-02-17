@@ -122,12 +122,12 @@ function TeacherWalkthroughshow() {
     return Arrmap?.answer === "1"
       ? "bg-red-200 border-red-400 shadow-red-300"
       : Arrmap?.answer === "2"
-      ? "bg-yellow-100 border-yellow-300 shadow-yellow-200" // Light Yellow
-      : Arrmap?.answer === "3"
-      ? "bg-yellow-300 border-yellow-300 shadow-yellow-300" // Dark Yellow
-      : Arrmap?.answer === "4"
-      ? "bg-green-200 border-green-400 shadow-green-300"
-      : "bg-gray-200 border-gray-400 shadow-gray-300";
+        ? "bg-yellow-100 border-yellow-300 shadow-yellow-200" // Light Yellow
+        : Arrmap?.answer === "3"
+          ? "bg-yellow-300 border-yellow-300 shadow-yellow-300" // Dark Yellow
+          : Arrmap?.answer === "4"
+            ? "bg-green-200 border-green-400 shadow-green-300"
+            : "bg-gray-200 border-gray-400 shadow-gray-300";
   };
 
   return (

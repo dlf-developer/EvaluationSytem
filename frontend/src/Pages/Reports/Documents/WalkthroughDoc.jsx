@@ -8,122 +8,130 @@ import {
   Image,
   Font,
 } from "@react-pdf/renderer";
+
 import Logo from "../Imgs/Logo.png";
 import LogoBanner from "../Imgs/image.png";
 import { getAllTimes } from "../../../Utils/auth";
+
+// ✅ Register Hindi + English Supported Font
 Font.register({
-  family: "Open Sans",
+  family: "NotoSansDevanagari",
   fonts: [
     {
-      src: "https://cdn.jsdelivr.net/npm/open-sans-all@0.1.3/fonts/open-sans-regular.ttf",
+      src: "/fonts/NotoSansDevanagari-Regular.ttf",
+      fontWeight: "normal",
     },
     {
-      src: "https://cdn.jsdelivr.net/npm/open-sans-all@0.1.3/fonts/open-sans-600.ttf",
-      fontWeight: 600,
+      src: "/fonts/NotoSansDevanagari-Bold.ttf",
+      fontWeight: "bold",
     },
   ],
 });
 
-function WalkthroughDoc({ data }) {
-  const RenderData = ({ keyName, keylenght }) => {
-    return (
-      <>
-        {data?.[keyName]?.map((item, key) => (
-          <View key={item?._id} style={{ flexDirection: "row" }}>
-            <View
-              key={key}
-              style={{
-                borderRightWidth: 1,
-                borderBottom: key + keylenght ===12 ?0:1,
-                padding: 5,
-                width: "10%",
-              }}
-            >
-              <Text style={styles.Question}>{key + keylenght}</Text>
-            </View>
-            <View
-              key={key}
-              style={{
-                borderRightWidth: 1,
-                padding: 6,
-                borderBottom: key + keylenght ===12 ?0:1,
-                width: "70%",
-              }}
-            >
-              <Text style={styles.Question}>{item?.question}</Text>
-            </View>
-            <View
-              style={{
-                borderRightWidth: 0,
-                padding: 5,
-                borderBottom: key + keylenght ===12 ?0:1,
-                width: "20%",
-              }}
-            >
-              <Text style={[styles.Question,{fontFamily: "Open Sans" , fontWeight:"800"}]}> {item?.answer}</Text>
-            </View>
-          </View>
-        ))}
-      </>
-    );
-  };
 
-  const RenderFeedbackQuestion =({keyName}) =>{
-    return(
-        <View style={{flexDirection:"row", flexWrap:"wrap",borderTop:1, borderBottom:0}}>
-            {data?.[keyName]?.map((item,key)=>(
-                <>
-                <View
-                style={{
-                  borderRightWidth: 1,
-                  borderBottom:key +1 ===2 ?0:1,
-                  padding: 5,
-                  width: "20%",
-                  minHeight:150
-                }}
-              >
-                <Text style={[styles.Question, styles.boldAns]}>
-                  {key+1}
-                </Text>
-              </View>
-              <View
-                style={{
-                    borderBottom:key +1 === 2 ?0:1,
-                  padding: 5,
-                  width: "80%",
-                }}
-              >
-                <Text style={[styles.Question]}>{item?.question}</Text>
-                <Text style={[styles.Question,{fontFamily: "Open Sans" , fontWeight:"800",marginTop:8,fontSize:10}]}>{item?.answer}</Text>
-              </View>
-                </>
-            ))}
-         
+function WalkthroughDoc({ data }) {
+  const RenderData = ({ keyName, keylenght }) => (
+    <>
+      {data?.[keyName]?.map((item, index) => (
+        <View key={item?._id || index} style={{ flexDirection: "row" }}>
+          <View
+            style={{
+              borderRightWidth: 1,
+              borderBottom: index + keylenght === 12 ? 0 : 1,
+              padding: 5,
+              width: "10%",
+            }}
+          >
+            <Text style={styles.Question}>
+              {index + keylenght}
+            </Text>
+          </View>
+
+          <View
+            style={{
+              borderRightWidth: 1,
+              padding: 6,
+              borderBottom: index + keylenght === 12 ? 0 : 1,
+              width: "70%",
+            }}
+          >
+            <Text style={styles.Question}>
+              {item?.question}
+            </Text>
+          </View>
+
+          <View
+            style={{
+              padding: 5,
+              borderBottom: index + keylenght === 12 ? 0 : 1,
+              width: "20%",
+            }}
+          >
+            <Text style={styles.boldText}>
+              {item?.answer}
+            </Text>
+          </View>
         </View>
-    )
-}
+      ))}
+    </>
+  );
+
+  const RenderFeedbackQuestion = ({ keyName }) => (
+    <View style={{ flexDirection: "row", flexWrap: "wrap", borderTopWidth: 1 }}>
+      {data?.[keyName]?.map((item, index) => (
+        <React.Fragment key={index}>
+          <View
+            style={{
+              borderRightWidth: 1,
+              borderBottomWidth: 1,
+              padding: 5,
+              width: "20%",
+              minHeight: 120,
+            }}
+          >
+            <Text style={styles.boldText}>
+              {index + 1}
+            </Text>
+          </View>
+
+          <View
+            style={{
+              borderBottomWidth: 1,
+              padding: 5,
+              width: "80%",
+            }}
+          >
+            <Text style={styles.Question}>
+              {item?.question}
+            </Text>
+
+            <Text style={[styles.boldText, { marginTop: 6 }]}>
+              {item?.answer}
+            </Text>
+          </View>
+        </React.Fragment>
+      ))}
+    </View>
+  );
+
   return (
     <Document>
+      {/* PAGE 1 */}
       <Page size="A4" style={styles.page}>
-        <View style={styles.constiner}>
+        <View style={styles.container}>
           <View style={styles.section}>
             <Image src={Logo} style={styles.logo} />
-            <Image src={LogoBanner} style={styles.logoBanners} />
+            <Image src={LogoBanner} style={styles.logoBanner} />
           </View>
-          <View style={[styles.Centered]}>
-            <Text style={{ fontSize: 15, marginBottom: 8 }}>
+
+          <View style={styles.centered}>
+            <Text style={styles.title}>
               VIRTUAL CLASSROOM WALK-THROUGH PROFORMA 2023-24 (V2.0)
             </Text>
           </View>
-          <View
-            style={{
-              flexDirection: "row",
-              borderWidth: 1,
-              padding: 8,
-              flexWrap: "wrap",
-              marginBottom: 18,
-            }}
-          >
+
+          {/* General Details */}
+          <View style={styles.generalBox}>
             {[
               {
                 question: "Name of the Visiting Teacher",
@@ -131,246 +139,97 @@ function WalkthroughDoc({ data }) {
               },
               {
                 question: "Date",
-                ans: getAllTimes(data?.grenralDetails?.DateOfObservation)
-                  .formattedDate2,
+                ans: getAllTimes(
+                  data?.grenralDetails?.DateOfObservation
+                )?.formattedDate2,
               },
               { question: "Class", ans: data?.grenralDetails?.className },
               { question: "Subject", ans: data?.grenralDetails?.Subject },
               { question: "Section", ans: data?.grenralDetails?.Section },
               { question: "Topic", ans: data?.grenralDetails?.Topic },
-            ].map((item) => (
-              <View style={{ width: "50%", marginBottom: 8 }}>
-                <Text style={[styles.basictext, styles.Question]}>
-                  {item?.question}: <Text style={[styles.Question,{fontFamily: "Open Sans" , fontWeight:"800"}]}>{item?.ans}</Text>
+            ].map((item, index) => (
+              <View key={index} style={{ width: "50%", marginBottom: 8 }}>
+                <Text style={styles.Question}>
+                  {item.question}:{" "}
+                  <Text style={styles.boldText}>
+                    {item.ans}
+                  </Text>
                 </Text>
               </View>
             ))}
           </View>
 
-          {/* Question */}
-          <View
-            style={{
-              flexDirection: "row",
-              borderWidth: 1,
-              flexWrap: "wrap",
-              marginBottom: 24,
-            }}
-          >
-            <View style={{ borderRightWidth: 1, padding: 5, width: "10%" }}>
-              <Text style={styles.Question}>Sr. No</Text>
-            </View>
-            <View style={{ borderRightWidth: 1, padding: 5, width: "70%" }}>
-              <Text style={styles.Question}>ITEM</Text>
-            </View>
-            <View style={{ borderRightWidth: 0, padding: 5, width: "20%" }}>
-              <Text style={styles.Question}>REMARKS</Text>
+          {/* Question Table */}
+          <View style={styles.table}>
+            <View style={styles.tableHeaderRow}>
+              <Text style={styles.headerCellSmall}>Sr. No</Text>
+              <Text style={styles.headerCellLarge}>ITEM</Text>
+              <Text style={styles.headerCellMedium}>REMARKS</Text>
             </View>
 
-            {/* Question Ans */}
-            <View
-              style={{
-                borderBottom: 1,
-                borderTop: 1,
-                width: "100%",
-                padding: 5,
-              }}
-            >
-              <Text style={[styles.Question, { textAlign: "center" }]}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.centerText}>
                 ESSENTIAL AGREEMENTS
               </Text>
             </View>
             <RenderData keyName="essentialAggrements" keylenght={1} />
 
-            <View style={{ borderBottom: 1, width: "100%", padding: 5 }}>
-              <Text style={[styles.Question, { textAlign: "center" }]}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.centerText}>
                 PLANNING AND PREPARATION
               </Text>
             </View>
-
             <RenderData keyName="planingAndPreparation" keylenght={6} />
           </View>
         </View>
       </Page>
+
+      {/* PAGE 2 */}
       <Page size="A4" style={styles.page}>
-        <View style={[styles.constiner, { paddingTop: 20 }]}>
-          <View
-            style={{
-              flexDirection: "row",
-              borderWidth: 1,
-              borderBottom: 0,
-              flexWrap: "wrap",
-            }}
-          >
-            <View style={{ borderBottom: 1, width: "100%", padding: 5 }}>
-              <Text style={[styles.Question, { textAlign: "center" }]}>
+        <View style={styles.container}>
+          <View style={styles.table}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.centerText}>
                 CLASSROOM ENVIRONMENT
               </Text>
             </View>
             <RenderData keyName="classRoomEnvironment" keylenght={13} />
 
-            <View style={{ borderBottom: 1, width: "100%", padding: 5 }}>
-              <Text style={[styles.Question, { textAlign: "center" }]}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.centerText}>
                 INSTRUCTION
               </Text>
             </View>
             <RenderData keyName="instruction" keylenght={18} />
-
-            <View style={{ flexDirection: "row", flexWrap: "wrap",borderBottom:1 }}>
-              <View
-                style={{
-                  borderRightWidth: 1,
-                  borderBottom: 1,
-                  padding: 5,
-                  width: "50%",
-                }}
-              >
-                <Text style={[styles.Question, styles.boldAns]}>
-                  Total Score
-                </Text>
-              </View>
-              <View
-                style={{
-                  padding: 6,
-                  borderBottom: 1,
-                  width: "50%",
-                }}
-              >
-                <Text style={[styles.Question, styles.boldAns]}>{data?.totalScores}</Text>
-              </View>
-              <View
-                style={{
-                  borderRightWidth: 1,
-                  borderBottom: 1,
-                  padding: 5,
-                  width: "50%",
-                }}
-              >
-                <Text style={[styles.Question, styles.boldAns]}>
-                  Score Out of
-                </Text>
-              </View>
-              <View
-                style={{
-                  padding: 5,
-                  borderBottom: 1,
-                  width: "50%",
-                }}
-              >
-                <Text style={[styles.Question, styles.boldAns]}>{data?.scoreOutof}</Text>
-              </View>
-              <View
-                style={{
-                  borderRightWidth: 1,
-                  borderBottom: 1,
-                  padding: 5,
-                  width: "50%",
-                }}
-              >
-                <Text style={[styles.Question, styles.boldAns]}>
-                  Percentage Score
-                </Text>
-              </View>
-              <View
-                style={{
-                  padding: 5,
-                  borderBottom: 1,
-                  width: "50%",
-                }}
-              >
-                <Text style={[styles.Question, styles.boldAns]}>{data?.percentageScore}</Text>
-              </View>
-              <View
-                style={{
-                  borderRightWidth: 1,
-                  borderBottom: 1,
-                  padding: 5,
-                  width: "50%",
-                }}
-              >
-                <Text style={[styles.Question, styles.boldAns]}>Grade</Text>
-              </View>
-              <View
-                style={{
-                  borderRightWidth: 1,
-                  padding: 5,
-                  borderBottom: 1,
-                  width: "50%",
-                }}
-              >
-                <Text style={[styles.Question, styles.boldAns]}>{data?.Grade}</Text>
-              </View>
-
-              <View
-                style={{
-                  borderRightWidth: 1,
-                  padding: 5,
-                  width: "50%",
-                }}
-              >
-                <Text style={[styles.Question, styles.boldAns]}>
-                  Number of Parameters Not Applicable
-                </Text>
-              </View>
-              <View
-                style={{
-                  padding: 5,
-                  width: "50%",
-                }}
-              >
-                <Text style={[styles.Question, styles.boldAns]}>{data?.NumberofParametersNotApplicable}</Text>
-              </View>
-            </View>
           </View>
         </View>
       </Page>
 
+      {/* PAGE 3 */}
       <Page size="A4" style={styles.page}>
-        <View style={[styles.constiner, { paddingTop: 20 }]}>
-          <View
-            style={{
-              flexDirection: "row",
-              borderWidth: 1,
-              flexWrap: "wrap",
-              marginBottom: 24,
-            }}
-          >
-            <View
-              style={{
-                width: "100%",
-                padding: 4,
-              }}
-            >
-              <Text style={[styles.Question, { textAlign: "center",padding: 5 }]}>
-              ACADEMIC HEAD / COORDINATOR'S / HOD'S FEEDBACK
+        <View style={styles.container}>
+          <View style={styles.table}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.centerText}>
+                ACADEMIC HEAD / COORDINATOR'S / HOD'S FEEDBACK
               </Text>
             </View>
-            <RenderFeedbackQuestion keyName="ObserverFeedback"/>
+            <RenderFeedbackQuestion keyName="ObserverFeedback" />
 
-
-            <View
-              style={{
-                width: "100%",
-                padding: 4,
-                borderTop:1
-              }}
-            >
-              <Text style={[styles.Question, { textAlign: "center",padding: 5 }]}>
-              TEACHER'S REFLECTION
+            <View style={styles.sectionHeader}>
+              <Text style={styles.centerText}>
+                TEACHER'S REFLECTION
               </Text>
             </View>
-
-
-            <RenderFeedbackQuestion keyName="TeacherFeedback"/>
-
-
-
-           
+            <RenderFeedbackQuestion keyName="TeacherFeedback" />
           </View>
 
-          <View style={{flexDirection:"row",gap:0}}>
-                <Text style={{fontSize:12}}>Principal's Signature </Text>
-                <View style={{width:100,borderBottom:1}}></View>
-            </View>
+          <View style={{ flexDirection: "row", marginTop: 20 }}>
+            <Text style={styles.Question}>
+              Principal's Signature
+            </Text>
+            <View style={{ width: 120, borderBottomWidth: 1, marginLeft: 10 }} />
+          </View>
         </View>
       </Page>
     </Document>
@@ -379,50 +238,89 @@ function WalkthroughDoc({ data }) {
 
 export default WalkthroughDoc;
 
-
+/* ===================== STYLES ===================== */
 
 const styles = StyleSheet.create({
   page: {
-    flexDirection: "row",
     backgroundColor: "#fff",
-    borderWidth: 1,
-    justifyContent: "flex-start",
-  },
-  constiner: {
-    borderWidth: 1,
-    margin: 20,
     padding: 20,
-    paddingTop: 0,
-    width: "100%",
+  },
+  container: {
+    borderWidth: 1,
+    padding: 15,
   },
   section: {
     flexDirection: "row",
-    width: "100%",
     justifyContent: "center",
     alignItems: "center",
   },
   logo: {
-    width: 100,
-    height: 120,
+    width: 90,
+    height: 100,
   },
-  boldAns: { fontWeight: "600", fontFamily: "Open Sans" },
-
-  logoBanners: {
-    width: 300,
-    height: 80,
+  logoBanner: {
+    width: 250,
+    height: 70,
   },
-  Centered: {
-    justifyContent: "center",
+  centered: {
+    alignItems: "center",
+    marginVertical: 10,
+  },
+  title: {
+    fontSize: 12,
+    fontFamily: "NotoSansDevanagari",
+  },
+  generalBox: {
     flexDirection: "row",
-    // fontFamily: "PT Serif",
-    marginBottom: 5,
+    flexWrap: "wrap",
+    borderWidth: 1,
+    padding: 8,
+    marginBottom: 15,
+  },
+  table: {
+    borderWidth: 1,
+  },
+  tableHeaderRow: {
+    flexDirection: "row",
+    borderBottomWidth: 1,
+  },
+  headerCellSmall: {
+    width: "10%",
+    fontSize:14,
+    padding: 5,
+    borderRightWidth: 1,
+    fontFamily: "NotoSansDevanagari",
+  },
+  headerCellLarge: {
+    width: "70%",
+    fontSize:14,
+    padding: 5,
+    borderRightWidth: 1,
+    fontFamily: "NotoSansDevanagari",
+  },
+  headerCellMedium: {
+    width: "20%",
+    padding: 5,
+    fontSize:14,
+    fontFamily: "NotoSansDevanagari",
+  },
+  sectionHeader: {
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    padding: 5,
+  },
+  centerText: {
+    fontSize:14,
+    textAlign: "center",
+    fontFamily: "NotoSansDevanagari",
   },
   Question: {
-    // fontFamily: "Gilda Display",
-    
-    fontSize: 12,
+    fontSize: 11,
+    fontFamily: "NotoSansDevanagari",
   },
-  testCenter: {
-    textAlign: "center",
+  boldText: {
+    fontSize: 11,
+    fontFamily: "NotoSansDevanagari",
+    fontWeight: "bold",
   },
 });

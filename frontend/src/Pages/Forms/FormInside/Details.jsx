@@ -29,7 +29,10 @@ import { UserRole } from "../../../config/config";
 import { getCreateClassSection, GetObserverList } from "../../../redux/userSlice";
 import { questions } from "../../../Components/normalData";
 import { CreateActivityApi } from "../../../redux/Activity/activitySlice";
+import "../../../App.css"; // Import the custom CSS
+
 const { Option } = Select;
+
 const Details = () => {
   const [form] = Form.useForm();
   const [formDetails, setFormDetails] = useState(null);
@@ -37,115 +40,110 @@ const Details = () => {
   const [isCoordinator, setIsCoordinator] = useState(false);
   const [selfAssessmentScore, setSelfAssessmentScore] = useState(0);
   const [ObserverID, setObserverID] = useState("");
-  const [sectionState,setSectionState] =useState();
+  const [sectionState, setSectionState] = useState();
   const Id = useParams().id;
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const GetUserAccess = getUserId()?.access;
   const isLoading2 = useSelector((state) => state?.Forms?.loading);
-  const [betaLoading,setBetaLoading] =useState(false);
-  const [appnewData,setAppnewData] =useState(null);
-  const [newData,setNewData] =useState(false);
+  const [betaLoading, setBetaLoading] = useState(false);
+  const [appnewData, setAppnewData] = useState(null);
+  const [newData, setNewData] = useState(false);
   const CurrectUserRole = getUserId().access;
   const ObserverList = useSelector((state) => state.user.GetObserverLists);
-  
-
 
   const fetchClassData = async () => {
-        try {
-          const res = await dispatch(getCreateClassSection());
-          if (res?.payload?.success) {
-            setNewData(res?.payload?.classDetails.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
-          } else {
-            message.error('Failed to fetch class data.');
-          }
-        } catch (error) {
-          console.error('Error fetching class data:', error);
-          message.error('An error occurred while fetching class data.');
-        } 
-      };
+    try {
+      const res = await dispatch(getCreateClassSection());
+      if (res?.payload?.success) {
+        setNewData(
+          res?.payload?.classDetails.sort(
+            (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+          )
+        );
+      } else {
+        message.error("Failed to fetch class data.");
+      }
+    } catch (error) {
+      console.error("Error fetching class data:", error);
+      message.error("An error occurred while fetching class data.");
+    }
+  };
 
   // Fetch form details
   useEffect(() => {
     setIsLoading(true);
-    fetchClassData()
+    fetchClassData();
     dispatch(GetSingleFormsOne(Id))
       .then((response) => {
         setFormDetails(response?.payload);
         setIsLoading(false);
-      const {className,date,section} = response.payload
-      if(!className || !date || !section){
-        dispatch(GetObserverList());
-        setBetaLoading(!className || !date || !section)
-        message.success("Fill All the data!");
-      }
-      else if (
-        response?.payload?.isCoordinatorComplete && response?.payload?.isTeacherComplete
-      ){
-        message.success("Form is already submitted!");
-        navigate(`/fortnightly-monitor/report/${Id}`);
-      }
-        else if (
-          GetUserAccess === UserRole[1] && response?.payload?.isCoordinatorComplete
+        const { className, date, section } = response.payload;
+        if (!className || !date || !section) {
+          dispatch(GetObserverList());
+          setBetaLoading(!className || !date || !section);
+          message.success("Fill All the data!");
+        } else if (
+          response?.payload?.isCoordinatorComplete &&
+          response?.payload?.isTeacherComplete
         ) {
           message.success("Form is already submitted!");
           navigate(`/fortnightly-monitor/report/${Id}`);
-        }else if (GetUserAccess === UserRole[2] && response?.payload?.isTeacherComplete ){
+        } else if (
+          GetUserAccess === UserRole[1] &&
+          response?.payload?.isCoordinatorComplete
+        ) {
+          message.success("Form is already submitted!");
+          navigate(`/fortnightly-monitor/report/${Id}`);
+        } else if (
+          GetUserAccess === UserRole[2] &&
+          response?.payload?.isTeacherComplete
+        ) {
           message.success("Form is already submitted!");
           navigate(`/fortnightly-monitor/report/${Id}`);
         }
-
-
-        
       })
       .catch(() => {
         message.error("Error fetching form details.");
         setIsLoading(false);
       });
-  }, [Id, navigate,!ObserverID]);
-
-
-
-
+  }, [Id, navigate, !ObserverID]);
 
   // Enum options
   const yesNoNAOptions = ["Yes", "No", "Sometimes", "N/A"];
 
   const [totalCount, setTotalCount] = useState(0);
   const [totalCountMein, setTotalCountMein] = useState(0);
-  const type= "teacherForm"
+  const type = "teacherForm";
 
   useEffect(() => {
     if (!formDetails || !formDetails[type]) return;
 
-    const validValues2 = ["Yes", 'Sometimes'];
-    const Assesscount = Object.values(formDetails[type]).filter(value =>
-        validValues2.includes(value)
-      ).length;
+    const validValues2 = ["Yes", "Sometimes"];
+    const Assesscount = Object.values(formDetails[type]).filter((value) =>
+      validValues2.includes(value)
+    ).length;
 
-    const validValues = ["Yes", "No", 'Sometimes']; // Include these values
-    const count = Object.values(formDetails[type]).filter(value =>
+    const validValues = ["Yes", "No", "Sometimes"]; // Include these values
+    const count = Object.values(formDetails[type]).filter((value) =>
       validValues.includes(value)
     ).length;
 
     setTotalCount(count);
   }, [formDetails, type]);
 
- 
-
-
-
   const onFinish = async (values) => {
+    console.log(values,"sjjssjjsj")
     if (!Id || !GetUserAccess) {
       message.error("Invalid form submission!");
       return;
     }
-  
+
     let payload = {
       id: Id,
-      data: {}
+      data: {},
     };
-  
+
     // Assign payload based on user role and form status
     if (GetUserAccess === UserRole[1] && !formDetails?.isCoordinatorComplete) {
       payload.data = {
@@ -157,7 +155,7 @@ const Details = () => {
         isTeacherComplete: true,
         teacherForm: values,
       };
-  
+
       if (formDetails.isObserverInitiation) {
         payload.data = {
           ...payload.data,
@@ -170,31 +168,41 @@ const Details = () => {
       message.error("You do not have permission to complete this form!");
       return;
     }
-  
-    
+
     setIsLoading(true);
     try {
       // Dispatch form submission
       const res = await dispatch(GetSingleFormComplete(payload));
-      
+
       if (res.payload.message) {
         setIsLoading(false);
         setAppnewData(res?.payload?.form);
         message.success("Form submitted successfully!");
         // Activity object
-    const receiverId =  UserRole[2] === getUserId().access ? res?.payload?.form?.coordinatorID?._id || res?.payload?.form?.userId?._id : formDetails?.teacherID?._id || formDetails?.userId?._id;
-    const observerMessage = payload?.data?.className
-      ? `${res?.payload?.form?.teacherID?.name || res?.payload?.form?.userId?.name} has completed the Fortnightly Monitor Form for ${res?.payload?.form?.className} | ${res?.payload?.form?.section}`
-      : UserRole[1] === getUserId().access ? `You have completed the Fortnightly Monitor Form for ${formDetails?.className} | ${formDetails?.section}` :
-      `${formDetails?.teacherID?.name || formDetails?.userId?.name } has completed the Fortnightly Monitor Form for ${formDetails?.className} | ${formDetails?.section}`
-      ;
-  
-    const teacherMessage = payload?.data?.className
-      ? `You have completed the Fortnightly Monitor Form for ${res?.payload?.form?.className} | ${res?.payload?.form?.section}`
-      : UserRole[1] === getUserId().access ? `${formDetails?.coordinatorID?.name || formDetails?.userId?.name} has completed the Fortnightly Monitor Form for ${formDetails?.className} | ${formDetails?.section}`:
-      `You have completed the Fortnightly Monitor Form for ${formDetails?.className} | ${formDetails?.section}`
-      ;
-  
+        const receiverId =
+          UserRole[2] === getUserId().access
+            ? res?.payload?.form?.coordinatorID?._id ||
+            res?.payload?.form?.userId?._id
+            : formDetails?.teacherID?._id || formDetails?.userId?._id;
+        const observerMessage = payload?.data?.className
+          ? `${res?.payload?.form?.teacherID?.name ||
+          res?.payload?.form?.userId?.name
+          } has completed the Fortnightly Monitor Form for ${res?.payload?.form?.className
+          } | ${res?.payload?.form?.section}`
+          : UserRole[1] === getUserId().access
+            ? `You have completed the Fortnightly Monitor Form for ${formDetails?.className} | ${formDetails?.section}`
+            : `${formDetails?.teacherID?.name || formDetails?.userId?.name
+            } has completed the Fortnightly Monitor Form for ${formDetails?.className
+            } | ${formDetails?.section}`;
+
+        const teacherMessage = payload?.data?.className
+          ? `You have completed the Fortnightly Monitor Form for ${res?.payload?.form?.className} | ${res?.payload?.form?.section}`
+          : UserRole[1] === getUserId().access
+            ? `${formDetails?.coordinatorID?.name || formDetails?.userId?.name
+            } has completed the Fortnightly Monitor Form for ${formDetails?.className
+            } | ${formDetails?.section}`
+            : `You have completed the Fortnightly Monitor Form for ${formDetails?.className} | ${formDetails?.section}`;
+
         const activity = {
           observerMessage,
           teacherMessage,
@@ -205,7 +213,7 @@ const Details = () => {
           fromNo: 1,
           data: res.payload,
         };
-      
+
         const activitiRecord = await dispatch(CreateActivityApi(activity));
         if (!activitiRecord?.payload?.success) {
           message.error("Error on Activity Record");
@@ -214,41 +222,34 @@ const Details = () => {
       } else {
         throw new Error(res.payload.message || "Error submitting the form.");
       }
-
-    
-  
-     
     } catch (error) {
       message.error(error.message);
     }
   };
-  
+
   // Calculate self-assessment score
   const calculateScore = () => {
     const values = form.getFieldsValue();
     let score = 0;
-  
+
     questions.forEach((key) => {
       const answer = values[key?.key];
-      if (answer === "Yes") score += 1;       // Add 1 for "Yes"
-      else if (answer === "No") score += 0;   // No points for "No"
+      if (answer === "Yes") score += 1; // Add 1 for "Yes"
+      else if (answer === "No") score += 0; // No points for "No"
       else if (answer === "Sometimes") score += 0.5; // Add 0.5 for "0.5"
       // Ignore "N/A" (or any undefined answer)
     });
     setSelfAssessmentScore(score);
-    getTotalScorevalu(values)
+    getTotalScorevalu(values);
   };
 
-
-  const getTotalScorevalu = (formValue) =>{
-  
-    const validValues = ["Yes", "No", 'Sometimes']; // Include these values
-    const count = Object.values(formValue).filter(value =>
+  const getTotalScorevalu = (formValue) => {
+    const validValues = ["Yes", "No", "Sometimes"]; // Include these values
+    const count = Object.values(formValue).filter((value) =>
       validValues.includes(value)
     ).length;
-    setTotalCountMein(count)
-  }
-
+    setTotalCountMein(count);
+  };
 
   const getTotalScore = (type) => {
     if (!formDetails) return 0;
@@ -268,9 +269,8 @@ const Details = () => {
     const scores = Object.values(formDetails[type]).reduce((sum, value) => {
       return sum + (validValues[value] || 0); // Add score if value matches, otherwise add 0
     }, 0);
-    return scores ;
+    return scores;
   };
-  // Questions to dynamically render
 
   const disableFutureDates = (current) => {
     // Get the current date without the time part
@@ -282,8 +282,9 @@ const Details = () => {
   };
 
   const SideQuestion = document.querySelectorAll("#SideQuestion");
-  const heights = Array.from(SideQuestion).map((element) => element.offsetHeight);
-
+  const heights = Array.from(SideQuestion).map(
+    (element) => element.offsetHeight
+  );
 
   const SectionSubject = (value) => {
     if (value) {
@@ -292,256 +293,288 @@ const Details = () => {
         setSectionState(filteredData[0]); // Set the filtered data to sectionState
       }
     }
-  
+
     return []; // Return an empty array if the value is falsy
   };
-  
 
   return (
-    <div className="container mt-3">
+    <div className="modern-form-container">
       {isLoading ? (
-        <div className="LoaderWrapper">
-                 <Spin size="large" className="position-absolute" />
-               </div>
+        <div className="modern-loader">
+          <Spin size="large" />
+        </div>
       ) : (
         <>
-          <div className="d-flex justify-content-around">
-          <h2 className="text-start mb-4 fs-5">Observation is Started</h2>
-          <h2 className="text-start mb-4 fs-5">Teacher Response</h2>
+          <div className="modern-form-header">
+            <div className="header-section">
+              <h2 className="form-title">Observation Form</h2>
+              <div className="form-subtitle">Complete your evaluation</div>
+            </div>
           </div>
+
           <Form
             form={form}
             layout="vertical"
             onFinish={onFinish}
-            onValuesChange={calculateScore} // Trigger score calculation
+            onValuesChange={calculateScore}
+            className="modern-form"
           >
-            <Row gutter={[16, 16]}>
-              <Col xs={24} sm={12} md={12} lg={12}>
-              {betaLoading && (
-                <>
-                 <Form.Item
-                              label="Class"
-                              name="className"
-                              rules={[{ required: true, message: "Please enter a class!" }]}
-                            >
-                              {/* <Input placeholder="Enter Class (e.g., 10th)" /> */}
-                              <Select
-                                      showSearch
-                                      placeholder="Select a Class"
-                                      onChange={(value)=>SectionSubject(value)}
-                                      options={newData?.map((item) => ({
-                                        key: item._id, // Ensure unique key
-                                        id: item._id, 
-                                        value: item._id,
-                                        label: item.className,
-                                      }))}
-                                      filterOption={(input, option) =>
-                                        option.label.toLowerCase().includes(input.toLowerCase())
-                                      }
-                                    />
-                            </Form.Item>
-                
-                            <Form.Item
-                              label="Section"
-                              name="section"
-                              rules={[{ required: true, message: "Please enter a section!" }]}
-                            >
-                              {/* <Input placeholder="Enter Section (e.g., A, B)" /> */}
-                              <Select
-                                  showSearch
-                                  placeholder="Select a Section"
-                                  options={sectionState?.sections?.map((item) => ({
-                                    key: item._id, // Ensure unique key
-                                    id: item._id,
-                                    value: item.name,
-                                    label: item.name,
-                                  }))}
-                                  filterOption={(input, option) =>
-                                    option.label.toLowerCase().includes(input.toLowerCase())
-                                  }
-                                />
-                
-                            </Form.Item>
-                
-
-            <div className="d-flex gap-3 align-items-center justify-content-between">
-              <Form.Item
-                className="w-100"
-                label="Date"
-                name="date"
-                rules={[{ required: true, message: "Please select a date!" }]}
-              >
-                <DatePicker className="w-100" format="YYYY-MM-DD"  disabledDate={disableFutureDates} />
-              </Form.Item>
-              {CurrectUserRole === UserRole[2] && (
-                <>
-                  <Form.Item
-                  className="w-100"
-                    label="Coordinator ID"
-                    name="coordinatorID"
-                    rules={[
-                      {
-                        message: "Please select a Coordinator!",
-                      },
-                    ]}
-                  >
-                    <Select
-                    defaultValue={formDetails?.userId?.name}
-                    disabled={betaLoading}
-                      showSearch
-                      placeholder="Select a Coordinator"
-                      options={ObserverList?.map((item) => ({
-                        value: item._id,
-                        label: item.name,
-                      }))}
-                      filterOption={(input, option) =>
-                        option.label.toLowerCase().includes(input.toLowerCase())
-                      }
-                    />
-                  </Form.Item>
-                  <Form.Item
-                  hidden
-                    className="w-100"
-                    label="Coordinator"
-                    name="isCoordinator"
-                  >
-                    <Select
-                      onChange={(value) => {
-                        setIsCoordinator(true);
-                        form.resetFields(["teacherID"]); // Reset teacher-related fields
-                      }}
-                    >
-                      <Option value={false}>No</Option>
-                      <Option value={true}>Yes</Option>
-                    </Select>
-                  </Form.Item>
-                </>
-              )}
-
-             
-            </div>
-                </>
-              )}
-                {questions?.map((field, index) => {
-                  return (
-                    <div id="SideQuestion" className="mb-3 border p-3 py-2 rounded shadow-sm " key={field?.key}>
-                      <Form.Item
-                         className="w-75 mb-2"
-                        name={field?.key}
-                        label={
-                          <p
-                            className="mb-0 fs-6"
-                            style={{ color: "rgb(52 52 52 / 64%)" }}
+            <Row gutter={[24, 0]}>
+              <Col xs={24} lg={12}>
+                <div className="form-section">
+                  {betaLoading && (
+                    <div className="info-card">
+                      <h3 className="section-title">Class Information</h3>
+                      <Row gutter={[16, 16]}>
+                        <Col span={24}>
+                          <Form.Item
+                            label="Class"
+                            name="className"
+                            rules={[
+                              {
+                                required: true,
+                                message: "Please select a class",
+                              },
+                            ]}
                           >
-                            {field?.name
-                              .replace(/([A-Z])/g, " $1")
-                              .replace(/^./, (str) => str.toUpperCase())}
-                          </p>
-                        }
-                        rules={[
-                          {
-                            required: true,
-                            message: `Please select an option for ${field?.name}.`,
-                          },
-                        ]}
-                      >
-                        <Radio.Group
-                        size="small"
-                          block
-                          options={yesNoNAOptions}
-                          optionType="button"
-                          buttonStyle="solid"
-                        />
-                      </Form.Item>
+                            <Select
+                              showSearch
+                              placeholder="Select a class"
+                              size="large"
+                              onChange={(value) => SectionSubject(value)}
+                              options={newData?.map((item) => ({
+                                key: item._id,
+                                id: item._id,
+                                value: item._id,
+                                label: item.className,
+                              }))}
+                              filterOption={(input, option) =>
+                                option.label
+                                  .toLowerCase()
+                                  .includes(input.toLowerCase())
+                              }
+                            />
+                          </Form.Item>
+                        </Col>
+
+                        <Col span={24}>
+                          <Form.Item
+                            label="Section"
+                            name="section"
+                            rules={[
+                              {
+                                required: true,
+                                message: "Please select a section",
+                              },
+                            ]}
+                          >
+                            <Select
+                              showSearch
+                              placeholder="Select a section"
+                              size="large"
+                              options={sectionState?.sections?.map((item) => ({
+                                key: item._id,
+                                id: item._id,
+                                value: item.name,
+                                label: item.name,
+                              }))}
+                              filterOption={(input, option) =>
+                                option.label
+                                  .toLowerCase()
+                                  .includes(input.toLowerCase())
+                              }
+                            />
+                          </Form.Item>
+                        </Col>
+
+                        <Col xs={24} sm={12}>
+                          <Form.Item
+                            label="Date"
+                            name="date"
+                            rules={[
+                              {
+                                required: true,
+                                message: "Please select a date",
+                              },
+                            ]}
+                          >
+                            <DatePicker
+                              className="w-100"
+                              size="large"
+                              format="YYYY-MM-DD"
+                              disabledDate={disableFutureDates}
+                            />
+                          </Form.Item>
+                        </Col>
+
+                        {CurrectUserRole === UserRole[2] && (
+                          <Col xs={24} sm={12}>
+                            <Form.Item
+                              label="Coordinator"
+                              name="coordinatorID"
+                            >
+                              <Select
+                                defaultValue={formDetails?.userId?.name}
+                                disabled={betaLoading}
+                                showSearch
+                                size="large"
+                                placeholder="Select a coordinator"
+                                options={ObserverList?.map((item) => ({
+                                  value: item._id,
+                                  label: item.name,
+                                }))}
+                                filterOption={(input, option) =>
+                                  option.label
+                                    .toLowerCase()
+                                    .includes(input.toLowerCase())
+                                }
+                              />
+                            </Form.Item>
+                            <Form.Item
+                              hidden
+                              label="Coordinator"
+                              name="isCoordinator"
+                            >
+                              <Select
+                                onChange={(value) => {
+                                  setIsCoordinator(true);
+                                  form.resetFields(["teacherID"]);
+                                }}
+                              >
+                                <Option value={false}>No</Option>
+                                <Option value={true}>Yes</Option>
+                              </Select>
+                            </Form.Item>
+                          </Col>
+                        )}
+                      </Row>
                     </div>
-                  );
-                })}
+                  )}
+
+                  <div className="questions-section">
+                    <h3 className="section-title">Evaluation Questions</h3>
+                    {questions?.map((field, index) => {
+                      return (
+                        <div className="question-card" key={field?.key}>
+                          <Form.Item
+                            className="question-item"
+                            name={field?.key}
+                            label={
+                              <span className="question-label">
+                                {field?.name
+                                  .replace(/([A-Z])/g, " $1")
+                                  .replace(/^./, (str) => str.toUpperCase())}
+                              </span>
+                            }
+                            rules={[
+                              {
+                                required: true,
+                                message: `Please select an option`,
+                              },
+                            ]}
+                          >
+                            <div className="modern-radio-group">
+                              {yesNoNAOptions.map((option) => (
+                                <label key={option} className="radio-label">
+                                  <input
+                                    type="radio"
+                                    name={field?.key}
+                                    value={option}
+                                    className="radio-input"
+                                  />
+                                  <span className="radio-text">{option}</span>
+                                </label>
+                              ))}
+                            </div>
+                          </Form.Item>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
               </Col>
-              <Col xs={24} sm={12} md={12} lg={12}>
-              
-                <div className="sticky-top">
-                    {(GetUserAccess === UserRole[2] &&
-                      !formDetails?.isCoordinatorComplete) ||
+
+              <Col xs={24} lg={12}>
+                <div className="sticky-sidebar">
+                  {(GetUserAccess === UserRole[2] &&
+                    !formDetails?.isCoordinatorComplete) ||
                     (GetUserAccess === UserRole[1] &&
                       !formDetails?.isTeacherComplete) ? (
-                      <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} />
-                    ) : (
-                      ""
+                    <div className="empty-state">
+                      <Empty
+                        image={Empty.PRESENTED_IMAGE_SIMPLE}
+                        description="Waiting for teacher response"
+                      />
+                    </div>
+                  ) : (
+                    ""
+                  )}
+
+                  {GetUserAccess === UserRole[1] &&
+                    formDetails?.isTeacherComplete && (
+                      <div className="response-section">
+                        <h3 className="section-title">Teacher Response</h3>
+                        {questions?.map((item, index) => {
+                          const answer = formDetails?.teacherForm[item.key];
+                          return (
+                            <div className="response-card" key={index + 1}>
+                              <div className="response-question">
+                                {item?.name
+                                  .replace(/([A-Z])/g, " $1")
+                                  .replace(/^./, (str) => str.toUpperCase())}
+                              </div>
+                              <div className={`response-badge badge-${answer?.toLowerCase()}`}>
+                                {answer}
+                              </div>
+                            </div>
+                          );
+                        })}
+
+                        <div className="score-card">
+                          <div className="score-label">Self Assessment</div>
+                          <div className="score-value">
+                            <span className="score-number">
+                              {getSelfAssemnetScrore("teacherForm") || "N/A"}
+                            </span>
+                            <span className="score-divider">/</span>
+                            <span className="score-total">
+                              {getTotalScore("teacherForm")}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
                     )}
-                   
-                    {GetUserAccess === UserRole[1] &&
-                      formDetails?.isTeacherComplete && (
-                       <>{questions?.map((item, index) => {
-                       
-                            return (
-                              <>
-                              <div  style={{heighteight:heights[index]}} className="mb-3 border  py-2 rounded shadow-sm p-2" key={index+1}>
-                              <div style={{marginBottom:"0.6rem"}}>
-                              <p
-                            className="mb-0 fs-6 "
-                            style={{ color: "rgb(52 52 52 / 64%)" }}
-                          >
-                            {item?.name
-                              .replace(/([A-Z])/g, " $1")
-                              .replace(/^./, (str) => str.toUpperCase())}
-                          </p>
-                          <div className={`alert ${formDetails?.teacherForm[item.key] === "Yes" ? "alert-success": formDetails?.teacherForm[item.key] === "No" ? "alert-danger" : formDetails?.teacherForm[item.key] === "N/A"?"alert-primary":formDetails?.teacherForm[item.key] === "Sometimes"&&"alert-warning"} 
-                          py-1  mb-0`}
-                          
-                          style={{width:"fit-content",fontSize:"16px"}}>
-                            <span> {formDetails?.teacherForm[item.key]}</span></div>
-                              </div>
-                              </div>
-                             
-                              </>
-                            );
-                          })}
-
-                        <div  className="mb-3 border p-3 rounded shadow-sm" >
-                              <h3
-                            className="mb-0 fs-5"
-                            style={{ color: "rgb(52 52 52 / 64%)" }}
-                          >
-                         Self Assesment
-                          </h3>
-                          <div className={` py-0 mt-3`}
-                          
-                          style={{width:"fit-content"}}>
-
-                            <span> {getSelfAssemnetScrore('teacherForm') || "NA"} Out of {getTotalScore('teacherForm')}</span></div>
-                              </div>
-                        </>
-                      )}
-                      
                 </div>
-   
-             </Col>
-            </Row>
-
-            {/* Self-assessment score */}
-            <Row gutter={[16, 16]}>
-              <Col xs={24} sm={12} md={8} lg={12}>
-              <h4 className="mb-3 mt-4"> {getUserId().access === UserRole[1] ? "Observer Score" : "Self Assessment Score:" } {selfAssessmentScore} Out of {totalCountMein}</h4>
-                <Form.Item name="selfEvaluationScore" hidden label="Self Assessment Score">
-                  <InputNumber
-                    value={selfAssessmentScore}
-                    disabled          
-                    className="w-100"
-                  />
-                </Form.Item>
               </Col>
             </Row>
 
-            {/* Submit button */}
-            <Row>
-              <Col span={9}>
-                <Form.Item>
-                  <Button type="primary" htmlType="submit" className="w-100">
-                    Submit
-                  </Button>
-                </Form.Item>
-              </Col>
-            </Row>
+            <div className="form-footer">
+              <div className="score-summary">
+                <span className="summary-label">
+                  {getUserId().access === UserRole[1]
+                    ? "Observer Score"
+                    : "Self Assessment Score"}
+                </span>
+                <span className="summary-value">
+                  <span className="value-number">{selfAssessmentScore}</span>
+                  <span className="value-divider">/</span>
+                  <span className="value-total">{totalCountMein}</span>
+                </span>
+              </div>
+
+              <Form.Item name="selfEvaluationScore" hidden>
+                <InputNumber value={selfAssessmentScore} disabled />
+              </Form.Item>
+
+              <Button
+                type="primary"
+                htmlType="submit"
+                size="large"
+                className="submit-button"
+              >
+                Submit Evaluation
+              </Button>
+            </div>
           </Form>
         </>
       )}

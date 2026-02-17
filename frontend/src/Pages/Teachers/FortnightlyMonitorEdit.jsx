@@ -90,180 +90,224 @@ function FortnightlyMonitorEdit() {
     setSelfAssessmentScore(score);
     form.setFieldsValue({ selfEvaluationScore: score }); // Update hidden field
   };
-  return (
-    <div className="container mt-3">
-    {isLoading ? (
-       <div className="LoaderWrapper">
-       <Spin size="large" className="position-absolute" />
-     </div>
-    ) : (
-      <>
-        <div className="d-flex justify-content-around">
-        <h2 className="text-start mb-4 fs-5">Edit Your Observation</h2>
-        <h2 className="text-start mb-4 fs-5">Current Response</h2>
+ return (
+    <div className="modern-form-container">
+      {isLoading ? (
+        <div className="modern-loader">
+          <Spin size="large" />
         </div>
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={onFinish}
-          onValuesChange={calculateScore} // Trigger score calculation
-        >
-          <Row gutter={[16, 16]}>
-            <Col xs={24} sm={12} md={12} lg={12}>
-            {betaLoading && (
-              <>
-               <Form.Item
-            label="Class"
-            name="className"
-            rules={[{ required: true, message: "Please enter a class!" }]}
-          >
-            <Input placeholder="Enter Class (e.g., 10th)" />
-          </Form.Item>
-
-          <Form.Item
-            label="Section"
-            name="section"
-            rules={[{ required: true, message: "Please enter a section!" }]}
-          >
-            <Input placeholder="Enter Section (e.g., A, B)" />
-          </Form.Item>
-
-          <div className="d-flex gap-3 align-items-center justify-content-between">
-            <Form.Item
-              className="w-100"
-              label="Date"
-              name="date"
-              rules={[{ required: true, message: "Please select a date!" }]}
-            >
-              <DatePicker className="w-100" format="YYYY-MM-DD" />
-            </Form.Item>
-     
-           
+      ) : (
+        <>
+          <div className="modern-form-header">
+            <div className="header-section">
+              <h2 className="form-title">Edit Your Observation</h2>
+              <div className="form-subtitle">Update your evaluation responses</div>
+            </div>
           </div>
-              </>
-            )}
-              {questions.map((field, index) => {
-                return (
-                  <div className="mb-3 border p-3 rounded shadow-sm" key={field?.key}>
-                    <Form.Item
-                        className="w-75 mb-2"
-                      name={field?.key}
-                      label={
-                        <p
-                          className="mb-0 fs-6"
-                          style={{ color: "rgb(52 52 52 / 64%)" }}
-                        >
-                          {field?.name
-                            .replace(/([A-Z])/g, " $1")
-                            .replace(/^./, (str) => str.toUpperCase())}
-                        </p>
-                      }
-                      rules={[
-                        {
-                          required: true,
-                          message: `Please select an option for ${field?.name}.`,
-                        },
-                      ]}
-                    >
-                      <Radio.Group
-                        block
-                        options={yesNoNAOptions}
-                        optionType="button"
-                        buttonStyle="solid"
-                      />
-                    </Form.Item>
+
+          <Form
+            form={form}
+            layout="vertical"
+            onFinish={onFinish}
+            onValuesChange={calculateScore}
+            className="modern-form"
+          >
+            <Row gutter={[24, 0]}>
+              <Col xs={24} lg={12}>
+                <div className="form-section">
+                  {betaLoading && (
+                    <div className="info-card">
+                      <h3 className="section-title">Class Information</h3>
+                      <Row gutter={[16, 16]}>
+                        <Col span={24}>
+                          <Form.Item
+                            label="Class"
+                            name="className"
+                            rules={[
+                              {
+                                required: true,
+                                message: "Please enter a class",
+                              },
+                            ]}
+                          >
+                            <Input
+                              placeholder="Enter Class (e.g., 10th)"
+                              size="large"
+                            />
+                          </Form.Item>
+                        </Col>
+
+                        <Col span={24}>
+                          <Form.Item
+                            label="Section"
+                            name="section"
+                            rules={[
+                              {
+                                required: true,
+                                message: "Please enter a section",
+                              },
+                            ]}
+                          >
+                            <Input
+                              placeholder="Enter Section (e.g., A, B)"
+                              size="large"
+                            />
+                          </Form.Item>
+                        </Col>
+
+                        <Col span={24}>
+                          <Form.Item
+                            label="Date"
+                            name="date"
+                            rules={[
+                              {
+                                required: true,
+                                message: "Please select a date",
+                              },
+                            ]}
+                          >
+                            <DatePicker
+                              className="w-100"
+                              size="large"
+                              format="YYYY-MM-DD"
+                            />
+                          </Form.Item>
+                        </Col>
+                      </Row>
+                    </div>
+                  )}
+
+                  <div className="questions-section">
+                    <h3 className="section-title">Evaluation Questions</h3>
+                    {questions?.map((field, index) => {
+                      return (
+                        <div className="question-card" key={field?.key}>
+                          <Form.Item
+                            className="question-item"
+                            name={field?.key}
+                            label={
+                              <span className="question-label">
+                                {field?.name
+                                  .replace(/([A-Z])/g, " $1")
+                                  .replace(/^./, (str) => str.toUpperCase())}
+                              </span>
+                            }
+                            rules={[
+                              {
+                                required: true,
+                                message: `Please select an option`,
+                              },
+                            ]}
+                          >
+                            <div className="modern-radio-group">
+                              {yesNoNAOptions.map((option) => (
+                                <label key={option} className="radio-label">
+                                  <input
+                                    type="radio"
+                                    name={field?.key}
+                                    value={option}
+                                    className="radio-input"
+                                    onChange={(e) => {
+                                      form.setFieldValue(field?.key, option);
+                                      calculateScore();
+                                    }}
+                                    checked={form.getFieldValue(field?.key) === option}
+                                  />
+                                  <span className="radio-text">{option}</span>
+                                </label>
+                              ))}
+                            </div>
+                          </Form.Item>
+                        </div>
+                      );
+                    })}
                   </div>
-                );
-              })}
-            </Col>
-            <Col xs={24} sm={12} md={12} lg={12}>
-            
-              <div className="sticky-top">
+                </div>
+              </Col>
+
+              <Col xs={24} lg={12}>
+                <div className="sticky-sidebar">
                   {(GetUserAccess === UserRole[1] &&
                     !formDetails?.isCoordinatorComplete) ||
                   (GetUserAccess === UserRole[2] &&
                     !formDetails?.isTeacherComplete) ? (
-                    <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                    <div className="empty-state">
+                      <Empty
+                        image={Empty.PRESENTED_IMAGE_SIMPLE}
+                        description="No current response available"
+                      />
+                    </div>
                   ) : (
                     ""
                   )}
-                 
-                  {(GetUserAccess === UserRole[2] &&
-                    formDetails?.isTeacherComplete )&& (
-                     <>{   questions?.map((item, index) => {
-                          return (
-                            <>
-                            <Card  className="mb-3 p-0" key={index+1}>
-                            <h3
-                          className="mb-0 fs-6"
-                          style={{ color: "rgb(52 52 52 / 64%)" }}
-                        >
-                          {item?.name
-                            .replace(/([A-Z])/g, " $1")
-                            .replace(/^./, (str) => str.toUpperCase())}
-                        </h3>
-                        <div className={`alert ${formDetails?.teacherForm[item?.key] === "Yes" ? "alert-success": formDetails?.teacherForm[item?.key] === "No" ? "alert-danger" : formDetails?.teacherForm[item?.key] === "N/A"?"alert-primary":formDetails?.teacherForm[item?.key] === "Sometimes"&&"alert-warning"} py-0   mt-3 mb-0`}
-                        
-                        style={{width:"fit-content"}}>
 
-                          <span> {formDetails?.teacherForm[item?.key]}</span></div>
-                            </Card>
-                           
-                           
-                            </>
+                  {GetUserAccess === UserRole[2] &&
+                    formDetails?.isTeacherComplete && (
+                      <div className="response-section">
+                        <h3 className="section-title">Current Response</h3>
+                        {questions?.map((item, index) => {
+                          const answer = formDetails?.teacherForm[item?.key];
+                          return (
+                            <div className="response-card" key={index + 1}>
+                              <div className="response-question">
+                                {item?.name
+                                  .replace(/([A-Z])/g, " $1")
+                                  .replace(/^./, (str) => str.toUpperCase())}
+                              </div>
+                              <div
+                                className={`response-badge badge-${answer?.toLowerCase()}`}
+                              >
+                                {answer}
+                              </div>
+                            </div>
                           );
                         })}
 
-                        <Card  className="mb-3 p-0" >
-                            <h3
-                          className="mb-0 fs-6"
-                          style={{ color: "rgb(52 52 52 / 64%)" }}
-                        >
-                       Self Assesment
-                        </h3>
-                        <div className={` py-0 mt-3`}
-                        
-                        style={{width:"fit-content"}}>
-
-                          <span> {formDetails?.teacherForm?.selfEvaluationScore} Out of {totalCount}</span></div>
-                            </Card>
-                      </>
+                        <div className="score-card">
+                          <div className="score-label">Self Assessment</div>
+                          <div className="score-value">
+                            <span className="score-number">
+                              {formDetails?.teacherForm?.selfEvaluationScore ||
+                                "N/A"}
+                            </span>
+                            <span className="score-divider">/</span>
+                            <span className="score-total">{totalCount}</span>
+                          </div>
+                        </div>
+                      </div>
                     )}
-                    
+                </div>
+              </Col>
+            </Row>
+
+            <div className="form-footer">
+              <div className="score-summary">
+                <span className="summary-label">Self Assessment Score</span>
+                <span className="summary-value">
+                  <span className="value-number">{selfAssessmentScore}</span>
+                  <span className="value-divider">/</span>
+                  <span className="value-total">{totalCount}</span>
+                </span>
               </div>
- 
-           </Col>
-          </Row>
 
-          {/* Self-assessment score */}
-          <Row gutter={[16, 16]}>
-            <Col xs={24} sm={12} md={8} lg={12}>
-            <h4 className="mb-3 mt-4">Self Assessment Score: {selfAssessmentScore}</h4>
-              <Form.Item name="selfEvaluationScore" hidden label="Self Assessment Score">
-                <InputNumber
-                  value={selfAssessmentScore}
-                  disabled          
-                  className="w-100"
-                />
+              <Form.Item name="selfEvaluationScore" hidden>
+                <InputNumber value={selfAssessmentScore} disabled />
               </Form.Item>
-            </Col>
-          </Row>
 
-          {/* Submit button */}
-          <Row>
-            <Col span={9}>
-              <Form.Item>
-                <Button type="primary" htmlType="submit" className="w-100">
-                  Submit
-                </Button>
-              </Form.Item>
-            </Col>
-          </Row>
-        </Form>
-      </>
-     )} 
-  </div>
-  )
+              <Button
+                type="primary"
+                htmlType="submit"
+                size="large"
+                className="submit-button"
+              >
+                Update Evaluation
+              </Button>
+            </div>
+          </Form>
+        </>
+      )}
+    </div>
+  );
 }
 
 export default FortnightlyMonitorEdit

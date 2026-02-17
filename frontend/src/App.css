@@ -1,41 +1,824 @@
+/* Modern Form Container */
+.modern-form-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 32px 24px;
+  background: #fafafa;
+  min-height: 100vh;
+}
 
-@import "tailwindcss";
-.App {
+/* Loader */
+.modern-loader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+}
+
+/* Header */
+.modern-form-header {
+  margin-bottom: 32px;
+}
+
+.header-section {
+  background: white;
+  padding: 24px 32px;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.form-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.form-subtitle {
+  font-size: 14px;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+/* Form Sections */
+.form-section {
+  height: 100%;
+}
+
+.info-card {
+  background: white;
+  padding: 24px;
+  border-radius: 12px;
+  margin-bottom: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.section-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 0 0 20px 0;
+  letter-spacing: -0.01em;
+}
+
+/* Questions Section */
+.questions-section {
+  background: white;
+  padding: 24px;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.question-card {
+  padding: 20px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.question-card:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.question-card:first-child {
+  padding-top: 0;
+}
+
+.question-item {
+  margin-bottom: 0 !important;
+}
+
+.question-label {
+  font-size: 14px;
+  color: #374151;
+  font-weight: 500;
+  line-height: 1.5;
+  display: block;
+  /* margin-bottom: 12px; */
+}
+
+/* Modern Radio Group */
+/* Modern Radio Group */
+.modern-radio-group {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.radio-label {
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  color: #374151;
+  font-weight: 400;
+  padding: 8px 12px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  background: #f9fafb;
+  border: 1px solid transparent;
+  cursor: pointer;
+  margin: 0;
+}
+
+.radio-label:hover {
+  background: #f3f4f6;
+}
+
+.radio-input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  margin-right: 8px;
+  cursor: pointer;
+  accent-color: #3b82f6;
+}
+
+.radio-input:checked+.radio-text {
+  font-weight: 500;
+}
+
+.radio-label:has(.radio-input:checked) {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+.radio-text {
+  user-select: none;
+}
+
+/* Sticky Sidebar */
+.sticky-sidebar {
+  position: sticky;
+  top: 24px;
+  height: fit-content;
+}
+
+.empty-state {
+  background: white;
+  padding: 48px 24px;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
   text-align: center;
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
+/* Response Section */
+.response-section {
+  background: white;
+  padding: 24px;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
+.response-card {
+  padding: 16px 0;
+  border-bottom: 1px solid #f0f0f0;
 }
 
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
+.response-card:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.response-card:first-of-type {
+  padding-top: 0;
+}
+
+.response-question {
+  font-size: 13px;
+  color: #6b7280;
+  margin-bottom: 10px;
+  line-height: 1.5;
+}
+
+.response-badge {
+  display: inline-block;
+  padding: 6px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.badge-yes {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.badge-no {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.badge-sometimes {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.badge-n\/a {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+/* Score Card */
+.score-card {
+  margin-top: 24px;
+  padding: 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px;
   color: white;
 }
 
-.App-link {
-  color: #61dafb;
+.score-label {
+  font-size: 13px;
+  font-weight: 500;
+  opacity: 0.9;
+  margin-bottom: 8px;
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
+.score-value {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-weight: 600;
+}
+
+.score-number {
+  font-size: 32px;
+  line-height: 1;
+}
+
+.score-divider {
+  font-size: 20px;
+  opacity: 0.7;
+}
+
+.score-total {
+  font-size: 20px;
+  opacity: 0.9;
+}
+
+/* Form Footer */
+.form-footer {
+  background: white;
+  padding: 24px 32px;
+  border-radius: 12px;
+  margin-top: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.score-summary {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.summary-label {
+  font-size: 14px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.summary-value {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.value-number {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.value-divider {
+  font-size: 16px;
+  opacity: 0.5;
+}
+
+.value-total {
+  font-size: 16px;
+  opacity: 0.7;
+}
+
+.submit-button {
+  height: 44px;
+  padding: 0 32px;
+  font-size: 15px;
+  font-weight: 500;
+  border-radius: 8px;
+  background: #3b82f6;
+  border: none;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+}
+
+.submit-button:hover {
+  background: #2563eb;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(59, 130, 246, 0.2);
+}
+
+/* Form Item Overrides */
+.modern-form .ant-form-item-label>label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.modern-form .ant-select-selector,
+.modern-form .ant-picker,
+.modern-form .ant-input {
+  border-radius: 8px !important;
+  border: 1.5px solid #e5e7eb !important;
+  transition: all 0.2s ease;
+}
+
+.modern-form .ant-select-selector:hover,
+.modern-form .ant-picker:hover,
+.modern-form .ant-input:hover {
+  border-color: #3b82f6 !important;
+}
+
+.modern-form .ant-select-focused .ant-select-selector,
+.modern-form .ant-picker-focused,
+.modern-form .ant-input:focus {
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+}
+
+/* Responsive */
+@media (max-width: 991px) {
+  .sticky-sidebar {
+    position: static;
+    margin-top: 24px;
   }
-  to {
-    transform: rotate(360deg);
+
+  .form-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .submit-button {
+    width: 100%;
   }
 }
 
+@media (max-width: 576px) {
+  .modern-form-container {
+    padding: 16px 12px;
+  }
+
+  .header-section {
+    padding: 20px;
+  }
+
+  .form-title {
+    font-size: 20px;
+  }
+
+  .info-card,
+  .questions-section,
+  .response-section {
+    padding: 20px;
+  }
+
+  .modern-radio-group {
+    flex-wrap: wrap;
+  }
+
+  .modern-radio-button {
+    flex: 0 0 calc(50% - 4px);
+  }
+}
+
+
+
+/* ============================================
+   MODERN FORM THEME - DESIGN SYSTEM
+   ============================================
+   Use this CSS for all observation forms to maintain consistency
+   ============================================ */
+
+/* ============================================
+   1. CONTAINER & LAYOUT
+   ============================================ */
+.modern-form-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 32px 24px;
+  background: #fafafa;
+  min-height: 100vh;
+}
+
+/* ============================================
+   2. LOADING STATE
+   ============================================ */
+.modern-loader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+}
+
+/* ============================================
+   3. HEADER SECTION
+   ============================================ */
+.modern-form-header {
+  margin-bottom: 32px;
+}
+
+.header-section {
+  background: white;
+  padding: 24px 32px;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.form-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.form-subtitle {
+  font-size: 14px;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+/* ============================================
+   4. FORM SECTIONS & CARDS
+   ============================================ */
+.form-section {
+  height: 100%;
+}
+
+.info-card {
+  background: white;
+  padding: 24px;
+  border-radius: 12px;
+  margin-bottom: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.section-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 0 0 20px 0;
+  letter-spacing: -0.01em;
+}
+
+/* ============================================
+   5. QUESTIONS SECTION
+   ============================================ */
+.questions-section {
+  background: white;
+  padding: 24px;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.question-card {
+  padding: 20px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.question-card:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.question-card:first-child {
+  padding-top: 0;
+}
+
+.question-item {
+  margin-bottom: 0 !important;
+}
+
+.question-label {
+  font-size: 14px;
+  color: #374151;
+  font-weight: 500;
+  line-height: 1.5;
+  display: block;
+  margin-bottom: 12px;
+}
+
+/* ============================================
+   6. RADIO BUTTONS (Default HTML Radio)
+   ============================================ */
+.modern-radio-group {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.radio-label {
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  color: #374151;
+  font-weight: 400;
+  padding: 8px 12px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  background: #f9fafb;
+  border: 1px solid transparent;
+  cursor: pointer;
+  margin: 0;
+}
+
+.radio-label:hover {
+  background: #f3f4f6;
+}
+
+.radio-input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  margin-right: 8px;
+  cursor: pointer;
+  accent-color: #3b82f6;
+}
+
+.radio-input:checked+.radio-text {
+  font-weight: 500;
+}
+
+.radio-label:has(.radio-input:checked) {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+.radio-text {
+  user-select: none;
+}
+
+/* ============================================
+   7. STICKY SIDEBAR
+   ============================================ */
+.sticky-sidebar {
+  position: sticky;
+  top: 24px;
+  height: fit-content;
+}
+
+.empty-state {
+  background: white;
+  padding: 48px 24px;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  text-align: center;
+}
+
+/* ============================================
+   8. RESPONSE SECTION (Right Panel)
+   ============================================ */
+.response-section {
+  background: white;
+  padding: 24px;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.response-card {
+  padding: 16px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.response-card:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.response-card:first-of-type {
+  padding-top: 0;
+}
+
+.response-question {
+  font-size: 13px;
+  color: #6b7280;
+  margin-bottom: 10px;
+  line-height: 1.5;
+}
+
+/* Response Badge Colors */
+.response-badge {
+  display: inline-block;
+  padding: 6px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.badge-yes {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.badge-no {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.badge-sometimes {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.badge-n\/a {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+/* ============================================
+   9. SCORE CARD (Gradient)
+   ============================================ */
+.score-card {
+  margin-top: 24px;
+  padding: 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px;
+  color: white;
+}
+
+.score-label {
+  font-size: 13px;
+  font-weight: 500;
+  opacity: 0.9;
+  margin-bottom: 8px;
+}
+
+.score-value {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-weight: 600;
+}
+
+.score-number {
+  font-size: 32px;
+  line-height: 1;
+}
+
+.score-divider {
+  font-size: 20px;
+  opacity: 0.7;
+}
+
+.score-total {
+  font-size: 20px;
+  opacity: 0.9;
+}
+
+/* ============================================
+   10. FORM FOOTER
+   ============================================ */
+.form-footer {
+  background: white;
+  padding: 24px 32px;
+  border-radius: 12px;
+  margin-top: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.score-summary {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.summary-label {
+  font-size: 14px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.summary-value {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.value-number {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.value-divider {
+  font-size: 16px;
+  opacity: 0.5;
+}
+
+.value-total {
+  font-size: 16px;
+  opacity: 0.7;
+}
+
+/* ============================================
+   11. SUBMIT BUTTON
+   ============================================ */
+.submit-button {
+  height: 44px;
+  padding: 0 32px;
+  font-size: 15px;
+  font-weight: 500;
+  border-radius: 8px;
+  background: #3b82f6;
+  border: none;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+}
+
+.submit-button:hover {
+  background: #2563eb;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(59, 130, 246, 0.2);
+}
+
+/* ============================================
+   12. ANT DESIGN FORM OVERRIDES
+   ============================================ */
+.modern-form .ant-form-item-label>label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.modern-form .ant-select-selector,
+.modern-form .ant-picker,
+.modern-form .ant-input {
+  border-radius: 8px !important;
+  border: 1.5px solid #e5e7eb !important;
+  transition: all 0.2s ease;
+}
+
+.modern-form .ant-select-selector:hover,
+.modern-form .ant-picker:hover,
+.modern-form .ant-input:hover {
+  border-color: #3b82f6 !important;
+}
+
+.modern-form .ant-select-focused .ant-select-selector,
+.modern-form .ant-picker-focused,
+.modern-form .ant-input:focus {
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+}
+
+/* ============================================
+   13. RESPONSIVE BREAKPOINTS
+   ============================================ */
+@media (max-width: 991px) {
+  .sticky-sidebar {
+    position: static;
+    margin-top: 24px;
+  }
+
+  .form-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .submit-button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 576px) {
+  .modern-form-container {
+    padding: 16px 12px;
+  }
+
+  .header-section {
+    padding: 20px;
+  }
+
+  .form-title {
+    font-size: 20px;
+  }
+
+  .info-card,
+  .questions-section,
+  .response-section {
+    padding: 20px;
+  }
+
+  .modern-radio-group {
+    gap: 12px;
+  }
+}

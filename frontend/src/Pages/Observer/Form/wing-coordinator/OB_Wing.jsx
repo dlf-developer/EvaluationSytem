@@ -404,7 +404,7 @@ const renderSections = useMemo(
                          </b>
                        </p>
                        <p className="mb-0">
-                             <span className='d-block fw-normal'>Observer Feedback: <b>{item?.observerFeedback}</b></span>
+                             <span className='d-block fw-normal'>Observer Feedback...: <b>{item?.observerFeedback}</b></span>
                             <span className='d-block fw-normal'>Teacher Reflection Feedback <b>{item?.teacherReflationFeedback}</b></span>
                        </p>
                           </>
