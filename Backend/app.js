@@ -17,14 +17,14 @@ const app = express();
 app.use(cors({
     origin: process.env.APP_URL,
     //  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-    headers: ["Content-Type",'Authorization'],
+    headers: ["Content-Type", 'Authorization'],
     credentials: true,
 }));
 
 
 
 
-// app.use(cors())
+app.use(cors())
 
 // Connect to MongoDB
 connectDB();
@@ -38,11 +38,14 @@ app.use('/api/user', userRouter)
 app.use('/api/form', formRouts)
 app.use('/api/notification', notificationRoutes)
 app.use('/api/classroom-walkthrough', classRoomRoutes)
-app.use('/api/notebook-checking-proforma',notebookRoutes)
-app.use('/api/wing-coordinator',finalFormRoutes)
-app.use('/api/class',ClassRoutes)
+app.use('/api/notebook-checking-proforma', notebookRoutes)
+app.use('/api/wing-coordinator', finalFormRoutes)
+app.use('/api/class', ClassRoutes)
 app.use('/api', Weekly4Routes);
 app.use('/api/activity', activityRoutes);
-app.use('/api/wing-coordinator',wingCoordinatorRoutes)
+app.use('/api/wing-coordinator', wingCoordinatorRoutes)
+app.get('/', (req, res) => {
+    return res.json({ message: "hello" })
+})
 
 module.exports = app;
