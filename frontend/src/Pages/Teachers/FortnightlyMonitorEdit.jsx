@@ -9,30 +9,30 @@ import { questions } from '../../Components/normalData';
 
 
 function FortnightlyMonitorEdit() {
-    const [form] = Form.useForm();
-    const [formDetails, setFormDetails] = useState(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const [isCoordinator, setIsCoordinator] = useState(false);
-    const [selfAssessmentScore, setSelfAssessmentScore] = useState(0);
-    const [ObserverID, setObserverID] = useState("");
-    const Id = useParams().id;
-    const navigate = useNavigate();
-    const dispatch = useDispatch();
-    const GetUserAccess = getUserId()?.access;
-    const isLoading2 = useSelector((state) => state?.Forms?.loading);
-    const [betaLoading,setBetaLoading] =useState(false);
-    const CurrectUserRole = getUserId().access;
-    const ObserverList = useSelector((state) => state.user.GetObserverLists);
-    const [totalCount, setTotalCount] = useState(0);
-    const [selfAssessCount,setSelfAssessCount] =useState()
+  const [form] = Form.useForm();
+  const [formDetails, setFormDetails] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isCoordinator, setIsCoordinator] = useState(false);
+  const [selfAssessmentScore, setSelfAssessmentScore] = useState(0);
+  const [ObserverID, setObserverID] = useState("");
+  const Id = useParams().id;
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const GetUserAccess = getUserId()?.access;
+  const isLoading2 = useSelector((state) => state?.Forms?.loading);
+  const [betaLoading, setBetaLoading] = useState(false);
+  const CurrectUserRole = getUserId().access;
+  const ObserverList = useSelector((state) => state.user.GetObserverLists);
+  const [totalCount, setTotalCount] = useState(0);
+  const [selfAssessCount, setSelfAssessCount] = useState()
 
-    const yesNoNAOptions = ["Yes", "No", "Sometimes", "N/A"];
+  const yesNoNAOptions = ["Yes", "No", "Sometimes", "N/A"];
 
 
-      // Fetch form details
+  // Fetch form details
   useEffect(() => {
     setIsLoading(true);
- 
+
     dispatch(GetSingleFormsOne(Id))
       .then((response) => {
         setFormDetails(response?.payload);
@@ -42,43 +42,44 @@ function FortnightlyMonitorEdit() {
         message.error("Error fetching form details.");
         setIsLoading(false);
       });
-  }, [Id, navigate,!ObserverID]);
+  }, [Id, navigate, !ObserverID]);
 
 
-      const type= "teacherForm"
-      useEffect(() => {
-        if (!formDetails || !formDetails[type]) return;
-    
-        const validValues2 = ["Yes", 'Sometimes'];
-        const Assesscount = Object.values(formDetails[type]).filter(value =>
-            validValues2.includes(value)
-          ).length;
-          setSelfAssessCount(Assesscount)
-        const validValues = ["Yes", "No", 'Sometimes']; // Include these values
-        const count = Object.values(formDetails[type]).filter(value =>
-          validValues.includes(value)
-        ).length;
-        setTotalCount(count);
-      }, [formDetails, type]);
-    
+  const type = "teacherForm"
+  useEffect(() => {
+    if (!formDetails || !formDetails[type]) return;
 
-    const onFinish= async (value)=>{
-        const payload ={
-            id:Id,
-            data:{teacherForm:value}
-        }
-        const response = await dispatch(EditUpdate(payload));
-        if(response.payload.success){
-            message.success(response.payload.message);
-            navigate('/fortnightly-monitor')
-        }
+    const validValues2 = ["Yes", 'Sometimes'];
+    const Assesscount = Object.values(formDetails[type]).filter(value =>
+      validValues2.includes(value)
+    ).length;
+    setSelfAssessCount(Assesscount)
+    const validValues = ["Yes", "No", 'Sometimes']; // Include these values
+    const count = Object.values(formDetails[type]).filter(value =>
+      validValues.includes(value)
+    ).length;
+    setTotalCount(count);
+  }, [formDetails, type]);
+
+
+  const onFinish = async (value) => {
+    const payload = {
+      id: Id,
+      data: { teacherForm: { ...value, OutOf: totalCount, totalScore: selfAssessmentScore, } }
     }
+    console.log(payload, "jdjdjdj")
+    const response = await dispatch(EditUpdate(payload));
+    if (response.payload.success) {
+      message.success(response.payload.message);
+      navigate('/fortnightly-monitor')
+    }
+  }
 
-      // Calculate self-assessment score
+  // Calculate self-assessment score
   const calculateScore = () => {
     const values = form.getFieldsValue();
     let score = 0;
-  
+
     questions.forEach((key) => {
       const answer = values[key?.key];
       if (answer === "Yes") score += 1;       // Add 1 for "Yes"
@@ -86,11 +87,11 @@ function FortnightlyMonitorEdit() {
       else if (answer === "Sometimes") score += 0.5; // Add 0.5 for "0.5"
       // Ignore "N/A" (or any undefined answer)
     });
-  
+
     setSelfAssessmentScore(score);
     form.setFieldsValue({ selfEvaluationScore: score }); // Update hidden field
   };
- return (
+  return (
     <div className="modern-form-container">
       {isLoading ? (
         <div className="modern-loader">
@@ -229,8 +230,8 @@ function FortnightlyMonitorEdit() {
                 <div className="sticky-sidebar">
                   {(GetUserAccess === UserRole[1] &&
                     !formDetails?.isCoordinatorComplete) ||
-                  (GetUserAccess === UserRole[2] &&
-                    !formDetails?.isTeacherComplete) ? (
+                    (GetUserAccess === UserRole[2] &&
+                      !formDetails?.isTeacherComplete) ? (
                     <div className="empty-state">
                       <Empty
                         image={Empty.PRESENTED_IMAGE_SIMPLE}

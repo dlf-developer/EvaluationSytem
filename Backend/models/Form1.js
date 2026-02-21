@@ -51,8 +51,8 @@ const formSchema = new Schema({
 
   electronicDevices: { type: String, enum: option, default: 'N/A' },
 
-  totalScore: { type: Number, min: 0, max: 100 },
-  OutOf: { type: Number, min: 0, max: 50 },
+  totalScore: { type: Number, min: 0, max: 100,default:0 },
+  OutOf: { type: Number, min: 0, max: 50,default:0 },
   ObservationDates: { type: Date, default: null },
 }, { _id: false });
 
