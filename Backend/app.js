@@ -14,12 +14,12 @@ const wingCoordinatorRoutes = require('./routes/wingCoordinatorRoutes');
 require('dotenv').config();
 const cors = require('cors')
 const app = express();
-app.use(cors({
-    origin: "",
-    //  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-    // headers: ["Content-Type", 'Authorization'],
-    // credentials: true,
-}));
+// app.use(cors({
+//     origin: "",
+//     //  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+//     // headers: ["Content-Type", 'Authorization'],
+//     // credentials: true,
+// }));
 
 
 
@@ -44,5 +44,8 @@ app.use('/api/class', ClassRoutes)
 app.use('/api', Weekly4Routes);
 app.use('/api/activity', activityRoutes);
 app.use('/api/wing-coordinator', wingCoordinatorRoutes)
+app.use('/api', (req, res) => {
+  res.send("Hello World")
+})
 
 module.exports = app;
