@@ -4,6 +4,7 @@ import { FormOne_Columns } from '../TableColumns';
 import { useDispatch, useSelector } from 'react-redux';
 import { GetAllFormsForAdmin } from '../../../redux/Form/fortnightlySlice';
 import moment from 'moment';
+import { calculateScore } from '../../../Utils/calculateScore';
 const { Option } = Select;
 function FormOneReport() {
 
@@ -21,8 +22,8 @@ function FormOneReport() {
   useEffect(() => {
     dispatch(GetAllFormsForAdmin());
   }, [dispatch]);
-
-  const CombinedData = useSelector((state) => state?.Forms?.getAllAdminForms || []);
+   let data = useSelector((state) => state?.Forms?.getAllAdminForms || []);
+  const CombinedData = calculateScore(data)
 
   // Dynamically get unique values for filters
   const uniqueClasses = [

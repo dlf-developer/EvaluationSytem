@@ -133,7 +133,6 @@ const Details = () => {
   }, [formDetails, type]);
 
   const onFinish = async (values) => {
-    console.log(values,"sjjssjjsj")
     if (!Id || !GetUserAccess) {
       message.error("Invalid form submission!");
       return;
