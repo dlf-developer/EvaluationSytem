@@ -1,14 +1,29 @@
-import { Button, Card, Col, DatePicker, Empty, Form, Input, InputNumber, message, Radio, Row, Spin } from 'antd';
-import React, { useEffect, useState } from 'react'
-import { useDispatch, useSelector } from 'react-redux';
-import { useNavigate, useParams } from 'react-router-dom';
-import { getUserId } from '../../Utils/auth';
-import { UserRole } from '../../config/config';
-import { EditUpdate, GetSingleFormsOne } from '../../redux/Form/fortnightlySlice';
-import { questions } from '../../Components/normalData';
+import {
+  Button,
+  Card,
+  Col,
+  DatePicker,
+  Empty,
+  Form,
+  Input,
+  InputNumber,
+  message,
+  Radio,
+  Row,
+  Spin,
+} from "antd";
+import React, { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { useNavigate, useParams } from "react-router-dom";
+import { getUserId } from "../../Utils/auth";
+import { UserRole } from "../../config/config";
+import {
+  EditUpdate,
+  GetSingleFormsOne,
+} from "../../redux/Form/fortnightlySlice";
+import { questions } from "../../Components/normalData";
 
-
-function FortnightlyMonitorEdit() {
+function FortnightlyMonitorEdit({ flag }) {
   const [form] = Form.useForm();
   const [formDetails, setFormDetails] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -24,10 +39,10 @@ function FortnightlyMonitorEdit() {
   const CurrectUserRole = getUserId().access;
   const ObserverList = useSelector((state) => state.user.GetObserverLists);
   const [totalCount, setTotalCount] = useState(0);
-  const [selfAssessCount, setSelfAssessCount] = useState()
+  const [selfAssessCount, setSelfAssessCount] = useState();
 
   const yesNoNAOptions = ["Yes", "No", "Sometimes", "N/A"];
-
+  const flagType = flag || "Teacher";
 
   // Fetch form details
   useEffect(() => {
@@ -44,36 +59,39 @@ function FortnightlyMonitorEdit() {
       });
   }, [Id, navigate, !ObserverID]);
 
-
-  const type = "teacherForm"
+  const type = "teacherForm";
   useEffect(() => {
     if (!formDetails || !formDetails[type]) return;
 
-    const validValues2 = ["Yes", 'Sometimes'];
-    const Assesscount = Object.values(formDetails[type]).filter(value =>
-      validValues2.includes(value)
+    const validValues2 = ["Yes", "Sometimes"];
+    const Assesscount = Object.values(formDetails[type]).filter((value) =>
+      validValues2.includes(value),
     ).length;
-    setSelfAssessCount(Assesscount)
-    const validValues = ["Yes", "No", 'Sometimes']; // Include these values
-    const count = Object.values(formDetails[type]).filter(value =>
-      validValues.includes(value)
+    setSelfAssessCount(Assesscount);
+    const validValues = ["Yes", "No", "Sometimes"]; // Include these values
+    const count = Object.values(formDetails[type]).filter((value) =>
+      validValues.includes(value),
     ).length;
     setTotalCount(count);
   }, [formDetails, type]);
 
-
   const onFinish = async (value) => {
     const payload = {
       id: Id,
-      data: { teacherForm: { ...value, OutOf: totalCount, totalScore: selfAssessmentScore, } }
-    }
-    console.log(payload, "jdjdjdj")
+      data: {
+        teacherForm: {
+          ...value,
+          OutOf: totalCount,
+          totalScore: selfAssessmentScore,
+        },
+      },
+    };
     const response = await dispatch(EditUpdate(payload));
     if (response.payload.success) {
       message.success(response.payload.message);
-      navigate('/fortnightly-monitor')
+      navigate("/fortnightly-monitor");
     }
-  }
+  };
 
   // Calculate self-assessment score
   const calculateScore = () => {
@@ -82,8 +100,10 @@ function FortnightlyMonitorEdit() {
 
     questions.forEach((key) => {
       const answer = values[key?.key];
-      if (answer === "Yes") score += 1;       // Add 1 for "Yes"
-      else if (answer === "No") score += 0;   // No points for "No"
+      if (answer === "Yes")
+        score += 1; // Add 1 for "Yes"
+      else if (answer === "No")
+        score += 0; // No points for "No"
       else if (answer === "Sometimes") score += 0.5; // Add 0.5 for "0.5"
       // Ignore "N/A" (or any undefined answer)
     });
@@ -102,7 +122,9 @@ function FortnightlyMonitorEdit() {
           <div className="modern-form-header">
             <div className="header-section">
               <h2 className="form-title">Edit Your Observation</h2>
-              <div className="form-subtitle">Update your evaluation responses</div>
+              <div className="form-subtitle">
+                Update your evaluation responses
+              </div>
             </div>
           </div>
 
@@ -212,7 +234,9 @@ function FortnightlyMonitorEdit() {
                                       form.setFieldValue(field?.key, option);
                                       calculateScore();
                                     }}
-                                    checked={form.getFieldValue(field?.key) === option}
+                                    checked={
+                                      form.getFieldValue(field?.key) === option
+                                    }
                                   />
                                   <span className="radio-text">{option}</span>
                                 </label>
@@ -230,8 +254,8 @@ function FortnightlyMonitorEdit() {
                 <div className="sticky-sidebar">
                   {(GetUserAccess === UserRole[1] &&
                     !formDetails?.isCoordinatorComplete) ||
-                    (GetUserAccess === UserRole[2] &&
-                      !formDetails?.isTeacherComplete) ? (
+                  (GetUserAccess === UserRole[2] &&
+                    !formDetails?.isTeacherComplete) ? (
                     <div className="empty-state">
                       <Empty
                         image={Empty.PRESENTED_IMAGE_SIMPLE}
@@ -243,40 +267,50 @@ function FortnightlyMonitorEdit() {
                   )}
 
                   {GetUserAccess === UserRole[2] &&
-                    formDetails?.isTeacherComplete && (
-                      <div className="response-section">
-                        <h3 className="section-title">Current Response</h3>
-                        {questions?.map((item, index) => {
-                          const answer = formDetails?.teacherForm[item?.key];
-                          return (
-                            <div className="response-card" key={index + 1}>
-                              <div className="response-question">
-                                {item?.name
-                                  .replace(/([A-Z])/g, " $1")
-                                  .replace(/^./, (str) => str.toUpperCase())}
-                              </div>
-                              <div
-                                className={`response-badge badge-${answer?.toLowerCase()}`}
-                              >
-                                {answer}
-                              </div>
-                            </div>
-                          );
-                        })}
+                  GetUserAccess === UserRole[1] &&
+                  flagType === "Teacher"
+                    ? formDetails?.isTeacherComplete
+                    : formDetails?.isCoordinatorComplete && (
+                        <div className="response-section">
+                          <h3 className="section-title">Current Response</h3>
+                          {questions?.map((item, index) => {
+                            const answer =
+                              flagType === "Teacher"
+                                ? formDetails?.teacherForm[item?.key]
+                                : formDetails?.observerForm[item?.key];
 
-                        <div className="score-card">
-                          <div className="score-label">Self Assessment</div>
-                          <div className="score-value">
-                            <span className="score-number">
-                              {formDetails?.teacherForm?.selfEvaluationScore ||
-                                "N/A"}
-                            </span>
-                            <span className="score-divider">/</span>
-                            <span className="score-total">{totalCount}</span>
+                            return (
+                              <div className="response-card" key={index + 1}>
+                                <div className="response-question">
+                                  {item?.name
+                                    .replace(/([A-Z])/g, " $1")
+                                    .replace(/^./, (str) => str.toUpperCase())}
+                                </div>
+                                <div
+                                  className={`response-badge badge-${answer?.toLowerCase()}`}
+                                >
+                                  {answer}
+                                </div>
+                              </div>
+                            );
+                          })}
+
+                          <div className="score-card">
+                            <div className="score-label">Self Assessment</div>
+                            <div className="score-value">
+                              <span className="score-number">
+                                {flagType === "Teacher"
+                                  ? formDetails?.teacherForm
+                                      ?.selfEvaluationScore
+                                  : formDetails?.observerForm
+                                      ?.selfEvaluationScore || "N/A"}
+                              </span>
+                              <span className="score-divider">/</span>
+                              <span className="score-total">{totalCount}</span>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    )}
+                      )}
                 </div>
               </Col>
             </Row>
@@ -311,4 +345,4 @@ function FortnightlyMonitorEdit() {
   );
 }
 
-export default FortnightlyMonitorEdit
+export default FortnightlyMonitorEdit;

@@ -6,7 +6,7 @@ import dayjs from 'dayjs';  // Import Day.js
 const { RangePicker } = DatePicker;
 
 function Fillter_Wing({ saveData, data }) {
-   
+
     const [form] = Form.useForm();
     const dispatch = useDispatch();
     const [newData, setNewData] = useState([]);
@@ -37,10 +37,10 @@ function Fillter_Wing({ saveData, data }) {
 
     useEffect(() => {
         if (data) {
-            if(data?.className){
+            if (data?.className) {
                 const payload = {
-                    range:data?.range,
-                    className:data?.className
+                    range: data?.range,
+                    className: data?.className
                 }
                 onFinish(payload)
             }
@@ -48,7 +48,7 @@ function Fillter_Wing({ saveData, data }) {
                 range: data?.range ? [dayjs(data.range[0]), dayjs(data.range[1])] : [],
                 className: data?.className || '',
             });
-    
+
             setSelectedItems({
                 range: data?.range ? [dayjs(data.range[0]), dayjs(data.range[1])] : [],
                 className: data?.className || '',
@@ -100,13 +100,13 @@ function Fillter_Wing({ saveData, data }) {
                             ]}
                         >
                             <Select
-                            mode='multiple'
+                                mode='multiple'
                                 placeholder="Choose Class"
-                                options={newData?.map((item) => ({
-                                    key: item._id,
-                                    id: item._id,
-                                    value: item.className,
-                                    label: item.className,
+                                options={newData && newData?.length > 0 && newData?.map((item) => ({
+                                    key: item?._id || "",
+                                    id: item?._id || "",
+                                    value: item?.className || "",
+                                    label: item?.className || "",
                                 }))}
                                 filterOption={(input, option) =>
                                     option.label.toLowerCase().includes(input.toLowerCase())

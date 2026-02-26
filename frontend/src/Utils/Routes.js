@@ -131,7 +131,7 @@ const protects = {
         { path: '/notebook-checking-proforma', element: <Notebook /> },
         { path: '/notebook-checking-proforma/create/:id', element: <ObserverNotebook /> },
         { path: "/fortnightly-monitor/form-initiation", element: <FortnightlyMonitorInitiation /> },
-        { path: '/fortnightly-monitor/edit/:id', element: <OB_FortnightlyMonitorEdit /> },
+        { path: '/fortnightly-monitor/edit/:id', element: <FortnightlyMonitorEdit /> },
         { path: "/classroom-walkthrough/edit/:id", element: <OB_WalkthroughEdit /> },
         { path: "/notebook-checking-proforma/edit/:id", element: <OB_Notebook /> },
         { path: "/notebook-checking-proforma/form-initiation", element: <NoteBookInisiate /> },
