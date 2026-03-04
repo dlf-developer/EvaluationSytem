@@ -26,8 +26,15 @@ import {
 import { getUserId } from "../../../Utils/auth";
 import { useDispatch, useSelector } from "react-redux";
 import { UserRole } from "../../../config/config";
-import { getCreateClassSection, GetObserverList } from "../../../redux/userSlice";
-import { questions } from "../../../Components/normalData";
+import {
+  getCreateClassSection,
+  GetObserverList,
+} from "../../../redux/userSlice";
+import {
+  questions,
+  questionsOld,
+  cutoffDate,
+} from "../../../Components/normalData";
 import { CreateActivityApi } from "../../../redux/Activity/activitySlice";
 import "../../../App.css"; // Import the custom CSS
 
@@ -58,8 +65,8 @@ const Details = () => {
       if (res?.payload?.success) {
         setNewData(
           res?.payload?.classDetails.sort(
-            (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-          )
+            (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
+          ),
         );
       } else {
         message.error("Failed to fetch class data.");
@@ -121,12 +128,12 @@ const Details = () => {
 
     const validValues2 = ["Yes", "Sometimes"];
     const Assesscount = Object.values(formDetails[type]).filter((value) =>
-      validValues2.includes(value)
+      validValues2.includes(value),
     ).length;
 
     const validValues = ["Yes", "No", "Sometimes"]; // Include these values
     const count = Object.values(formDetails[type]).filter((value) =>
-      validValues.includes(value)
+      validValues.includes(value),
     ).length;
 
     setTotalCount(count);
@@ -149,7 +156,10 @@ const Details = () => {
         isCoordinatorComplete: true,
         observerForm: values,
       };
-    } else if (GetUserAccess === UserRole[2] && !formDetails?.isTeacherComplete) {
+    } else if (
+      GetUserAccess === UserRole[2] &&
+      !formDetails?.isTeacherComplete
+    ) {
       payload.data = {
         isTeacherComplete: true,
         teacherForm: values,
@@ -181,25 +191,31 @@ const Details = () => {
         const receiverId =
           UserRole[2] === getUserId().access
             ? res?.payload?.form?.coordinatorID?._id ||
-            res?.payload?.form?.userId?._id
+              res?.payload?.form?.userId?._id
             : formDetails?.teacherID?._id || formDetails?.userId?._id;
         const observerMessage = payload?.data?.className
-          ? `${res?.payload?.form?.teacherID?.name ||
-          res?.payload?.form?.userId?.name
-          } has completed the Fortnightly Monitor Form for ${res?.payload?.form?.className
-          } | ${res?.payload?.form?.section}`
+          ? `${
+              res?.payload?.form?.teacherID?.name ||
+              res?.payload?.form?.userId?.name
+            } has completed the Fortnightly Monitor Form for ${
+              res?.payload?.form?.className
+            } | ${res?.payload?.form?.section}`
           : UserRole[1] === getUserId().access
             ? `You have completed the Fortnightly Monitor Form for ${formDetails?.className} | ${formDetails?.section}`
-            : `${formDetails?.teacherID?.name || formDetails?.userId?.name
-            } has completed the Fortnightly Monitor Form for ${formDetails?.className
-            } | ${formDetails?.section}`;
+            : `${
+                formDetails?.teacherID?.name || formDetails?.userId?.name
+              } has completed the Fortnightly Monitor Form for ${
+                formDetails?.className
+              } | ${formDetails?.section}`;
 
         const teacherMessage = payload?.data?.className
           ? `You have completed the Fortnightly Monitor Form for ${res?.payload?.form?.className} | ${res?.payload?.form?.section}`
           : UserRole[1] === getUserId().access
-            ? `${formDetails?.coordinatorID?.name || formDetails?.userId?.name
-            } has completed the Fortnightly Monitor Form for ${formDetails?.className
-            } | ${formDetails?.section}`
+            ? `${
+                formDetails?.coordinatorID?.name || formDetails?.userId?.name
+              } has completed the Fortnightly Monitor Form for ${
+                formDetails?.className
+              } | ${formDetails?.section}`
             : `You have completed the Fortnightly Monitor Form for ${formDetails?.className} | ${formDetails?.section}`;
 
         const activity = {
@@ -231,10 +247,15 @@ const Details = () => {
     const values = form.getFieldsValue();
     let score = 0;
 
-    questions.forEach((key) => {
+    const currentQuestions =
+      formDetails?.createdAt < cutoffDate ? questionsOld : questions;
+
+    currentQuestions.forEach((key) => {
       const answer = values[key?.key];
-      if (answer === "Yes") score += 1; // Add 1 for "Yes"
-      else if (answer === "No") score += 0; // No points for "No"
+      if (answer === "Yes")
+        score += 1; // Add 1 for "Yes"
+      else if (answer === "No")
+        score += 0; // No points for "No"
       else if (answer === "Sometimes") score += 0.5; // Add 0.5 for "0.5"
       // Ignore "N/A" (or any undefined answer)
     });
@@ -245,7 +266,7 @@ const Details = () => {
   const getTotalScorevalu = (formValue) => {
     const validValues = ["Yes", "No", "Sometimes"]; // Include these values
     const count = Object.values(formValue).filter((value) =>
-      validValues.includes(value)
+      validValues.includes(value),
     ).length;
     setTotalCountMein(count);
   };
@@ -282,7 +303,7 @@ const Details = () => {
 
   const SideQuestion = document.querySelectorAll("#SideQuestion");
   const heights = Array.from(SideQuestion).map(
-    (element) => element.offsetHeight
+    (element) => element.offsetHeight,
   );
 
   const SectionSubject = (value) => {
@@ -341,12 +362,16 @@ const Details = () => {
                               placeholder="Select a class"
                               size="large"
                               onChange={(value) => SectionSubject(value)}
-                              options={newData?.map((item) => ({
-                                key: item._id,
-                                id: item._id,
-                                value: item._id,
-                                label: item.className,
-                              }))}
+                              options={
+                                newData &&
+                                newData?.length > 0 &&
+                                newData?.map((item) => ({
+                                  key: item?._id,
+                                  id: item?._id,
+                                  value: item?._id,
+                                  label: item?.className,
+                                }))
+                              }
                               filterOption={(input, option) =>
                                 option.label
                                   .toLowerCase()
@@ -408,10 +433,7 @@ const Details = () => {
 
                         {CurrectUserRole === UserRole[2] && (
                           <Col xs={24} sm={12}>
-                            <Form.Item
-                              label="Coordinator"
-                              name="coordinatorID"
-                            >
+                            <Form.Item label="Coordinator" name="coordinatorID">
                               <Select
                                 defaultValue={formDetails?.userId?.name}
                                 disabled={betaLoading}
@@ -452,7 +474,10 @@ const Details = () => {
 
                   <div className="questions-section">
                     <h3 className="section-title">Evaluation Questions</h3>
-                    {questions?.map((field, index) => {
+                    {(formDetails?.createdAt < cutoffDate
+                      ? questionsOld
+                      : questions
+                    )?.map((field, index) => {
                       return (
                         <div className="question-card" key={field?.key}>
                           <Form.Item
@@ -497,8 +522,8 @@ const Details = () => {
                 <div className="sticky-sidebar">
                   {(GetUserAccess === UserRole[2] &&
                     !formDetails?.isCoordinatorComplete) ||
-                    (GetUserAccess === UserRole[1] &&
-                      !formDetails?.isTeacherComplete) ? (
+                  (GetUserAccess === UserRole[1] &&
+                    !formDetails?.isTeacherComplete) ? (
                     <div className="empty-state">
                       <Empty
                         image={Empty.PRESENTED_IMAGE_SIMPLE}
@@ -513,21 +538,45 @@ const Details = () => {
                     formDetails?.isTeacherComplete && (
                       <div className="response-section">
                         <h3 className="section-title">Teacher Response</h3>
-                        {questions?.map((item, index) => {
-                          const answer = formDetails?.teacherForm[item.key];
-                          return (
-                            <div className="response-card" key={index + 1}>
-                              <div className="response-question">
-                                {item?.name
-                                  .replace(/([A-Z])/g, " $1")
-                                  .replace(/^./, (str) => str.toUpperCase())}
-                              </div>
-                              <div className={`response-badge badge-${answer?.toLowerCase()}`}>
-                                {answer}
-                              </div>
-                            </div>
-                          );
-                        })}
+                        {formDetails.createdAt < cutoffDate
+                          ? questionsOld?.map((item, index) => {
+                              const answer = formDetails?.teacherForm[item.key];
+                              return (
+                                <div className="response-card" key={index + 1}>
+                                  <div className="response-question">
+                                    {item?.name
+                                      .replace(/([A-Z])/g, " $1")
+                                      .replace(/^./, (str) =>
+                                        str.toUpperCase(),
+                                      )}
+                                  </div>
+                                  <div
+                                    className={`response-badge badge-${answer?.toLowerCase()}`}
+                                  >
+                                    {answer}
+                                  </div>
+                                </div>
+                              );
+                            })
+                          : questions?.map((item, index) => {
+                              const answer = formDetails?.teacherForm[item.key];
+                              return (
+                                <div className="response-card" key={index + 1}>
+                                  <div className="response-question">
+                                    {item?.name
+                                      .replace(/([A-Z])/g, " $1")
+                                      .replace(/^./, (str) =>
+                                        str.toUpperCase(),
+                                      )}
+                                  </div>
+                                  <div
+                                    className={`response-badge badge-${answer?.toLowerCase()}`}
+                                  >
+                                    {answer}
+                                  </div>
+                                </div>
+                              );
+                            })}
 
                         <div className="score-card">
                           <div className="score-label">Self Assessment</div>

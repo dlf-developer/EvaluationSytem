@@ -1,7 +1,11 @@
-import { Font, StyleSheet, Text, View } from '@react-pdf/renderer';
-import React, { useEffect, useState } from 'react';
-import { getAllTimes } from '../../../Utils/auth';
-
+import { Font, StyleSheet, Text, View } from "@react-pdf/renderer";
+import React, { useEffect, useState } from "react";
+import { getAllTimes } from "../../../Utils/auth";
+import {
+  questions,
+  questionsOld,
+  cutoffDate,
+} from "../../../Components/normalData";
 
 Font.register({
   family: "Open Sans",
@@ -20,16 +24,14 @@ function AnswerComp({ data, type }) {
   const [totalCount, setTotalCount] = useState(0);
   const [selfAssessCount, setSelfAssessCount] = useState(0);
 
-
-
   useEffect(() => {
     if (!data || !data[type]) return;
 
     const validValues = ["Yes", "No", "Sometimes"];
 
     // Calculate total valid responses
-    const count = Object.values(data[type]).filter(value =>
-      validValues.includes(value)
+    const count = Object.values(data[type]).filter((value) =>
+      validValues.includes(value),
     ).length;
     setTotalCount(count);
 
@@ -54,38 +56,11 @@ function AnswerComp({ data, type }) {
         },
       ]}
     >
-      <Text style={[styles.testCenter]}>{data?.[type]?.[fieldName] || "-"}</Text>
+      <Text style={[styles.testCenter]}>
+        {data?.[type]?.[fieldName] || "-"}
+      </Text>
     </View>
   );
-
-
-
-  const fields = [
-    "classCleanliness",
-    "newsUpdate",
-    "smileyChart",
-    "missionEnglishChart",
-    "transportCorner",
-    "generalDiscipline",
-    "lunchEtiquettes",
-    "birthdayChart",
-    "unitSyllabusChart",
-    "uniformTieBeltShoesICard",
-    "classPass",
-    "classTeacherTimeTable",
-    "participationChart",
-    "coScholasticActivityChart",
-    "goodwillPiggyBank",
-    "thursdaySpecial",
-    "homeworkRegisterAQADRegister",
-    "isGroupOnDuty",
-    "isWeeklyRotationOfStudents",
-    "anecdotalRegister",
-    "supplementaryReadingRecord",
-    "thinkZone",
-    "digitalCitizenshipRules",
-    "meditation",
-  ];
 
   return (
     <>
@@ -102,9 +77,11 @@ function AnswerComp({ data, type }) {
       >
         {/* <Text style={styles.testCenter}>{data?.className?.className}/{data?.section}</Text> */}
         <Text style={styles.testCenter}>
-          {typeof data?.className === "object" ? data.className.name : data?.className}/{data?.section}
+          {typeof data?.className === "object"
+            ? data.className.name
+            : data?.className}
+          /{data?.section}
         </Text>
-
       </View>
 
       <View
@@ -123,11 +100,11 @@ function AnswerComp({ data, type }) {
         </Text>
       </View>
 
-      {fields.map((field, index) => (
-        <View key={index}>
-          {renderField(field)}
-        </View>
-      ))}
+      {(data?.createdAt < cutoffDate ? questionsOld : questions).map(
+        (field, index) => (
+          <View key={index}>{renderField(field?.key)}</View>
+        ),
+      )}
 
       <View
         style={[
@@ -157,7 +134,6 @@ function AnswerComp({ data, type }) {
       >
         <Text style={styles.testCenter}>{totalCount}</Text>
       </View>
-
     </>
   );
 }
@@ -170,7 +146,7 @@ const styles = StyleSheet.create({
   },
   testCenter: {
     textAlign: "center",
-        fontWeight:'bold',
-    fontFamily: "Open Sans"
+    fontWeight: "bold",
+    fontFamily: "Open Sans",
   },
 });

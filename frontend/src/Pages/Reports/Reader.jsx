@@ -8,7 +8,11 @@ import { Button, Spin, Table, Tag } from "antd";
 import { DownloadOutlined } from "@ant-design/icons";
 import Logo from "./Imgs/Logo.png";
 import LogoBanner from "./Imgs/image.png";
-import { questions2 } from "../../Components/normalData";
+import {
+  questions,
+  questionsOld,
+  cutoffDate,
+} from "../../Components/normalData";
 
 function Reader() {
   const Id = useParams().id;
@@ -19,7 +23,7 @@ function Reader() {
 
   const downloadPDF = async () => {
     const blob = await ReactPDF.pdf(
-      <MyDocument data={GetSingleForms} />
+      <MyDocument data={GetSingleForms} />,
     ).toBlob();
     const url = URL.createObjectURL(blob);
 
@@ -55,10 +59,13 @@ function Reader() {
     const scores = Object.values(GetSingleForms[type]).reduce((sum, value) => {
       return sum + (validValues[value] || 0); // Add score if value matches, otherwise add 0
     }, 0);
-    return scores ;
+    return scores;
   };
 
-  let questionsAll = questions2;
+  const currentQuestions =
+    GetSingleForms?.createdAt < cutoffDate ? questionsOld : questions;
+
+  let questionsAll = [...(currentQuestions || [])];
   const newItems = [
     { name: "Total Score", key: "Total Score" },
     { name: "Out of", key: "Out Of" },
@@ -139,9 +146,7 @@ function Reader() {
                   );
                 }
                 if (record.key === "Out Of") {
-                  return (
-                    <p className="mb-0">{getTotalScore("teacherForm")}</p>
-                  );
+                  return <p className="mb-0">{getTotalScore("teacherForm")}</p>;
                 }
                 // Default behavior for other rows
                 return (
@@ -151,10 +156,10 @@ function Reader() {
                         GetSingleForms?.teacherForm[text] === "Yes"
                           ? "green"
                           : GetSingleForms?.teacherForm[text] === "No"
-                          ? "red"
-                          : GetSingleForms?.teacherForm[text] === "Sometimes"
-                          ? "orange"
-                          : ""
+                            ? "red"
+                            : GetSingleForms?.teacherForm[text] === "Sometimes"
+                              ? "orange"
+                              : ""
                       }
                       className="mb-0"
                     >
@@ -191,10 +196,10 @@ function Reader() {
                         GetSingleForms?.observerForm[text] === "Yes"
                           ? "green"
                           : GetSingleForms?.observerForm[text] === "No"
-                          ? "red"
-                          : GetSingleForms?.observerForm[text] === "Sometimes"
-                          ? "orange"
-                          : ""
+                            ? "red"
+                            : GetSingleForms?.observerForm[text] === "Sometimes"
+                              ? "orange"
+                              : ""
                       }
                       className="mb-0"
                     >
@@ -208,7 +213,10 @@ function Reader() {
         />
       </div>
 
-      <PDFViewer className="w-100 m-auto d-block mt-3" style={{ height: "100vh" }}>
+      <PDFViewer
+        className="w-100 m-auto d-block mt-3"
+        style={{ height: "100vh" }}
+      >
         <MyDocument data={GetSingleForms} />
       </PDFViewer>
     </>

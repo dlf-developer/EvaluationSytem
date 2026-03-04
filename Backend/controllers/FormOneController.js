@@ -172,10 +172,10 @@ exports.FormInitiation = async (req, res) => {
             return formData;
           }
           return null;
-        })
+        }),
       );
       const checkForm = await Form1.findById(FormData._id).populate(
-        "teacherID coordinatorID userId"
+        "teacherID coordinatorID userId",
       );
       const validForms = teacherForms.filter((form) => form !== null);
       const recipientEmail = checkForm?.teacherID?.email;
@@ -218,7 +218,7 @@ exports.getuserForm = async (req, res) => {
     // Fetch both sets of data
     const data = await Form1.find({ userId });
     const Form = await Form1.find({ teacherID: userId }).populate(
-      "teacherID coordinatorID"
+      "teacherID coordinatorID",
     );
 
     // Combine both arrays without duplicates based on _id
@@ -227,8 +227,8 @@ exports.getuserForm = async (req, res) => {
       ...Form.filter(
         (formItem) =>
           !data.some(
-            (dataItem) => dataItem._id.toString() === formItem._id.toString()
-          )
+            (dataItem) => dataItem._id.toString() === formItem._id.toString(),
+          ),
       ),
     ];
 
@@ -374,7 +374,7 @@ exports.FormFill = async (req, res) => {
       await sendEmail(
         updatedForm?.teacherID?.email || updatedForm?.userId?.email,
         subject,
-        body
+        body,
       );
     }
 
@@ -401,30 +401,30 @@ The Admin Team
       await sendEmail(
         updatedForm?.coordinatorID?.email || updatedForm?.userId?.email,
         subject,
-        body
+        body,
       );
       await notifications.save();
     }
 
     const userId = updatedForm?.userId?._id;
     const teacherId = updatedForm?.teacherID?._id;
-    
-    
+
     const updateOrCreateActivity = async (userId, message) => {
       if (!userId) {
         console.log("No userId found, skipping activity creation.");
         return;
       }
-    
+
       try {
-    
         const existingActivity = await activity.findOne({
-          userId, 
+          userId,
           "form1.router": `fortnightly-monitor/create/${updatedForm?._id}`,
         });
-    
+
         if (existingActivity && existingActivity.form1.message === message) {
-          console.log(`⚠️ Activity with the same message already exists for User ID: ${userId}. Skipping.`);
+          console.log(
+            `⚠️ Activity with the same message already exists for User ID: ${userId}. Skipping.`,
+          );
         } else {
           await activity.create({
             userId,
@@ -443,13 +443,13 @@ The Admin Team
       if (updatedForm?.isCoordinatorComplete) {
         await updateOrCreateActivity(
           userId,
-          "Observer has completed the form. Please review."
+          "Observer has completed the form. Please review.",
         );
       }
       if (updatedForm?.isTeacherComplete) {
         await updateOrCreateActivity(
           teacherId,
-          "Teacher has completed the form. Please review."
+          "Teacher has completed the form. Please review.",
         );
       }
     })();
@@ -509,6 +509,7 @@ exports.GetFormOneAdmin = async (req, res) => {
 
   try {
     const GetAllForms = await Form1.find()
+      .sort({ createdAt: -1 })
       .populate({
         path: "teacherID",
         select: "-password -mobile -employeeId -customId",

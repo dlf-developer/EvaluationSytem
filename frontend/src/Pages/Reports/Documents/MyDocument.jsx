@@ -12,6 +12,11 @@ import Logo from "../Imgs/Logo.png";
 import LogoBanner from "../Imgs/image.png";
 import { getAllTimes } from "../../../Utils/auth";
 import AnswerComp from "./AnswerComp";
+import {
+  questions,
+  questionsOld,
+  cutoffDate,
+} from "../../../Components/normalData";
 
 // Font.register({
 //   family: "PT Serif",
@@ -75,43 +80,13 @@ const styles = StyleSheet.create({
     fontFamily: "Open Sans",
     fontSize: 11,
   },
-  testCenter:{
-    textAlign:"center"
-  }
+  testCenter: {
+    textAlign: "center",
+  },
 });
-const Questions = [
-  "Class Cleanliness",
-  "News Update",
-  "Smiley Chart",
-  "Mission English Chart",
-  "Transport Corner",
-  "General Discipline",
-  "Lunch Etiquettes",
-  "Birthday Chart",
-  "Unit Syllabus Chart",
-  "Uniform-Tie, Belt, Shoes, I.Card",
-  "Class Pass",
-  "Class/Teacher's Time Table",
-  "Participation Chart",
-  "Co-scholastic Activity Chart (PA, PE, CA)",
-  "Goodwill Piggy Bank",
-  "Thursday Special",
-  "Homework Register / AQAD Register",
-  "Is there a Group on Duty",
-  "Is there weekly Rotation of Student",
-  "Anecdotal Register",
-  "Supplementary Reading Record",
-  "Think Zone",
-  "Digital citizenship rules",
-  "Meditation",
-  "Total Score",
-  "Outof",
- 
-];
 
 // Create Document Component
 const MyDocument = ({ data }) => {
-
   return (
     <Document>
       <Page size="A4" style={styles.page}>
@@ -130,11 +105,10 @@ const MyDocument = ({ data }) => {
                 { padding: 0, margin: 0, width: "70%" },
               ]}
             >
-
-            <View
+              <View
                 style={[
                   styles.Question,
-                   {
+                  {
                     padding: 5,
                     paddingBottom: 3,
                     paddingTop: 3,
@@ -142,10 +116,8 @@ const MyDocument = ({ data }) => {
                   },
                 ]}
               >
-                <Text style={{textAlign:"center"}} >Questions</Text>
+                <Text style={{ textAlign: "center" }}>Questions</Text>
               </View>
-
-
 
               <View
                 style={[
@@ -174,31 +146,26 @@ const MyDocument = ({ data }) => {
                 <Text>Date</Text>
               </View>
 
-              {Questions.map((item, index) => (
-                <View
-                  key={index}
-                  style={[
-                    styles.Question,
-                    {
-                      padding: 5,
-                      paddingBottom: 3,
-                      paddingTop: 3,
-                      borderBottomWidth: index === Questions.length - 1 ? 0 : 1, // Remove border for the last item
-                    },
-                  ]}
-                >
-                  <Text>{item}</Text>
-                </View>
-              ))}
-            </View>
+              {(data?.createdAt < cutoffDate ? questionsOld : questions).map(
+                (item, index) => (
+                  <View
+                    key={index}
+                    style={[
+                      styles.Question,
+                      {
+                        padding: 5,
+                        paddingBottom: 3,
+                        paddingTop: 3,
+                        borderBottomWidth: 1,
+                      },
+                    ]}
+                  >
+                    <Text>{item.name}</Text>
+                  </View>
+                ),
+              )}
 
-            <View
-              style={[
-                styles.constiner,
-                { padding: 0, margin: 0, borderLeftWidth: 0, width: "20%" },
-              ]}
-            >
-               <View
+              <View
                 style={[
                   styles.Question,
                   {
@@ -209,11 +176,45 @@ const MyDocument = ({ data }) => {
                   },
                 ]}
               >
-                <Text style={{textAlign:"center"}}>Teacher</Text>
+                <Text>Total Score</Text>
               </View>
 
+              <View
+                style={[
+                  styles.Question,
+                  {
+                    padding: 5,
+                    paddingBottom: 3,
+                    paddingTop: 3,
+                    borderBottomWidth: 0,
+                  },
+                ]}
+              >
+                <Text>Out of</Text>
+              </View>
+            </View>
 
-              <AnswerComp data={data} type={"teacherForm"}/>
+            <View
+              style={[
+                styles.constiner,
+                { padding: 0, margin: 0, borderLeftWidth: 0, width: "20%" },
+              ]}
+            >
+              <View
+                style={[
+                  styles.Question,
+                  {
+                    padding: 5,
+                    paddingBottom: 3,
+                    paddingTop: 3,
+                    borderBottomWidth: 1,
+                  },
+                ]}
+              >
+                <Text style={{ textAlign: "center" }}>Teacher</Text>
+              </View>
+
+              <AnswerComp data={data} type={"teacherForm"} />
             </View>
 
             {/* Section 3 */}
@@ -223,7 +224,7 @@ const MyDocument = ({ data }) => {
                 { padding: 0, margin: 0, borderLeftWidth: 0, width: "20%" },
               ]}
             >
-               <View
+              <View
                 style={[
                   styles.Question,
                   {
@@ -234,12 +235,10 @@ const MyDocument = ({ data }) => {
                   },
                 ]}
               >
-                <Text style={{textAlign:"center"}}>Observer</Text>
+                <Text style={{ textAlign: "center" }}>Observer</Text>
               </View>
 
-
-            <AnswerComp data={data} type={"observerForm"}/>
-
+              <AnswerComp data={data} type={"observerForm"} />
             </View>
           </View>
         </View>
