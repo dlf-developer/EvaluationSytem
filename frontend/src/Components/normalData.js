@@ -469,4 +469,4 @@ export const questionsOld2 = [
   { name: "Meditation", key: "meditation" },
 ];
 
-export const cutoffDate = "2026-05-02T12:11:04.388Z";
+export const cutoffDate = "2026-03-05T12:11:04.388Z";

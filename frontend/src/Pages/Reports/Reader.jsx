@@ -63,7 +63,9 @@ function Reader() {
   };
 
   const currentQuestions =
-    GetSingleForms?.createdAt < cutoffDate ? questionsOld : questions;
+    new Date(GetSingleForms?.createdAt) < new Date(cutoffDate)
+      ? questionsOld
+      : questions;
 
   let questionsAll = [...(currentQuestions || [])];
   const newItems = [

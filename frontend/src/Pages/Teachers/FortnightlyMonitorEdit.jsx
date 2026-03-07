@@ -44,6 +44,19 @@ function FortnightlyMonitorEdit({ flag }) {
   const ObserverList = useSelector((state) => state.user.GetObserverLists);
   const [totalCount, setTotalCount] = useState(0);
   const [selfAssessCount, setSelfAssessCount] = useState();
+  const [currentQuestions, setCurrentQuestions] = useState([]);
+
+  useEffect(() => {
+    if (formDetails?.createdAt) {
+      if (new Date(formDetails.createdAt) < new Date(cutoffDate)) {
+        setCurrentQuestions(questionsOld);
+      } else {
+        setCurrentQuestions(questions);
+      }
+    } else {
+      setCurrentQuestions(questions);
+    }
+  }, [formDetails]);
 
   const yesNoNAOptions = ["Yes", "No", "Sometimes", "N/A"];
   const flagType = flag || "Teacher";
@@ -101,9 +114,6 @@ function FortnightlyMonitorEdit({ flag }) {
   const calculateScore = () => {
     const values = form.getFieldsValue();
     let score = 0;
-
-    const currentQuestions =
-      formDetails?.createdAt < cutoffDate ? questionsOld : questions;
 
     currentQuestions.forEach((key) => {
       const answer = values[key?.key];
@@ -209,10 +219,8 @@ function FortnightlyMonitorEdit({ flag }) {
 
                   <div className="questions-section">
                     <h3 className="section-title">Evaluation Questions</h3>
-                    {(formDetails?.createdAt < cutoffDate
-                      ? questionsOld
-                      : questions
-                    )?.map((field, index) => {
+
+                    {currentQuestions?.map((field, index) => {
                       return (
                         <div className="question-card" key={field?.key}>
                           <Form.Item
@@ -284,59 +292,27 @@ function FortnightlyMonitorEdit({ flag }) {
                         <div className="response-section">
                           {console.log(formDetails, "kskskskks")}
                           <h3 className="section-title">Current Response</h3>
-                          {formDetails.createdAt < cutoffDate
-                            ? questionsOld?.map((item, index) => {
-                                const answer =
-                                  flagType === "Teacher"
-                                    ? formDetails?.teacherForm[item?.key]
-                                    : formDetails?.observerForm[item?.key];
+                          {currentQuestions?.map((item, index) => {
+                            const answer =
+                              flagType === "Teacher"
+                                ? formDetails?.teacherForm[item?.key]
+                                : formDetails?.observerForm[item?.key];
 
-                                return (
-                                  <div
-                                    className="response-card"
-                                    key={index + 1}
-                                  >
-                                    <div className="response-question">
-                                      {item?.name
-                                        .replace(/([A-Z])/g, " $1")
-                                        .replace(/^./, (str) =>
-                                          str.toUpperCase(),
-                                        )}
-                                    </div>
-                                    <div
-                                      className={`response-badge badge-${answer?.toLowerCase()}`}
-                                    >
-                                      {answer}
-                                    </div>
-                                  </div>
-                                );
-                              })
-                            : questions?.map((item, index) => {
-                                const answer =
-                                  flagType === "Teacher"
-                                    ? formDetails?.teacherForm[item?.key]
-                                    : formDetails?.observerForm[item?.key];
-
-                                return (
-                                  <div
-                                    className="response-card"
-                                    key={index + 1}
-                                  >
-                                    <div className="response-question">
-                                      {item?.name
-                                        .replace(/([A-Z])/g, " $1")
-                                        .replace(/^./, (str) =>
-                                          str.toUpperCase(),
-                                        )}
-                                    </div>
-                                    <div
-                                      className={`response-badge badge-${answer?.toLowerCase()}`}
-                                    >
-                                      {answer}
-                                    </div>
-                                  </div>
-                                );
-                              })}
+                            return (
+                              <div className="response-card" key={index + 1}>
+                                <div className="response-question">
+                                  {item?.name
+                                    .replace(/([A-Z])/g, " $1")
+                                    .replace(/^./, (str) => str.toUpperCase())}
+                                </div>
+                                <div
+                                  className={`response-badge badge-${answer?.toLowerCase()}`}
+                                >
+                                  {answer}
+                                </div>
+                              </div>
+                            );
+                          })}
 
                           <div className="score-card">
                             <div className="score-label">Self Assessment</div>

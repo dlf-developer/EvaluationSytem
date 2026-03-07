@@ -100,11 +100,12 @@ function AnswerComp({ data, type }) {
         </Text>
       </View>
 
-      {(data?.createdAt < cutoffDate ? questionsOld : questions).map(
-        (field, index) => (
-          <View key={index}>{renderField(field?.key)}</View>
-        ),
-      )}
+      {(new Date(data?.createdAt) < new Date(cutoffDate)
+        ? questionsOld
+        : questions
+      ).map((field, index) => (
+        <View key={index}>{renderField(field?.key)}</View>
+      ))}
 
       <View
         style={[

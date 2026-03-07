@@ -146,24 +146,25 @@ const MyDocument = ({ data }) => {
                 <Text>Date</Text>
               </View>
 
-              {(data?.createdAt < cutoffDate ? questionsOld : questions).map(
-                (item, index) => (
-                  <View
-                    key={index}
-                    style={[
-                      styles.Question,
-                      {
-                        padding: 5,
-                        paddingBottom: 3,
-                        paddingTop: 3,
-                        borderBottomWidth: 1,
-                      },
-                    ]}
-                  >
-                    <Text>{item.name}</Text>
-                  </View>
-                ),
-              )}
+              {(new Date(data?.createdAt) < new Date(cutoffDate)
+                ? questionsOld
+                : questions
+              ).map((item, index) => (
+                <View
+                  key={index}
+                  style={[
+                    styles.Question,
+                    {
+                      padding: 5,
+                      paddingBottom: 3,
+                      paddingTop: 3,
+                      borderBottomWidth: 1,
+                    },
+                  ]}
+                >
+                  <Text>{item.name}</Text>
+                </View>
+              ))}
 
               <View
                 style={[

@@ -44,6 +44,19 @@ function OB_FortnightlyMonitorEdit() {
   const ObserverList = useSelector((state) => state.user.GetObserverLists);
   const [totalCount, setTotalCount] = useState(0);
   const [selfAssessCount, setSelfAssessCount] = useState();
+  const [currentQuestions, setCurrentQuestions] = useState([]);
+
+  useEffect(() => {
+    if (formDetails?.createdAt) {
+      if (new Date(formDetails.createdAt) < new Date(cutoffDate)) {
+        setCurrentQuestions(questionsOld);
+      } else {
+        setCurrentQuestions(questions);
+      }
+    } else {
+      setCurrentQuestions(questions);
+    }
+  }, [formDetails]);
 
   const yesNoNAOptions = ["Yes", "No", "Sometimes", "N/A"];
 
@@ -94,9 +107,6 @@ function OB_FortnightlyMonitorEdit() {
   const calculateScore = () => {
     const values = form.getFieldsValue();
     let score = 0;
-
-    const currentQuestions =
-      formDetails?.createdAt < cutoffDate ? questionsOld : questions;
 
     currentQuestions.forEach((key) => {
       const answer = values[key?.key];
@@ -167,10 +177,7 @@ function OB_FortnightlyMonitorEdit() {
                     </div>
                   </>
                 )}
-                {(formDetails?.createdAt < cutoffDate
-                  ? questionsOld
-                  : questions
-                ).map((field, index) => {
+                {currentQuestions?.map((field, index) => {
                   return (
                     <div
                       className="mb-3 border p-3 rounded shadow-sm"
@@ -221,10 +228,7 @@ function OB_FortnightlyMonitorEdit() {
                   {GetUserAccess === UserRole[1] &&
                     formDetails?.isTeacherComplete && (
                       <>
-                        {(formDetails?.createdAt < cutoffDate
-                          ? questionsOld
-                          : questions
-                        ).map((item, index) => {
+                        {currentQuestions?.map((item, index) => {
                           return (
                             <React.Fragment key={index + 1}>
                               <div className="mb-3 border p-3 rounded ">

@@ -121,6 +121,19 @@ const Details = () => {
 
   const [totalCount, setTotalCount] = useState(0);
   const [totalCountMein, setTotalCountMein] = useState(0);
+  const [currentQuestions, setCurrentQuestions] = useState([]);
+
+  useEffect(() => {
+    if (formDetails?.createdAt) {
+      if (new Date(formDetails.createdAt) < new Date(cutoffDate)) {
+        setCurrentQuestions(questionsOld);
+      } else {
+        setCurrentQuestions(questions);
+      }
+    } else {
+      setCurrentQuestions(questions);
+    }
+  }, [formDetails]);
   const type = "teacherForm";
 
   useEffect(() => {
@@ -246,9 +259,6 @@ const Details = () => {
   const calculateScore = () => {
     const values = form.getFieldsValue();
     let score = 0;
-
-    const currentQuestions =
-      formDetails?.createdAt < cutoffDate ? questionsOld : questions;
 
     currentQuestions.forEach((key) => {
       const answer = values[key?.key];
@@ -474,10 +484,8 @@ const Details = () => {
 
                   <div className="questions-section">
                     <h3 className="section-title">Evaluation Questions</h3>
-                    {(formDetails?.createdAt < cutoffDate
-                      ? questionsOld
-                      : questions
-                    )?.map((field, index) => {
+
+                    {currentQuestions?.map((field, index) => {
                       return (
                         <div className="question-card" key={field?.key}>
                           <Form.Item
@@ -538,45 +546,23 @@ const Details = () => {
                     formDetails?.isTeacherComplete && (
                       <div className="response-section">
                         <h3 className="section-title">Teacher Response</h3>
-                        {formDetails.createdAt < cutoffDate
-                          ? questionsOld?.map((item, index) => {
-                              const answer = formDetails?.teacherForm[item.key];
-                              return (
-                                <div className="response-card" key={index + 1}>
-                                  <div className="response-question">
-                                    {item?.name
-                                      .replace(/([A-Z])/g, " $1")
-                                      .replace(/^./, (str) =>
-                                        str.toUpperCase(),
-                                      )}
-                                  </div>
-                                  <div
-                                    className={`response-badge badge-${answer?.toLowerCase()}`}
-                                  >
-                                    {answer}
-                                  </div>
-                                </div>
-                              );
-                            })
-                          : questions?.map((item, index) => {
-                              const answer = formDetails?.teacherForm[item.key];
-                              return (
-                                <div className="response-card" key={index + 1}>
-                                  <div className="response-question">
-                                    {item?.name
-                                      .replace(/([A-Z])/g, " $1")
-                                      .replace(/^./, (str) =>
-                                        str.toUpperCase(),
-                                      )}
-                                  </div>
-                                  <div
-                                    className={`response-badge badge-${answer?.toLowerCase()}`}
-                                  >
-                                    {answer}
-                                  </div>
-                                </div>
-                              );
-                            })}
+                        {currentQuestions?.map((item, index) => {
+                          const answer = formDetails?.teacherForm[item.key];
+                          return (
+                            <div className="response-card" key={index + 1}>
+                              <div className="response-question">
+                                {item?.name
+                                  .replace(/([A-Z])/g, " $1")
+                                  .replace(/^./, (str) => str.toUpperCase())}
+                              </div>
+                              <div
+                                className={`response-badge badge-${answer?.toLowerCase()}`}
+                              >
+                                {answer}
+                              </div>
+                            </div>
+                          );
+                        })}
 
                         <div className="score-card">
                           <div className="score-label">Self Assessment</div>
