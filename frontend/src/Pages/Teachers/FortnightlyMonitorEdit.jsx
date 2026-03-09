@@ -26,6 +26,7 @@ import {
   questionsOld,
   cutoffDate,
 } from "../../Components/normalData";
+import { calculateScorenew } from "../../Utils/calculateScore";
 
 function FortnightlyMonitorEdit({ flag }) {
   const [form] = Form.useForm();
@@ -80,17 +81,10 @@ function FortnightlyMonitorEdit({ flag }) {
   useEffect(() => {
     if (!formDetails || !formDetails[type]) return;
 
-    const validValues2 = ["Yes", "Sometimes"];
-    const Assesscount = Object.values(formDetails[type]).filter((value) =>
-      validValues2.includes(value),
-    ).length;
-    setSelfAssessCount(Assesscount);
-    const validValues = ["Yes", "No", "Sometimes"]; // Include these values
-    const count = Object.values(formDetails[type]).filter((value) =>
-      validValues.includes(value),
-    ).length;
-    setTotalCount(count);
-  }, [formDetails, type]);
+    const result = calculateScorenew(formDetails[type], currentQuestions);
+    setSelfAssessCount(result.score);
+    setTotalCount(result.total);
+  }, [formDetails, type, currentQuestions]);
 
   const onFinish = async (value) => {
     const payload = {
@@ -113,20 +107,10 @@ function FortnightlyMonitorEdit({ flag }) {
   // Calculate self-assessment score
   const calculateScore = () => {
     const values = form.getFieldsValue();
-    let score = 0;
+    const result = calculateScorenew(values, currentQuestions);
 
-    currentQuestions.forEach((key) => {
-      const answer = values[key?.key];
-      if (answer === "Yes")
-        score += 1; // Add 1 for "Yes"
-      else if (answer === "No")
-        score += 0; // No points for "No"
-      else if (answer === "Sometimes") score += 0.5; // Add 0.5 for "0.5"
-      // Ignore "N/A" (or any undefined answer)
-    });
-
-    setSelfAssessmentScore(score);
-    form.setFieldsValue({ selfEvaluationScore: score }); // Update hidden field
+    setSelfAssessmentScore(result.score);
+    form.setFieldsValue({ selfEvaluationScore: result.score }); // Update hidden field
   };
   return (
     <div className="modern-form-container">

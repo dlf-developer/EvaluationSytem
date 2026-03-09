@@ -35,6 +35,7 @@ import {
   questionsOld,
   cutoffDate,
 } from "../../../Components/normalData";
+import { calculateScorenew } from "../../../Utils/calculateScore";
 import { CreateActivityApi } from "../../../redux/Activity/activitySlice";
 import "../../../App.css"; // Import the custom CSS
 
@@ -85,27 +86,38 @@ const Details = () => {
       .then((response) => {
         setFormDetails(response?.payload);
         setIsLoading(false);
-        const { className, date, section } = response.payload;
-        if (!className || !date || !section) {
+        const {
+          className,
+          date,
+          section,
+          isObserverInitiation,
+          isTeacherComplete,
+          isCoordinatorComplete,
+        } = response.payload;
+
+        const needsTeacherToFillClassInfo =
+          isObserverInitiation &&
+          !isTeacherComplete &&
+          GetUserAccess === UserRole[2];
+
+        if (!className || !date || !section || needsTeacherToFillClassInfo) {
           dispatch(GetObserverList());
-          setBetaLoading(!className || !date || !section);
-          message.success("Fill All the data!");
-        } else if (
-          response?.payload?.isCoordinatorComplete &&
-          response?.payload?.isTeacherComplete
-        ) {
+          setBetaLoading(true);
+          if (needsTeacherToFillClassInfo) {
+            form.setFieldsValue({
+              className: className || undefined,
+              section: section || undefined,
+            });
+          } else {
+            message.success("Fill All the data!");
+          }
+        } else if (isCoordinatorComplete && isTeacherComplete) {
           message.success("Form is already submitted!");
           navigate(`/fortnightly-monitor/report/${Id}`);
-        } else if (
-          GetUserAccess === UserRole[1] &&
-          response?.payload?.isCoordinatorComplete
-        ) {
+        } else if (GetUserAccess === UserRole[1] && isCoordinatorComplete) {
           message.success("Form is already submitted!");
           navigate(`/fortnightly-monitor/report/${Id}`);
-        } else if (
-          GetUserAccess === UserRole[2] &&
-          response?.payload?.isTeacherComplete
-        ) {
+        } else if (GetUserAccess === UserRole[2] && isTeacherComplete) {
           message.success("Form is already submitted!");
           navigate(`/fortnightly-monitor/report/${Id}`);
         }
@@ -181,9 +193,9 @@ const Details = () => {
       if (formDetails.isObserverInitiation) {
         payload.data = {
           ...payload.data,
-          className: values?.className,
+          className: values?.className || formDetails?.className,
           date: values?.date,
-          Section: values?.section,
+          Section: values?.section || formDetails?.section,
         };
       }
     } else {
@@ -258,48 +270,22 @@ const Details = () => {
   // Calculate self-assessment score
   const calculateScore = () => {
     const values = form.getFieldsValue();
-    let score = 0;
+    const result = calculateScorenew(values, currentQuestions);
 
-    currentQuestions.forEach((key) => {
-      const answer = values[key?.key];
-      if (answer === "Yes")
-        score += 1; // Add 1 for "Yes"
-      else if (answer === "No")
-        score += 0; // No points for "No"
-      else if (answer === "Sometimes") score += 0.5; // Add 0.5 for "0.5"
-      // Ignore "N/A" (or any undefined answer)
-    });
-    setSelfAssessmentScore(score);
-    getTotalScorevalu(values);
-  };
-
-  const getTotalScorevalu = (formValue) => {
-    const validValues = ["Yes", "No", "Sometimes"]; // Include these values
-    const count = Object.values(formValue).filter((value) =>
-      validValues.includes(value),
-    ).length;
-    setTotalCountMein(count);
+    setSelfAssessmentScore(result.score);
+    setTotalCountMein(result.total);
   };
 
   const getTotalScore = (type) => {
     if (!formDetails) return 0;
-
-    // Count "Yes", "Sometimes", and "No" as 1
-    const validValues = ["Yes", "Sometimes", "No"];
-    const scores = Object.values(formDetails[type]).reduce((sum, value) => {
-      return sum + (validValues.includes(value) ? 1 : 0); // Add 1 if value matches
-    }, 0);
-
-    return scores; // Return total score
+    const result = calculateScorenew(formDetails[type], currentQuestions);
+    return result.total;
   };
 
   const getSelfAssemnetScrore = (type) => {
     if (!formDetails) return 0;
-    const validValues = { Yes: 1, Sometimes: 0.5 };
-    const scores = Object.values(formDetails[type]).reduce((sum, value) => {
-      return sum + (validValues[value] || 0); // Add score if value matches, otherwise add 0
-    }, 0);
-    return scores;
+    const result = calculateScorenew(formDetails[type], currentQuestions);
+    return result.score;
   };
 
   const disableFutureDates = (current) => {
@@ -371,6 +357,11 @@ const Details = () => {
                               showSearch
                               placeholder="Select a class"
                               size="large"
+                              disabled={
+                                !!formDetails?.className &&
+                                formDetails?.isObserverInitiation &&
+                                GetUserAccess === UserRole[2]
+                              }
                               onChange={(value) => SectionSubject(value)}
                               options={
                                 newData &&
@@ -406,12 +397,19 @@ const Details = () => {
                               showSearch
                               placeholder="Select a section"
                               size="large"
-                              options={sectionState?.sections?.map((item) => ({
-                                key: item._id,
-                                id: item._id,
-                                value: item.name,
-                                label: item.name,
-                              }))}
+                              disabled={
+                                !!formDetails?.section &&
+                                formDetails?.isObserverInitiation &&
+                                GetUserAccess === UserRole[2]
+                              }
+                              options={
+                                sectionState?.sections?.map((item) => ({
+                                  key: item._id,
+                                  id: item._id,
+                                  value: item.name,
+                                  label: item.name,
+                                })) || []
+                              }
                               filterOption={(input, option) =>
                                 option.label
                                   .toLowerCase()

@@ -126,11 +126,18 @@ exports.createForm = async (req, res) => {
 
 // jab observer form 1 ko init karata hai tab ye function kam karta hai
 exports.FormInitiation = async (req, res) => {
-  const { isTeacher, teacherIDs } = req.body;
+  const { isTeacher, teacherIDs, className, section } = req.body;
   const userId = req?.user?.id;
   const userIdName = req?.user?.name;
   let FormData;
   try {
+    const mongoose = require("mongoose");
+    let finalClassName = className;
+    if (className && mongoose.Types.ObjectId.isValid(className)) {
+      const classData = await ClassDetails.findById(className);
+      if (classData) finalClassName = classData.className;
+    }
+
     if (isTeacher && Array.isArray(teacherIDs) && teacherIDs.length > 0) {
       const teacherForms = await Promise.all(
         teacherIDs.map(async (item) => {
@@ -144,6 +151,8 @@ exports.FormInitiation = async (req, res) => {
               teacherForm: {},
               teacherID: teacher?._id,
               date: new Date(),
+              className: finalClassName,
+              section,
             });
 
             // Save the form
@@ -309,7 +318,11 @@ exports.FormFill = async (req, res) => {
       Section,
     } = req.body;
 
-    const FindClass = await ClassDetails.findById(className);
+    const mongoose = require("mongoose");
+    let FindClass = null;
+    if (mongoose.Types.ObjectId.isValid(className)) {
+      FindClass = await ClassDetails.findById(className);
+    }
 
     // if (!isCoordinatorComplete && !isTeacherComplete && !data?.isObserverInitiation && (!className || !date || !Section)) {
     //   res.status(400).json({

@@ -1,8 +1,8 @@
-import React from 'react';
-import { Button } from 'antd';
-import { Link } from 'react-router-dom';
-import { UserRole } from '../../config/config';
-import { getUserId } from '../../Utils/auth';
+import React from "react";
+import { Button } from "antd";
+import { Link } from "react-router-dom";
+import { UserRole } from "../../config/config";
+import { getUserId } from "../../Utils/auth";
 const Role = getUserId()?.access;
 
 export const FormOne_Columns = [
@@ -11,16 +11,26 @@ export const FormOne_Columns = [
     dataIndex: "coordinatorID",
     key: "coordinatorID",
     width: "160px",
-    sorter: (a, b) => (a.coordinatorID?.name || b?.userId?.name || "").localeCompare(b.coordinatorID?.name || b?.userId?.name || ""),
-    render: (coordinator, record) => <span>{coordinator?.name || record?.userId?.name || "N/A"}</span>,
+    sorter: (a, b) =>
+      (a.coordinatorID?.name || b?.userId?.name || "").localeCompare(
+        b.coordinatorID?.name || b?.userId?.name || "",
+      ),
+    render: (coordinator, record) => (
+      <span>{coordinator?.name || record?.userId?.name || "N/A"}</span>
+    ),
   },
   {
     title: "Teacher Name",
     dataIndex: "teacherID",
     key: "teacherID",
     width: "160px",
-    sorter: (a, b) => (a?.name || b?.userId?.name).localeCompare(b.teacherID?.name || b?.userId?.name),
-    render: (user, record) => <span>{user?.name || record?.userId?.name || "N/A"}</span>,
+    sorter: (a, b) =>
+      (a?.name || b?.userId?.name).localeCompare(
+        b.teacherID?.name || b?.userId?.name,
+      ),
+    render: (user, record) => (
+      <span>{user?.name || record?.userId?.name || "N/A"}</span>
+    ),
   },
   {
     title: "Class Name",
@@ -48,7 +58,9 @@ export const FormOne_Columns = [
     key: "date",
     width: "120px",
     sorter: (a, b) => new Date(a.date) - new Date(b.date),
-    render: (date) => <span>{date ? new Date(date).toLocaleDateString() : "N/A"}</span>,
+    render: (date) => (
+      <span>{date ? new Date(date).toLocaleDateString() : "N/A"}</span>
+    ),
   },
 
   {
@@ -64,9 +76,9 @@ export const FormOne_Columns = [
     render: (isComplete) => (
       <span
         style={{
-          color: isComplete ? 'green' : 'red',
-          padding: '2px 6px',
-          borderRadius: '4px'
+          color: isComplete ? "green" : "red",
+          padding: "2px 6px",
+          borderRadius: "4px",
         }}
       >
         {isComplete ? "COMPLETED" : "NOT COMPLETED"}
@@ -86,23 +98,26 @@ export const FormOne_Columns = [
     render: (isComplete) => (
       <span
         style={{
-          color: isComplete ? 'green' : 'red',
-          padding: '2px 6px',
-          borderRadius: '4px'
+          color: isComplete ? "green" : "red",
+          padding: "2px 6px",
+          borderRadius: "4px",
         }}
       >
         {isComplete ? "COMPLETED" : "NOT COMPLETED"}
       </span>
     ),
   },
-   {
+  {
     title: "Teacher Score",
     dataIndex: "teacherScore",
     key: "teacherScore",
     width: "160px",
     sorter: (a, b) => a.teacherScore - b.teacherScore,
-    render: (teacherScore) => <span>{teacherScore ? teacherScore : "N/A"}</span>,
-  
+    render: (teacherScore, record) => (
+      <span>
+        {teacherScore ? `${teacherScore} / ${record.teacherTotal}` : "N/A"}
+      </span>
+    ),
   },
   {
     title: "Observer Score",
@@ -110,7 +125,11 @@ export const FormOne_Columns = [
     key: "observerScore",
     width: "160px",
     sorter: (a, b) => a.observerScore - b.observerScore,
-    render: (observerScore) => <span>{observerScore ? observerScore : "N/A"}</span>,
+    render: (observerScore, record) => (
+      <span>
+        {observerScore ? `${observerScore} / ${record.observerTotal}` : "N/A"}
+      </span>
+    ),
   },
   {
     title: "Action",
@@ -118,12 +137,8 @@ export const FormOne_Columns = [
     key: "action",
     width: "200px",
     render: (text, record) => (
-      <Link
-        to={`/fortnightly-monitor/report/${record._id}`}
-      >
-        <button
-          className="px-3 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-md text-sm font-medium transition-colors"
-        >
+      <Link to={`/fortnightly-monitor/report/${record._id}`}>
+        <button className="px-3 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-md text-sm font-medium transition-colors">
           View Report
         </button>
       </Link>
@@ -131,34 +146,35 @@ export const FormOne_Columns = [
   },
 ];
 
-
 export const FormOne_Columns2 = [
   {
     title: "Observer Name",
     dataIndex: "createdBy", // Fixed typo from 'grenralDetails' to 'generalDetails'
     key: "createdBy",
-    width: '160px',
+    width: "160px",
     sorter: (a, b) => (a?.name || "").localeCompare(b?.createdBy?.name || ""),
-    render: (text, record) => (
-      <a>
-        {text.name || "N/A"}
-      </a>
-    ),
+    render: (text, record) => <a>{text.name || "N/A"}</a>,
   },
   {
     title: "Teacher Name",
     dataIndex: "grenralDetails",
     key: "grenralDetails",
-    width: '160px',
-    sorter: (a, b) => (a?.NameoftheVisitingTeacher?.name || "").localeCompare(b.grenralDetails?.NameoftheVisitingTeacher?.name || ""),
-    render: (user) => <span>{user?.NameoftheVisitingTeacher?.name || "N/A"}</span>,
+    width: "160px",
+    sorter: (a, b) =>
+      (a?.NameoftheVisitingTeacher?.name || "").localeCompare(
+        b.grenralDetails?.NameoftheVisitingTeacher?.name || "",
+      ),
+    render: (user) => (
+      <span>{user?.NameoftheVisitingTeacher?.name || "N/A"}</span>
+    ),
   },
   {
     title: "Class Name",
     dataIndex: "grenralDetails",
     key: "grenralDetails",
     width: "150px",
-    sorter: (a, b) => (a.className || "").localeCompare(b.grenralDetails?.className || ""),
+    sorter: (a, b) =>
+      (a.className || "").localeCompare(b.grenralDetails?.className || ""),
     onFilter: (value, record) => record.grenralDetails.className === value,
     render: (text) => <span>{text.className || "N/A"}</span>,
   },
@@ -167,7 +183,8 @@ export const FormOne_Columns2 = [
     dataIndex: "grenralDetails",
     key: "grenralDetails",
     width: "100px",
-    sorter: (a, b) => (a.Section || "").localeCompare(b.grenralDetails?.Section || ""),
+    sorter: (a, b) =>
+      (a.Section || "").localeCompare(b.grenralDetails?.Section || ""),
     onFilter: (value, record) => record.grenralDetails.Section === value,
     render: (text) => <span>{text.Section || "N/A"}</span>,
   },
@@ -176,7 +193,8 @@ export const FormOne_Columns2 = [
     dataIndex: "grenralDetails",
     key: "grenralDetails",
     width: "100px",
-    sorter: (a, b) => (a?.Subject || "").localeCompare(b?.grenralDetails?.Subject || ""),
+    sorter: (a, b) =>
+      (a?.Subject || "").localeCompare(b?.grenralDetails?.Subject || ""),
     onFilter: (value, record) => record.grenralDetails?.Subject === value,
     render: (text) => <span>{text.Subject}</span>,
   },
@@ -185,8 +203,14 @@ export const FormOne_Columns2 = [
     dataIndex: "grenralDetails",
     key: "grenralDetails",
     width: "120px",
-    sorter: (a, b) => new Date(a.DateOfObservation) - new Date(b.grenralDetails.DateOfObservation),
-    render: (date) => <span>{date ? new Date(date?.DateOfObservation).toLocaleDateString() : "N/A"}</span>,
+    sorter: (a, b) =>
+      new Date(a.DateOfObservation) -
+      new Date(b.grenralDetails.DateOfObservation),
+    render: (date) => (
+      <span>
+        {date ? new Date(date?.DateOfObservation).toLocaleDateString() : "N/A"}
+      </span>
+    ),
   },
   {
     title: "Total Score",
@@ -194,7 +218,7 @@ export const FormOne_Columns2 = [
     key: "totalScores",
     width: "120px",
     sorter: (a, b) => a.totalScores - b.totalScores,
-    render: (totalScores) => <span>{totalScores ?   totalScores : "N/A"}</span>,
+    render: (totalScores) => <span>{totalScores ? totalScores : "N/A"}</span>,
   },
 
   {
@@ -210,9 +234,9 @@ export const FormOne_Columns2 = [
     render: (isComplete) => (
       <span
         style={{
-          color: isComplete ? 'green' : 'red',
-          padding: '2px 6px',
-          borderRadius: '4px'
+          color: isComplete ? "green" : "red",
+          padding: "2px 6px",
+          borderRadius: "4px",
         }}
       >
         {isComplete ? "COMPLETED" : "NOT COMPLETED"}
@@ -232,9 +256,9 @@ export const FormOne_Columns2 = [
     render: (isComplete) => (
       <span
         style={{
-          color: isComplete ? 'green' : 'red',
-          padding: '2px 6px',
-          borderRadius: '4px'
+          color: isComplete ? "green" : "red",
+          padding: "2px 6px",
+          borderRadius: "4px",
         }}
       >
         {isComplete ? "COMPLETED" : "NOT COMPLETED"}
@@ -247,12 +271,8 @@ export const FormOne_Columns2 = [
     key: "action",
     width: "200px",
     render: (text, record) => (
-      <Link
-        to={`/classroom-walkthrough/report/${record._id}`}
-      >
-        <button
-          className="px-3 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-md text-sm font-medium transition-colors"
-        >
+      <Link to={`/classroom-walkthrough/report/${record._id}`}>
+        <button className="px-3 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-md text-sm font-medium transition-colors">
           View Report
         </button>
       </Link>
@@ -265,24 +285,38 @@ export const FormOne_Columns3 = [
     title: "Observer Name",
     dataIndex: "grenralDetails",
     key: "grenralDetails",
-    width: '160px',
-    sorter: (a, b) => (a?.NameofObserver?.name || b?.createdBy?.name || "").localeCompare(b?.generalDetails?.NameofObserver?.name || b?.createdBy?.name || ""),
-    render: (user, record) => <span>{user?.NameofObserver?.name || record?.generalDetails?.NameofObserver?.name}</span>,
+    width: "160px",
+    sorter: (a, b) =>
+      (a?.NameofObserver?.name || b?.createdBy?.name || "").localeCompare(
+        b?.generalDetails?.NameofObserver?.name || b?.createdBy?.name || "",
+      ),
+    render: (user, record) => (
+      <span>
+        {user?.NameofObserver?.name ||
+          record?.generalDetails?.NameofObserver?.name}
+      </span>
+    ),
   },
   {
     title: "Teacher Name",
     dataIndex: "teacherID",
     key: "teacherID",
-    width: '160px',
-    sorter: (a, b) => (a?.name || b?.createdBy?.name || "").localeCompare(b?.teacherID?.name || b?.createdBy?.name || ""),
-    render: (user, record) => <span>{user?.name || record?.createdBy?.name}</span>,
+    width: "160px",
+    sorter: (a, b) =>
+      (a?.name || b?.createdBy?.name || "").localeCompare(
+        b?.teacherID?.name || b?.createdBy?.name || "",
+      ),
+    render: (user, record) => (
+      <span>{user?.name || record?.createdBy?.name}</span>
+    ),
   },
   {
     title: "Grade",
     dataIndex: "grenralDetails",
     key: "grenralDetails",
     width: "150px",
-    sorter: (a, b) => (a.className || "").localeCompare(b.grenralDetails?.className || ""),
+    sorter: (a, b) =>
+      (a.className || "").localeCompare(b.grenralDetails?.className || ""),
     onFilter: (value, record) => record.grenralDetails.className === value,
     render: (text) => <span>{text.className || "N/A"}</span>,
   },
@@ -291,7 +325,8 @@ export const FormOne_Columns3 = [
     dataIndex: "grenralDetails",
     key: "grenralDetails",
     width: "100px",
-    sorter: (a, b) => (a.Section || "").localeCompare(b.grenralDetails?.Section || ""),
+    sorter: (a, b) =>
+      (a.Section || "").localeCompare(b.grenralDetails?.Section || ""),
     onFilter: (value, record) => record.grenralDetails.Section === value,
     render: (text) => <span>{text.Section || "N/A"}</span>,
   },
@@ -300,7 +335,8 @@ export const FormOne_Columns3 = [
     dataIndex: "grenralDetails",
     key: "grenralDetails",
     width: "100px",
-    sorter: (a, b) => (a.Subject || "").localeCompare(b.grenralDetails?.Subject || ""),
+    sorter: (a, b) =>
+      (a.Subject || "").localeCompare(b.grenralDetails?.Subject || ""),
     onFilter: (value, record) => record.grenralDetails.Subject === value,
     render: (text) => <span>{text.Subject || "N/A"}</span>,
   },
@@ -309,8 +345,14 @@ export const FormOne_Columns3 = [
     dataIndex: "grenralDetails",
     key: "grenralDetails",
     width: "180px",
-    sorter: (a, b) => new Date(a.DateOfObservation) - new Date(b.grenralDetails.DateOfObservation),
-    render: (date) => <span>{date ? new Date(date?.DateOfObservation).toLocaleDateString() : "N/A"}</span>,
+    sorter: (a, b) =>
+      new Date(a.DateOfObservation) -
+      new Date(b.grenralDetails.DateOfObservation),
+    render: (date) => (
+      <span>
+        {date ? new Date(date?.DateOfObservation).toLocaleDateString() : "N/A"}
+      </span>
+    ),
   },
   {
     title: "Teacher Status",
@@ -325,9 +367,9 @@ export const FormOne_Columns3 = [
     render: (isComplete) => (
       <span
         style={{
-          color: isComplete ? 'green' : 'red',
-          padding: '2px 6px',
-          borderRadius: '4px'
+          color: isComplete ? "green" : "red",
+          padding: "2px 6px",
+          borderRadius: "4px",
         }}
       >
         {isComplete ? "COMPLETED" : "NOT COMPLETED"}
@@ -347,9 +389,9 @@ export const FormOne_Columns3 = [
     render: (isComplete) => (
       <span
         style={{
-          color: isComplete ? 'green' : 'red',
-          padding: '2px 6px',
-          borderRadius: '4px'
+          color: isComplete ? "green" : "red",
+          padding: "2px 6px",
+          borderRadius: "4px",
         }}
       >
         {isComplete ? "COMPLETED" : "NOT COMPLETED"}
@@ -369,9 +411,9 @@ export const FormOne_Columns3 = [
     render: (isComplete) => (
       <span
         style={{
-          color: isComplete ? 'green' : 'red',
-          padding: '2px 6px',
-          borderRadius: '4px'
+          color: isComplete ? "green" : "red",
+          padding: "2px 6px",
+          borderRadius: "4px",
         }}
       >
         {isComplete ? "COMPLETED" : "NOT COMPLETED"}
@@ -384,12 +426,8 @@ export const FormOne_Columns3 = [
     key: "action",
     width: "200px",
     render: (text, record) => (
-      <Link
-        to={`/notebook-checking-proforma/report/${record._id}`}
-      >
-        <button
-          className="text-nowrap px-3 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-md text-sm font-medium transition-colors"
-        >
+      <Link to={`/notebook-checking-proforma/report/${record._id}`}>
+        <button className="text-nowrap px-3 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-md text-sm font-medium transition-colors">
           View Report
         </button>
       </Link>
@@ -402,15 +440,18 @@ export const FormOne_Columns4 = [
     title: "Observer Name",
     dataIndex: "isInitiated",
     key: "isInitiated",
-    width: '160px',
-    sorter: (a, b) => (a?.Observer?.name || "").localeCompare(b?.isInitiated?.Observer?.name || ""),
+    width: "160px",
+    sorter: (a, b) =>
+      (a?.Observer?.name || "").localeCompare(
+        b?.isInitiated?.Observer?.name || "",
+      ),
     render: (user) => <span>{user?.Observer?.name || "N/A"}</span>,
   },
   {
     title: "Teacher Name",
     dataIndex: "teacherId",
     key: "teacherId",
-    width: '160px',
+    width: "160px",
     sorter: (a, b) => (a?.name || "").localeCompare(b?.teacherId?.name || ""),
     render: (user) => <span>{user?.name || "N/A"}</span>,
   },
@@ -420,7 +461,9 @@ export const FormOne_Columns4 = [
     key: "dateOfSubmission",
     width: "150px",
     sorter: (a, b) => new Date(a) - new Date(b?.dateOfSubmission),
-    render: (date) => <span>{date ? new Date(date).toLocaleDateString() : "N/A"}</span>,
+    render: (date) => (
+      <span>{date ? new Date(date).toLocaleDateString() : "N/A"}</span>
+    ),
   },
   // {
   //   title: "Date Of Submission",
@@ -443,9 +486,9 @@ export const FormOne_Columns4 = [
     render: (isComplete) => (
       <span
         style={{
-          color: isComplete ? 'green' : 'red',
-          padding: '2px 6px',
-          borderRadius: '4px'
+          color: isComplete ? "green" : "red",
+          padding: "2px 6px",
+          borderRadius: "4px",
         }}
       >
         {isComplete ? "COMPLETED" : "NOT COMPLETED"}
@@ -458,12 +501,8 @@ export const FormOne_Columns4 = [
     key: "action",
     width: "200px",
     render: (text, record) => (
-      <Link
-        to={`/weekly4form/report/${record._id}`}
-      >
-        <button
-          className="px-3 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-md text-sm font-medium transition-colors"
-        >
+      <Link to={`/weekly4form/report/${record._id}`}>
+        <button className="px-3 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-md text-sm font-medium transition-colors">
           View Report
         </button>
       </Link>
