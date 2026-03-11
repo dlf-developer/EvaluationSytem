@@ -60,7 +60,9 @@ function FortnightlyMonitorEdit({ flag }) {
   }, [formDetails]);
 
   const yesNoNAOptions = ["Yes", "No", "Sometimes", "N/A"];
-  const flagType = flag || "Teacher";
+  const role = getUserId()?.access;
+  const flagType = flag || (role === UserRole[1] ? "Teacher" : "Observer");
+  const type = flagType === "Teacher" ? "teacherForm" : "observerForm";
 
   // Fetch form details
   useEffect(() => {
@@ -68,29 +70,27 @@ function FortnightlyMonitorEdit({ flag }) {
 
     dispatch(GetSingleFormsOne(Id))
       .then((response) => {
-        setFormDetails(response?.payload);
+        const data = response?.payload;
+        setFormDetails(data);
+        if (data?.[type]) {
+          form.setFieldsValue(data[type]);
+          const result = calculateScorenew(data[type], currentQuestions);
+          setSelfAssessmentScore(result.score);
+          setTotalCount(result.total);
+        }
         setIsLoading(false);
       })
       .catch(() => {
         message.error("Error fetching form details.");
         setIsLoading(false);
       });
-  }, [Id, navigate, !ObserverID]);
-
-  const type = "teacherForm";
-  useEffect(() => {
-    if (!formDetails || !formDetails[type]) return;
-
-    const result = calculateScorenew(formDetails[type], currentQuestions);
-    setSelfAssessCount(result.score);
-    setTotalCount(result.total);
-  }, [formDetails, type, currentQuestions]);
+  }, [Id, navigate, !ObserverID, currentQuestions]);
 
   const onFinish = async (value) => {
     const payload = {
       id: Id,
       data: {
-        teacherForm: {
+        [type]: {
           ...value,
           OutOf: totalCount,
           totalScore: selfAssessmentScore,
@@ -110,6 +110,7 @@ function FortnightlyMonitorEdit({ flag }) {
     const result = calculateScorenew(values, currentQuestions);
 
     setSelfAssessmentScore(result.score);
+    setTotalCount(result.total);
     form.setFieldsValue({ selfEvaluationScore: result.score }); // Update hidden field
   };
   return (
@@ -302,14 +303,26 @@ function FortnightlyMonitorEdit({ flag }) {
                             <div className="score-label">Self Assessment</div>
                             <div className="score-value">
                               <span className="score-number">
-                                {flagType === "Teacher"
-                                  ? formDetails?.teacherForm
-                                      ?.selfEvaluationScore
-                                  : formDetails?.observerForm
-                                      ?.selfEvaluationScore || "N/A"}
+                                {
+                                  calculateScorenew(
+                                    flagType === "Teacher"
+                                      ? formDetails?.teacherForm
+                                      : formDetails?.observerForm,
+                                    currentQuestions,
+                                  ).score
+                                }
                               </span>
                               <span className="score-divider">/</span>
-                              <span className="score-total">{totalCount}</span>
+                              <span className="score-total">
+                                {
+                                  calculateScorenew(
+                                    flagType === "Teacher"
+                                      ? formDetails?.teacherForm
+                                      : formDetails?.observerForm,
+                                    currentQuestions,
+                                  ).total
+                                }
+                              </span>
                             </div>
                           </div>
                         </div>

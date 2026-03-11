@@ -67,7 +67,14 @@ function OB_FortnightlyMonitorEdit() {
 
     dispatch(GetSingleFormsOne(Id))
       .then((response) => {
-        setFormDetails(response?.payload);
+        const data = response?.payload;
+        setFormDetails(data);
+        if (data?.observerForm) {
+          form.setFieldsValue(data.observerForm);
+          const result = calculateScorenew(data.observerForm, currentQuestions);
+          setSelfAssessmentScore(result.score);
+          setTotalCount(result.total);
+        }
         setIsLoading(false);
       })
       .catch(() => {
@@ -103,6 +110,7 @@ function OB_FortnightlyMonitorEdit() {
     const result = calculateScorenew(values, currentQuestions);
 
     setSelfAssessmentScore(result.score);
+    setTotalCount(result.total);
     form.setFieldsValue({ selfEvaluationScore: result.score }); // Update hidden field
   };
   return (
@@ -252,9 +260,18 @@ function OB_FortnightlyMonitorEdit() {
                             <span>
                               {" "}
                               {
-                                formDetails?.observerForm?.selfEvaluationScore
+                                calculateScorenew(
+                                  formDetails?.teacherForm,
+                                  currentQuestions,
+                                ).score
                               }{" "}
-                              Out of {totalCount}
+                              Out of{" "}
+                              {
+                                calculateScorenew(
+                                  formDetails?.teacherForm,
+                                  currentQuestions,
+                                ).total
+                              }
                             </span>
                           </div>
                         </div>
