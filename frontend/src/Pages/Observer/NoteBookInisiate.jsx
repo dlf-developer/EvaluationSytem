@@ -217,7 +217,7 @@ function NoteBookInisiate() {
           )}
 
           <Button type="primary" htmlType="submit">
-            initiate....
+            initiate
             {/* {loading ? "initiating Form..." : "initiate"} */}
           </Button>
         </Form>

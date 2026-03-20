@@ -45,6 +45,14 @@ const styles = StyleSheet.create({
     paddingTop: 0,
     width: "100%",
   },
+  newBox: {
+    display: "flex",
+    flexDirection: "row",
+    justifyContent: "space-around",
+    alignItems: "center",
+    marginBottom: 10,
+    marginTop: 10,
+  },
   headerSection: {
     flexDirection: "row",
     width: "100%",
@@ -63,7 +71,6 @@ const styles = StyleSheet.create({
   table: {
     width: "100%",
     borderWidth: 1,
-    borderBottomWidth: 0,
     borderRightWidth: 0,
   },
   row: {
@@ -100,8 +107,20 @@ const styles = StyleSheet.create({
 // ── Score helpers ─────────────────────────────────────
 
 // ── Reusable row ──────────────────────────────────────
-const TableRow = ({ label, teacherVal, observerVal, isLast = false }) => (
-  <View style={[styles.row, isLast && { borderBottomWidth: 0 }]}>
+const TableRow = ({
+  label,
+  teacherVal,
+  observerVal,
+  isLast = false,
+  bgColor = "transparent",
+}) => (
+  <View
+    style={[
+      styles.row,
+      { backgroundColor: bgColor },
+      isLast && { borderBottomWidth: 0 },
+    ]}
+  >
     <View style={styles.colQuestion}>
       <Text style={styles.cellTextLeft}>{label}</Text>
     </View>
@@ -163,6 +182,8 @@ const MyDocument = ({ data }) => {
   const classSection = `${className ?? ""}/${data?.section ?? ""}`;
   const formattedDate = getAllTimes(data?.date)?.formattedDate2 ?? "-";
 
+  const teacherName = data?.userId?.name || data?.teacherName || "N/A";
+  const observerName = data?.coordinatorID?.name || data?.observerName || "N/A";
   // Split questions into chunks of 20
   const page1Questions = activeQuestions.slice(0, QUESTIONS_PER_PAGE);
   const page2Questions = activeQuestions.slice(QUESTIONS_PER_PAGE);
@@ -178,6 +199,11 @@ const MyDocument = ({ data }) => {
             pageNum={1}
             totalPages={totalPages}
           />
+          <View style={styles.newBox}>
+            {" "}
+            <Text>Teacher Name :{teacherName}</Text>
+            <Text>Observer Name :{observerName}</Text>
+          </View>
           <View style={styles.table}>
             <ColumnHeaders />
 
@@ -186,11 +212,13 @@ const MyDocument = ({ data }) => {
               label="Class & Section"
               teacherVal={classSection}
               observerVal={classSection}
+              bgColor="rgba(172, 172, 172, 1)"
             />
             <TableRow
               label="Date"
               teacherVal={formattedDate}
               observerVal={formattedDate}
+              bgColor="rgba(172, 172, 172, 1)"
             />
 
             {/* First 20 questions */}
@@ -212,12 +240,14 @@ const MyDocument = ({ data }) => {
                   label="Total Score"
                   teacherVal={String(teacherScores.score)}
                   observerVal={String(observerScores.score)}
+                  bgColor="#f0f0f0"
                 />
                 <TableRow
                   label="Out of"
                   teacherVal={String(teacherScores.total)}
                   observerVal={String(observerScores.total)}
                   isLast
+                  bgColor="#f0f0f0"
                 />
               </>
             )}
@@ -252,12 +282,14 @@ const MyDocument = ({ data }) => {
                 label="Total Score"
                 teacherVal={String(teacherScores.score)}
                 observerVal={String(observerScores.score)}
+                bgColor="#f0f0f0"
               />
               <TableRow
                 label="Out of"
                 teacherVal={String(teacherScores.total)}
                 observerVal={String(observerScores.total)}
                 isLast
+                bgColor="#f0f0f0"
               />
             </View>
           </View>

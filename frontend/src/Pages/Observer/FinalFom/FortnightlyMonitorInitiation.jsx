@@ -290,7 +290,7 @@ function FortnightlyMonitorInitiation() {
           )}
 
           <Button type="primary" htmlType="submit" disabled={loading}>
-            {loading ? "initiating Form..." : "initiate...."}
+            {loading ? "initiating Form..." : "initiate"}
           </Button>
         </Form>
       </Spin>
