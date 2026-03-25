@@ -182,8 +182,8 @@ const MyDocument = ({ data }) => {
   const classSection = `${className ?? ""}/${data?.section ?? ""}`;
   const formattedDate = getAllTimes(data?.date)?.formattedDate2 ?? "-";
 
-  const teacherName = data?.userId?.name || data?.teacherName || "N/A";
-  const observerName = data?.coordinatorID?.name || data?.observerName || "N/A";
+  const teacherName = data?.teacherID?.name || data?.teacherName || "N/A";
+  const observerName = data?.userId?.name || data?.coordinatorID?.name || "N/A";
   // Split questions into chunks of 20
   const page1Questions = activeQuestions.slice(0, QUESTIONS_PER_PAGE);
   const page2Questions = activeQuestions.slice(QUESTIONS_PER_PAGE);
