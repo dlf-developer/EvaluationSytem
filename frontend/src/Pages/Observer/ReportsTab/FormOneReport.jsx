@@ -1,13 +1,12 @@
-import { DatePicker, Select, Table } from 'antd';
-import React, { useEffect, useState } from 'react'
-import { FormOne_Columns } from '../TableColumns';
-import { useDispatch, useSelector } from 'react-redux';
-import { GetAllFormsForAdmin } from '../../../redux/Form/fortnightlySlice';
-import moment from 'moment';
-import { calculateScore } from '../../../Utils/calculateScore';
+import { DatePicker, Select, Table } from "antd";
+import React, { useEffect, useState } from "react";
+import { FormOne_Columns } from "../TableColumns";
+import { useDispatch, useSelector } from "react-redux";
+import { GetAllFormsForAdmin } from "../../../redux/Form/fortnightlySlice";
+import moment from "moment";
+import { calculateScore } from "../../../Utils/calculateScore";
 const { Option } = Select;
 function FormOneReport() {
-
   const dispatch = useDispatch();
   const [filters, setFilters] = useState({
     observer: [],
@@ -22,8 +21,8 @@ function FormOneReport() {
   useEffect(() => {
     dispatch(GetAllFormsForAdmin());
   }, [dispatch]);
-   let data = useSelector((state) => state?.Forms?.getAllAdminForms || []);
-  const CombinedData = calculateScore(data)
+  let data = useSelector((state) => state?.Forms?.getAllAdminForms || []);
+  const CombinedData = calculateScore(data);
 
   // Dynamically get unique values for filters
   const uniqueClasses = [
@@ -31,14 +30,16 @@ function FormOneReport() {
   ];
   const uniqueObservers = [
     ...new Set(
-      CombinedData.map((item) => item.coordinatorID?.name || item.userId?.name).filter(
-        (name) => name
-      )
+      CombinedData.map(
+        (item) => item.coordinatorID?.name || item.userId?.name,
+      ).filter((name) => name),
     ),
   ]; // Ensure only non-falsy names are included
   const uniqueTeachers = [
     ...new Set(
-      CombinedData.map((item) => item?.teacherID?.name || item.userId?.name).filter((name) => name)
+      CombinedData.map(
+        (item) => item?.teacherID?.name || item.userId?.name,
+      ).filter((name) => name),
     ),
   ]; // Ensure only non-falsy names are included
   const uniqueDates = [...new Set(CombinedData.map((item) => item.date))];
@@ -97,12 +98,17 @@ function FormOneReport() {
       (filters.observerStatus.length === 0 ||
         filters.observerStatus.includes(item.isCoordinatorComplete)) &&
       (filters.observer.length === 0 ||
-        filters.observer.some((name) =>
-          item?.coordinatorID?.name?.includes(name) || item?.userId?.name?.includes(name)
-        ))
-      &&
+        filters.observer.some(
+          (name) =>
+            item?.coordinatorID?.name?.includes(name) ||
+            item?.userId?.name?.includes(name),
+        )) &&
       (filters.teacher.length === 0 ||
-        filters.teacher.some((name) => item?.teacherID?.name?.includes(name) || item.userId?.name.includes(name)))
+        filters.teacher.some(
+          (name) =>
+            item?.teacherID?.name?.includes(name) ||
+            item.userId?.name.includes(name),
+        ))
     );
   });
   return (
@@ -214,7 +220,7 @@ function FormOneReport() {
         </div>
         <div className="mb-4 w-35 select-options">
           <DatePicker
-            className='w-full'
+            className="w-full"
             placeholder="Select Date"
             onChange={handleDateChange}
             format="YYYY-MM-DD"
@@ -230,11 +236,11 @@ function FormOneReport() {
         columns={FormOne_Columns}
         dataSource={filteredData}
         pagination={false}
-        scroll={{ y: 70 * 5 }}
+        scroll={{ y: "calc(100vh - 400px)", x: "max-content" }}
         rowKey="_id"
       />
     </div>
-  )
+  );
 }
 
-export default FormOneReport
+export default FormOneReport;

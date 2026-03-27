@@ -10,21 +10,24 @@ import {
   Select,
   Spin,
 } from "antd";
-import { Col, Container, Row } from "react-bootstrap";
+import { Box, Flex, SimpleGrid, Heading, Text, VStack } from "@chakra-ui/react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
 import CommonStepper from "../../../Components/CommonStepper";
-import { getCreateClassSection, GetObserverList } from "../../../redux/userSlice";
+import {
+  getCreateClassSection,
+  GetObserverList,
+} from "../../../redux/userSlice";
 import { BsEmojiFrown, BsEmojiNeutral, BsEmojiSmile } from "react-icons/bs";
-import { CreateNoteBookForm, GetNoteBookForm } from "../../../redux/Form/noteBookSlice";
+import {
+  CreateNoteBookForm,
+  GetNoteBookForm,
+} from "../../../redux/Form/noteBookSlice";
 import { getUserId } from "../../../Utils/auth";
 import { UserRole } from "../../../config/config";
 import { CreateActivityApi } from "../../../redux/Activity/activitySlice";
 
-
-
 const { Option } = Select;
-
 
 const NoteBookDetails = () => {
   const [currStep, setCurrStep] = useState(0);
@@ -34,20 +37,25 @@ const NoteBookDetails = () => {
   const [form] = Form.useForm();
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const FormId = useParams()?.id
+  const FormId = useParams()?.id;
   const { loading, GetObserverLists } = useSelector((state) => state?.user);
   //   const {isLoading,formDataList} = useSelector((state)=>state?.walkThroughForm)
   // Fetch notebook form details
   const fetchNoteBookForm = async () => {
     try {
       const response = await dispatch(GetNoteBookForm(FormId));
-      const { isTeacherComplete, createdBy, isObserverComplete } = response?.payload;
+      const { isTeacherComplete, createdBy, isObserverComplete } =
+        response?.payload;
       const userId = getUserId().id;
       const userAccess = getUserId().access;
 
       if (
-        (isTeacherComplete && createdBy?._id === userId && userAccess === UserRole[2]) ||
-        (isObserverComplete && createdBy?._id === userId && userAccess === UserRole[1])
+        (isTeacherComplete &&
+          createdBy?._id === userId &&
+          userAccess === UserRole[2]) ||
+        (isObserverComplete &&
+          createdBy?._id === userId &&
+          userAccess === UserRole[1])
       ) {
         navigate(`/notebook-checking-proforma/report/${FormId}`);
       } else {
@@ -66,8 +74,8 @@ const NoteBookDetails = () => {
       if (response?.payload?.success) {
         setNewData(
           response?.payload?.classDetails.sort(
-            (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-          )
+            (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
+          ),
         );
       } else {
         message.error("Failed to fetch class data.");
@@ -93,10 +101,7 @@ const NoteBookDetails = () => {
     return current && current.toDate() > today;
   };
 
-  const steps = [
-    { title: "General Details" },
-    { title: "Final" },
-  ];
+  const steps = [{ title: "General Details" }, { title: "Final" }];
 
   const yesNoNAOptions = [
     { value: "1", label: "1" },
@@ -105,22 +110,16 @@ const NoteBookDetails = () => {
     { value: "N/A", label: "N/A" },
   ];
 
-
   const SectionSubject = (value) => {
     if (value) {
       const filteredData = newData.filter((data) => data?._id === value);
       if (filteredData.length > 0) {
         setSectionState(filteredData[0]);
       }
-
     }
 
     return []; // Return an empty array if value is falsy
   };
-
-
-
-
 
   const generalDetailsConfig = useMemo(
     () => [
@@ -167,21 +166,27 @@ const NoteBookDetails = () => {
         })),
       },
       { name: "ClassStrength", label: "Class Strength", type: "input" },
-      { name: "NotebooksSubmitted", label: "Notebooks Submitted", type: "input" },
+      {
+        name: "NotebooksSubmitted",
+        label: "Notebooks Submitted",
+        type: "input",
+      },
       { name: "Absentees", label: "Absentees", type: "input" },
       { name: "Defaulters", label: "Defaulters", type: "input" },
-    ], [GetObserverLists, newData, sectionState]
+    ],
+    [GetObserverLists, newData, sectionState],
   );
 
   const renderFormItem = ({ name, label, type, options, list }) => {
     const inputProps = {
       select: (
-        <Select size="large" placeholder={`Select ${label.toLowerCase()}`} onChange={(value) => SectionSubject(value)}>
+        <Select
+          size="large"
+          placeholder={`Select ${label.toLowerCase()}`}
+          onChange={(value) => SectionSubject(value)}
+        >
           {options?.map((option) => (
-            <Option
-              key={option?.id || option}
-              value={option?.value || option}
-            >
+            <Option key={option?.id || option} value={option?.value || option}>
               {option?.name || option}
             </Option>
           ))}
@@ -218,9 +223,7 @@ const NoteBookDetails = () => {
 
   const renderGeneralDetails = () =>
     generalDetailsConfig.map((item) => (
-      <div key={item.name}>
-        {renderFormItem(item)}
-      </div>
+      <div key={item.name}>{renderFormItem(item)}</div>
     ));
 
   const Questions = {
@@ -306,96 +309,139 @@ const NoteBookDetails = () => {
   };
 
   const renderMaintenanceQuestions = () => (
-    <>
-      <Col md={12}>
-        <h2
-          className="mb-3 px-3 py-3 rounded-3 text-primary"
-          style={{ background: "#f7f7f7" }}
-        >
-          Maintenance Of Notebooks
-        </h2>
-      </Col>
-      {Questions["maintenanceOfNotebooks"].map((question, index) => (
-        <Col md={12} key={`maintenanceOfNotebooks-${index}`}>
-          <Card className="mb-3 shadow-sm">
-            <RadioFormItem
-              name={["maintenanceOfNotebooks", index]}
-              question={question}
-            />
-          </Card>
-        </Col>
-      ))}
-    </>
+    <Box w="100%" mb={8}>
+      <Heading
+        size="md"
+        color="brand.primary"
+        bg="gray.50"
+        p={4}
+        borderRadius="lg"
+        mb={6}
+      >
+        Maintenance Of Notebooks
+      </Heading>
+      <VStack spacing={4} align="stretch">
+        {Questions["maintenanceOfNotebooks"].map((question, index) => (
+          <Box key={`maintenanceOfNotebooks-${index}`}>
+            <Box
+              bg="white"
+              p={6}
+              borderRadius="xl"
+              boxShadow="sm"
+              borderWidth="1px"
+              borderColor="gray.100"
+            >
+              <RadioFormItem
+                name={["maintenanceOfNotebooks", index]}
+                question={question}
+              />
+            </Box>
+          </Box>
+        ))}
+      </VStack>
+    </Box>
   );
 
   const renderQualityOfOppurtunities = () => (
-    <>
-      <Col md={12}>
-        <h2
-          className="mb-3 px-3 py-3 rounded-3 text-primary"
-          style={{ background: "#f7f7f7" }}
-        >
-          Quality Of Oppurtunities
-        </h2>
-      </Col>
-      {Questions["qualityOfOppurtunities"].map((question, index) => (
-        <Col md={12} key={`qualityOfOppurtunities-${index}`}>
-          <Card className="mb-3 shadow-sm">
-            <RadioFormItem
-              name={["qualityOfOppurtunities", index]}
-              question={question}
-            />
-          </Card>
-        </Col>
-      ))}
-    </>
+    <Box w="100%" mb={8}>
+      <Heading
+        size="md"
+        color="brand.primary"
+        bg="gray.50"
+        p={4}
+        borderRadius="lg"
+        mb={6}
+      >
+        Quality Of Oppurtunities
+      </Heading>
+      <VStack spacing={4} align="stretch">
+        {Questions["qualityOfOppurtunities"].map((question, index) => (
+          <Box key={`qualityOfOppurtunities-${index}`}>
+            <Box
+              bg="white"
+              p={6}
+              borderRadius="xl"
+              boxShadow="sm"
+              borderWidth="1px"
+              borderColor="gray.100"
+            >
+              <RadioFormItem
+                name={["qualityOfOppurtunities", index]}
+                question={question}
+              />
+            </Box>
+          </Box>
+        ))}
+      </VStack>
+    </Box>
   );
 
-
   const renderQualityOfTeacherFeedback = () => (
-    <>
-      <Col md={12}>
-        <h2
-          className="mb-3 px-3 py-3 rounded-3 text-primary"
-          style={{ background: "#f7f7f7" }}
-        >
-          Quality Of TeacherFeedback
-        </h2>
-      </Col>
-      {Questions["qualityOfTeacherFeedback"].map((question, index) => (
-        <Col md={12} key={`qualityOfTeacherFeedback-${index}`}>
-          <Card className="mb-3 shadow-sm">
-            <RadioFormItem
-              name={["qualityOfTeacherFeedback", index]}
-              question={question}
-            />
-          </Card>
-        </Col>
-      ))}
-    </>
+    <Box w="100%" mb={8}>
+      <Heading
+        size="md"
+        color="brand.primary"
+        bg="gray.50"
+        p={4}
+        borderRadius="lg"
+        mb={6}
+      >
+        Quality Of TeacherFeedback
+      </Heading>
+      <VStack spacing={4} align="stretch">
+        {Questions["qualityOfTeacherFeedback"].map((question, index) => (
+          <Box key={`qualityOfTeacherFeedback-${index}`}>
+            <Box
+              bg="white"
+              p={6}
+              borderRadius="xl"
+              boxShadow="sm"
+              borderWidth="1px"
+              borderColor="gray.100"
+            >
+              <RadioFormItem
+                name={["qualityOfTeacherFeedback", index]}
+                question={question}
+              />
+            </Box>
+          </Box>
+        ))}
+      </VStack>
+    </Box>
   );
 
   const renderQualityOfLearner = () => (
-    <>
-      <Col md={12}>
-        <h2
-          className="mb-3 px-3 py-3 rounded-3 text-primary"
-          style={{ background: "#f7f7f7" }}
-        >
-          Quality Of Learner
-        </h2>
-      </Col>
-      {Questions["qualityOfLearner"].map((question, index) => (
-        <Col md={12} key={`qualityOfLearner-${index}`}>
-          <Card className="mb-3 shadow-sm">
-            <RadioFormItem
-              name={["qualityOfLearner", index]}
-              question={question}
-            />
-          </Card>
-        </Col>
-      ))}
-    </>
+    <Box w="100%" mb={8}>
+      <Heading
+        size="md"
+        color="brand.primary"
+        bg="gray.50"
+        p={4}
+        borderRadius="lg"
+        mb={6}
+      >
+        Quality Of Learner
+      </Heading>
+      <VStack spacing={4} align="stretch">
+        {Questions["qualityOfLearner"].map((question, index) => (
+          <Box key={`qualityOfLearner-${index}`}>
+            <Box
+              bg="white"
+              p={6}
+              borderRadius="xl"
+              boxShadow="sm"
+              borderWidth="1px"
+              borderColor="gray.100"
+            >
+              <RadioFormItem
+                name={["qualityOfLearner", index]}
+                question={question}
+              />
+            </Box>
+          </Box>
+        ))}
+      </VStack>
+    </Box>
   );
 
   const handleNext = () => {
@@ -426,11 +472,10 @@ const NoteBookDetails = () => {
   };
 
   const handleSubmit = async (finalData) => {
-
-    const data = await dispatch(CreateNoteBookForm(finalData))
+    const data = await dispatch(CreateNoteBookForm(finalData));
     if (data?.payload?.status) {
       message.success(data?.payload?.message);
-      const userInfo = data?.payload?.form?.grenralDetails
+      const userInfo = data?.payload?.form?.grenralDetails;
       const activity = {
         observerMessage: `${getUserId()?.name} has completed the Notebook Checking Proforma Form For ${userInfo?.className} | ${userInfo?.Subject} | ${userInfo?.Section}.`,
         teacherMessage: `You have completed Notebook Checking Proforma Form For ${userInfo?.className} | ${userInfo?.Subject} | ${userInfo?.Section}..`,
@@ -439,7 +484,7 @@ const NoteBookDetails = () => {
         reciverId: userInfo?.NameofObserver,
         senderId: getUserId()?.id,
         fromNo: 3,
-        data: data?.payload?.form
+        data: data?.payload?.form,
       };
 
       const activitiRecord = await dispatch(CreateActivityApi(activity));
@@ -447,12 +492,13 @@ const NoteBookDetails = () => {
         message.error("Error on Activity Record");
       }
 
-      navigate(`/notebook-checking-proforma/report/${data?.payload?.form?._id}`)
+      navigate(
+        `/notebook-checking-proforma/report/${data?.payload?.form?._id}`,
+      );
     } else {
       message.success(data?.payload?.message);
     }
   };
-
 
   const [totalScore, setTotalScore] = useState(0);
   const [numOfParameters, setNumOfParameters] = useState(0);
@@ -462,16 +508,13 @@ const NoteBookDetails = () => {
 
   const validValues = ["1", "2", "3"];
   const calculateSelfAssessmentScore = () => {
-
-
     // // Array of keys to iterate over
     const keyObject = [
-      'maintenanceOfNotebooks',
-      'qualityOfOppurtunities',
-      'qualityOfTeacherFeedback',
-      'qualityOfLearner',
+      "maintenanceOfNotebooks",
+      "qualityOfOppurtunities",
+      "qualityOfTeacherFeedback",
+      "qualityOfLearner",
     ];
-
 
     const formValues = form.getFieldsValue();
     let totalScore = 0; // Total points scored
@@ -526,34 +569,67 @@ const NoteBookDetails = () => {
       Grade: grade,
       NumberofParametersNotApplicable: numOfParametersNA, // Add the N/A count
     });
-
-
   };
   const getPercentafe = (get, from) => {
-    const numberVal = get / from * 100;
-    return numberVal || '0'
-  }
+    const numberVal = (get / from) * 100;
+    return numberVal || "0";
+  };
 
   return (
-    <div className="container">
-      <Row className="flex-column">
-        <Col md={12} className="sticky-stepper z-0">
-          <div className="sticky-top bg-white w-100 p-3">
-            <CommonStepper currentStep={currStep} steps={steps} />
-          </div>
-        </Col>
-        <Col md={12} className="scrollable-form position-relative">
-          {loading && <div className="LoaderWrapper" >
-            <Spin size="large" className="position-absolute" />
-          </div>}
-          <Form form={form} layout="vertical" className="w-100" onValuesChange={(changedValues, allValues) => {
-            calculateSelfAssessmentScore(allValues); // Trigger the calculation
-          }} >
-            <Container className="mt-5">
-              <Row className="justify-content-start  align-items-start">
-                <Col md={6} className="overflow-auto" style={{ height: "80vh" }}>
+    <Box p={{ base: 4, md: 8 }} minH="80vh" bg="transparent">
+      <Box maxW="1200px" mx="auto">
+        <Box
+          mb={8}
+          bg="white"
+          p={6}
+          borderRadius="2xl"
+          boxShadow="sm"
+          borderWidth="1px"
+          borderColor="gray.100"
+          position="sticky"
+          top="0"
+          zIndex={10}
+        >
+          <CommonStepper currentStep={currStep} steps={steps} />
+        </Box>
 
-                  {currStep === 0 && renderGeneralDetails()}
+        <Box position="relative">
+          {loading && (
+            <Flex
+              justify="center"
+              align="center"
+              position="absolute"
+              inset={0}
+              bg="whiteAlpha.800"
+              zIndex={20}
+            >
+              <Spin size="large" />
+            </Flex>
+          )}
+
+          <Form
+            form={form}
+            layout="vertical"
+            onValuesChange={(changedValues, allValues) => {
+              calculateSelfAssessmentScore(allValues);
+            }}
+          >
+            <Flex direction={{ base: "column", lg: "row" }} gap={8}>
+              <Box flex="1" overflowY="auto" maxH="75vh" pr={2}>
+                <Box
+                  bg="white"
+                  p={{ base: 4, md: 8 }}
+                  borderRadius="2xl"
+                  boxShadow="sm"
+                  borderWidth="1px"
+                  borderColor="gray.100"
+                  minH="50vh"
+                >
+                  {currStep === 0 && (
+                    <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
+                      {renderGeneralDetails()}
+                    </SimpleGrid>
+                  )}
                   {currStep === 1 && (
                     <>
                       {renderMaintenanceQuestions()}
@@ -562,55 +638,156 @@ const NoteBookDetails = () => {
                       {renderQualityOfLearner()}
                     </>
                   )}
+                </Box>
 
-                  {currStep === 2 && (
-                    <>
-
-                    </>
+                <Flex justify="space-between" mt={6} pt={6} pb={8}>
+                  {currStep > 0 ? (
+                    <Button
+                      size="large"
+                      onClick={() => setCurrStep(currStep - 1)}
+                      style={{ borderRadius: "8px", minWidth: "120px" }}
+                    >
+                      Back
+                    </Button>
+                  ) : (
+                    <Box />
                   )}
-                </Col>
-                <Col md={6}>
-                  <Card>
-                    {/* <h4>Assement Score: {assessmentScore} Out Of {outOfScore} </h4>
-                    <h6>Precentage {getPercentafe(assessmentScore,outOfScore)}%</h6> */}
-
-                    <h5>Total Score: {totalScore}</h5>
-                    <h5>Out of: {getOutOfScore}</h5>
-                    <h5>Percentage: {percentageScore}%</h5>
-                    <h5>Grade: {grade}</h5>
-                    <h5>Number Of Parameters: {numOfParameters}</h5>
-                  </Card>
-                </Col>
-
-                <Col
-                  md={currStep === 0 ? 6 : 8}
-                  className="mt-3 d-flex justify-content-between bg-white py-5"
-                >
                   <Button
-                    size="large"
-                    disabled={currStep === 0}
-                    className="px-5"
-                    type="default"
-                    onClick={() => setCurrStep(currStep - 1)}
-                  >
-                    Back
-                  </Button>
-                  <Button
-                    size="large"
-                    className="px-5"
                     type="primary"
+                    size="large"
                     onClick={handleNext}
+                    style={{
+                      borderRadius: "8px",
+                      minWidth: "120px",
+                      background: "#1a4d2e",
+                    }}
                   >
                     {currStep === steps.length - 1 ? "Submit" : "Next"}
                   </Button>
-                </Col>
-              </Row>
-            </Container>
-          </Form>
-        </Col>
+                </Flex>
+              </Box>
 
-      </Row>
-    </div>
+              <Box w={{ base: "100%", lg: "350px" }}>
+                <Box
+                  p={6}
+                  borderRadius="2xl"
+                  boxShadow="sm"
+                  bg="white"
+                  borderWidth="1px"
+                  borderColor="gray.100"
+                  position="sticky"
+                  top="120px"
+                >
+                  <Heading
+                    size="md"
+                    color="gray.800"
+                    mb={6}
+                    pb={4}
+                    borderBottom="1px solid"
+                    borderColor="gray.100"
+                  >
+                    Score Summary
+                  </Heading>
+
+                  <VStack spacing={4} align="stretch">
+                    <Flex
+                      justify="space-between"
+                      p={3}
+                      bg="gray.50"
+                      borderRadius="lg"
+                    >
+                      <Text color="gray.600" fontWeight="500">
+                        Total Score
+                      </Text>
+                      <Text
+                        color="brand.primary"
+                        fontWeight="bold"
+                        fontSize="lg"
+                      >
+                        {totalScore}
+                      </Text>
+                    </Flex>
+
+                    <Flex
+                      justify="space-between"
+                      p={3}
+                      bg="gray.50"
+                      borderRadius="lg"
+                    >
+                      <Text color="gray.600" fontWeight="500">
+                        Out of
+                      </Text>
+                      <Text color="gray.800" fontWeight="bold">
+                        {getOutOfScore}
+                      </Text>
+                    </Flex>
+
+                    <Flex
+                      justify="space-between"
+                      p={3}
+                      bg="blue.50"
+                      borderRadius="lg"
+                    >
+                      <Text color="blue.700" fontWeight="500">
+                        Percentage
+                      </Text>
+                      <Text color="blue.700" fontWeight="bold">
+                        {percentageScore}%
+                      </Text>
+                    </Flex>
+
+                    <Flex
+                      justify="space-between"
+                      p={3}
+                      bg={
+                        grade === "A" || grade === "B"
+                          ? "green.50"
+                          : grade === "C"
+                            ? "yellow.50"
+                            : "red.50"
+                      }
+                      borderRadius="lg"
+                    >
+                      <Text color="gray.700" fontWeight="500">
+                        Grade
+                      </Text>
+                      <Text
+                        color={
+                          grade === "A" || grade === "B"
+                            ? "green.600"
+                            : grade === "C"
+                              ? "yellow.600"
+                              : "red.600"
+                        }
+                        fontWeight="bold"
+                        fontSize="xl"
+                      >
+                        {grade}
+                      </Text>
+                    </Flex>
+
+                    <Flex
+                      justify="space-between"
+                      p={3}
+                      bg="gray.100"
+                      borderRadius="lg"
+                      mt={2}
+                    >
+                      <Text color="gray.600" fontSize="sm">
+                        Excluded Parameters (N/A)
+                      </Text>
+                      <Text color="gray.600" fontWeight="bold">
+                        {numOfParameters}
+                      </Text>
+                    </Flex>
+                  </VStack>
+                </Box>
+              </Box>
+            </Flex>
+          </Form>
+        </Box>
+      </Box>
+    </Box>
   );
 };
 

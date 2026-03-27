@@ -1,7 +1,5 @@
 import {
   Button,
-  Card,
-  Col,
   DatePicker,
   Empty,
   Form,
@@ -9,9 +7,9 @@ import {
   InputNumber,
   message,
   Radio,
-  Row,
   Spin,
 } from "antd";
+import { Box, Flex, SimpleGrid, Heading, Text, Badge } from "@chakra-ui/react";
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
@@ -114,151 +112,213 @@ function OB_FortnightlyMonitorEdit() {
     form.setFieldsValue({ selfEvaluationScore: result.score }); // Update hidden field
   };
   return (
-    <div className="container mt-3">
-      {isLoading ? (
-        <div className="LoaderWrapper">
-          <Spin size="large" className="position-absolute" />
-        </div>
-      ) : (
-        <>
-          <div className="d-flex justify-content-around">
-            <h2 className="text-start mb-4 fs-5">Edit Your Observation</h2>
-            <h2 className="text-start mb-4 fs-5">Current Response</h2>
-          </div>
-          <Form
-            form={form}
-            layout="vertical"
-            onFinish={onFinish}
-            onValuesChange={calculateScore} // Trigger score calculation
-          >
-            <Row gutter={[16, 16]}>
-              <Col xs={24} sm={12} md={12} lg={12}>
-                {betaLoading && (
-                  <>
-                    <Form.Item
-                      label="Class"
-                      name="className"
-                      rules={[
-                        { required: true, message: "Please enter a class!" },
-                      ]}
-                    >
-                      <Input placeholder="Enter Class (e.g., 10th)" />
-                    </Form.Item>
-
-                    <Form.Item
-                      label="Section"
-                      name="section"
-                      rules={[
-                        { required: true, message: "Please enter a section!" },
-                      ]}
-                    >
-                      <Input placeholder="Enter Section (e.g., A, B)" />
-                    </Form.Item>
-
-                    <div className="d-flex gap-3 align-items-center justify-content-between">
+    <Box p={{ base: 4, md: 8 }} minH="calc(100vh - 72px)" bg="gray.50">
+      <Box maxW="1200px" mx="auto">
+        {isLoading ? (
+          <Flex justify="center" align="center" h="400px">
+            <Spin size="large" />
+          </Flex>
+        ) : (
+          <Box>
+            <Box mb={6} textAlign="center">
+              <Heading size="lg" color="gray.800" mb={1}>
+                Fortnightly Monitor Evaluation
+              </Heading>
+              <Text color="gray.500">
+                Review teacher responses and provide your observations.
+              </Text>
+            </Box>
+            <Form
+              form={form}
+              layout="vertical"
+              onFinish={onFinish}
+              onValuesChange={calculateScore} // Trigger score calculation
+            >
+              <SimpleGrid columns={{ base: 1, md: 2 }} spacing={8}>
+                <Box
+                  bg="white"
+                  p={6}
+                  borderRadius="2xl"
+                  boxShadow="sm"
+                  borderWidth="1px"
+                  borderColor="gray.100"
+                >
+                  <Heading size="md" mb={6} color="brand.primary">
+                    Edit Your Observation
+                  </Heading>
+                  {betaLoading && (
+                    <>
                       <Form.Item
-                        className="w-100"
-                        label="Date"
-                        name="date"
+                        label="Class"
+                        name="className"
                         rules={[
-                          { required: true, message: "Please select a date!" },
+                          { required: true, message: "Please enter a class!" },
                         ]}
                       >
-                        <DatePicker className="w-100" format="YYYY-MM-DD" />
+                        <Input placeholder="Enter Class (e.g., 10th)" />
                       </Form.Item>
-                    </div>
-                  </>
-                )}
-                {currentQuestions?.map((field, index) => {
-                  return (
-                    <div
-                      className="mb-3 border p-3 rounded shadow-sm"
-                      key={field?.key}
-                    >
+
                       <Form.Item
-                        className="w-75 mb-2"
-                        name={field?.key}
-                        label={
-                          <p
-                            className="mb-0 fs-6"
-                            style={{ color: "rgb(52 52 52 / 64%)" }}
-                          >
-                            {field?.name
-                              .replace(/([A-Z])/g, " $1")
-                              .replace(/^./, (str) => str.toUpperCase())}
-                          </p>
-                        }
+                        label="Section"
+                        name="section"
                         rules={[
                           {
                             required: true,
-                            message: `Please select an option for ${field?.name}.`,
+                            message: "Please enter a section!",
                           },
                         ]}
                       >
-                        <Radio.Group
-                          block
-                          options={yesNoNAOptions}
-                          optionType="button"
-                          buttonStyle="solid"
-                        />
+                        <Input placeholder="Enter Section (e.g., A, B)" />
                       </Form.Item>
-                    </div>
-                  );
-                })}
-              </Col>
-              <Col xs={24} sm={12} md={12} lg={12}>
-                <div className="sticky-top">
-                  {(GetUserAccess === UserRole[2] &&
-                    !formDetails?.isCoordinatorComplete) ||
-                  (GetUserAccess === UserRole[1] &&
-                    !formDetails?.isTeacherComplete) ? (
-                    <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} />
-                  ) : (
-                    ""
-                  )}
 
-                  {GetUserAccess === UserRole[1] &&
-                    formDetails?.isTeacherComplete && (
-                      <>
-                        {currentQuestions?.map((item, index) => {
-                          return (
-                            <React.Fragment key={index + 1}>
-                              <div className="mb-3 border p-3 rounded ">
-                                <h3
-                                  className="mb-0 fs-6"
-                                  style={{ color: "rgb(52 52 52 / 64%)" }}
+                      <div className="d-flex gap-3 align-items-center justify-content-between">
+                        <Form.Item
+                          className="w-100"
+                          label="Date"
+                          name="date"
+                          rules={[
+                            {
+                              required: true,
+                              message: "Please select a date!",
+                            },
+                          ]}
+                        >
+                          <DatePicker className="w-100" format="YYYY-MM-DD" />
+                        </Form.Item>
+                      </div>
+                    </>
+                  )}
+                  {currentQuestions?.map((field, index) => {
+                    return (
+                      <Box
+                        key={field?.key}
+                        mb={4}
+                        p={5}
+                        borderRadius="xl"
+                        borderWidth="1px"
+                        borderColor="gray.100"
+                        bg="gray.50"
+                      >
+                        <Form.Item
+                          className="mb-2"
+                          name={field?.key}
+                          label={
+                            <Text
+                              fontWeight="600"
+                              color="gray.700"
+                              fontSize="md"
+                            >
+                              {field?.name
+                                .replace(/([A-Z])/g, " $1")
+                                .replace(/^./, (str) => str.toUpperCase())}
+                            </Text>
+                          }
+                          rules={[
+                            {
+                              required: true,
+                              message: `Please select an option for ${field?.name}.`,
+                            },
+                          ]}
+                        >
+                          <Radio.Group
+                            block
+                            options={yesNoNAOptions}
+                            optionType="button"
+                            buttonStyle="solid"
+                          />
+                        </Form.Item>
+                      </Box>
+                    );
+                  })}
+                </Box>
+
+                <Box
+                  bg="white"
+                  p={6}
+                  borderRadius="2xl"
+                  boxShadow="sm"
+                  borderWidth="1px"
+                  borderColor="gray.100"
+                >
+                  <Box position="sticky" top="20px">
+                    <Heading size="md" mb={6} color="gray.700">
+                      Current Response
+                    </Heading>
+                    {(GetUserAccess === UserRole[2] &&
+                      !formDetails?.isCoordinatorComplete) ||
+                    (GetUserAccess === UserRole[1] &&
+                      !formDetails?.isTeacherComplete) ? (
+                      <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                    ) : (
+                      ""
+                    )}
+
+                    {GetUserAccess === UserRole[1] &&
+                      formDetails?.isTeacherComplete && (
+                        <>
+                          {currentQuestions?.map((item, index) => {
+                            const val = formDetails?.teacherForm[item.key];
+                            const badgeColor =
+                              val === "Yes"
+                                ? "green"
+                                : val === "No"
+                                  ? "red"
+                                  : val === "Sometimes"
+                                    ? "orange"
+                                    : "blue";
+                            return (
+                              <Box
+                                key={index + 1}
+                                mb={4}
+                                p={5}
+                                borderRadius="xl"
+                                borderWidth="1px"
+                                borderColor="gray.100"
+                                bg="gray.50"
+                              >
+                                <Text
+                                  fontWeight="600"
+                                  color="gray.700"
+                                  fontSize="sm"
+                                  mb={3}
                                 >
                                   {item?.name
                                     .replace(/([A-Z])/g, " $1")
                                     .replace(/^./, (str) => str.toUpperCase())}
-                                </h3>
-                                <div
-                                  className={`alert ${formDetails?.teacherForm[item.key] === "Yes" ? "alert-success" : formDetails?.teacherForm[item.key] === "No" ? "alert-danger" : formDetails?.teacherForm[item.key] === "N/A" ? "alert-primary" : formDetails?.teacherForm[item.key] === "Sometimes" && "alert-warning"} py-0 mt-3 mb-3`}
-                                  style={{ width: "fit-content" }}
+                                </Text>
+                                <Badge
+                                  colorScheme={badgeColor}
+                                  px={3}
+                                  py={1}
+                                  borderRadius="full"
+                                  fontSize="sm"
                                 >
-                                  <span>
-                                    {" "}
-                                    {formDetails?.teacherForm[item?.key]}
-                                  </span>
-                                </div>
-                              </div>
-                            </React.Fragment>
-                          );
-                        })}
+                                  {val || "No Answer"}
+                                </Badge>
+                              </Box>
+                            );
+                          })}
 
-                        <div className="mb-3 border p-3 rounded shadow-sm">
-                          <h3
-                            className="mb-0 fs-6"
-                            style={{ color: "rgb(52 52 52 / 64%)" }}
+                          <Box
+                            p={5}
+                            borderRadius="xl"
+                            borderWidth="1px"
+                            borderColor="brand.primary"
+                            bg="blue.50"
                           >
-                            Self Assesment
-                          </h3>
-                          <div
-                            className={` py-0 mt-3`}
-                            style={{ width: "fit-content" }}
-                          >
-                            <span>
-                              {" "}
+                            <Text
+                              fontWeight="600"
+                              color="brand.primary"
+                              fontSize="sm"
+                              mb={2}
+                            >
+                              Teacher Self Assessment Score
+                            </Text>
+                            <Text
+                              fontSize="2xl"
+                              fontWeight="bold"
+                              color="gray.800"
+                            >
                               {
                                 calculateScorenew(
                                   formDetails?.teacherForm,
@@ -272,49 +332,55 @@ function OB_FortnightlyMonitorEdit() {
                                   currentQuestions,
                                 ).total
                               }
-                            </span>
-                          </div>
-                        </div>
-                      </>
-                    )}
-                </div>
-              </Col>
-            </Row>
+                            </Text>
+                          </Box>
+                        </>
+                      )}
+                  </Box>
+                </Box>
+              </SimpleGrid>
 
-            {/* Self-assessment score */}
-            <Row gutter={[16, 16]}>
-              <Col xs={24} sm={12} md={8} lg={12}>
-                <h4 className="mb-3 mt-4">
-                  Self Assessment Score: {selfAssessmentScore} / {totalCount}
-                </h4>
-                <Form.Item
-                  name="selfEvaluationScore"
-                  hidden
-                  label="Self Assessment Score"
+              {/* Evaluation Score & Submit */}
+              <Flex direction="column" align="center" mt={10} mb={6}>
+                <Box
+                  bg="white"
+                  px={8}
+                  py={4}
+                  borderRadius="full"
+                  boxShadow="sm"
+                  borderWidth="1px"
+                  borderColor="gray.100"
+                  mb={6}
                 >
-                  <InputNumber
-                    value={selfAssessmentScore}
-                    disabled
-                    className="w-100"
-                  />
+                  <Text fontSize="lg" fontWeight="600" color="gray.700">
+                    Your Assessment Score:{" "}
+                    <Text as="span" color="brand.primary" fontSize="xl">
+                      {selfAssessmentScore} / {totalCount}
+                    </Text>
+                  </Text>
+                </Box>
+                <Form.Item name="selfEvaluationScore" hidden>
+                  <InputNumber value={selfAssessmentScore} disabled />
                 </Form.Item>
-              </Col>
-            </Row>
 
-            {/* Submit button */}
-            <Row>
-              <Col span={9}>
-                <Form.Item>
-                  <Button type="primary" htmlType="submit" className="w-100">
-                    Submit
-                  </Button>
-                </Form.Item>
-              </Col>
-            </Row>
-          </Form>
-        </>
-      )}
-    </div>
+                <Button
+                  type="primary"
+                  htmlType="submit"
+                  size="large"
+                  style={{
+                    borderRadius: "8px",
+                    minWidth: "200px",
+                    boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
+                  }}
+                >
+                  Submit Evaluation
+                </Button>
+              </Flex>
+            </Form>
+          </Box>
+        )}
+      </Box>
+    </Box>
   );
 }
 

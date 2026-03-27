@@ -11,13 +11,13 @@ import { Formcolumns1 } from "../../Components/Data";
 import { getUserId } from "../../Utils/auth";
 import { UserRole } from "../../config/config";
 import moment from "moment";
-import { Col, Row } from "react-bootstrap";
+import { Box, Flex, Heading, Text, Stack } from "@chakra-ui/react";
 
 function ClassroomWalkthrough() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { isLoading, GetForms } = useSelector(
-    (state) => state?.walkThroughForm
+    (state) => state?.walkThroughForm,
   );
   const Role = getUserId().access;
   const [sortedForms, setSortedForms] = useState([]);
@@ -124,17 +124,17 @@ function ClassroomWalkthrough() {
         : true;
       const matchesStatus = status.length
         ? status.includes(
-            item.isTeacherCompletes ? "COMPLETED" : "NOT COMPLETED"
+            item.isTeacherCompletes ? "COMPLETED" : "NOT COMPLETED",
           )
         : true;
       const matchesObserverStatus = Observerstatus.length
         ? Observerstatus.includes(
-            item.isObserverCompleted ? "COMPLETED" : "NOT COMPLETED"
+            item.isObserverCompleted ? "COMPLETED" : "NOT COMPLETED",
           )
         : true;
       const matchesDate = date.length
         ? date.some((d) =>
-            moment(item.grenralDetails.DateOfObservation).isSame(d, "day")
+            moment(item.grenralDetails.DateOfObservation).isSame(d, "day"),
           )
         : true;
       const matchesObserverName = observerName.length
@@ -187,13 +187,13 @@ function ClassroomWalkthrough() {
           sorter: (a, b) => {
             if (column.dataIndex === "NameoftheVisitingTeacher") {
               return a.grenralDetails.NameoftheVisitingTeacher.name.localeCompare(
-                b.grenralDetails.NameoftheVisitingTeacher.name
+                b.grenralDetails.NameoftheVisitingTeacher.name,
               );
             } else if (column.dataIndex === "createdBy") {
               return a.createdBy.name.localeCompare(b.createdBy.name);
             } else {
               return a.grenralDetails[column.dataIndex]?.localeCompare(
-                b.grenralDetails[column.dataIndex]
+                b.grenralDetails[column.dataIndex],
               );
             }
           },
@@ -225,148 +225,185 @@ function ClassroomWalkthrough() {
   }, [GetForms]);
 
   return (
-    <div className="container p-0">
-      {isLoading && (
-        <div className="LoaderWrapper">
-          <Spin size="large" className="position-absolute" />
-        </div>
-      )}
-      <div >
-        {Role === UserRole[1] ? (
-          <button
-           style={{borderRadius:5}}
-           className="mb-3 bg-[#1a4d2e] p-3 text-white py-2 "
-            onClick={() => navigate("/classroom-walkthrough/create")}>
-            <PlusCircleOutlined /> Fill New Form
-          </button>
-        ) : (
-          <h2 className="mb-4">Classroom Walkthrough</h2>
-        )}
+    <Box p={{ base: 4, md: 8 }} minH="calc(100vh - 72px)">
+      <Flex
+        justify="space-between"
+        align="center"
+        mb={6}
+        flexWrap="wrap"
+        gap={4}
+      >
+        <Box>
+          <Heading size="lg" color="gray.800" mb={1}>
+            Classroom Walkthrough
+          </Heading>
+          <Text color="gray.500">
+            Manage and view classroom walkthrough evaluation forms.
+          </Text>
+        </Box>
 
-        {/* Filter Options - Searchable Multi-Select */}
-        <div className="mb-3 d-flex flex-wrap align-items-center gap-2">
+        <Stack direction="row" spacing={3}>
+          {Role === UserRole[1] && (
+            <Button
+              leftIcon={<PlusCircleOutlined />}
+              bg="brand.primary"
+              color="white"
+              _hover={{ bg: "brand.text", transform: "translateY(-2px)" }}
+              onClick={() => navigate("/classroom-walkthrough/create")}
+              px={6}
+            >
+              Fill New Form
+            </Button>
+          )}
+        </Stack>
+      </Flex>
+
+      <Box
+        bg="white"
+        borderRadius="2xl"
+        boxShadow="sm"
+        borderWidth="1px"
+        borderColor="gray.100"
+        p={6}
+        w="100%"
+        overflowX="auto"
+      >
+        <Flex flexWrap="wrap" gap={4} mb={6}>
           {UserRole[1] === getUserId().access && (
-            <Select
-              mode="multiple"
-              allowClear
-              showSearch
-              style={{ width: "140px" }}
-              placeholder="Select Teacher"
-              value={filters.teacherID}
-              onChange={(value) => handleFilter("teacherID", value)}
-              options={getTeachersNames().map((teacher) => ({
-                value: teacher,
-                label: teacher,
-              }))}
-            />
+            <Box flex="1" minW="150px">
+              <Select
+                mode="multiple"
+                allowClear
+                showSearch
+                style={{ width: "100%" }}
+                placeholder="Select Teacher"
+                value={filters.teacherID}
+                onChange={(value) => handleFilter("teacherID", value)}
+                options={getTeachersNames().map((teacher) => ({
+                  value: teacher,
+                  label: teacher,
+                }))}
+              />
+            </Box>
           )}
 
           {UserRole[2] === getUserId().access && (
+            <Box flex="1" minW="150px">
+              <Select
+                mode="multiple"
+                allowClear
+                showSearch
+                style={{ width: "100%" }}
+                placeholder="Select Observer"
+                value={filters.observerName}
+                onChange={(value) => handleFilter("observerName", value)}
+                options={getObserverNames().map((observer) => ({
+                  value: observer,
+                  label: observer,
+                }))}
+              />
+            </Box>
+          )}
+
+          <Box flex="1" minW="150px">
             <Select
               mode="multiple"
               allowClear
               showSearch
-              style={{ width: "140px" }}
-              placeholder="Select Observer"
-              value={filters.observerName}
-              onChange={(value) => handleFilter("observerName", value)}
-              options={getObserverNames().map((observer) => ({
-                value: observer,
-                label: observer,
+              style={{ width: "100%" }}
+              placeholder="Select Class"
+              value={filters.className}
+              onChange={(value) => handleFilter("className", value)}
+              options={getClasses().map((className) => ({
+                value: className,
+                label: className,
               }))}
             />
-          )}
+          </Box>
 
-          <Select
-            mode="multiple"
-            allowClear
-            showSearch
-            style={{ width: "140px" }}
-            placeholder="Select Class"
-            value={filters.className}
-            onChange={(value) => handleFilter("className", value)}
-            options={getClasses().map((className) => ({
-              value: className,
-              label: className,
-            }))}
-          />
+          <Box flex="1" minW="150px">
+            <Select
+              mode="multiple"
+              allowClear
+              showSearch
+              style={{ width: "100%" }}
+              placeholder="Select Section"
+              value={filters.section}
+              onChange={(value) => handleFilter("section", value)}
+              options={getSections().map((section) => ({
+                value: section,
+                label: section,
+              }))}
+            />
+          </Box>
 
-          <Select
-            mode="multiple"
-            allowClear
-            showSearch
-            style={{ width: "140px" }}
-            placeholder="Select Section"
-            value={filters.section}
-            onChange={(value) => handleFilter("section", value)}
-            options={getSections().map((section) => ({
-              value: section,
-              label: section,
-            }))}
-          />
+          <Box flex="1" minW="150px">
+            <Select
+              mode="multiple"
+              allowClear
+              showSearch
+              style={{ width: "100%" }}
+              placeholder="Select Subject"
+              value={filters.subject}
+              onChange={(value) => handleFilter("subject", value)}
+              options={getSubject().map((subject) => ({
+                value: subject,
+                label: subject,
+              }))}
+            />
+          </Box>
 
-          <Select
-            mode="multiple"
-            allowClear
-            showSearch
-            style={{ width: "140px" }}
-            placeholder="Select Subject"
-            value={filters.subject}
-            onChange={(value) => handleFilter("subject", value)}
-            options={getSubject().map((subject) => ({
-              value: subject,
-              label: subject,
-            }))}
-          />
+          <Box flex="1" minW="150px">
+            <DatePicker
+              style={{ width: "100%" }}
+              placeholder="Select Date"
+              onChange={(date) =>
+                handleFilter("date", date ? [date.format("YYYY-MM-DD")] : [])
+              }
+            />
+          </Box>
 
-          <DatePicker
-            style={{ width: "140px" }}
-            placeholder="Select Date"
-            onChange={(date) =>
-              handleFilter("date", date ? [date.format("YYYY-MM-DD")] : [])
-            }
-          />
+          <Box flex="1" minW="150px">
+            <Select
+              mode="multiple"
+              allowClear
+              style={{ width: "100%" }}
+              placeholder="Teacher Status"
+              value={filters.status}
+              onChange={(value) => handleFilter("status", value)}
+              options={[
+                { value: "COMPLETED", label: "Completed" },
+                { value: "NOT COMPLETED", label: "Not Completed" },
+              ]}
+            />
+          </Box>
 
-          <Select
-            mode="multiple"
-            allowClear
-            style={{ width: "140px" }}
-            placeholder="Teacher Status"
-            value={filters.status}
-            onChange={(value) => handleFilter("status", value)}
-            options={[
-              { value: "COMPLETED", label: "Completed" },
-              { value: "NOT COMPLETED", label: "Not Completed" },
-            ]}
-          />
-
-          <Select
-            mode="multiple"
-            allowClear
-            style={{ width: "150px" }}
-            placeholder="Observer Status"
-            value={filters.Observerstatus}
-            onChange={(value) => handleFilter("Observerstatus", value)}
-            options={[
-              { value: "COMPLETED", label: "Completed" },
-              { value: "NOT COMPLETED", label: "Not Completed" },
-            ]}
-          />
-
-          <Button onClick={handleResetFilters} type="default">
-            Reset Filters
-          </Button>
-        </div>
+          <Box flex="1" minW="150px">
+            <Select
+              mode="multiple"
+              allowClear
+              style={{ width: "100%" }}
+              placeholder="Observer Status"
+              value={filters.Observerstatus}
+              onChange={(value) => handleFilter("Observerstatus", value)}
+              options={[
+                { value: "COMPLETED", label: "Completed" },
+                { value: "NOT COMPLETED", label: "Not Completed" },
+              ]}
+            />
+          </Box>
+        </Flex>
 
         <Table
           columns={columnsWithFilters}
           dataSource={applyFilters(sortedForms)}
           pagination={false}
-          scroll={{ y: "100%", x: "100%" }}
-        rowKey="_id"
+          scroll={{ y: "calc(100vh - 450px)", x: "max-content" }}
+          rowKey="_id"
+          className="custom-table"
         />
-      </div>
-    </div>
+      </Box>
+    </Box>
   );
 }
 

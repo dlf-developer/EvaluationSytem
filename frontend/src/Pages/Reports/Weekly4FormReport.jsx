@@ -1,10 +1,9 @@
-import React, { useEffect, useState } from 'react';
-import { useDispatch } from 'react-redux';
-import { useNavigate, useParams } from 'react-router-dom';
-import { getAllWeeklyFromById } from '../../redux/userSlice';
-import { message, Card, Typography, List, Table, Row, Col, Tag } from 'antd';
-
-const { Title, Text } = Typography;
+import React, { useEffect, useState } from "react";
+import { useDispatch } from "react-redux";
+import { useNavigate, useParams } from "react-router-dom";
+import { getAllWeeklyFromById } from "../../redux/userSlice";
+import { message, Table, Tag } from "antd";
+import { Box, Flex, Heading, Text, VStack, SimpleGrid } from "@chakra-ui/react";
 
 function Weekly4FormReport() {
   const [formData, setFormData] = useState(null);
@@ -14,7 +13,7 @@ function Weekly4FormReport() {
 
   useEffect(() => {
     if (!formId) {
-      navigate('/weekly4form');
+      navigate("/weekly4form");
       return;
     }
 
@@ -27,12 +26,12 @@ function Weekly4FormReport() {
             setFormData(response.payload.form);
           } else {
             message.error(response?.payload?.message);
-            navigate('/weekly4form');
+            navigate("/weekly4form");
           }
         }
       } catch (error) {
-        message.error('Error fetching form data:', error);
-        if (isMounted) navigate('/weekly4form');
+        message.error("Error fetching form data:", error);
+        if (isMounted) navigate("/weekly4form");
       }
     };
 
@@ -50,41 +49,38 @@ function Weekly4FormReport() {
   const observerDetails = formData?.isInitiated?.Observer || {};
   const tableColumns = [
     {
-      title: 'Question',
-      dataIndex: 'question',
-      key: 'question',
+      title: "Question",
+      dataIndex: "question",
+      key: "question",
     },
     {
-      title: 'Answer',
-      dataIndex: 'answer',
-      key: 'answer',
+      title: "Answer",
+      dataIndex: "answer",
+      key: "answer",
       render: (answer, record) =>
         record?.sections ? (
           <>
             {record?.sections?.map((item) => (
-                <Tag color={item?.answer === "Yes"? "green": "red"}>
-                  {item?.answer}
-               </Tag>
+              <Tag color={item?.answer === "Yes" ? "green" : "red"}>
+                {item?.answer}
+              </Tag>
             ))}
           </>
         ) : (
-          <Tag color={answer === "Yes"? "green": "red"}>
-                  {answer}
-               </Tag>
+          <Tag color={answer === "Yes" ? "green" : "red"}>{answer}</Tag>
         ),
     },
     {
-      title: 'Class Name',
-      dataIndex: 'section',
-      key: 'section',
+      title: "Class Name",
+      dataIndex: "section",
+      key: "section",
       render: (classId, record) =>
-
         record?.sections ? (
           <>
             {record?.sections?.map((item) => (
-                <p className='text-nowrap'>
-                  {item?.className} / {item?.section} 
-                </p>
+              <p className="text-nowrap">
+                {item?.className} / {item?.section}
+              </p>
             ))}
           </>
         ) : (
@@ -92,83 +88,140 @@ function Weekly4FormReport() {
         ),
     },
     {
-      title: 'Additional Info',
-      dataIndex: 'textArea',
-      key: 'textArea',
-      render: (text,record) => (
-          <Text>{text || <Tag color={!text && "yellow"}>
-          N/A
-       </Tag>}</Text>
-      ),
+      title: "Additional Info",
+      dataIndex: "textArea",
+      key: "textArea",
+      render: (text) => <span>{text || <Tag color="yellow">N/A</Tag>}</span>,
     },
   ];
 
   return (
-    <div style={{ padding: '20px' }}>
-      <Row gutter={[16, 16]}>
-        <Col xs={24}>
-          <Card>
-            <Title level={3}>Weekly Form Report</Title>
-          </Card>
-        </Col>
+    <Box p={{ base: 4, md: 8 }} bg="gray.50" minH="100vh">
+      <Box maxW="1200px" mx="auto">
+        <VStack spacing={6} align="stretch">
+          <Box
+            bg="white"
+            p={6}
+            borderRadius="xl"
+            boxShadow="sm"
+            borderWidth="1px"
+            borderColor="gray.100"
+          >
+            <Heading size="lg" color="gray.800">
+              Weekly Form Report
+            </Heading>
+          </Box>
 
-        <Col xs={24}>
-          <Card>
-            <Title level={4}>Observer Details</Title>
-            <Text>
-              <strong>Name:</strong> {observerDetails.name}
-            </Text>
-            <br />
-            <Text>
-              <strong>Email:</strong> {observerDetails.email}
-            </Text>
-            <br />
-            <Text>
-              <strong>Mobile:</strong> {observerDetails.mobile}
-            </Text>
-            <br />
-            <Text>
-              <strong>Designation:</strong> {observerDetails.designation}
-            </Text>
-            <br />
-            <Text>
-              <strong>Coordinator:</strong> {observerDetails.coordinator}
-            </Text>
-          </Card>
-        </Col>
+          <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
+            <Box
+              bg="white"
+              p={6}
+              borderRadius="xl"
+              boxShadow="sm"
+              borderWidth="1px"
+              borderColor="gray.100"
+            >
+              <Heading size="md" color="gray.800" mb={4}>
+                Observer Details
+              </Heading>
+              <VStack align="start" spacing={2}>
+                <Text>
+                  <Text as="span" fontWeight="600" color="gray.700">
+                    Name:{" "}
+                  </Text>
+                  {observerDetails.name}
+                </Text>
+                <Text>
+                  <Text as="span" fontWeight="600" color="gray.700">
+                    Email:{" "}
+                  </Text>
+                  {observerDetails.email}
+                </Text>
+                <Text>
+                  <Text as="span" fontWeight="600" color="gray.700">
+                    Mobile:{" "}
+                  </Text>
+                  {observerDetails.mobile}
+                </Text>
+                <Text>
+                  <Text as="span" fontWeight="600" color="gray.700">
+                    Designation:{" "}
+                  </Text>
+                  {observerDetails.designation}
+                </Text>
+                <Text>
+                  <Text as="span" fontWeight="600" color="gray.700">
+                    Coordinator:{" "}
+                  </Text>
+                  {observerDetails.coordinator}
+                </Text>
+              </VStack>
+            </Box>
 
-        <Col xs={24}>
-          <Card>
-            <Title level={4}>Form Details</Title>
-            <Text>
-              <strong>Date:</strong> {new Date(formData.date).toLocaleDateString()}
-            </Text>
-            <br />
-            <Text>
-              <strong>Submission Date:</strong>{' '}
-              {new Date(formData.dateOfSubmission).toLocaleDateString()}
-            </Text>
-            <br />
-            <Text>
-              <strong>Completed:</strong> {formData.isCompleted ? 'Yes' : 'No'}
-            </Text>
-          </Card>
-        </Col>
+            <Box
+              bg="white"
+              p={6}
+              borderRadius="xl"
+              boxShadow="sm"
+              borderWidth="1px"
+              borderColor="gray.100"
+            >
+              <Heading size="md" color="gray.800" mb={4}>
+                Form Details
+              </Heading>
+              <VStack align="start" spacing={2}>
+                <Text>
+                  <Text as="span" fontWeight="600" color="gray.700">
+                    Date:{" "}
+                  </Text>
+                  {new Date(formData.date).toLocaleDateString()}
+                </Text>
+                <Text>
+                  <Text as="span" fontWeight="600" color="gray.700">
+                    Submission Date:{" "}
+                  </Text>
+                  {new Date(formData.dateOfSubmission).toLocaleDateString()}
+                </Text>
+                <Text>
+                  <Text as="span" fontWeight="600" color="gray.700">
+                    Completed:{" "}
+                  </Text>
+                  <Tag color={formData.isCompleted ? "green" : "orange"}>
+                    {formData.isCompleted ? "Yes" : "No"}
+                  </Tag>
+                </Text>
+              </VStack>
+            </Box>
+          </SimpleGrid>
 
-        <Col xs={24}>
-          <Card>
-            <Title level={4}>Responses</Title>
-            <Table
-              dataSource={formData.FormData}
-              columns={tableColumns}
-              rowKey={(record) => record.question}
-              pagination={false}
-              scroll={{ x: true }} // Enable horizontal scrolling on small screens
-            />
-          </Card>
-        </Col>
-      </Row>
-    </div>
+          <Box
+            bg="white"
+            p={6}
+            borderRadius="xl"
+            boxShadow="sm"
+            borderWidth="1px"
+            borderColor="gray.100"
+          >
+            <Heading size="md" color="gray.800" mb={6}>
+              Responses
+            </Heading>
+            <Box
+              overflowX="auto"
+              borderRadius="lg"
+              borderWidth="1px"
+              borderColor="gray.200"
+            >
+              <Table
+                dataSource={formData.FormData}
+                columns={tableColumns}
+                rowKey={(record) => record.question}
+                pagination={false}
+              />
+            </Box>
+          </Box>
+        </VStack>
+      </Box>
+    </Box>
   );
 }
 

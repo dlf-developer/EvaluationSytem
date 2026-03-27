@@ -1,20 +1,12 @@
-import React, { useEffect, useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { useNavigate, useParams } from 'react-router-dom';
-import {
-    Button,
-    Card,
-    Form,
-    Input,
-    message,
-    Radio,
-    Tag,
-  } from "antd";
-import { Col, Container, Row } from "react-bootstrap";
+import React, { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { useNavigate, useParams } from "react-router-dom";
+import { Button, Form, Input, message, Radio } from "antd";
+import { Box, Flex, Heading, Text, VStack } from "@chakra-ui/react";
 import TextArea from "antd/es/input/TextArea";
-import { BsEmojiFrown, BsEmojiNeutral, BsEmojiSmile } from 'react-icons/bs';
-import { EditNoteBook, GetNoteBookForm } from '../../redux/Form/noteBookSlice';
-import { getAllTimes } from '../../Utils/auth';
+import { BsEmojiFrown, BsEmojiNeutral, BsEmojiSmile } from "react-icons/bs";
+import { EditNoteBook, GetNoteBookForm } from "../../redux/Form/noteBookSlice";
+import { getAllTimes } from "../../Utils/auth";
 
 function OB_Notebook() {
   const dispatch = useDispatch();
@@ -22,9 +14,7 @@ function OB_Notebook() {
   const [formData, setFormData] = useState({});
   const FormId = useParams()?.id;
 
-  const { isLoading, formDataList } = useSelector(
-    (state) => state?.notebook
-  );
+  const { isLoading, formDataList } = useSelector((state) => state?.notebook);
 
   const [form] = Form.useForm();
 
@@ -37,7 +27,8 @@ function OB_Notebook() {
       ...data.payload.NotebooksObserver,
       maintenanceOfNotebooks: data.payload.TeacherForm.maintenanceOfNotebooks,
       qualityOfOppurtunities: data.payload.TeacherForm.qualityOfOppurtunities,
-      qualityOfTeacherFeedback: data.payload.TeacherForm.qualityOfTeacherFeedback,
+      qualityOfTeacherFeedback:
+        data.payload.TeacherForm.qualityOfTeacherFeedback,
       qualityOfLearner: data.payload.TeacherForm.qualityOfLearner,
       observerFeedback: data.payload.observerFeedback,
     });
@@ -73,19 +64,24 @@ function OB_Notebook() {
       ),
       textarea: (
         <TextArea size="large" placeholder={`Enter ${label.toLowerCase()}`} />
-      )
+      ),
     };
 
     return (
       <Form.Item
         name={name}
-        label={<h5 className="text-gray">{label}</h5>}
+        label={
+          <Text fontWeight="500" color="gray.700" mb={1}>
+            {label}
+          </Text>
+        }
         rules={[
           {
             required: true,
             message: `Please provide a valid ${label.toLowerCase()}!`,
           },
         ]}
+        style={{ marginBottom: "20px" }}
       >
         {inputProps[type]}
       </Form.Item>
@@ -94,20 +90,16 @@ function OB_Notebook() {
 
   const renderGeneralDetails = () =>
     generalDetailsConfig?.map((item) => (
-      <Row key={item.name}>
-        <Col md={12}>
-          {renderFormItem(item)}
-        </Col>
-      </Row>
+      <Box key={item.name} w="100%">
+        {renderFormItem(item)}
+      </Box>
     ));
 
   const renderGeneralDetails2 = () =>
     generalDetailsConfig2?.map((item) => (
-      <Row key={item.name}>
-        <Col md={12}>
-          {renderFormItem(item)}
-        </Col>
-      </Row>
+      <Box key={item.name} w="100%">
+        {renderFormItem(item)}
+      </Box>
     ));
 
   const RenderRadioFormItem = ({ name, label, question, isTextArea }) => {
@@ -116,13 +108,17 @@ function OB_Notebook() {
     return (
       <>
         <Form.Item
-          className='mb-0'
+          className="mb-0"
           name={[...name, "answer"]}
-          label={<h5 className="text-gray">{label}</h5>}
+          label={
+            <Text fontWeight="600" color="gray.700" fontSize="md" mb={2}>
+              {label}
+            </Text>
+          }
           rules={[{ required: true, message: "Please select an answer!" }]}
         >
           <Radio.Group
-            size='large'
+            size="large"
             options={yesNoNAOptions.map((value) => ({
               label: value.label,
               value: value.value,
@@ -132,7 +128,7 @@ function OB_Notebook() {
           />
         </Form.Item>
         <Button
-          className='mt-2'
+          className="mt-2"
           type="link"
           onClick={() => setShowRemark(!showRemark)}
           style={{ padding: 0 }}
@@ -158,28 +154,41 @@ function OB_Notebook() {
         )}
       </>
     );
-  }
+  };
 
   const renderSections = (title, questions, namePrefix) => (
-    <>
-      <Col md={12}>
-        <h2
-          className="mb-3 px-3 py-3 rounded-3 text-primary"
-          style={{ background: "#f7f7f7" }}
-        >
-          {title}
-        </h2>
-      </Col>
-      {questions?.map((question, index) => (
-        <Col md={12} key={`${namePrefix}${index}`}>
-          <Card className="mb-3 shadow-sm">
-            <RenderRadioFormItem question name={[namePrefix, index]}
+    <Box w="100%" mb={8}>
+      <Heading
+        size="md"
+        color="brand.primary"
+        bg="gray.50"
+        p={4}
+        borderRadius="lg"
+        mb={6}
+      >
+        {title}
+      </Heading>
+      <VStack spacing={4} align="stretch">
+        {questions?.map((question, index) => (
+          <Box
+            key={`${namePrefix}${index}`}
+            bg="white"
+            p={6}
+            borderRadius="xl"
+            boxShadow="sm"
+            borderWidth="1px"
+            borderColor="gray.100"
+          >
+            <RenderRadioFormItem
+              question
+              name={[namePrefix, index]}
               label={question}
-              isTextArea={true} />
-          </Card>
-        </Col>
-      ))}
-    </>
+              isTextArea={true}
+            />
+          </Box>
+        ))}
+      </VStack>
+    </Box>
   );
 
   const handleNext = () => {
@@ -197,87 +206,116 @@ function OB_Notebook() {
       data,
       id: FormId,
     };
-  
-const response = await dispatch(EditNoteBook(payload));
-if(response?.payload && response?.payload?.success) {
-  navigate('/notebook-checking-proforma');
-message.success(response?.payload?.message);
-  };
+
+    const response = await dispatch(EditNoteBook(payload));
+    if (response?.payload && response?.payload?.success) {
+      navigate("/notebook-checking-proforma");
+      message.success(response?.payload?.message);
+    }
   };
   return (
-    <Container className="mt-3">
-      <Row>
-        <Col md={6}>
-          <Form form={form} layout="vertical">
-            <div className="mb-5">
-              <h3 className="mb-4">Maintenance Of Notebooks</h3>
-              {renderGeneralDetails()}
-            </div>
-            <div className="mb-5 pb-3">
-              {renderSections(
-                "Maintenance Of Notebooks",
-                [
-                  "I have checked that NBs are in a good physical condition.",
-                  "I have checked that the work presentation is neat.",
-                  "I have ensured that the work of the learners is complete.",
-                  "I have checked the appropriateness of Headings / CW / HW.",
-                  "There is no scribbling on the last page/any pages thereof.",
-                  "I have ensured that the child has implemented the previous feedback and done the correction work.",
-                ],
-                "maintenanceOfNotebooks"
-              )}
-            </div>
-            <div className="mb-5 pb-3">
-              {renderSections(
-                "Quality Of Oppurtunities",
-                [
-                  "I have provided HOTs and VBQs with every chapter.",
-                  "I have made app. remarks about the quality of answers.",
-                  "I have developed vocab of students (pre-post activities).",
-                  "I have taken up at least 2 CSPs fortnightly with clear LOs.",
-                  "The quality questions given by me offer a scope for original thinking by learners.",
-                  "The writing tasks / questions given by me provide a scope for independent encounters.",
-                ],
-                "qualityOfOppurtunities"
-              )}
-            </div>
-            <div className="mb-5 pb-3">
-              {renderSections(
-                "Quality Of Teacher Feedback",
-                [
-                  "I have provided timely and regular feedback.",
-                  "I have corrected all the notebook work.",
-                  "I have provided positive reinforcement.",
-                  "I have provided personalized feedback.",
-                  "My feedback provides learners directions for improvement.",
-                  "My feedback facilitates learners with clear directions on what good work looks like.",
-                ],
-                "qualityOfTeacherFeedback"
-              )}
-            </div>
-            <div className="mb-5 pb-3">
-              {renderSections(
-                "Quality Of Learner",
-                [
-                  "I have checked / addressed the common misconceptions",
-                  "I have given remarks if the answers are copied or if there are common errors.",
-                ],
-                "qualityOfLearner"
-              )}
-            </div>
-            <div>
-              {renderGeneralDetails2()}
-            </div>
-            <Button size="large" type="primary" onClick={handleNext}>
-              {" "}
-              Submit
+    <Box p={{ base: 4, md: 8 }} minH="calc(100vh - 72px)" bg="gray.50">
+      <Box maxW="800px" mx="auto">
+        <Box mb={6}>
+          <Heading size="lg" color="gray.800" mb={1}>
+            Notebook Checking
+          </Heading>
+          <Text color="gray.500">
+            Evaluate notebook maintenance and grading quality.
+          </Text>
+        </Box>
+        <Form form={form} layout="vertical">
+          <Box
+            bg="white"
+            p={8}
+            borderRadius="2xl"
+            boxShadow="sm"
+            borderWidth="1px"
+            borderColor="gray.100"
+            mb={8}
+          >
+            <Heading size="md" color="gray.700" mb={6}>
+              General Information
+            </Heading>
+            {renderGeneralDetails()}
+          </Box>
+          <Box>
+            {renderSections(
+              "Maintenance Of Notebooks",
+              [
+                "I have checked that NBs are in a good physical condition.",
+                "I have checked that the work presentation is neat.",
+                "I have ensured that the work of the learners is complete.",
+                "I have checked the appropriateness of Headings / CW / HW.",
+                "There is no scribbling on the last page/any pages thereof.",
+                "I have ensured that the child has implemented the previous feedback and done the correction work.",
+              ],
+              "maintenanceOfNotebooks",
+            )}
+            {renderSections(
+              "Quality Of Oppurtunities",
+              [
+                "I have provided HOTs and VBQs with every chapter.",
+                "I have made app. remarks about the quality of answers.",
+                "I have developed vocab of students (pre-post activities).",
+                "I have taken up at least 2 CSPs fortnightly with clear LOs.",
+                "The quality questions given by me offer a scope for original thinking by learners.",
+                "The writing tasks / questions given by me provide a scope for independent encounters.",
+              ],
+              "qualityOfOppurtunities",
+            )}
+            {renderSections(
+              "Quality Of Teacher Feedback",
+              [
+                "I have provided timely and regular feedback.",
+                "I have corrected all the notebook work.",
+                "I have provided positive reinforcement.",
+                "I have provided personalized feedback.",
+                "My feedback provides learners directions for improvement.",
+                "My feedback facilitates learners with clear directions on what good work looks like.",
+              ],
+              "qualityOfTeacherFeedback",
+            )}
+            {renderSections(
+              "Quality Of Learner",
+              [
+                "I have checked / addressed the common misconceptions",
+                "I have given remarks if the answers are copied or if there are common errors.",
+              ],
+              "qualityOfLearner",
+            )}
+          </Box>
+          <Box
+            bg="white"
+            p={8}
+            borderRadius="2xl"
+            boxShadow="sm"
+            borderWidth="1px"
+            borderColor="gray.100"
+            mb={8}
+          >
+            <Heading size="md" color="gray.700" mb={6}>
+              Observer Feedback
+            </Heading>
+            {renderGeneralDetails2()}
+          </Box>
+          <Flex justify="flex-end" mb={10}>
+            <Button
+              size="large"
+              type="primary"
+              onClick={handleNext}
+              style={{
+                borderRadius: "8px",
+                boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+              }}
+            >
+              Submit Evaluation
             </Button>
-          </Form>
-        </Col>
-    
-      </Row>
-    </Container>
-  )
+          </Flex>
+        </Form>
+      </Box>
+    </Box>
+  );
 }
 
 export default OB_Notebook;

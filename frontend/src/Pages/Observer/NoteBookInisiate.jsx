@@ -1,6 +1,6 @@
 import { Button, Form, message, Select, Spin } from "antd";
 import React, { useEffect, useState } from "react";
-import { Col, Container, Row } from "react-bootstrap";
+
 import { useDispatch, useSelector } from "react-redux";
 import { getUserId } from "../../Utils/auth";
 import { useNavigate } from "react-router-dom";
@@ -8,6 +8,7 @@ import { GetTeacherList } from "../../redux/userSlice";
 import { UserRole } from "../../config/config";
 import { createInitiate } from "../../redux/Form/noteBookSlice";
 import { CreateActivityApi } from "../../redux/Activity/activitySlice";
+import { Box, Flex, Heading, Text, VStack } from "@chakra-ui/react";
 
 const { Option } = Select;
 function NoteBookInisiate() {
@@ -74,155 +75,192 @@ function NoteBookInisiate() {
     }
   };
   return (
-    <div className="create-form m-auto pb-5 pt-5" style={{ maxWidth: "400px" }}>
-      <Spin spinning={loading}>
-        <Form
-          form={form}
-          onFinish={handleSubmit}
-          layout="vertical"
-          initialValues={{
-            isCoordinator: false,
-            isTeacher: false,
-          }}
-        >
-          <div className="d-flex gap-3 align-items-center justify-content-between">
-            {CurrectUserRole === UserRole[1] && (
-              <>
-                <Form.Item
-                  className="w-100"
-                  label="Teacher ID"
-                  name="teacherIDs"
-                  rules={[
-                    { required: true, message: "Please select a Teacher!" },
-                  ]}
-                >
-                  <Select
-                    mode="multiple"
-                    allowClear
-                    showSearch
-                    placeholder="Select a Teacher"
-                    options={TeachersList?.map((item) => ({
-                      value: item._id,
-                      label: item.name,
-                    }))}
-                    filterOption={(input, option) =>
-                      option.label.toLowerCase().includes(input.toLowerCase())
-                    }
-                  />
-                </Form.Item>
-                <Form.Item
-                  hidden
-                  className="w-100"
-                  label="Teachers"
-                  name="isTeacher"
-                >
-                  <Select
-                    onChange={(value) => {
-                      setIsTeacher(true);
-                      setIsCoordinator(false); // Disable Coordinator when Teacher is selected
-                      form.resetFields(["coordinatorID"]); // Reset coordinator-related fields
-                    }}
-                    disabled={isCoordinator} // Disable if Coordinator is selected
+    <Box
+      p={{ base: 4, md: 8 }}
+      minH="calc(100vh - 72px)"
+      display="flex"
+      alignItems="center"
+      justifyContent="center"
+      bg="gray.50"
+    >
+      <Box
+        w="full"
+        maxW="500px"
+        bg="white"
+        borderRadius="2xl"
+        boxShadow="xl"
+        borderWidth="1px"
+        borderColor="gray.100"
+        p={{ base: 6, md: 8 }}
+      >
+        <VStack spacing={2} mb={8} align="center" textAlign="center">
+          <Heading size="lg" color="brand.primary">
+            Initiate Monitoring
+          </Heading>
+          <Text color="gray.500">
+            Configure roles and targets for the Notebook Checking
+          </Text>
+        </VStack>
+        <Spin spinning={loading}>
+          <Form
+            form={form}
+            onFinish={handleSubmit}
+            layout="vertical"
+            initialValues={{
+              isCoordinator: false,
+              isTeacher: false,
+            }}
+          >
+            <Flex direction="column" gap={4}>
+              {CurrectUserRole === UserRole[1] && (
+                <>
+                  <Form.Item
+                    className="w-100 mb-0"
+                    label={<Text fontWeight="500">Teacher ID</Text>}
+                    name="teacherIDs"
+                    rules={[
+                      { required: true, message: "Please select a Teacher!" },
+                    ]}
                   >
-                    <Option value={false}>No</Option>
-                    <Option value={true}>Yes</Option>
-                  </Select>
-                </Form.Item>
-              </>
+                    <Select
+                      mode="multiple"
+                      allowClear
+                      showSearch
+                      placeholder="Select a Teacher"
+                      options={TeachersList?.map((item) => ({
+                        value: item._id,
+                        label: item.name,
+                      }))}
+                      filterOption={(input, option) =>
+                        option.label.toLowerCase().includes(input.toLowerCase())
+                      }
+                    />
+                  </Form.Item>
+                  <Form.Item
+                    hidden
+                    className="w-100"
+                    label="Teachers"
+                    name="isTeacher"
+                  >
+                    <Select
+                      onChange={(value) => {
+                        setIsTeacher(true);
+                        setIsCoordinator(false); // Disable Coordinator when Teacher is selected
+                        form.resetFields(["coordinatorID"]); // Reset coordinator-related fields
+                      }}
+                      disabled={isCoordinator} // Disable if Coordinator is selected
+                    >
+                      <Option value={false}>No</Option>
+                      <Option value={true}>Yes</Option>
+                    </Select>
+                  </Form.Item>
+                </>
+              )}
+            </Flex>
+
+            {CurrectUserRole === UserRole[0] && (
+              <Flex direction="column" gap={4}>
+                <Flex gap={4} width="100%">
+                  <Form.Item
+                    className="w-100 mb-0"
+                    style={{ flex: 1 }}
+                    label={<Text fontWeight="500">Coordinator</Text>}
+                    name="isCoordinator"
+                  >
+                    <Select
+                      onChange={(value) => {
+                        setIsCoordinator(value);
+                        setIsTeacher(false); // Disable Teacher when Coordinator is selected
+                        form.resetFields(["teacherID"]); // Reset teacher-related fields
+                      }}
+                    >
+                      <Option value={false}>No</Option>
+                      <Option value={true}>Yes</Option>
+                    </Select>
+                  </Form.Item>
+
+                  <Form.Item
+                    className="w-100"
+                    label="Teachers"
+                    name="isTeacher"
+                  >
+                    <Select
+                      onChange={(value) => {
+                        setIsTeacher(value);
+                        setIsCoordinator(false); // Disable Coordinator when Teacher is selected
+                        form.resetFields(["coordinatorID"]); // Reset coordinator-related fields
+                      }}
+                      disabled={isCoordinator} // Disable if Coordinator is selected
+                    >
+                      <Option value={false}>No</Option>
+                      <Option value={true}>Yes</Option>
+                    </Select>
+                  </Form.Item>
+                </Flex>
+
+                {isCoordinator && (
+                  <Form.Item
+                    label={<Text fontWeight="500">Coordinator ID</Text>}
+                    name="coordinatorID"
+                    rules={[
+                      {
+                        required: true,
+                        message: "Please select a Coordinator!",
+                      },
+                    ]}
+                  >
+                    <Select
+                      showSearch
+                      placeholder="Select a Coordinator"
+                      options={ObserverList?.map((item) => ({
+                        value: item._id,
+                        label: item.name,
+                      }))}
+                      filterOption={(input, option) =>
+                        option.label.toLowerCase().includes(input.toLowerCase())
+                      }
+                    />
+                  </Form.Item>
+                )}
+
+                {isTeacher && (
+                  <Form.Item
+                    label={<Text fontWeight="500">Teacher ID</Text>}
+                    name="teacherID"
+                    rules={[
+                      { required: true, message: "Please select a Teacher!" },
+                    ]}
+                  >
+                    <Select
+                      showSearch
+                      placeholder="Select a Teacher"
+                      options={TeachersList?.map((item) => ({
+                        value: item._id,
+                        label: item.name,
+                      }))}
+                      filterOption={(input, option) =>
+                        option.label.toLowerCase().includes(input.toLowerCase())
+                      }
+                    />
+                  </Form.Item>
+                )}
+              </Flex>
             )}
-          </div>
 
-          {CurrectUserRole === UserRole[0] && (
-            <>
-              <div className="d-flex gap-3 align-items-center justify-content-between">
-                <Form.Item
-                  className="w-100"
-                  label="Coordinator"
-                  name="isCoordinator"
-                >
-                  <Select
-                    onChange={(value) => {
-                      setIsCoordinator(value);
-                      setIsTeacher(false); // Disable Teacher when Coordinator is selected
-                      form.resetFields(["teacherID"]); // Reset teacher-related fields
-                    }}
-                  >
-                    <Option value={false}>No</Option>
-                    <Option value={true}>Yes</Option>
-                  </Select>
-                </Form.Item>
-
-                <Form.Item className="w-100" label="Teachers" name="isTeacher">
-                  <Select
-                    onChange={(value) => {
-                      setIsTeacher(value);
-                      setIsCoordinator(false); // Disable Coordinator when Teacher is selected
-                      form.resetFields(["coordinatorID"]); // Reset coordinator-related fields
-                    }}
-                    disabled={isCoordinator} // Disable if Coordinator is selected
-                  >
-                    <Option value={false}>No</Option>
-                    <Option value={true}>Yes</Option>
-                  </Select>
-                </Form.Item>
-              </div>
-
-              {isCoordinator && (
-                <Form.Item
-                  label="Coordinator ID"
-                  name="coordinatorID"
-                  rules={[
-                    {
-                      required: true,
-                      message: "Please select a Coordinator!",
-                    },
-                  ]}
-                >
-                  <Select
-                    showSearch
-                    placeholder="Select a Coordinator"
-                    options={ObserverList?.map((item) => ({
-                      value: item._id,
-                      label: item.name,
-                    }))}
-                    filterOption={(input, option) =>
-                      option.label.toLowerCase().includes(input.toLowerCase())
-                    }
-                  />
-                </Form.Item>
-              )}
-
-              {isTeacher && (
-                <Form.Item
-                  label="Teacher ID"
-                  name="teacherID"
-                  rules={[
-                    { required: true, message: "Please select a Teacher!" },
-                  ]}
-                >
-                  <Select
-                    showSearch
-                    placeholder="Select a Teacher"
-                    options={TeachersList?.map((item) => ({
-                      value: item._id,
-                      label: item.name,
-                    }))}
-                    filterOption={(input, option) =>
-                      option.label.toLowerCase().includes(input.toLowerCase())
-                    }
-                  />
-                </Form.Item>
-              )}
-            </>
-          )}
-
-          <Button type="primary" htmlType="submit">
-            initiate
-            {/* {loading ? "initiating Form..." : "initiate"} */}
-          </Button>
-        </Form>
-      </Spin>
-    </div>
+            <Button
+              type="primary"
+              htmlType="submit"
+              disabled={loading}
+              size="large"
+              block
+              style={{ borderRadius: "8px", marginTop: "16px" }}
+            >
+              {loading ? "Initiating Form..." : "Initiate Form"}
+            </Button>
+          </Form>
+        </Spin>
+      </Box>
+    </Box>
   );
 }
 

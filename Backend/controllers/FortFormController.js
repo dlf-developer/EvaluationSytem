@@ -14,6 +14,7 @@ exports.createForm = async (req, res) => {
     coordinatorID,
     isTeacher,
     teacherID,
+    observerID,
   } = req.body;
   const userId = req?.user?.id;
 

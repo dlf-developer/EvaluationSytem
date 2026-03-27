@@ -9,7 +9,7 @@ import {
 } from "../../redux/userSlice";
 import { useParams, useSearchParams } from "react-router-dom";
 import { Form, Select, Button, Input, Radio, message, Space } from "antd";
-import { Col, Container, Row } from "react-bootstrap";
+import { Box, Flex, Heading, Text, SimpleGrid } from "@chakra-ui/react";
 import { getUserId } from "../../Utils/auth";
 import "./Weekly4Form.css"; // Import custom CSS for animation
 import { UserRole } from "../../config/config";
@@ -22,7 +22,7 @@ function Weekly4Form() {
   const [thankYou, setThankYou] = useState(false);
   const dispatch = useDispatch();
   const { GetTeachersLists, GetObserverLists } = useSelector(
-    (state) => state.user
+    (state) => state.user,
   );
   const [searchParams] = useSearchParams();
   const [form] = Form.useForm();
@@ -88,7 +88,7 @@ function Weekly4Form() {
                   validator: async (_, sections) => {
                     if (!sections || sections.length < 1) {
                       return Promise.reject(
-                        new Error("At least one section is required")
+                        new Error("At least one section is required"),
                       );
                     }
                   },
@@ -98,12 +98,18 @@ function Weekly4Form() {
               {(fields, { add, remove }) => (
                 <>
                   {fields.map(({ key, name, fieldKey, ...restField }) => (
-                    <Row
+                    <SimpleGrid
+                      columns={{ base: 1, md: 3 }}
+                      spacing={4}
                       key={key}
-                      style={{ display: "flex", marginBottom: 8 }}
-                      className="g-3"
+                      mb={4}
+                      p={5}
+                      borderRadius="xl"
+                      borderWidth="1px"
+                      borderColor="gray.100"
+                      bg="gray.50"
                     >
-                      <Col xs={12} md={4}>
+                      <Box>
                         <Form.Item
                           {...restField}
                           name={[name, "classId"]}
@@ -126,9 +132,9 @@ function Weekly4Form() {
                             onChange={(v) => onChnageSection(v)}
                           />
                         </Form.Item>
-                      </Col>
+                      </Box>
 
-                      <Col xs={12} md={4}>
+                      <Box>
                         <Form.Item
                           {...restField}
                           name={[name, "section"]}
@@ -150,9 +156,9 @@ function Weekly4Form() {
                             }))}
                           />
                         </Form.Item>
-                      </Col>
+                      </Box>
 
-                      <Col xs={12} md={4}>
+                      <Box>
                         <Form.Item
                           {...restField}
                           name={[name, "answer"]}
@@ -164,19 +170,31 @@ function Weekly4Form() {
                             },
                           ]}
                         >
-                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "space-between",
+                            }}
+                          >
                             <Radio.Group
                               size="middle"
                               options={yesNoNAOptions}
                               optionType="button"
                               buttonStyle="solid"
                             />
-                            <MinusCircleOutlined style={{ marginLeft: "5px", cursor: "pointer" }} onClick={() => remove(name)} />
+                            <MinusCircleOutlined
+                              style={{
+                                marginLeft: "5px",
+                                cursor: "pointer",
+                                color: "red",
+                              }}
+                              onClick={() => remove(name)}
+                            />
                           </div>
                         </Form.Item>
-                      </Col>
-
-                    </Row>
+                      </Box>
+                    </SimpleGrid>
                   ))}
 
                   {fields.length < 5 && (
@@ -251,18 +269,28 @@ function Weekly4Form() {
   };
 
   const renderSections = (title, questions, namePrefix) => (
-    <>
-      <Col md={12}>
-        <h2
-          className="mb-3 px-3 py-3 rounded-3 text-primary"
-          style={{ background: "#f7f7f7" }}
-        >
-          {title}
-        </h2>
-      </Col>
-      {questions.map((question, index) => (
-        <Col md={12} key={`${namePrefix}${index}`}>
-          <div className="mb-3 shadow-sm p-3">
+    <Box w="100%" mb={8}>
+      <Heading
+        size="md"
+        color="brand.primary"
+        bg="gray.50"
+        p={4}
+        borderRadius="lg"
+        mb={6}
+      >
+        {title}
+      </Heading>
+      <Box display="flex" flexDirection="column" gap={4}>
+        {questions.map((question, index) => (
+          <Box
+            key={`${namePrefix}${index}`}
+            bg="white"
+            p={6}
+            borderRadius="xl"
+            boxShadow="sm"
+            borderWidth="1px"
+            borderColor="gray.100"
+          >
             <RenderRadioFormItem
               classSelection={index < 2 ? true : false}
               inputBox={index >= 3 ? true : false}
@@ -271,10 +299,10 @@ function Weekly4Form() {
               label={question}
               question={question}
             />
-          </div>
-        </Col>
-      ))}
-    </>
+          </Box>
+        ))}
+      </Box>
+    </Box>
   );
 
   const handleSubmit = async (values) => {
@@ -296,7 +324,7 @@ function Weekly4Form() {
 
         const res = await dispatch(initiateFromObserver(payload));
         if (res?.payload?.success) {
-          const userInfo=res?.payload?.data[0]?.teacherId
+          const userInfo = res?.payload?.data[0]?.teacherId;
           const activity = {
             observerMessage: `You have Initiated the Learning Progress Checklist.`,
             teacherMessage: `${getUserId()?.name} has Initiated the Learning Progress Checklist.`,
@@ -305,7 +333,7 @@ function Weekly4Form() {
             reciverId: userInfo,
             senderId: getUserId()?.id,
             fromNo: 4,
-            data: res?.payload?.data
+            data: res?.payload?.data,
           };
 
           const activitiRecord = await dispatch(CreateActivityApi(activity));
@@ -331,8 +359,7 @@ function Weekly4Form() {
 
         const res = await dispatch(initiateFromObserver(payload));
         if (res.payload.success) {
-
-          const userInfo=res?.payload?.data?.isInitiated?.Observer
+          const userInfo = res?.payload?.data?.isInitiated?.Observer;
           const activity = {
             observerMessage: `You have complete the Learning Progress Checklist.`,
             teacherMessage: `${getUserId()?.name} has been complete the Learning Progress Checklist.`,
@@ -341,7 +368,7 @@ function Weekly4Form() {
             reciverId: userInfo,
             senderId: getUserId()?.id,
             fromNo: 4,
-            data: res?.payload?.data
+            data: res?.payload?.data,
           };
 
           const activitiRecord = await dispatch(CreateActivityApi(activity));
@@ -367,8 +394,7 @@ function Weekly4Form() {
 
         const res = await dispatch(UpdateFromObserver(payload));
         if (res?.payload?.isCompleted) {
-
-          const userInfo=res?.payload?.isInitiated?.Observer?._id
+          const userInfo = res?.payload?.isInitiated?.Observer?._id;
           const activity = {
             observerMessage: `${getUserId()?.name} has been completed your initiated Learning Progress Checklist Form.`,
             teacherMessage: `You have complete the Learning Progress Checklist initiated by ${res?.payload?.isInitiated?.Observer?.name}.`,
@@ -377,7 +403,7 @@ function Weekly4Form() {
             reciverId: userInfo,
             senderId: getUserId()?.id,
             fromNo: 4,
-            data: res?.payload
+            data: res?.payload,
           };
 
           const activitiRecord = await dispatch(CreateActivityApi(activity));
@@ -385,7 +411,7 @@ function Weekly4Form() {
             message.error("Error on Activity Record");
           }
 
-          window.location.href = "/weekly4form"; 
+          window.location.href = "/weekly4form";
         } else {
           message.error("Something went wrong!");
         }
@@ -395,102 +421,151 @@ function Weekly4Form() {
       message.error("An unexpected error occurred!");
     }
   };
-
   return (
-    <div>
-      <Form form={form} onFinish={handleSubmit} layout="vertical">
-        {isInitiate ? (
-          <Container className="w-100 py-5">
-            {thankYou ? (
-              <Row
-                className="justify-content-center align-items-center"
-                style={{ height: "80vh" }}
-              >
-                <Col md={6}>
-                  <h1 className="fade-in">Form Successfully Initiated!</h1>
-                  <p className="fade-in">Redirecting you...</p>
-                </Col>
-              </Row>
-            ) : (
-              <Row
-                className="justify-content-center align-items-center"
-                style={{ height: "80vh" }}
-              >
-                <Col md={4}>
-                  <Form.Item
-                    className="w-100"
-                    label="Teacher ID"
-                    name="teacherId"
-                    rules={[
-                      { required: true, message: "Please select a Teacher!" },
-                    ]}
-                  >
-                    <Select
-                      mode="multiple"
-                      allowClear
-                      showSearch
-                      placeholder="Select a Teacher"
-                      options={GetTeachersLists?.map((item) => ({
-                        value: item._id,
-                        label: item.name,
-                      }))}
-                      filterOption={(input, option) =>
-                        option.label.toLowerCase().includes(input.toLowerCase())
-                      }
-                    />
-                  </Form.Item>
-                  <Button type="primary" htmlType="submit" className="mt-0">
-                    Submit
-                  </Button>
-                </Col>
-              </Row>
-            )}
-          </Container>
-        ) : (
-          <Container>
-            <Row>
-              <Col md={6}>
-                {FormId === undefined && (
-                  <>
-                    <h6>Select Observer</h6>
-                    <Select
-                      className="w-100 mb-4"
-                      mode="multiple"
-                      allowClear
-                      showSearch
-                      placeholder="Select a Observer"
-                      onChange={(value) => setObsereverId(value)}
-                      options={GetObserverLists?.map((item) => ({
-                        value: item._id,
-                        label: item.name,
-                      }))}
-                      filterOption={(input, option) =>
-                        option.label.toLowerCase().includes(input.toLowerCase())
-                      }
-                    />
-                  </>
-                )}
+    <Box p={{ base: 4, md: 8 }} minH="calc(100vh - 72px)" bg="gray.50">
+      <Box maxW="1200px" mx="auto">
+        <Box mb={6}>
+          <Heading size="lg" color="gray.800" mb={1}>
+            Weekly 4 Form
+          </Heading>
+          <Text color="gray.500">
+            Please provide your responses for the weekly assessment.
+          </Text>
+        </Box>
+        <Form form={form} onFinish={handleSubmit} layout="vertical">
+          {isInitiate ? (
+            <Box
+              bg="white"
+              p={8}
+              borderRadius="2xl"
+              boxShadow="sm"
+              borderWidth="1px"
+              borderColor="gray.100"
+              py={10}
+            >
+              {thankYou ? (
+                <Flex
+                  justify="center"
+                  align="center"
+                  direction="column"
+                  minH="50vh"
+                >
+                  <Heading color="green.500" mb={4} className="fade-in">
+                    Form Successfully Initiated!
+                  </Heading>
+                  <Text color="gray.600" fontSize="lg" className="fade-in">
+                    Redirecting you...
+                  </Text>
+                </Flex>
+              ) : (
+                <Flex justify="center" align="center" minH="50vh">
+                  <Box w={{ base: "100%", md: "50%" }}>
+                    <Form.Item
+                      className="w-100"
+                      label={<Text fontWeight="500">Teacher ID</Text>}
+                      name="teacherId"
+                      rules={[
+                        { required: true, message: "Please select a Teacher!" },
+                      ]}
+                    >
+                      <Select
+                        size="large"
+                        mode="multiple"
+                        allowClear
+                        showSearch
+                        placeholder="Select a Teacher"
+                        options={GetTeachersLists?.map((item) => ({
+                          value: item._id,
+                          label: item.name,
+                        }))}
+                        filterOption={(input, option) =>
+                          option.label
+                            .toLowerCase()
+                            .includes(input.toLowerCase())
+                        }
+                      />
+                    </Form.Item>
+                    <Button
+                      type="primary"
+                      size="large"
+                      htmlType="submit"
+                      w="100%"
+                      style={{ borderRadius: "8px" }}
+                      bg="#1a4d2e"
+                    >
+                      Submit
+                    </Button>
+                  </Box>
+                </Flex>
+              )}
+            </Box>
+          ) : (
+            <Box
+              bg="white"
+              p={{ base: 4, md: 8 }}
+              borderRadius="2xl"
+              boxShadow="sm"
+              borderWidth="1px"
+              borderColor="gray.100"
+            >
+              {FormId === undefined && (
+                <Box
+                  mb={8}
+                  bg="gray.50"
+                  p={6}
+                  borderRadius="xl"
+                  borderWidth="1px"
+                  borderColor="gray.100"
+                >
+                  <Heading size="sm" mb={4} color="gray.700">
+                    Select Observer
+                  </Heading>
+                  <Select
+                    size="large"
+                    className="w-100 mb-4"
+                    mode="multiple"
+                    allowClear
+                    showSearch
+                    placeholder="Select a Observer"
+                    onChange={(value) => setObsereverId(value)}
+                    options={GetObserverLists?.map((item) => ({
+                      value: item._id,
+                      label: item.name,
+                    }))}
+                    filterOption={(input, option) =>
+                      option.label.toLowerCase().includes(input.toLowerCase())
+                    }
+                  />
+                </Box>
+              )}
 
-                {renderSections(
-                  "Learning Progress Checklist",
-                  [
-                    "I have completed last week's plan.",
-                    "I have uploaded experiential/active Lesson Plan for the next week that includes triggers/visual or auditory stimulus.",
-                    "My last corrected work is not beyond a fortnight.",
-                    "Name of L.O.W. Students with Class & Section.",
-                    "Name of I Care Forms filled along with reason",
-                  ],
-                  "FormData"
-                )}
-              </Col>
-              <Button type="primary" htmlType="submit" className="mt-0">
-                Submit
-              </Button>
-            </Row>
-          </Container>
-        )}
-      </Form>
-    </div>
+              {renderSections(
+                "Learning Progress Checklist",
+                [
+                  "I have completed last week's plan.",
+                  "I have uploaded experiential/active Lesson Plan for the next week that includes triggers/visual or auditory stimulus.",
+                  "My last corrected work is not beyond a fortnight.",
+                  "Name of L.O.W. Students with Class & Section.",
+                  "Name of I Care Forms filled along with reason",
+                ],
+                "FormData",
+              )}
+
+              <Flex justify="flex-end" mt={8}>
+                <Button
+                  type="primary"
+                  size="large"
+                  htmlType="submit"
+                  style={{ borderRadius: "8px", minWidth: "150px" }}
+                >
+                  Submit Evaluation
+                </Button>
+              </Flex>
+            </Box>
+          )}
+        </Form>
+      </Box>
+    </Box>
   );
 }
 

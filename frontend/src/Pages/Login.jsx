@@ -6,6 +6,7 @@ import { message } from "antd";
 import {
   Box,
   Button,
+  Flex,
   FormControl,
   FormErrorMessage,
   Heading,
@@ -13,6 +14,7 @@ import {
   Input,
   InputGroup,
   InputLeftElement,
+  Stack,
   Text,
   VStack,
 } from "@chakra-ui/react";
@@ -68,133 +70,208 @@ function Login() {
   };
 
   return (
-    <Box
-      display="flex"
-      w="100%"
-      justifyContent="center"
-      alignItems="center"
+    <Flex
       minH="100vh"
+      direction={{ base: "column", md: "row" }}
       bg="brand.background"
     >
-      <Box
-        borderWidth="1px"
-        py={10}
-        px={8}
-        borderRadius="2xl"
-        w="100%"
-        maxW="458px"
-        bg="white"
-        boxShadow="2xl"
-        borderColor="brand.primary" // Vibrant Purple border
-        borderTopWidth="6px"
-        borderTopColor="brand.primary" // DLF Green accent top border
+      {/* Left Side: Branding / Visual */}
+      <Flex
+        flex={1}
+        bgGradient="linear(to-br, brand.primary, brand.secondary)"
+        color="white"
+        p={10}
+        direction="column"
+        justify="center"
+        align="center"
+        position="relative"
+        overflow="hidden"
+        display={{ base: "none", md: "flex" }}
       >
-        <VStack spacing={6} align="stretch">
-          <Box textAlign="center" mb={4}>
-            <Image
-              src="/images/mainLogo.jpeg"
-              alt="Main Logo"
-              mx="auto"
+        {/* Glassmorphism Abstract Shapes */}
+        <Box
+          position="absolute"
+          top="-10%"
+          left="-10%"
+          w="400px"
+          h="400px"
+          bg="whiteAlpha.200"
+          borderRadius="full"
+          filter="blur(50px)"
+        />
+        <Box
+          position="absolute"
+          bottom="-10%"
+          right="-10%"
+          w="300px"
+          h="300px"
+          bg="whiteAlpha.200"
+          borderRadius="full"
+          filter="blur(40px)"
+        />
+
+        <VStack spacing={8} zIndex={1} textAlign="center" maxW="lg">
+          <Image
+            src="/images/mainLogo.jpeg"
+            alt="Main Logo"
+            maxH="120px"
+            objectFit="contain"
+            bg="white"
+            p={2}
+            borderRadius="xl"
+            boxShadow="2xl"
+          />
+          <Heading as="h1" size="2xl" fontWeight="bold" lineHeight="tall">
+            Welcome to Teacher Portal
+          </Heading>
+          <Text fontSize="lg" opacity={0.9}>
+            A comprehensive evaluation system to streamline academic and
+            administrative assessments with precision.
+          </Text>
+        </VStack>
+      </Flex>
+
+      {/* Right Side: Form */}
+      <Flex flex={1} justify="center" align="center" p={{ base: 6, md: 10 }}>
+        <Box
+          w="full"
+          maxW="md"
+          bg="white"
+          p={10}
+          borderRadius="2xl"
+          boxShadow={{ base: "none", md: "2xl" }}
+          border={{ base: "none", md: "1px solid" }}
+          borderColor="gray.100"
+        >
+          <VStack spacing={6} align="stretch" w="full">
+            <Box
+              textAlign="center"
+              display={{ base: "block", md: "none" }}
               mb={4}
-              maxH="80px"
-              objectFit="contain"
-            />
-            <Heading as="h1" size="xl" color="brand.secondary" mb={2}>
-              Teacher Proformas Portal
-            </Heading>
-            <Heading
-              as="h2"
-              size="md"
-              color="brand.text"
-              mb={3}
-              fontWeight="medium"
             >
-              User Login
-            </Heading>
-            <Text color="brand.textMuted" fontSize="sm">
-              Enter your registered email and password
-            </Text>
-          </Box>
-
-          <FormControl isInvalid={!!errors.email}>
-            <InputGroup size="lg">
-              <InputLeftElement pointerEvents="none">
-                <UserOutlined
-                  style={{ color: "var(--chakra-colors-brand-secondary)" }}
-                />
-              </InputLeftElement>
-              <Input
-                placeholder="Email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                focusBorderColor="brand.primary"
-                borderColor="gray.300"
-                _hover={{ borderColor: "brand.secondary" }}
+              <Image
+                src="/images/mainLogo.jpeg"
+                alt="Main Logo"
+                mx="auto"
+                mb={4}
+                maxH="80px"
+                objectFit="contain"
               />
-            </InputGroup>
-            {errors.email && (
-              <FormErrorMessage>{errors.email}</FormErrorMessage>
-            )}
-          </FormControl>
+              <Heading as="h1" size="xl" color="brand.secondary" mb={2}>
+                Teacher Portal
+              </Heading>
+            </Box>
 
-          <FormControl isInvalid={!!errors.password}>
-            <InputGroup size="lg">
-              <InputLeftElement pointerEvents="none">
-                <LockOutlined
-                  style={{ color: "var(--chakra-colors-brand-secondary)" }}
-                />
-              </InputLeftElement>
-              <Input
-                type="password"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                focusBorderColor="brand.primary"
-                borderColor="gray.300"
-                _hover={{ borderColor: "brand.secondary" }}
-              />
-            </InputGroup>
-            {errors.password && (
-              <FormErrorMessage>{errors.password}</FormErrorMessage>
-            )}
-          </FormControl>
+            <Box mb={2}>
+              <Heading
+                as="h2"
+                size="xl"
+                mb={2}
+                color="brand.text"
+                fontWeight="bold"
+              >
+                Login
+              </Heading>
+              <Text color="brand.textMuted" fontSize="md">
+                Enter your credentials to access your account.
+              </Text>
+            </Box>
 
-          <Box
-            display="flex"
-            justifyContent="space-between"
-            alignItems="center"
-            mt={4}
-          >
+            <Stack spacing={5}>
+              <FormControl isInvalid={!!errors.email}>
+                <InputGroup size="lg">
+                  <InputLeftElement pointerEvents="none">
+                    <UserOutlined
+                      style={{ color: "var(--chakra-colors-brand-secondary)" }}
+                    />
+                  </InputLeftElement>
+                  <Input
+                    placeholder="Email Address"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    focusBorderColor="brand.primary"
+                    borderColor="gray.300"
+                    _hover={{ borderColor: "brand.secondary" }}
+                    borderRadius="lg"
+                    bg="gray.50"
+                  />
+                </InputGroup>
+                {errors.email && (
+                  <FormErrorMessage>{errors.email}</FormErrorMessage>
+                )}
+              </FormControl>
+
+              <FormControl isInvalid={!!errors.password}>
+                <InputGroup size="lg">
+                  <InputLeftElement pointerEvents="none">
+                    <LockOutlined
+                      style={{ color: "var(--chakra-colors-brand-secondary)" }}
+                    />
+                  </InputLeftElement>
+                  <Input
+                    type="password"
+                    placeholder="Password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    focusBorderColor="brand.primary"
+                    borderColor="gray.300"
+                    _hover={{ borderColor: "brand.secondary" }}
+                    borderRadius="lg"
+                    bg="gray.50"
+                  />
+                </InputGroup>
+                {errors.password && (
+                  <FormErrorMessage>{errors.password}</FormErrorMessage>
+                )}
+              </FormControl>
+            </Stack>
+
+            <Flex justify="flex-end" align="center">
+              <Box
+                as={Link}
+                to="/forget-password"
+                color="brand.primary"
+                fontWeight="semibold"
+                fontSize="sm"
+                _hover={{
+                  color: "brand.secondary",
+                  textDecoration: "underline",
+                }}
+                transition="color 0.2s"
+              >
+                Forgot Password?
+              </Box>
+            </Flex>
+
             <Button
               colorScheme="brand"
               size="lg"
+              w="full"
               leftIcon={<AntDesignOutlined />}
               onClick={handleLogin}
-              px={8}
-              shadow="md"
+              py={7}
+              mt={2}
+              fontSize="md"
+              fontWeight="bold"
+              borderRadius="xl"
+              boxShadow="lg"
               _hover={{
                 transform: "translateY(-2px)",
-                shadow: "lg",
+                boxShadow: "xl",
                 bg: "brand.secondary",
               }}
-              transition="all 0.2s"
+              _active={{
+                transform: "translateY(0)",
+                boxShadow: "md",
+              }}
+              transition="all 0.3s"
             >
-              Login
+              Sign In
             </Button>
-            <Box
-              as={Link}
-              to="/forget-password"
-              color="brand.primary"
-              fontWeight="medium"
-              _hover={{ color: "brand.secondary", textDecoration: "underline" }}
-              transition="color 0.2s"
-            >
-              Forget Password
-            </Box>
-          </Box>
-        </VStack>
-      </Box>
-    </Box>
+          </VStack>
+        </Box>
+      </Flex>
+    </Flex>
   );
 }
 

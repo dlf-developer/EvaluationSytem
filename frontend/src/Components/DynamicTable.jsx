@@ -27,6 +27,8 @@ const DynamicTable = ({
             `${range[0]}-${range[1]} of ${total} items`,
         }}
         onChange={onChange}
+        scroll={{ y: "calc(100vh - 450px)", x: "max-content" }}
+        className="custom-table"
         {...props}
       />
     </Spin>

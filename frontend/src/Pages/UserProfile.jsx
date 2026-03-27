@@ -1,22 +1,16 @@
 import React, { useEffect, useState } from "react";
-import {
-  Form,
-  Input,
-  Button,
-  Card,
-  Avatar,
-  Typography,
-  message,
-  Spin,
-  Row,
-  Col,
-} from "antd";
+import { Form, Input, Button, message, Spin, Row, Col } from "antd";
 import { UserOutlined, EditOutlined, SaveOutlined } from "@ant-design/icons";
 import { useDispatch } from "react-redux";
 import { GetSignleUser, UpdateUser } from "../redux/userSlice";
 import { getUserId } from "../Utils/auth";
-
-const { Title } = Typography;
+import {
+  Box,
+  Flex,
+  Heading,
+  Text,
+  Avatar as ChakraAvatar,
+} from "@chakra-ui/react";
 
 const UserProfile = () => {
   const [userData, setUserData] = useState(null);
@@ -86,106 +80,248 @@ const UserProfile = () => {
 
   if (loading) {
     return (
-      <div style={{ textAlign: "center", marginTop: 50 }}>
+      <Flex
+        w="100%"
+        h="100vh"
+        align="center"
+        justify="center"
+        bg="brand.background"
+      >
         <Spin size="large" />
-      </div>
+      </Flex>
     );
   }
 
   return (
-    <Card
-      style={{
-        maxWidth: 400,
-        margin: "auto",
-        marginTop: "20px",
-        marginBottom: 24,
-      }}
-      cover={
-        <div style={{ textAlign: "center", padding: "20px" }}>
-          <Avatar
-            className="Bg-Temp"
-            size={100}
-            icon={userData?.name?.slice(0, 1) || <UserOutlined />}
-          />
-          <Title level={4} style={{ marginTop: "10px" }}>
-            {userData?.name || "User Name"}
-          </Title>
-        </div>
-      }
-      actions={[
-        isEditing ? (
-          <>
-            <Button icon={<SaveOutlined />} onClick={handleSave} type="primary">
-              Save
-            </Button>
-            <Button onClick={handleCancel}>Cancel</Button>
-          </>
-        ) : (
-          <Button icon={<EditOutlined />} onClick={handleEdit}>
-            Edit Profile
-          </Button>
-        ),
-      ]}
-    >
-      <Form
-        layout="vertical"
-        form={form}
-        initialValues={userData}
-        disabled={!isEditing}
+    <Box bg="brand.background" minH="100vh" pb={12}>
+      {/* Premium Cover Header */}
+      <Box
+        h={{ base: "200px", md: "280px" }}
+        w="100%"
+        bgGradient="linear(to-r, brand.primary, brand.secondary)"
+        position="relative"
+        overflow="hidden"
       >
-        <Row gutter={16}>
-          <Col xs={24} sm={12}>
-            <Form.Item
-              label="Name"
-              name="name"
-              rules={[{ required: true, message: "Name is required!" }]}
-            >
-              <Input />
-            </Form.Item>
-          </Col>
-          <Col xs={24} sm={12}>
-            <Form.Item
-              label="Email"
-              name="email"
-              rules={[
-                { required: true, message: "Email is required!" },
-                { type: "email", message: "Enter a valid email address!" },
-              ]}
-            >
-              <Input />
-            </Form.Item>
-          </Col>
-        </Row>
+        {/* Subtle decorative shapes */}
+        <Box
+          position="absolute"
+          top="-20%"
+          left="-5%"
+          w="300px"
+          h="300px"
+          bg="whiteAlpha.200"
+          rounded="full"
+          filter="blur(40px)"
+        />
+        <Box
+          position="absolute"
+          bottom="-20%"
+          right="10%"
+          w="250px"
+          h="250px"
+          bg="whiteAlpha.200"
+          rounded="full"
+          filter="blur(50px)"
+        />
+      </Box>
 
-        <Row gutter={16}>
-          <Col xs={24} sm={12}>
-            <Form.Item
-              label="Phone"
-              name="mobile"
-              rules={[
-                { required: true, message: "Phone number is required!" },
-                {
-                  pattern: /^\d{10}$/,
-                  message:
-                    "Enter a valid 10 digit phone number (e.g., 0123456789).",
-                },
-              ]}
+      {/* Profile Content Box */}
+      <Box
+        maxW="5xl"
+        mx="auto"
+        mt={{ base: "-80px", md: "-120px" }}
+        px={{ base: 4, md: 8 }}
+        position="relative"
+        zIndex={1}
+      >
+        <Box
+          bg="white"
+          rounded="2xl"
+          shadow={{ base: "lg", md: "2xl" }}
+          overflow="hidden"
+        >
+          {/* Header Section */}
+          <Flex
+            direction={{ base: "column", sm: "row" }}
+            align={{ base: "center", sm: "flex-end" }}
+            justify="space-between"
+            p={{ base: 6, md: 10 }}
+            borderBottomWidth="1px"
+            borderColor="gray.100"
+            bg="white"
+          >
+            <Flex
+              align="center"
+              direction={{ base: "column", sm: "row" }}
+              textAlign={{ base: "center", sm: "left" }}
+              gap={{ base: 4, sm: 6 }}
             >
-              <Input />
-            </Form.Item>
-          </Col>
-          <Col xs={24} sm={12}>
-            <Form.Item
-              label="Designation"
-              name="designation"
-              rules={[{ required: true, message: "Designation is required!" }]}
+              <ChakraAvatar
+                size="2xl"
+                name={userData?.name || "User"}
+                icon={<UserOutlined fontSize="3xl" />}
+                showBorder
+                borderColor="white"
+                borderWidth="4px"
+                boxShadow="xl"
+                mt={{ base: "-40px", sm: 0 }}
+                bg="brand.secondary"
+                color="white"
+                w={{ base: "120px", md: "150px" }}
+                h={{ base: "120px", md: "150px" }}
+              />
+              <Box pb={{ sm: 2 }}>
+                <Heading size="xl" fontWeight="bold" color="gray.800" mb={1}>
+                  {userData?.name || "User Name"}
+                </Heading>
+                <Text color="brand.primary" fontWeight="semibold" fontSize="lg">
+                  {userData?.designation || "Staff Member"}
+                </Text>
+              </Box>
+            </Flex>
+
+            <Box mt={{ base: 6, sm: 0 }} pb={{ sm: 2 }}>
+              {isEditing ? (
+                <Flex gap={3}>
+                  <Button
+                    type="primary"
+                    icon={<SaveOutlined />}
+                    onClick={handleSave}
+                    size="large"
+                    style={{
+                      borderRadius: "8px",
+                      boxShadow: "0 4px 14px 0 rgba(0,118,255,0.39)",
+                    }}
+                  >
+                    Save Changes
+                  </Button>
+                  <Button
+                    onClick={handleCancel}
+                    size="large"
+                    style={{ borderRadius: "8px" }}
+                  >
+                    Cancel
+                  </Button>
+                </Flex>
+              ) : (
+                <Button
+                  type="default"
+                  icon={<EditOutlined />}
+                  onClick={handleEdit}
+                  size="large"
+                  style={{
+                    borderRadius: "8px",
+                    borderColor: "var(--chakra-colors-brand-primary)",
+                    color: "var(--chakra-colors-brand-primary)",
+                  }}
+                >
+                  Edit Profile
+                </Button>
+              )}
+            </Box>
+          </Flex>
+
+          {/* Form Section */}
+          <Box p={{ base: 6, md: 10 }} bg="gray.50">
+            <Heading size="md" mb={8} color="gray.700" fontWeight="bold">
+              Personal Information
+            </Heading>
+            <Form
+              layout="vertical"
+              form={form}
+              initialValues={userData}
+              disabled={!isEditing}
+              size="large"
             >
-              <Input />
-            </Form.Item>
-          </Col>
-        </Row>
-      </Form>
-    </Card>
+              <Row gutter={[32, 24]}>
+                <Col xs={24} sm={12}>
+                  <Form.Item
+                    label={
+                      <span style={{ fontWeight: 500, color: "#4a5568" }}>
+                        Full Name
+                      </span>
+                    }
+                    name="name"
+                    rules={[{ required: true, message: "Name is required!" }]}
+                  >
+                    <Input
+                      style={{ borderRadius: "8px", padding: "10px 14px" }}
+                      placeholder="Enter your full name"
+                    />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} sm={12}>
+                  <Form.Item
+                    label={
+                      <span style={{ fontWeight: 500, color: "#4a5568" }}>
+                        Email Address
+                      </span>
+                    }
+                    name="email"
+                    rules={[
+                      { required: true, message: "Email is required!" },
+                      {
+                        type: "email",
+                        message: "Enter a valid email address!",
+                      },
+                    ]}
+                  >
+                    <Input
+                      style={{ borderRadius: "8px", padding: "10px 14px" }}
+                      placeholder="Enter your email"
+                    />
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              <Row gutter={[32, 24]}>
+                <Col xs={24} sm={12}>
+                  <Form.Item
+                    label={
+                      <span style={{ fontWeight: 500, color: "#4a5568" }}>
+                        Phone Number
+                      </span>
+                    }
+                    name="mobile"
+                    rules={[
+                      { required: true, message: "Phone number is required!" },
+                      {
+                        pattern: /^\d{10}$/,
+                        message:
+                          "Enter a valid 10 digit phone number (e.g., 0123456789).",
+                      },
+                    ]}
+                  >
+                    <Input
+                      style={{ borderRadius: "8px", padding: "10px 14px" }}
+                      placeholder="Enter your phone frequency"
+                    />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} sm={12}>
+                  <Form.Item
+                    label={
+                      <span style={{ fontWeight: 500, color: "#4a5568" }}>
+                        Designation
+                      </span>
+                    }
+                    name="designation"
+                    rules={[
+                      { required: true, message: "Designation is required!" },
+                    ]}
+                  >
+                    <Input
+                      style={{ borderRadius: "8px", padding: "10px 14px" }}
+                      placeholder="Enter your designation"
+                    />
+                  </Form.Item>
+                </Col>
+              </Row>
+            </Form>
+          </Box>
+        </Box>
+      </Box>
+    </Box>
   );
 };
 

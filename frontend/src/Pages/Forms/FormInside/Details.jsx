@@ -2,8 +2,6 @@ import React, { useEffect, useState } from "react";
 import {
   Form,
   InputNumber,
-  Row,
-  Col,
   message,
   Spin,
   Radio,
@@ -18,6 +16,16 @@ import {
   Input,
   Alert,
 } from "antd";
+import {
+  Box,
+  Flex,
+  Heading,
+  Text,
+  SimpleGrid,
+  VStack,
+  Grid,
+  GridItem,
+} from "@chakra-ui/react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   GetSingleFormComplete,
@@ -314,35 +322,51 @@ const Details = () => {
   };
 
   return (
-    <div className="modern-form-container">
+    <Box p={{ base: 4, md: 8 }} minH="80vh" bg="gray.50">
       {isLoading ? (
-        <div className="modern-loader">
+        <Flex justify="center" align="center" minH="50vh">
           <Spin size="large" />
-        </div>
+        </Flex>
       ) : (
-        <>
-          <div className="modern-form-header">
-            <div className="header-section">
-              <h2 className="form-title">Observation Form</h2>
-              <div className="form-subtitle">Complete your evaluation</div>
-            </div>
-          </div>
+        <Box maxW="1200px" mx="auto">
+          <Box mb={8}>
+            <Heading size="lg" color="gray.800" mb={2}>
+              Observation Form
+            </Heading>
+            <Text color="gray.500">Complete your evaluation</Text>
+          </Box>
 
           <Form
             form={form}
             layout="vertical"
             onFinish={onFinish}
             onValuesChange={calculateScore}
-            className="modern-form"
           >
-            <Row gutter={[24, 0]}>
-              <Col xs={24} lg={12}>
-                <div className="form-section">
+            <Flex direction={{ base: "column", lg: "row" }} gap={8}>
+              <Box flex="1">
+                <Box>
                   {betaLoading && (
-                    <div className="info-card">
-                      <h3 className="section-title">Class Information</h3>
-                      <Row gutter={[16, 16]}>
-                        <Col span={24}>
+                    <Box
+                      bg="white"
+                      p={6}
+                      borderRadius="2xl"
+                      boxShadow="sm"
+                      borderWidth="1px"
+                      borderColor="gray.100"
+                      mb={8}
+                    >
+                      <Heading
+                        size="md"
+                        color="gray.800"
+                        mb={6}
+                        pb={4}
+                        borderBottom="1px solid"
+                        borderColor="gray.100"
+                      >
+                        Class Information
+                      </Heading>
+                      <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
+                        <Box>
                           <Form.Item
                             label="Class"
                             name="className"
@@ -380,9 +404,9 @@ const Details = () => {
                               }
                             />
                           </Form.Item>
-                        </Col>
+                        </Box>
 
-                        <Col span={24}>
+                        <Box>
                           <Form.Item
                             label="Section"
                             name="section"
@@ -417,9 +441,9 @@ const Details = () => {
                               }
                             />
                           </Form.Item>
-                        </Col>
+                        </Box>
 
-                        <Col xs={24} sm={12}>
+                        <Box>
                           <Form.Item
                             label="Date"
                             name="date"
@@ -437,10 +461,10 @@ const Details = () => {
                               disabledDate={disableFutureDates}
                             />
                           </Form.Item>
-                        </Col>
+                        </Box>
 
                         {CurrectUserRole === UserRole[2] && (
-                          <Col xs={24} sm={12}>
+                          <Box>
                             <Form.Item label="Coordinator" name="coordinatorID">
                               <Select
                                 defaultValue={formDetails?.userId?.name}
@@ -474,27 +498,52 @@ const Details = () => {
                                 <Option value={true}>Yes</Option>
                               </Select>
                             </Form.Item>
-                          </Col>
+                          </Box>
                         )}
-                      </Row>
-                    </div>
+                      </SimpleGrid>
+                    </Box>
                   )}
 
-                  <div className="questions-section">
-                    <h3 className="section-title">Evaluation Questions</h3>
+                  <Box
+                    bg="white"
+                    p={6}
+                    borderRadius="2xl"
+                    boxShadow="sm"
+                    borderWidth="1px"
+                    borderColor="gray.100"
+                    mb={8}
+                  >
+                    <Heading
+                      size="md"
+                      color="gray.800"
+                      mb={6}
+                      pb={4}
+                      borderBottom="1px solid"
+                      borderColor="gray.100"
+                    >
+                      Evaluation Questions
+                    </Heading>
 
                     {currentQuestions?.map((field, index) => {
                       return (
-                        <div className="question-card" key={field?.key}>
+                        <Box
+                          key={field?.key}
+                          bg="gray.50"
+                          p={5}
+                          borderRadius="xl"
+                          mb={4}
+                          borderWidth="1px"
+                          borderColor="gray.100"
+                        >
                           <Form.Item
-                            className="question-item"
+                            className="question-item mb-0"
                             name={field?.key}
                             label={
-                              <span className="question-label">
+                              <Text fontWeight="500" color="gray.800" mb={2}>
                                 {field?.name
                                   .replace(/([A-Z])/g, " $1")
                                   .replace(/^./, (str) => str.toUpperCase())}
-                              </span>
+                              </Text>
                             }
                             rules={[
                               {
@@ -517,82 +566,142 @@ const Details = () => {
                               ))}
                             </div>
                           </Form.Item>
-                        </div>
+                        </Box>
                       );
                     })}
-                  </div>
-                </div>
-              </Col>
+                  </Box>
+                </Box>
+              </Box>
 
-              <Col xs={24} lg={12}>
-                <div className="sticky-sidebar">
+              <Box w={{ base: "100%", lg: "350px" }}>
+                <Box position="sticky" top="24px">
                   {(GetUserAccess === UserRole[2] &&
                     !formDetails?.isCoordinatorComplete) ||
                   (GetUserAccess === UserRole[1] &&
                     !formDetails?.isTeacherComplete) ? (
-                    <div className="empty-state">
+                    <Box
+                      bg="white"
+                      p={6}
+                      borderRadius="2xl"
+                      boxShadow="sm"
+                      borderWidth="1px"
+                      borderColor="gray.100"
+                    >
                       <Empty
                         image={Empty.PRESENTED_IMAGE_SIMPLE}
                         description="Waiting for teacher response"
                       />
-                    </div>
+                    </Box>
                   ) : (
                     ""
                   )}
 
                   {GetUserAccess === UserRole[1] &&
                     formDetails?.isTeacherComplete && (
-                      <div className="response-section">
-                        <h3 className="section-title">Teacher Response</h3>
+                      <Box
+                        bg="white"
+                        p={6}
+                        borderRadius="2xl"
+                        boxShadow="sm"
+                        borderWidth="1px"
+                        borderColor="gray.100"
+                      >
+                        <Heading
+                          size="md"
+                          color="gray.800"
+                          mb={6}
+                          pb={4}
+                          borderBottom="1px solid"
+                          borderColor="gray.100"
+                        >
+                          Teacher Response
+                        </Heading>
                         {currentQuestions?.map((item, index) => {
                           const answer = formDetails?.teacherForm[item.key];
                           return (
-                            <div className="response-card" key={index + 1}>
-                              <div className="response-question">
+                            <Box
+                              key={index + 1}
+                              p={4}
+                              bg="gray.50"
+                              borderRadius="lg"
+                              mb={3}
+                            >
+                              <Text color="gray.600" fontSize="sm" mb={2}>
                                 {item?.name
                                   .replace(/([A-Z])/g, " $1")
                                   .replace(/^./, (str) => str.toUpperCase())}
-                              </div>
-                              <div
-                                className={`response-badge badge-${answer?.toLowerCase()}`}
-                              >
+                              </Text>
+                              <Text fontWeight="bold" color="brand.primary">
                                 {answer}
-                              </div>
-                            </div>
+                              </Text>
+                            </Box>
                           );
                         })}
 
-                        <div className="score-card">
-                          <div className="score-label">Self Assessment</div>
-                          <div className="score-value">
-                            <span className="score-number">
+                        <Box
+                          mt={6}
+                          pt={4}
+                          borderTop="1px solid"
+                          borderColor="gray.100"
+                        >
+                          <Text color="gray.500" mb={1}>
+                            Self Assessment
+                          </Text>
+                          <Flex align="baseline" gap={1}>
+                            <Text
+                              color="brand.primary"
+                              fontSize="2xl"
+                              fontWeight="bold"
+                            >
                               {getSelfAssemnetScrore("teacherForm") || "N/A"}
-                            </span>
-                            <span className="score-divider">/</span>
-                            <span className="score-total">
+                            </Text>
+                            <Text color="gray.400" fontSize="lg">
+                              /
+                            </Text>
+                            <Text
+                              color="gray.600"
+                              fontSize="lg"
+                              fontWeight="500"
+                            >
                               {getTotalScore("teacherForm")}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
+                            </Text>
+                          </Flex>
+                        </Box>
+                      </Box>
                     )}
-                </div>
-              </Col>
-            </Row>
+                </Box>
+              </Box>
+            </Flex>
 
-            <div className="form-footer">
-              <div className="score-summary">
-                <span className="summary-label">
+            <Flex
+              justify="space-between"
+              align="center"
+              mt={8}
+              bg="white"
+              p={6}
+              borderRadius="2xl"
+              boxShadow="sm"
+              borderWidth="1px"
+              borderColor="gray.100"
+            >
+              <Box>
+                <Text color="gray.500" fontWeight="500" mb={1} fontSize="sm">
                   {getUserId().access === UserRole[1]
                     ? "Observer Score"
                     : "Self Assessment Score"}
-                </span>
-                <span className="summary-value">
-                  <span className="value-number">{selfAssessmentScore}</span>
-                  <span className="value-divider">/</span>
-                  <span className="value-total">{totalCountMein}</span>
-                </span>
-              </div>
+                </Text>
+                <Flex align="baseline" gap={1}>
+                  <Text color="brand.primary" fontSize="2xl" fontWeight="bold">
+                    {selfAssessmentScore}
+                  </Text>
+                  <Text color="gray.400" fontSize="lg">
+                    /
+                  </Text>
+                  <Text color="gray.600" fontSize="lg" fontWeight="500">
+                    {totalCountMein}
+                  </Text>
+                </Flex>
+              </Box>
 
               <Form.Item name="selfEvaluationScore" hidden>
                 <InputNumber value={selfAssessmentScore} disabled />
@@ -602,15 +711,19 @@ const Details = () => {
                 type="primary"
                 htmlType="submit"
                 size="large"
-                className="submit-button"
+                style={{
+                  borderRadius: "8px",
+                  minWidth: "150px",
+                  background: "#1a4d2e",
+                }}
               >
                 Submit Evaluation
               </Button>
-            </div>
+            </Flex>
           </Form>
-        </>
+        </Box>
       )}
-    </div>
+    </Box>
   );
 };
 

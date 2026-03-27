@@ -6,17 +6,8 @@ import {
   TeacherWalkThroughComplete,
 } from "../../redux/Form/classroomWalkthroughSlice";
 import { getAllTimes, getUserId } from "../../Utils/auth";
-import {
-  Button,
-  Card,
-  Descriptions,
-  Form,
-  Input,
-  message,
-  Radio,
-  Spin,
-} from "antd";
-import { Col, Container, Row } from "react-bootstrap";
+import { Button, Form, Input, message, Radio, Spin } from "antd";
+import { Box, Flex, Heading, Text, VStack, SimpleGrid } from "@chakra-ui/react";
 import TextArea from "antd/es/input/TextArea";
 
 function TeacherWalkthroughshow() {
@@ -26,7 +17,7 @@ function TeacherWalkthroughshow() {
   const FormId = useParams()?.id;
 
   const { isLoading, formDataList } = useSelector(
-    (state) => state?.walkThroughForm
+    (state) => state?.walkThroughForm,
   );
   const [form] = Form.useForm();
   const Fectch = async () => {
@@ -66,28 +57,38 @@ function TeacherWalkthroughshow() {
     </>
   );
   const renderSections = (title, questions, namePrefix) => (
-    <>
-      <Col md={12}>
-        <h2
-          className="mb-3 px-3 py-3 rounded-3 text-primary"
-          style={{ background: "#f7f7f7" }}
-        >
-          {title}
-        </h2>
-      </Col>
-      {questions.map((question, index) => (
-        <Col md={12} key={`${namePrefix}${index}`}>
-          <Card className="mb-3 shadow-sm">
+    <Box mt={8}>
+      <Heading
+        size="md"
+        color="gray.800"
+        mb={6}
+        pb={2}
+        borderBottom="1px solid"
+        borderColor="gray.100"
+      >
+        {title}
+      </Heading>
+      <VStack spacing={4} align="stretch">
+        {questions.map((question, index) => (
+          <Box
+            key={`${namePrefix}${index}`}
+            bg="white"
+            p={6}
+            borderRadius="xl"
+            boxShadow="sm"
+            borderWidth="1px"
+            borderColor="gray.100"
+          >
             {renderRadioFormItem({
               name: [namePrefix, index],
               label: question,
               question,
               isTextArea: true,
             })}
-          </Card>
-        </Col>
-      ))}
-    </>
+          </Box>
+        ))}
+      </VStack>
+    </Box>
   );
 
   const handleNext = () => {
@@ -131,157 +132,277 @@ function TeacherWalkthroughshow() {
   };
 
   return (
-    <Container className="mt-3 mb-4">
-      {isLoading && (
-        <div className="LoaderWrapper bg-opacity-100">
-          <Spin size="large" className="position-absolute" />
-        </div>
-      )}
-      <Row>
-        <Col md={12}>
-          <Card title="Observer Response">
-            <Card className="mt-4">
-              <div
-                className="d-grid"
-                style={{ gridTemplateColumns: "1fr 1fr" }}
-              >
-                <p className="mb-0 fs-5">
-                  <b>Name:</b>{" "}
+    <Box position="relative">
+      <Box position="relative">
+        {isLoading && (
+          <Flex
+            justify="center"
+            align="center"
+            position="absolute"
+            inset={0}
+            bg="whiteAlpha.800"
+            zIndex={20}
+            borderRadius="2xl"
+          >
+            <Spin size="large" />
+          </Flex>
+        )}
+        <Box
+          bg="white"
+          p={{ base: 4, md: 8 }}
+          borderRadius="2xl"
+          boxShadow="sm"
+          borderWidth="1px"
+          borderColor="gray.100"
+        >
+          <Heading size="lg" color="brand.primary" mb={6}>
+            Observer & Teacher Responses
+          </Heading>
+
+          <Box
+            bg="blue.50"
+            p={6}
+            borderRadius="xl"
+            mb={8}
+            borderWidth="1px"
+            borderColor="blue.100"
+          >
+            <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+              <Box>
+                <Text fontWeight="bold" color="blue.900" display="inline">
+                  Name:{" "}
+                </Text>
+                <Text display="inline" color="blue.800">
                   {formDataList?.grenralDetails?.NameoftheVisitingTeacher?.name}
-                </p>
-                <p className="mb-0 fs-5">
-                  <b>Date Of Observation:</b>{" "}
+                </Text>
+              </Box>
+              <Box>
+                <Text fontWeight="bold" color="blue.900" display="inline">
+                  Date:{" "}
+                </Text>
+                <Text display="inline" color="blue.800">
                   {
                     getAllTimes(formDataList?.grenralDetails?.DateOfObservation)
                       .formattedDate2
                   }
-                </p>
-                <p className="mb-0 fs-5">
-                  <b>Class:</b> {formDataList?.grenralDetails?.className}
-                </p>
-                <p className="mb-0 fs-5">
-                  <b>Section:</b> {formDataList?.grenralDetails?.Section}
-                </p>
-                <p className="mb-0 fs-5">
-                  <b>Subject:</b> {formDataList?.grenralDetails?.Subject}
-                </p>
-                <p className="mb-0 fs-5">
-                  <b>Topic:</b> {formDataList?.grenralDetails?.Topic}
-                </p>
-              </div>
-            </Card>
-            <Card className="mt-4" title={"Essential Aggrements"}>
+                </Text>
+              </Box>
+              <Box>
+                <Text fontWeight="bold" color="blue.900" display="inline">
+                  Class:{" "}
+                </Text>
+                <Text display="inline" color="blue.800">
+                  {formDataList?.grenralDetails?.className}
+                </Text>
+              </Box>
+              <Box>
+                <Text fontWeight="bold" color="blue.900" display="inline">
+                  Section:{" "}
+                </Text>
+                <Text display="inline" color="blue.800">
+                  {formDataList?.grenralDetails?.Section}
+                </Text>
+              </Box>
+              <Box>
+                <Text fontWeight="bold" color="blue.900" display="inline">
+                  Subject:{" "}
+                </Text>
+                <Text display="inline" color="blue.800">
+                  {formDataList?.grenralDetails?.Subject}
+                </Text>
+              </Box>
+              <Box>
+                <Text fontWeight="bold" color="blue.900" display="inline">
+                  Topic:{" "}
+                </Text>
+                <Text display="inline" color="blue.800">
+                  {formDataList?.grenralDetails?.Topic}
+                </Text>
+              </Box>
+            </SimpleGrid>
+          </Box>
+
+          <Box mb={8}>
+            <Heading size="md" color="gray.800" mb={4}>
+              Essential Aggrements
+            </Heading>
+            <VStack spacing={3} align="stretch">
               {formDataList?.essentialAggrements?.map((item, index) => (
-                <div
+                <Flex
                   key={index}
-                  className="d-flex py-2  justify-content-between"
+                  justify="space-between"
+                  align="center"
+                  p={4}
+                  bg="gray.50"
+                  borderRadius="lg"
+                  borderWidth="1px"
+                  borderColor="gray.100"
                 >
-                  <p className="mb-0">{item?.question}</p>
-                  {/* <p className="mb-0"> {item?.answer}</p> */}
-                  <p
-                    className={`mb-0 p-2 text-sm rounded-md text-gray-900 font-medium shadow-md border transform transition-all duration-200 hover:scale-105
-  ${MapColor(item)}`}
+                  <Text flex="1" pr={4} color="gray.700" fontWeight="500">
+                    {item?.question}
+                  </Text>
+                  <Box
+                    className={`px-4 py-2 text-sm rounded-md font-bold shadow-sm ${MapColor(item)} min-w-[100px] text-center`}
                   >
                     {item?.answer}
-                  </p>
-                </div>
+                  </Box>
+                </Flex>
               ))}
-            </Card>
+            </VStack>
+          </Box>
 
-            <Card className="mt-4" title="Planing And Preparation">
+          <Box mb={8}>
+            <Heading size="md" color="gray.800" mb={4}>
+              Planing And Preparation
+            </Heading>
+            <VStack spacing={3} align="stretch">
               {formDataList?.planingAndPreparation?.map((item, index) => (
-                <div
+                <Flex
                   key={index}
-                  className="d-flex py-2  justify-content-between"
+                  justify="space-between"
+                  align="center"
+                  p={4}
+                  bg="gray.50"
+                  borderRadius="lg"
+                  borderWidth="1px"
+                  borderColor="gray.100"
                 >
-                  <p className="mb-0">{item?.question}</p>
-                  {/* <p className="mb-0"> {item?.answer}</p> */}
-
-                  <p
-                    className={`mb-0 p-2 text-sm rounded-md text-gray-900 font-medium shadow-md border transform transition-all duration-200 hover:scale-105
-                    ${MapColor(item)}`}
+                  <Text flex="1" pr={4} color="gray.700" fontWeight="500">
+                    {item?.question}
+                  </Text>
+                  <Box
+                    className={`px-4 py-2 text-sm rounded-md font-bold shadow-sm ${MapColor(item)} min-w-[100px] text-center`}
                   >
                     {item?.answer}
-                  </p>
-                </div>
+                  </Box>
+                </Flex>
               ))}
-            </Card>
+            </VStack>
+          </Box>
 
-            <Card className="mt-4" title="Class Room Environment">
+          <Box mb={8}>
+            <Heading size="md" color="gray.800" mb={4}>
+              Class Room Environment
+            </Heading>
+            <VStack spacing={3} align="stretch">
               {formDataList?.classRoomEnvironment?.map((item, index) => (
-                <div
+                <Flex
                   key={index}
-                  className="d-flex py-2  justify-content-between"
+                  justify="space-between"
+                  align="center"
+                  p={4}
+                  bg="gray.50"
+                  borderRadius="lg"
+                  borderWidth="1px"
+                  borderColor="gray.100"
                 >
-                  <p className="mb-0">{item?.question}</p>
-                  {/* <p className="mb-0"> {item?.answer}</p> */}
-                  <p
-                    className={`mb-0 p-2 text-sm rounded-md text-gray-900 font-medium shadow-md border transform transition-all duration-200 hover:scale-105
-                    ${MapColor(item)}`}
+                  <Text flex="1" pr={4} color="gray.700" fontWeight="500">
+                    {item?.question}
+                  </Text>
+                  <Box
+                    className={`px-4 py-2 text-sm rounded-md font-bold shadow-sm ${MapColor(item)} min-w-[100px] text-center`}
                   >
                     {item?.answer}
-                  </p>
-                </div>
+                  </Box>
+                </Flex>
               ))}
-            </Card>
+            </VStack>
+          </Box>
 
-            <Card className="mt-4" title="Instruction">
+          <Box mb={8}>
+            <Heading size="md" color="gray.800" mb={4}>
+              Instruction
+            </Heading>
+            <VStack spacing={3} align="stretch">
               {formDataList?.instruction?.map((item, index) => (
-                <div
+                <Flex
                   key={index}
-                  className="d-flex py-2  justify-content-between"
+                  justify="space-between"
+                  align="center"
+                  p={4}
+                  bg="gray.50"
+                  borderRadius="lg"
+                  borderWidth="1px"
+                  borderColor="gray.100"
                 >
-                  <p className="mb-0">{item?.question}</p>
-                  {/* <p className="mb-0"> {item?.answer}</p> */}
-                  <p
-                    className={`mb-0 p-2 text-sm rounded-md text-gray-900 font-medium shadow-md border transform transition-all duration-200 hover:scale-105
-                    ${MapColor(item)}`}
+                  <Text flex="1" pr={4} color="gray.700" fontWeight="500">
+                    {item?.question}
+                  </Text>
+                  <Box
+                    className={`px-4 py-2 text-sm rounded-md font-bold shadow-sm ${MapColor(item)} min-w-[100px] text-center`}
                   >
                     {item?.answer}
-                  </p>
-                </div>
+                  </Box>
+                </Flex>
               ))}
-            </Card>
+            </VStack>
+          </Box>
 
-            <Card className="mt-4" title="Observer Feedback">
+          <Box mb={8}>
+            <Heading size="md" color="gray.800" mb={4}>
+              Observer Feedback
+            </Heading>
+            <VStack spacing={3} align="stretch">
               {formDataList?.ObserverFeedback?.map((item, index) => (
-                <div
+                <Box
                   key={index}
-                  className="d-flex flex-column py-2  justify-content-between"
+                  p={5}
+                  bg="blue.50"
+                  borderRadius="lg"
+                  borderWidth="1px"
+                  borderColor="blue.100"
                 >
-                  <p className="mb-0">{item?.question}</p>
-                  {/* <p style={{background:"#f7f7f7"}} className="mb-0 p-2 rounded border mt-2"> {item?.answer}</p> */}
-                  <p
-                    className={`mb-0 p-2 text-sm rounded-md text-gray-900 font-medium shadow-md border transform transition-all duration-200 hover:scale-105
-                      ${MapColor(item)}`}
+                  <Text color="blue.900" fontWeight="600" mb={3}>
+                    {item?.question}
+                  </Text>
+                  <Text
+                    color="gray.700"
+                    bg="white"
+                    p={3}
+                    borderRadius="md"
+                    borderWidth="1px"
+                    borderColor="gray.200"
                   >
                     {item?.answer}
-                  </p>
-                </div>
+                  </Text>
+                </Box>
               ))}
-            </Card>
-            <Card className="mt-4" title="Teacher Feedback">
-              {formDataList?.TeacherFeedback?.map((item, index) => (
-                <div
-                  key={index}
-                  className="d-flex flex-column py-2  justify-content-between"
-                >
-                  <p className="mb-0">{item?.question}</p>
-                  {/* <p style={{background:"#f7f7f7"}} className="mb-0 p-2 rounded border mt-2"> {item?.answer}</p> */}
-                  <p
-                    className={`mb-0 p-2 text-sm rounded-md text-gray-900 font-medium shadow-md border transform transition-all duration-200 hover:scale-105
-                      ${MapColor(item)}`}
+            </VStack>
+          </Box>
+
+          <Box mt={8} pt={8} borderTop="1px solid" borderColor="gray.200">
+            <Heading size="md" color="gray.800" mb={4}>
+              Teacher Feedback
+            </Heading>
+            <Box
+              bg="green.50"
+              p={6}
+              borderRadius="xl"
+              borderWidth="1px"
+              borderColor="green.100"
+            >
+              <VStack spacing={3} align="stretch">
+                {formDataList?.TeacherFeedback?.map((item, index) => (
+                  <Box
+                    key={index}
+                    bg="white"
+                    p={4}
+                    borderRadius="lg"
+                    borderWidth="1px"
+                    borderColor="green.200"
                   >
-                    {item?.answer}
-                  </p>
-                </div>
-              ))}
-            </Card>
-          </Card>
-        </Col>
-        <Col md={5}></Col>
-      </Row>
-    </Container>
+                    <Text color="gray.800" fontWeight="600" mb={3}>
+                      {item?.question}
+                    </Text>
+                    <Text color="gray.600">{item?.answer}</Text>
+                  </Box>
+                ))}
+              </VStack>
+            </Box>
+          </Box>
+        </Box>
+      </Box>
+    </Box>
   );
 }
 

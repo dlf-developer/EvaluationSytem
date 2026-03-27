@@ -1,17 +1,44 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useParams } from "react-router-dom";
-import { Button, Card, message, Spin, Table, Tag } from "antd";
-import { Container, Row, Col } from "react-bootstrap";
+import { Button, message, Spin, Table, Tag } from "antd";
+import {
+  Box,
+  Flex,
+  Grid,
+  Heading,
+  Text,
+  VStack,
+  SimpleGrid,
+  Divider,
+  Textarea,
+  Image,
+} from "@chakra-ui/react";
 import Logo from "../Reports/Imgs/Logo.png";
 import LogoBanner from "../Reports/Imgs/image.png";
-import { GetNoteBookForm, updateTeacherReflationFeedback } from "../../redux/Form/noteBookSlice";
+import {
+  GetNoteBookForm,
+  updateTeacherReflationFeedback,
+} from "../../redux/Form/noteBookSlice";
 import { getAllTimes, getUserId } from "../../Utils/auth";
 import { useNavigate } from "react-router-dom";
 import { CreateActivityApi } from "../../redux/Activity/activitySlice";
 
 const TableCard = React.memo(({ title, dataSource }) => (
-  <Card title={title} className="mt-4">
+  <Box
+    bg="white"
+    borderRadius="2xl"
+    boxShadow="sm"
+    borderWidth="1px"
+    borderColor="gray.100"
+    p={5}
+    mt={6}
+    w="100%"
+    overflowX="auto"
+  >
+    <Heading size="md" mb={4} color="gray.700">
+      {title}
+    </Heading>
     <Table
       pagination={false}
       dataSource={dataSource}
@@ -32,10 +59,10 @@ const TableCard = React.memo(({ title, dataSource }) => (
                 text === "1"
                   ? "yellow"
                   : text === "2"
-                  ? "blue"
-                  : text === "3"
-                  ? "green"
-                  : "red"
+                    ? "blue"
+                    : text === "3"
+                      ? "green"
+                      : "red"
               }
             >
               {text}
@@ -50,7 +77,7 @@ const TableCard = React.memo(({ title, dataSource }) => (
         },
       ]}
     />
-  </Card>
+  </Box>
 ));
 
 function NotebookComplete() {
@@ -72,14 +99,18 @@ function NotebookComplete() {
     }
   }, [formDataList]);
 
-
-const navigate = useNavigate();
-const handleSubmit =  () => {
+  const navigate = useNavigate();
+  const handleSubmit = () => {
     if (Id && inputValue.trim()) {
-      dispatch(updateTeacherReflationFeedback({ id: Id, data: { reflation: inputValue } }))
-        .then(async(res)  => {
+      dispatch(
+        updateTeacherReflationFeedback({
+          id: Id,
+          data: { reflation: inputValue },
+        }),
+      )
+        .then(async (res) => {
           if (res?.payload?.success) {
-            const userInfo = res?.payload?.form?.grenralDetails
+            const userInfo = res?.payload?.form?.grenralDetails;
             const activity = {
               observerMessage: `${getUserId()?.name} has completed the Notebook Checking Proforma Reflection Feedback For ${userInfo?.className} | ${userInfo?.Subject} | ${userInfo?.Section}.`,
               teacherMessage: `You have completed the Notebook Checking Proforma Reflection Feedback For ${userInfo?.className} | ${userInfo?.Subject} | ${userInfo?.Section}.`,
@@ -88,9 +119,9 @@ const handleSubmit =  () => {
               reciverId: userInfo?.NameofObserver,
               senderId: getUserId()?.id,
               fromNo: 3,
-              data: res?.payload?.form
+              data: res?.payload?.form,
             };
-      
+
             const activitiRecord = await dispatch(CreateActivityApi(activity));
             if (!activitiRecord?.payload?.success) {
               message.error("Error on Activity Record");
@@ -106,7 +137,6 @@ const handleSubmit =  () => {
         });
     }
   };
-  
 
   const keyObject = [
     "Maintenance Of Notebooks",
@@ -119,149 +149,248 @@ const handleSubmit =  () => {
     formDataList?.[type]?.[field];
 
   return (
-    <div className="ms-5 lh-sm py-4 position-relative">
+    <Box
+      p={{ base: 4, md: 8 }}
+      minH="calc(100vh - 72px)"
+      bg="gray.50"
+      position="relative"
+    >
       {isLoading && (
-        <div className="LoaderWrapper">
-          <Spin size="large" className="position-absolute" />
-        </div>
+        <Flex
+          justify="center"
+          align="center"
+          position="absolute"
+          top="0"
+          left="0"
+          right="0"
+          bottom="0"
+          bg="rgba(255,255,255,0.7)"
+          zIndex={10}
+        >
+          <Spin size="large" />
+        </Flex>
       )}
-      <Container>
-        <Row className="justify-content-start align-items-start">
-          <Col md={12}>
-            <div className="d-flex gap-4 justify-content-center mb-4">
-              <img src={Logo} width={100} height={100} alt="Logo" />
-              <img src={LogoBanner} width={400} height={100} alt="Banner" />
-            </div>
-          </Col>
+      <Box maxW="1200px" mx="auto">
+        <Flex justify="center" gap={4} mb={8} align="center">
+          <Image src={Logo} alt="Logo" h="80px" objectFit="contain" />
+          <Image src={LogoBanner} alt="Banner" h="80px" objectFit="contain" />
+        </Flex>
 
-          <Col md={12}>
-            <div className="p-4 rounded border mb-4">
-              <h5>General Details</h5>
-              <div className="d-flex gap-3 mb-4">
-                <p className="m-0">
-                  Name Of Observer:{" "}
-                  <b>{formDataList?.grenralDetails?.NameofObserver?.name}</b>
-                </p>
-                <p className="m-0">
-                  Grade: <b>{formDataList?.grenralDetails?.className}</b>
-                </p>
-                <p className="m-0">
-                  Section: <b>{formDataList?.grenralDetails?.Section}</b>
-                </p>
-                <p className="m-0">
-                  Subject: <b>{formDataList?.grenralDetails?.Subject}</b>
-                </p>
-                <p className="m-0">
-                  Date Of Observation:{" "}
-                  <b>
-                    {
-                      getAllTimes(
-                        formDataList?.grenralDetails?.DateOfObservation
-                      ).formattedDate2
-                    }
-                  </b>
-                </p>
-              </div>
+        <Box
+          bg="white"
+          p={8}
+          borderRadius="2xl"
+          boxShadow="sm"
+          borderWidth="1px"
+          borderColor="gray.100"
+          mb={8}
+        >
+          <Heading size="md" color="brand.primary" mb={6}>
+            General Details
+          </Heading>
+          <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4} mb={8}>
+            <Box>
+              <Text color="gray.500" fontSize="sm">
+                Name Of Observer
+              </Text>
+              <Text fontWeight="600" color="gray.800">
+                {formDataList?.grenralDetails?.NameofObserver?.name || "N/A"}
+              </Text>
+            </Box>
+            <Box>
+              <Text color="gray.500" fontSize="sm">
+                Grade
+              </Text>
+              <Text fontWeight="600" color="gray.800">
+                {formDataList?.grenralDetails?.className || "N/A"}
+              </Text>
+            </Box>
+            <Box>
+              <Text color="gray.500" fontSize="sm">
+                Section
+              </Text>
+              <Text fontWeight="600" color="gray.800">
+                {formDataList?.grenralDetails?.Section || "N/A"}
+              </Text>
+            </Box>
+            <Box>
+              <Text color="gray.500" fontSize="sm">
+                Subject
+              </Text>
+              <Text fontWeight="600" color="gray.800">
+                {formDataList?.grenralDetails?.Subject || "N/A"}
+              </Text>
+            </Box>
+            <Box>
+              <Text color="gray.500" fontSize="sm">
+                Date Of Observation
+              </Text>
+              <Text fontWeight="600" color="gray.800">
+                {formDataList?.grenralDetails?.DateOfObservation
+                  ? getAllTimes(formDataList?.grenralDetails?.DateOfObservation)
+                      .formattedDate2
+                  : "N/A"}
+              </Text>
+            </Box>
+          </SimpleGrid>
 
-              <h5>Observer Notebook</h5>
-              <div className="d-flex gap-3 mb-4">
-                <p className="m-0">
-                  Absentees: <b>{formDataList?.NotebooksObserver?.Absentees}</b>
-                </p>
-                <p className="m-0">
-                  Class Strength:{" "}
-                  <b>{formDataList?.NotebooksObserver?.ClassStrength}</b>
-                </p>
-                <p className="m-0">
-                  Defaulters:{" "}
-                  <b>{formDataList?.NotebooksObserver?.Defaulters}</b>
-                </p>
-                <p className="m-0">
-                  Notebooks Submitted:{" "}
-                  <b>{formDataList?.NotebooksObserver?.NotebooksSubmitted}</b>
-                </p>
-              </div>
+          <Divider mb={8} />
 
-              <h5>Teacher Notebook</h5>
-              <div className="d-flex gap-3">
-                <p className="m-0">
-                  Absentees: <b>{formDataList?.NotebooksTeacher?.Absentees}</b>
-                </p>
-                <p className="m-0">
-                  Class Strength:{" "}
-                  <b>{formDataList?.NotebooksTeacher?.ClassStrength}</b>
-                </p>
-                <p className="m-0">
-                  Defaulters:{" "}
-                  <b>{formDataList?.NotebooksTeacher?.Defaulters}</b>
-                </p>
-                <p className="m-0">
-                  Notebooks Submitted:{" "}
-                  <b>{formDataList?.NotebooksTeacher?.NotebooksSubmitted}</b>
-                </p>
-              </div>
-            </div>
-          </Col>
+          <SimpleGrid columns={{ base: 1, md: 2 }} spacing={8}>
+            <Box>
+              <Heading size="sm" color="gray.700" mb={4}>
+                Observer Notebook
+              </Heading>
+              <VStack align="stretch" spacing={2}>
+                <Flex justify="space-between">
+                  <Text color="gray.500">Absentees:</Text>{" "}
+                  <Text fontWeight="600">
+                    {formDataList?.NotebooksObserver?.Absentees || "0"}
+                  </Text>
+                </Flex>
+                <Flex justify="space-between">
+                  <Text color="gray.500">Class Strength:</Text>{" "}
+                  <Text fontWeight="600">
+                    {formDataList?.NotebooksObserver?.ClassStrength || "0"}
+                  </Text>
+                </Flex>
+                <Flex justify="space-between">
+                  <Text color="gray.500">Defaulters:</Text>{" "}
+                  <Text fontWeight="600">
+                    {formDataList?.NotebooksObserver?.Defaulters || "0"}
+                  </Text>
+                </Flex>
+                <Flex justify="space-between">
+                  <Text color="gray.500">Notebooks Submitted:</Text>{" "}
+                  <Text fontWeight="600">
+                    {formDataList?.NotebooksObserver?.NotebooksSubmitted || "0"}
+                  </Text>
+                </Flex>
+              </VStack>
+            </Box>
 
-          <Col md={6}>
-            <h3>Observer Response</h3>
-          </Col>
-          <Col md={6} className="mt-4">
-            <h3>Teacher Response</h3>
-          </Col>
+            <Box>
+              <Heading size="sm" color="gray.700" mb={4}>
+                Teacher Notebook
+              </Heading>
+              <VStack align="stretch" spacing={2}>
+                <Flex justify="space-between">
+                  <Text color="gray.500">Absentees:</Text>{" "}
+                  <Text fontWeight="600">
+                    {formDataList?.NotebooksTeacher?.Absentees || "0"}
+                  </Text>
+                </Flex>
+                <Flex justify="space-between">
+                  <Text color="gray.500">Class Strength:</Text>{" "}
+                  <Text fontWeight="600">
+                    {formDataList?.NotebooksTeacher?.ClassStrength || "0"}
+                  </Text>
+                </Flex>
+                <Flex justify="space-between">
+                  <Text color="gray.500">Defaulters:</Text>{" "}
+                  <Text fontWeight="600">
+                    {formDataList?.NotebooksTeacher?.Defaulters || "0"}
+                  </Text>
+                </Flex>
+                <Flex justify="space-between">
+                  <Text color="gray.500">Notebooks Submitted:</Text>{" "}
+                  <Text fontWeight="600">
+                    {formDataList?.NotebooksTeacher?.NotebooksSubmitted || "0"}
+                  </Text>
+                </Flex>
+              </VStack>
+            </Box>
+          </SimpleGrid>
+        </Box>
 
-          <Col md={6}>
+        <SimpleGrid columns={{ base: 1, xl: 2 }} spacing={8} mb={8}>
+          <Box>
+            <Heading size="lg" mb={4} color="gray.800">
+              Observer Response
+            </Heading>
             {keyObject.map((title, index) => (
               <TableCard
                 key={index}
                 title={title}
                 dataSource={getField(
-                  Object.keys(formDataList?.ObserverForm || {})[index]
+                  Object.keys(formDataList?.ObserverForm || {})[index],
                 )}
               />
             ))}
-          </Col>
 
-          <Col md={6}>
+            <Box
+              mt={6}
+              bg="white"
+              p={6}
+              borderRadius="2xl"
+              boxShadow="sm"
+              borderWidth="1px"
+              borderColor="brand.primary"
+            >
+              <Heading size="md" color="brand.primary" mb={4}>
+                Observer Feedback
+              </Heading>
+              <Text color="gray.700" whiteSpace="pre-wrap">
+                {formDataList?.observerFeedback || "No feedback provided."}
+              </Text>
+            </Box>
+          </Box>
+
+          <Box>
+            <Heading size="lg" mb={4} color="gray.800">
+              Teacher Response
+            </Heading>
             {keyObject.map((title, index) => (
               <TableCard
                 key={index + 4}
                 title={title}
                 dataSource={getField(
                   Object.keys(formDataList?.TeacherForm || {})[index],
-                  "TeacherForm"
+                  "TeacherForm",
                 )}
               />
             ))}
-          </Col>
+          </Box>
+        </SimpleGrid>
 
-          <Col md={4}>
-            <Card title="Observer Feedback" className="mt-4">
-              <p>{formDataList?.observerFeedback}</p>
-            </Card>
-          </Col>
-        </Row>
-        <Row className="mt-4">
-          <Col md={8} className="justify-content-start align-items-start">
-            <h5 className="mb-3">Teacher Reflection</h5>
-            <textarea
-              name="reflation"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              placeholder="Enter your thoughts or Reflection"
-              className="form-control w-75"
-              rows={5}
-              style={{ resize: "none" }}
-            ></textarea>
-          </Col>
-          <Col md={12} className="justify-content-start align-items-start mt-4">
-            <Button type="primary" size="large" onClick={handleSubmit}>
-              Submit
+        <Box
+          bg="white"
+          p={8}
+          borderRadius="2xl"
+          boxShadow="md"
+          borderWidth="1px"
+          borderColor="gray.100"
+        >
+          <Heading size="md" color="gray.800" mb={4}>
+            Teacher Reflection
+          </Heading>
+          <Text color="gray.500" mb={4}>
+            Enter your thoughts or reflection on this observation.
+          </Text>
+          <Textarea
+            name="reflation"
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            placeholder="Your Reflection..."
+            size="lg"
+            rows={5}
+            resize="none"
+            focusBorderColor="brand.primary"
+            mb={6}
+          />
+          <Flex justify="flex-end">
+            <Button
+              type="primary"
+              size="large"
+              onClick={handleSubmit}
+              style={{ borderRadius: "8px", minWidth: "150px" }}
+            >
+              Submit Reflection
             </Button>
-          </Col>
-        </Row>
-      </Container>
-    </div>
+          </Flex>
+        </Box>
+      </Box>
+    </Box>
   );
 }
 

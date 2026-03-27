@@ -1,24 +1,28 @@
-import ReactPDF, { PDFViewer } from '@react-pdf/renderer';
-import React, { useEffect } from 'react'
-import { useDispatch, useSelector } from 'react-redux';
-import { useNavigate, useParams } from 'react-router-dom';
-import { GetWalkThroughForm } from '../../redux/Form/classroomWalkthroughSlice';
-import MyDocument from './Documents/MyDocument';
-import WalkthroughDoc from './Documents/WalkthroughDoc';
-import { DownloadOutlined } from '@ant-design/icons';
-import { Button, Spin } from 'antd';
-import TeacherWalkthroughshow from './TeacherWalkthroughshow';
+import ReactPDF, { PDFViewer } from "@react-pdf/renderer";
+import React, { useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { useNavigate, useParams } from "react-router-dom";
+import { GetWalkThroughForm } from "../../redux/Form/classroomWalkthroughSlice";
+import MyDocument from "./Documents/MyDocument";
+import WalkthroughDoc from "./Documents/WalkthroughDoc";
+import { DownloadOutlined } from "@ant-design/icons";
+import { Button, Spin } from "antd";
+import { Box, Flex, Heading } from "@chakra-ui/react";
+import TeacherWalkthroughshow from "./TeacherWalkthroughshow";
 
 function ClassroomWalkthroughReader() {
+  const Id = useParams().id;
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
 
-    const Id = useParams().id;
-    const navigate = useNavigate();
-    const dispatch = useDispatch();
-
-    const {formDataList,loading} = useSelector((state) => state?.walkThroughForm);
+  const { formDataList, loading } = useSelector(
+    (state) => state?.walkThroughForm,
+  );
 
   const downloadPDF = async () => {
-    const blob = await ReactPDF.pdf(<WalkthroughDoc data={formDataList} />).toBlob();
+    const blob = await ReactPDF.pdf(
+      <WalkthroughDoc data={formDataList} />,
+    ).toBlob();
     const url = URL.createObjectURL(blob);
 
     // Trigger download
@@ -31,34 +35,71 @@ function ClassroomWalkthroughReader() {
     URL.revokeObjectURL(url);
   };
 
-
-  useEffect(()=>{
-
-    dispatch(GetWalkThroughForm(Id))
-  },[])
+  useEffect(() => {
+    dispatch(GetWalkThroughForm(Id));
+  }, []);
 
   return (
-   <>
-     <div className="ms-5 lh-sm py-4 position-relative">
-     {loading && (
-        <div className="LoaderWrapper">
-          <Spin size="large" className="position-absolute" />
-        </div>
-      )}
+    <Box>
+      <Box position="relative">
+        <Flex justify="space-between" align="center" mb={6}>
+          <Heading size="lg" color="gray.800">
+            Classroom Walkthrough Report
+          </Heading>
+          <Button
+            type="primary"
+            size="large"
+            onClick={downloadPDF}
+            style={{ borderRadius: "8px", background: "#1a4d2e" }}
+          >
+            <DownloadOutlined /> Download PDF
+          </Button>
+        </Flex>
 
+        {loading && (
+          <Flex
+            justify="center"
+            align="center"
+            position="absolute"
+            inset={0}
+            bg="whiteAlpha.800"
+            zIndex={20}
+            borderRadius="2xl"
+          >
+            <Spin size="large" />
+          </Flex>
+        )}
 
+        <TeacherWalkthroughshow />
 
-     {/* <h2>Fortnightly Monitor Report</h2> */}
-     <Button type="primary"  onClick={downloadPDF}><DownloadOutlined/> Download PDF</Button>
-     </div>
-     <TeacherWalkthroughshow />
-
-      <PDFViewer className="w-100 m-auto d-block" style={{ height: "100vh" }}>
-        
-        <WalkthroughDoc data={formDataList} />
-      </PDFViewer>
-   </>
-  )
+        <Box
+          bg="white"
+          p={6}
+          borderRadius="2xl"
+          boxShadow="sm"
+          borderWidth="1px"
+          borderColor="gray.100"
+          mt={8}
+        >
+          <Heading size="md" mb={6} color="gray.800">
+            Print Preview
+          </Heading>
+          <Box
+            borderRadius="xl"
+            overflow="hidden"
+            borderWidth="1px"
+            borderColor="gray.200"
+          >
+            <PDFViewer
+              style={{ width: "100%", height: "800px", border: "none" }}
+            >
+              <WalkthroughDoc data={formDataList} />
+            </PDFViewer>
+          </Box>
+        </Box>
+      </Box>
+    </Box>
+  );
 }
 
-export default ClassroomWalkthroughReader
+export default ClassroomWalkthroughReader;

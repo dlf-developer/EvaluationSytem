@@ -6,6 +6,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { GetSingleFormsOne } from "../../redux/Form/fortnightlySlice";
 import { Button, Spin, Table, Tag } from "antd";
 import { DownloadOutlined } from "@ant-design/icons";
+import { Box, Flex, Heading, Image } from "@chakra-ui/react";
 import Logo from "./Imgs/Logo.png";
 import LogoBanner from "./Imgs/image.png";
 import {
@@ -81,147 +82,192 @@ function Reader() {
   });
 
   return (
-    <>
-      <div className="ms-5 lh-sm py-4 position-relative">
+    <Box p={{ base: 4, md: 8 }} bg="gray.50" minH="100vh">
+      <Box maxW="1200px" mx="auto" position="relative">
+        <Flex justify="space-between" align="center" mb={6}>
+          <Heading size="lg" color="gray.800">
+            Fortnightly Monitor Report
+          </Heading>
+          <Button
+            type="primary"
+            size="large"
+            onClick={downloadPDF}
+            style={{ borderRadius: "8px", background: "#1a4d2e" }}
+          >
+            <DownloadOutlined /> Download PDF
+          </Button>
+        </Flex>
+
         {loading && (
-          <div className="LoaderWrapper">
-            <Spin size="large" className="position-absolute" />
-          </div>
+          <Flex
+            justify="center"
+            align="center"
+            position="absolute"
+            inset={0}
+            bg="whiteAlpha.800"
+            zIndex={20}
+            borderRadius="2xl"
+          >
+            <Spin size="large" />
+          </Flex>
         )}
-        {/* <h2>Fortnightly Monitor Report</h2> */}
-        <Button type="primary" onClick={downloadPDF}>
-          <DownloadOutlined /> Download PDF
-        </Button>
-      </div>
-      {/* <div style={{ display: "flex", justifyContent: "center", marginBottom: "20px" }}>
-        <img src={Logo} className="img-fluid" />
-        <img src={LogoBanner} className="img-fluid" />
-      </div> */}
 
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          marginBottom: "20px",
-        }}
-      >
-        <img
-          src={Logo}
-          style={{
-            width: window.innerWidth <= 576 ? "150px" : "100px", // Smaller size on mobile
-            height: "auto",
-          }}
-          alt="Logo"
-        />
-        <img
-          src={LogoBanner}
-          style={{
-            width: window.innerWidth <= 576 ? "150px" : "300px", // Smaller size on mobile
-            height: "auto",
-          }}
-          alt="Logo Banner"
-        />
-      </div>
+        <Flex
+          justify="center"
+          gap={8}
+          mb={8}
+          align="center"
+          bg="white"
+          p={6}
+          borderRadius="2xl"
+          boxShadow="sm"
+          borderWidth="1px"
+          borderColor="gray.100"
+        >
+          <Image
+            src={Logo}
+            w={{ base: "150px", sm: "100px" }}
+            h="auto"
+            alt="Logo"
+          />
+          <Image
+            src={LogoBanner}
+            w={{ base: "150px", sm: "300px" }}
+            h="auto"
+            alt="Logo Banner"
+          />
+        </Flex>
 
-      <div className="container border p-0 rounded-4 overflow-hidden">
-        <Table
-          pagination={false}
-          dataSource={questionsAll}
-          columns={[
-            {
-              title: "Questions",
-              dataIndex: "name",
-              key: "key",
-              render: (text) => <p className="mb-0">{text}</p>,
-            },
-            {
-              title: "Teacher Response",
-              dataIndex: "key",
-              key: "key",
-              render: (text, record) => {
-                // Custom logic for manual values
-                if (record.key === "Total Score") {
+        <Box
+          bg="white"
+          borderRadius="2xl"
+          boxShadow="sm"
+          borderWidth="1px"
+          borderColor="gray.100"
+          overflow="hidden"
+          mb={8}
+        >
+          <Table
+            pagination={false}
+            dataSource={questionsAll}
+            columns={[
+              {
+                title: "Questions",
+                dataIndex: "name",
+                key: "key",
+                render: (text) => <p className="mb-0">{text}</p>,
+              },
+              {
+                title: "Teacher Response",
+                dataIndex: "key",
+                key: "key",
+                render: (text, record) => {
+                  // Custom logic for manual values
+                  if (record.key === "Total Score") {
+                    return (
+                      <p className="mb-0">
+                        {getSelfAssemnetScrore("teacherForm")}
+                      </p>
+                    );
+                  }
+                  if (record.key === "Out Of") {
+                    return (
+                      <p className="mb-0">{getTotalScore("teacherForm")}</p>
+                    );
+                  }
+                  // Default behavior for other rows
                   return (
                     <p className="mb-0">
-                      {getSelfAssemnetScrore("teacherForm")}
+                      <Tag
+                        color={
+                          GetSingleForms?.teacherForm[text] === "Yes"
+                            ? "green"
+                            : GetSingleForms?.teacherForm[text] === "No"
+                              ? "red"
+                              : GetSingleForms?.teacherForm[text] ===
+                                  "Sometimes"
+                                ? "orange"
+                                : ""
+                        }
+                        className="mb-0"
+                      >
+                        {GetSingleForms?.teacherForm[text]}
+                      </Tag>
                     </p>
                   );
-                }
-                if (record.key === "Out Of") {
-                  return <p className="mb-0">{getTotalScore("teacherForm")}</p>;
-                }
-                // Default behavior for other rows
-                return (
-                  <p className="mb-0">
-                    <Tag
-                      color={
-                        GetSingleForms?.teacherForm[text] === "Yes"
-                          ? "green"
-                          : GetSingleForms?.teacherForm[text] === "No"
-                            ? "red"
-                            : GetSingleForms?.teacherForm[text] === "Sometimes"
-                              ? "orange"
-                              : ""
-                      }
-                      className="mb-0"
-                    >
-                      {GetSingleForms?.teacherForm[text]}
-                    </Tag>
-                  </p>
-                );
+                },
               },
-            },
-            {
-              title: "Observer Response",
-              dataIndex: "key",
-              key: "key",
-              render: (text, record) => {
-                // Custom logic for manual values
-                if (record.key === "Total Score") {
+              {
+                title: "Observer Response",
+                dataIndex: "key",
+                key: "key",
+                render: (text, record) => {
+                  // Custom logic for manual values
+                  if (record.key === "Total Score") {
+                    return (
+                      <p className="mb-0">
+                        {getSelfAssemnetScrore("observerForm")}
+                      </p>
+                    );
+                  }
+                  if (record.key === "Out Of") {
+                    return (
+                      <p className="mb-0">{getTotalScore("observerForm")}</p>
+                    );
+                  }
+
+                  // Default behavior for other rows
                   return (
                     <p className="mb-0">
-                      {getSelfAssemnetScrore("observerForm")}
+                      <Tag
+                        color={
+                          GetSingleForms?.observerForm[text] === "Yes"
+                            ? "green"
+                            : GetSingleForms?.observerForm[text] === "No"
+                              ? "red"
+                              : GetSingleForms?.observerForm[text] ===
+                                  "Sometimes"
+                                ? "orange"
+                                : ""
+                        }
+                        className="mb-0"
+                      >
+                        {GetSingleForms?.observerForm[text]}
+                      </Tag>
                     </p>
                   );
-                }
-                if (record.key === "Out Of") {
-                  return (
-                    <p className="mb-0">{getTotalScore("observerForm")}</p>
-                  );
-                }
-
-                // Default behavior for other rows
-                return (
-                  <p className="mb-0">
-                    <Tag
-                      color={
-                        GetSingleForms?.observerForm[text] === "Yes"
-                          ? "green"
-                          : GetSingleForms?.observerForm[text] === "No"
-                            ? "red"
-                            : GetSingleForms?.observerForm[text] === "Sometimes"
-                              ? "orange"
-                              : ""
-                      }
-                      className="mb-0"
-                    >
-                      {GetSingleForms?.observerForm[text]}
-                    </Tag>
-                  </p>
-                );
+                },
               },
-            },
-          ]}
-        />
-      </div>
+            ]}
+          />
+        </Box>
 
-      <PDFViewer
-        className="w-100 m-auto d-block mt-3"
-        style={{ height: "100vh" }}
-      >
-        <MyDocument data={GetSingleForms} />
-      </PDFViewer>
-    </>
+        <Box
+          bg="white"
+          p={6}
+          borderRadius="2xl"
+          boxShadow="sm"
+          borderWidth="1px"
+          borderColor="gray.100"
+        >
+          <Heading size="md" mb={6} color="gray.800">
+            Print Preview
+          </Heading>
+          <Box
+            borderRadius="xl"
+            overflow="hidden"
+            borderWidth="1px"
+            borderColor="gray.200"
+          >
+            <PDFViewer
+              style={{ width: "100%", height: "800px", border: "none" }}
+            >
+              <MyDocument data={GetSingleForms} />
+            </PDFViewer>
+          </Box>
+        </Box>
+      </Box>
+    </Box>
   );
 }
 

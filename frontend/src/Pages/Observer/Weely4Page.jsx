@@ -1,5 +1,5 @@
-import {  PlusCircleOutlined } from "@ant-design/icons";
-import { Button, DatePicker, Select, Table, Tag } from "antd";
+import { PlusCircleOutlined } from "@ant-design/icons";
+import { Button, DatePicker, Select, Table } from "antd";
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { UserRole } from "../../config/config";
@@ -8,6 +8,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { getAllWeeklyFrom } from "../../redux/userSlice";
 import moment from "moment";
 import Reminder from "../../Components/Reminder";
+import { Box, Flex, Heading, Text, Stack, Tag } from "@chakra-ui/react";
 
 const { Option } = Select;
 
@@ -21,7 +22,7 @@ function Weely4Page() {
   });
 
   const CombinedData = useSelector(
-    (state) => state?.user?.getAllWeeklyFroms || []
+    (state) => state?.user?.getAllWeeklyFroms || [],
   );
 
   useEffect(() => {
@@ -34,13 +35,13 @@ function Weely4Page() {
   const uniqueObservers = [
     ...new Set(
       CombinedData.map((item) => item?.isInitiated?.Observer?.name).filter(
-        Boolean
-      )
+        Boolean,
+      ),
     ),
   ];
   const uniqueTeachers = [
     ...new Set(
-      CombinedData.map((item) => item?.teacherId?.name).filter(Boolean)
+      CombinedData.map((item) => item?.teacherId?.name).filter(Boolean),
     ),
   ];
 
@@ -73,48 +74,66 @@ function Weely4Page() {
     );
   });
   return (
-    <div>
-      <div className="contai    ner py-0 px-0">
-        {UserRole[1] === getUserId()?.access && (
-          <Link to="/weekly4form/create?Initiate=true">
-            <button    style={{borderRadius:5}}
-           className="mb-3 bg-[#1a4d2e] p-3 text-white py-2 ">
-              <PlusCircleOutlined /> Form Initiation
-            </button>
-            {/* <Button
-              className="mb-4"
-              variant="solid"
-              color="primary"
-              size="large"
-            >
-              {" "}
-              <PlusCircleOutlined />
-              Form Initiation
-            </Button> */}
-          </Link>
-        )}
-        {UserRole[2] === getUserId()?.access && (
-          <Link to="/weekly4form/create">
-            <button  style={{borderRadius:5}}
-           className="mb-3 bg-[#1a4d2e] p-3 text-white py-2 ">
-              <PlusCircleOutlined /> Fill New Form
-            </button>
-            {/* <Button
-              className="mb-4"
-              variant="solid"
-              color="primary"
-              size="large"
-            >
-              {" "}
-              <PlusCircleOutlined /> New Form
-            </Button> */}
-          </Link>
-        )}
+    <Box p={{ base: 4, md: 8 }} minH="calc(100vh - 72px)">
+      <Flex
+        justify="space-between"
+        align="center"
+        mb={6}
+        flexWrap="wrap"
+        gap={4}
+      >
+        <Box>
+          <Heading size="lg" color="gray.800" mb={1}>
+            Weekly 4 Form
+          </Heading>
+          <Text color="gray.500">Manage and view weekly assessment forms.</Text>
+        </Box>
 
-        <div className="flex flex-wrap gap-4">
+        <Stack direction="row" spacing={3}>
+          {UserRole[2] === getUserId()?.access && (
+            <Link to="/weekly4form/create">
+              <Button
+                leftIcon={<PlusCircleOutlined />}
+                bg="brand.primary"
+                color="white"
+                _hover={{ bg: "brand.text", transform: "translateY(-2px)" }}
+                px={6}
+              >
+                Fill New Form
+              </Button>
+            </Link>
+          )}
+
+          {UserRole[1] === getUserId()?.access && (
+            <Link to="/weekly4form/create?Initiate=true">
+              <Button
+                leftIcon={<PlusCircleOutlined />}
+                bg="brand.primary"
+                color="white"
+                _hover={{ bg: "brand.text", transform: "translateY(-2px)" }}
+                px={6}
+              >
+                Form Initiation
+              </Button>
+            </Link>
+          )}
+        </Stack>
+      </Flex>
+
+      <Box
+        bg="white"
+        borderRadius="2xl"
+        boxShadow="sm"
+        borderWidth="1px"
+        borderColor="gray.100"
+        p={6}
+        w="100%"
+        overflowX="auto"
+      >
+        <Flex flexWrap="wrap" gap={4} mb={6}>
           {/* Observer Filter */}
           {UserRole[2] === getUserId().access && (
-            <div className="w-35 select-options">
+            <Box flex="1" minW="200px">
               <Select
                 mode="multiple"
                 style={{ width: "100%" }}
@@ -130,12 +149,12 @@ function Weely4Page() {
                   value: observer,
                 }))}
               />
-            </div>
+            </Box>
           )}
 
           {/* Teacher Filter */}
           {UserRole[1] === getUserId().access && (
-            <div className="w-35 select-options">
+            <Box flex="1" minW="200px">
               <Select
                 mode="multiple"
                 style={{ width: "100%" }}
@@ -151,11 +170,11 @@ function Weely4Page() {
                   value: teacher,
                 }))}
               />
-            </div>
+            </Box>
           )}
 
           {/* Teacher Status Filter */}
-          <div className="w-35 select-options">
+          <Box flex="1" minW="150px">
             <Select
               mode="multiple"
               style={{ width: "100%" }}
@@ -166,20 +185,19 @@ function Weely4Page() {
               <Option value={true}>Complete</Option>
               <Option value={false}>Incomplete</Option>
             </Select>
-          </div>
+          </Box>
 
           {/* Date Picker */}
-          <div className="mb-4 w-35 select-options">
+          <Box flex="1" minW="200px">
             <DatePicker
-              className="w-full"
+              style={{ width: "100%" }}
               placeholder="Select Date"
               onChange={handleDateChange}
               format="YYYY-MM-DD"
             />
-          </div>
-        </div>
+          </Box>
+        </Flex>
 
-        {/* <h4 className='mt-3'>Weekly Filled Forms</h4> */}
         <Table
           columns={[
             {
@@ -188,7 +206,9 @@ function Weely4Page() {
               key: "teacherId",
               width: "160px",
               sorter: (a, b) =>
-                (a?.name || "").localeCompare(b?.teacherId?.name || ""),
+                (a?.teacherId?.name || "").localeCompare(
+                  b?.teacherId?.name || "",
+                ),
               render: (user) => <span>{user?.name || "N/A"}</span>,
             },
             {
@@ -196,11 +216,10 @@ function Weely4Page() {
               dataIndex: "dateOfSubmission",
               key: "dateOfSubmission",
               width: "150px",
-              sorter: (a, b) => new Date(a) - new Date(b?.dateOfSubmission),
+              sorter: (a, b) =>
+                new Date(a.dateOfSubmission) - new Date(b.dateOfSubmission),
               render: (date) => (
-                <span>
-                  {date ? getAllTimes(date).formattedDate2 : "N/A"}
-                </span>
+                <span>{date ? getAllTimes(date).formattedDate2 : "N/A"}</span>
               ),
             },
             {
@@ -212,18 +231,16 @@ function Weely4Page() {
                 { text: "Not Completed", value: false },
               ],
               width: "160px",
-
               onFilter: (value, record) => record.isCompleted === value,
               render: (isComplete) => (
-                <span
-                  style={{
-                    color: isComplete ? "green" : "red",
-                    padding: "2px 6px",
-                    borderRadius: "4px",
-                  }}
+                <Tag
+                  colorScheme={isComplete ? "green" : "red"}
+                  variant="subtle"
+                  px={3}
+                  py={1}
                 >
                   {isComplete ? "COMPLETED" : "NOT COMPLETED"}
-                </span>
+                </Tag>
               ),
             },
             {
@@ -231,49 +248,50 @@ function Weely4Page() {
               key: "action",
               width: "200px",
               render: (text, record) => (
-                <span key={record?._id}>
+                <Stack direction="row" spacing={2} key={record?._id}>
                   {record?.isCompleted ? (
-                   
-
                     <Link to={`/weekly4form/report/${record._id}`}>
-                      <button className="px-3 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-md text-sm font-medium transition-colors">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        colorScheme="brand"
+                        color="brand.primary"
+                        _hover={{ bg: "brand.background" }}
+                      >
                         View Report
-                      </button>
+                      </Button>
                     </Link>
                   ) : (
                     UserRole[2] === getUserId().access && (
-                     
-
                       <Link to={`/weekly4form/create/${record?._id}`}>
-                        <button className="px-3 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-md text-sm font-medium transition-colors">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          colorScheme="brand"
+                          color="brand.primary"
+                          _hover={{ bg: "brand.background" }}
+                        >
                           Continue Form
-                        </button>
+                        </Button>
                       </Link>
                     )
                   )}
                   {UserRole[1] === getUserId().access &&
                     !record?.isCompleted && (
-                      <Link
-                        onClick={() => handleSendReminder(record._id)}
-                       
-                      >
-                        <Reminder id={record?._id} type={"form4"} />
-                      </Link>
+                      <Reminder id={record?._id} type={"form4"} />
                     )}
-                 
-                </span>
+                </Stack>
               ),
             },
           ]}
           dataSource={filteredData}
-          scroll={{
-            x: "max-content", // Makes the table horizontally scrollable for mobile
-          }}
+          scroll={{ y: "calc(100vh - 450px)", x: "max-content" }}
           pagination={false}
           rowKey={"_id"}
+          className="custom-table"
         />
-      </div>
-    </div>
+      </Box>
+    </Box>
   );
 }
 

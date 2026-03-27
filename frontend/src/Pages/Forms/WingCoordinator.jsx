@@ -1,40 +1,67 @@
-import React, { useEffect } from 'react'
-import { getUserId } from '../../Utils/auth'
-import { Button, Card, Table } from 'antd'
-import { UserRole } from '../../config/config'
-import { PlusCircleOutlined } from '@ant-design/icons'
-import { Link, useNavigate } from 'react-router-dom'
-import { useDispatch, useSelector } from 'react-redux';
-import { createWingForm, GetWingFrom } from '../../redux/userSlice'
+import React, { useEffect } from "react";
+import { getUserId } from "../../Utils/auth";
+import { Button, Card, Table } from "antd";
+import { UserRole } from "../../config/config";
+import { PlusCircleOutlined } from "@ant-design/icons";
+import { Link, useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import { createWingForm, GetWingFrom } from "../../redux/userSlice";
+import { Box, Flex, Heading, Text, Tag, Stack } from "@chakra-ui/react";
 
 function WingCoordinator() {
-    const navigate = useNavigate();
-    const dispatch = useDispatch();
-    const id = getUserId()?.id;
-    const {getWingFormlist,loading} = useSelector((state) => state?.user);
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const id = getUserId()?.id;
+  const { getWingFormlist, loading } = useSelector((state) => state?.user);
 
-    useEffect(()=>{
-      dispatch(GetWingFrom(id))
-    },[])
-    
-    const createFrom = async () =>{
-      const res = await dispatch(createWingForm()).unwrap();
-     if(res?.success)
-      navigate(`/wing-coordinator/${res?.data?._id}`)
-    }
+  useEffect(() => {
+    dispatch(GetWingFrom(id));
+  }, []);
+
+  const createFrom = async () => {
+    const res = await dispatch(createWingForm()).unwrap();
+    if (res?.success) navigate(`/wing-coordinator/${res?.data?._id}`);
+  };
   return (
-    <div className='pb-0 pt-0' >
-    {getUserId().access === UserRole[1] && 
+    <Box p={{ base: 4, md: 8 }} minH="calc(100vh - 72px)">
+      <Flex
+        justify="space-between"
+        align="center"
+        mb={6}
+        flexWrap="wrap"
+        gap={4}
+      >
+        <Box>
+          <Heading size="lg" color="gray.800" mb={1}>
+            Wing Coordinator Forms
+          </Heading>
+          <Text color="gray.500">Manage and view all coordinated forms.</Text>
+        </Box>
+        {getUserId().access === UserRole[1] && (
+          <Button
+            leftIcon={<PlusCircleOutlined />}
+            bg="brand.primary"
+            color="white"
+            _hover={{ bg: "brand.text", transform: "translateY(-2px)" }}
+            onClick={() => createFrom()}
+            px={6}
+          >
+            Fill New Form
+          </Button>
+        )}
+      </Flex>
 
-   <button
-   style={{borderRadius:5}}
-   className="mb-3 bg-[#1a4d2e] p-3 text-white py-2 " onClick={() => createFrom()}
-    >
-    <PlusCircleOutlined/>  Fill New Form
-  </button>
-  }
-<h1>All Froms</h1>
-      <Table
+      <Box
+        bg="white"
+        borderRadius="2xl"
+        boxShadow="sm"
+        borderWidth="1px"
+        borderColor="gray.100"
+        p={6}
+        w="100%"
+        overflowX="auto"
+      >
+        <Table
           columns={[
             {
               title: "Name Of Observer",
@@ -42,7 +69,7 @@ function WingCoordinator() {
               key: "userId",
               width: "160px",
               sorter: (a, b) =>
-                (a?.name || "").localeCompare(b?.userId?.name || ""),
+                (a?.userId?.name || "").localeCompare(b?.userId?.name || ""),
               render: (user) => <span>{user?.name || "N/A"}</span>,
             },
             {
@@ -52,7 +79,7 @@ function WingCoordinator() {
               width: "160px",
               sorter: (a, b) =>
                 (a?.className || "").localeCompare(b?.className || ""),
-              render: (user,b) => <span>{user || "N/A"}</span>,
+              render: (user, b) => <span>{user || "N/A"}</span>,
             },
             {
               title: "Status",
@@ -65,15 +92,14 @@ function WingCoordinator() {
               ],
               onFilter: (value, record) => record.isComplete === value,
               render: (isComplete) => (
-                <span 
-                  style={{
-                    color: isComplete ? 'green' : 'red', 
-                    padding: '2px 6px',
-                    borderRadius: '4px'
-                  }}
+                <Tag
+                  colorScheme={isComplete ? "green" : "red"}
+                  variant="subtle"
+                  px={3}
+                  py={1}
                 >
                   {isComplete ? "COMPLETED" : "NOT COMPLETED"}
-                </span>
+                </Tag>
               ),
             },
             {
@@ -86,88 +112,78 @@ function WingCoordinator() {
                 { text: "Published", value: false },
               ],
               onFilter: (value, record) => record.isDraft === value,
-              render: (isComplete,record) => (
-                <span 
-                  style={{
-                    color: isComplete && !record?.iscomplete ?   'red':'green', 
-                    padding: '2px 6px',
-                    borderRadius: '4px'
-                  }}
+              render: (isDraft, record) => (
+                <Tag
+                  colorScheme={isDraft && !record?.isComplete ? "red" : "green"}
+                  variant="subtle"
+                  px={3}
+                  py={1}
                 >
-                  {isComplete && !record?.iscomplete ? "DRAFT" : "PUBLISHED"}
-                </span>
+                  {isDraft && !record?.isComplete ? "DRAFT" : "PUBLISHED"}
+                </Tag>
               ),
             },
             {
               title: "Action",
               dataIndex: "action",
               key: "action",
-              width:"160px",
+              width: "200px",
               render: (_, record) => {
-                const { isDraft, isComplete, isObserverInitiation } =
-                  record;
-                  if (isDraft && !isComplete) {
-                  return(
-                      <Link
-                                // className="btn text-primary"
-                                to={`/wing-coordinator/${record._id}`}
-                              >
-                                  <button
-                              className="text-nowrap px-3 py-1  text-blue-600 hover:text-blue-900 rounded-md text-sm font-medium transition-colors"
-                            >
-                               Continue Form
-                            </button>
-                               
-                              </Link>
-                  )
-                  }
-                if (!isDraft && isComplete) {
-                  return (
-                    <div className="d-flex gap-1 justify-content-start align-items-center">
-                      <Link
-                        // className="btn btn-primary text-nowrap h-fit"
-                        to={`/wing-coordinator/report/${record._id}`}
-                      >
-                       <button
-                    className="text-nowrap px-3 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-md text-sm font-medium transition-colors"
-                  >
-                    View Report
-                  </button>
+                const { isDraft, isComplete } = record;
+                return (
+                  <Stack direction="row" spacing={2}>
+                    {isDraft && !isComplete && (
+                      <Link to={`/wing-coordinator/${record._id}`}>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          colorScheme="brand"
+                          color="brand.primary"
+                          _hover={{ bg: "brand.background" }}
+                        >
+                          Continue Form
+                        </Button>
                       </Link>
-                      <Link
-                        to={`/fortnightly-monitor/edit/${record._id}`}
-                      >
-                        <button
-                        
-                    className="text-nowrap px-3 py-1 bg-red-50 text-red-600 hover:bg-blue-100 rounded-md text-sm font-medium transition-colors"
-                  >
-                    Edit
-                  </button>
-                       
-                      </Link>
-                    </div>
-                  );
-                }
-                }
+                    )}
+                    {!isDraft && isComplete && (
+                      <>
+                        <Link to={`/wing-coordinator/report/${record._id}`}>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            colorScheme="brand"
+                            color="brand.primary"
+                            _hover={{ bg: "brand.background" }}
+                          >
+                            View Report
+                          </Button>
+                        </Link>
+                        <Link to={`/fortnightly-monitor/edit/${record._id}`}>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            colorScheme="red"
+                            color="red.600"
+                            _hover={{ bg: "red.50" }}
+                          >
+                            Edit
+                          </Button>
+                        </Link>
+                      </>
+                    )}
+                  </Stack>
+                );
+              },
             },
           ]}
           dataSource={getWingFormlist?.data}
-          scroll={{
-            x: "max-content", // Makes the table horizontally scrollable for mobile
-          }}
+          scroll={{ y: "calc(100vh - 400px)", x: "max-content" }}
           pagination={false}
           rowKey={"_id"}
         />
-{/* {Array.isArray(getWingFormlist?.data) && getWingFormlist?.data.map((item) => (
-  item?.className && (
-    <Card key={item?._id}>
-      {item?.className}
-    </Card>
-  )
-))} */}
-
-  </div>
-  )
+      </Box>
+    </Box>
+  );
 }
 
-export default WingCoordinator
+export default WingCoordinator;

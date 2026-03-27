@@ -1,12 +1,11 @@
-import { DatePicker, Select, Table } from 'antd'
-import moment from 'moment';
-import React, { useEffect, useState } from 'react'
-import { useDispatch, useSelector } from 'react-redux';
-import { FormOne_Columns2 } from '../TableColumns';
-import { GetAllClassRoomForms } from '../../../redux/Form/classroomWalkthroughSlice';
+import { DatePicker, Select, Table } from "antd";
+import moment from "moment";
+import React, { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { FormOne_Columns2 } from "../TableColumns";
+import { GetAllClassRoomForms } from "../../../redux/Form/classroomWalkthroughSlice";
 const { Option } = Select;
 function FormTwoReport() {
-
   const dispatch = useDispatch();
   const [filters, setFilters] = useState({
     observer: [],
@@ -19,40 +18,46 @@ function FormTwoReport() {
     observerStatus: [],
   });
 
-
-  const CombinedData = useSelector((state) => state?.walkThroughForm?.GetForms || []);
+  const CombinedData = useSelector(
+    (state) => state?.walkThroughForm?.GetForms || [],
+  );
 
   useEffect(() => {
     dispatch(GetAllClassRoomForms());
   }, [dispatch]);
 
-
   // Dynamically get unique values for filters
   const uniqueClasses = [
-    ...new Set(CombinedData.map((item) => item?.grenralDetails?.className).filter(Boolean)),
+    ...new Set(
+      CombinedData.map((item) => item?.grenralDetails?.className).filter(
+        Boolean,
+      ),
+    ),
   ];
   const uniqueObservers = [
     ...new Set(
-      CombinedData.map((item) => item?.createdBy?.name).filter(
-        (name) => name
-      )
+      CombinedData.map((item) => item?.createdBy?.name).filter((name) => name),
     ),
   ]; // Ensure only non-falsy names are included
   const uniqueTeachers = [
     ...new Set(
-      CombinedData.map((item) => item?.grenralDetails?.NameoftheVisitingTeacher?.name).filter((name) => name)
+      CombinedData.map(
+        (item) => item?.grenralDetails?.NameoftheVisitingTeacher?.name,
+      ).filter((name) => name),
     ),
   ]; // Ensure only non-falsy names are included
   const uniqueDates = [...new Set(CombinedData.map((item) => item.date))];
 
   // Dynamically get unique sections
   const uniqueSections = [
-    ...new Set(CombinedData.map((item) => item?.grenralDetails?.Section).filter(Boolean)), // Ensure only non-falsy values
+    ...new Set(
+      CombinedData.map((item) => item?.grenralDetails?.Section).filter(Boolean),
+    ), // Ensure only non-falsy values
   ];
 
   const uniqueSubject = [
     ...new Set(
-      CombinedData.map((item) => item?.grenralDetails?.Subject).filter(Boolean)
+      CombinedData.map((item) => item?.grenralDetails?.Subject).filter(Boolean),
     ),
   ];
 
@@ -93,32 +98,32 @@ function FormTwoReport() {
   // Filter CombinedData based on selected filters
   const filteredData = CombinedData.filter((item) => {
     // Format date in item for comparison
-    const itemDate = moment(item?.grenralDetails?.DateOfObservation).format("MM-DD-YY");
+    const itemDate = moment(item?.grenralDetails?.DateOfObservation).format(
+      "MM-DD-YY",
+    );
     return (
-      (filters.class.length === 0 || filters.class.includes(item.grenralDetails?.className)) &&
+      (filters.class.length === 0 ||
+        filters.class.includes(item.grenralDetails?.className)) &&
       (filters.section.length === 0 ||
         filters.section.includes(item.grenralDetails?.Section)) &&
-      (filters.subject.length === 0 || filters.subject.includes(item?.grenralDetails?.Subject)) &&
+      (filters.subject.length === 0 ||
+        filters.subject.includes(item?.grenralDetails?.Subject)) &&
       (filters.date.length === 0 || filters.date.includes(itemDate)) && // Compare the date as string
       (filters.teacherStatus.length === 0 ||
         filters.teacherStatus.includes(item.isTeacherCompletes)) &&
       (filters.observerStatus.length === 0 ||
         filters.observerStatus.includes(item.isObserverCompleted)) &&
       (filters.observer.length === 0 ||
-        filters.observer.some((name) =>
-          item.createdBy?.name.includes(name)
-        ))
-      &&
+        filters.observer.some((name) => item.createdBy?.name.includes(name))) &&
       (filters.teacher.length === 0 ||
-        filters.teacher.some((name) => item?.grenralDetails?.NameoftheVisitingTeacher?.name.includes(name)))
+        filters.teacher.some((name) =>
+          item?.grenralDetails?.NameoftheVisitingTeacher?.name.includes(name),
+        ))
     );
   });
 
-
-
   return (
     <div>
-
       {/* Filters Section */}
       <div className=" flex flex-wrap gap-4 mb-3 ">
         {/* Observer Filter */}
@@ -242,7 +247,7 @@ function FormTwoReport() {
         </div>
         <div className=" w-35 select-options">
           <DatePicker
-            className='w-full'
+            className="w-full"
             placeholder="Select Date"
             onChange={handleDateChange}
             format="YYYY-MM-DD"
@@ -257,11 +262,11 @@ function FormTwoReport() {
         columns={FormOne_Columns2}
         dataSource={filteredData}
         pagination={false}
-        scroll={{ y: 70 * 5 }}
+        scroll={{ y: "calc(100vh - 400px)", x: "max-content" }}
         rowKey="_id"
       />
     </div>
-  )
+  );
 }
 
-export default FormTwoReport
+export default FormTwoReport;
