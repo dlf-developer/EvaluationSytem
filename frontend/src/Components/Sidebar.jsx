@@ -26,10 +26,8 @@ import {
   Heading,
   Divider,
   Avatar,
-  HStack,
 } from "@chakra-ui/react";
 
-// Mapping of menu item names to Lucide icons for a consistent modern look
 const iconMap = {
   Dashboard: LayoutDashboard,
   Reports: FileText,
@@ -62,31 +60,34 @@ function Sidebar({ collapsed }) {
       direction="column"
       h="100vh"
       py={8}
-      px={collapsed ? 2 : 6}
+      px={collapsed ? 2 : 5}
       bg="white"
       borderRight="1px"
       borderColor="gray.100"
       justify="space-between"
       transition="all 0.3s ease"
+      overflowY="auto"
+      overflowX="hidden"
     >
       <Box>
-        {/* Logo Section */}
+        {/* ── Logo ────────────────────────────────────────────── */}
         <Flex
           mb={10}
-          px={collapsed ? 0 : 3}
           align="center"
           justify={collapsed ? "center" : "flex-start"}
+          px={collapsed ? 0 : 2}
+          gap={3}
         >
           <Box
+            flexShrink={0}
             p={2}
             bg="brand.primary"
             borderRadius="lg"
-            mr={collapsed ? 0 : 3}
             display="flex"
             alignItems="center"
             justifyContent="center"
           >
-            <Layers size={20} color="white" />
+            <Layers size={18} color="white" />
           </Box>
           {!collapsed && (
             <Heading
@@ -95,27 +96,29 @@ function Sidebar({ collapsed }) {
               letterSpacing="tight"
               fontWeight="800"
               fontSize="lg"
+              lineHeight="1"
             >
               SchoolPortal
             </Heading>
           )}
         </Flex>
 
-        {/* Navigation Items */}
-        <VStack spacing={1} align="stretch">
+        {/* ── Navigation Items ────────────────────────────────── */}
+        <VStack spacing={0.5} align="stretch">
           {menuItems.map((item, index) => {
+            /* Section label */
             if (item.label) {
               return (
                 !collapsed && (
                   <Text
                     key={`label-${index}`}
-                    fontSize="11px"
-                    fontWeight="bold"
+                    fontSize="10px"
+                    fontWeight="700"
                     color="gray.400"
                     textTransform="uppercase"
                     letterSpacing="1.5px"
                     mt={6}
-                    mb={2}
+                    mb={1}
                     px={3}
                   >
                     {item.label}
@@ -128,86 +131,75 @@ function Sidebar({ collapsed }) {
             const LucideIcon = iconMap[item.name] || FileText;
 
             return (
-              <Box
+              <Flex
                 as={Link}
                 to={item.route}
                 key={`link-${index}`}
-                py={2.5}
-                px={collapsed ? 0 : 4}
+                alignContent="center"                       /* single axis — guaranteed alignment */
+                gap={3}
+                justifyContent={'center'}
+                py="10px"
+                px={collapsed ? 0 : 3}
                 borderRadius="xl"
                 bg={isActive ? "brand.primary" : "transparent"}
                 color={isActive ? "white" : "gray.500"}
                 fontWeight={isActive ? "semibold" : "medium"}
-                transition="all 0.2s cubic-bezier(.08,.52,.52,1)"
+                transition="all 0.18s ease"
+                justify={collapsed ? "center" : "flex-start"}
                 _hover={{
                   bg: isActive ? "brand.primary" : "gray.50",
                   color: isActive ? "white" : "brand.primary",
+                  textDecoration: "none",
                 }}
-                display="flex"
-                alignItems="center"
-                justifyContent={collapsed ? "center" : "flex-start"}
+                textDecoration="none"
+                role="group"
               >
+                {/* Icon — fixed size, never stretches */}
                 <Icon
                   as={LucideIcon}
-                  fontSize={20}
-                  mr={collapsed ? 0 : 4}
+                  boxSize="18px"           /* use boxSize, not fontSize */
+                  flexShrink={0}
                   strokeWidth={isActive ? 2.5 : 2}
                 />
+
+                {/* Label + active chevron */}
                 {!collapsed && (
-                  <Flex flex={1} justify="space-between" align="center">
-                    <Text fontSize="14px" letterSpacing="-0.01em">
+                  <>
+                    <Text
+                      flex="1"
+                      fontSize="13.5px"
+                      fontWeight="inherit"
+                      color="inherit"
+                      lineHeight="1"        /* remove extra line-height gap */
+                      letterSpacing="-0.01em"
+                      whiteSpace="nowrap"
+                      overflow="hidden"
+                      textOverflow="ellipsis"
+                    >
                       {item.name}
                     </Text>
-                    {isActive && <ChevronRight size={14} opacity={0.5} />}
-                  </Flex>
+                    {isActive && (
+                      <ChevronRight
+                        size={13}
+                        style={{ opacity: 0.6, flexShrink: 0 }}
+                      />
+                    )}
+                  </>
                 )}
-              </Box>
+              </Flex>
             );
           })}
         </VStack>
       </Box>
 
-      {/* User Actions Section */}
-      <Box px={collapsed ? 0 : 2} pb={2}>
-        <Divider mb={6} borderColor="gray.100" />
+      {/* ── User Actions ─────────────────────────────────────── */}
+      <Box px={collapsed ? 0 : 1} pb={2}>
+        <Divider mb={5} borderColor="gray.100" />
 
         {!collapsed ? (
-          <VStack spacing={4} align="stretch">
-            {/* <Flex
-              p={3}
-              bg="gray.50"
-              borderRadius="xl"
-              align="center"
-              transition="all 0.2s"
-              _hover={{ bg: "gray.100" }}
-              cursor="pointer"
-              as={Link}
-              to="/profile"
-            >
-              <Avatar
-                size="sm"
-                name={userName}
-                bg="brand.primary"
-                color="white"
-                mr={3}
-              />
-              <Box overflow="hidden">
-                <Text
-                  fontSize="sm"
-                  fontWeight="bold"
-                  color="gray.800"
-                  isTruncated
-                >
-                  {userName}
-                </Text>
-                <Text fontSize="xs" color="gray.500" textTransform="capitalize">
-                  {Role}
-                </Text>
-              </Box>
-            </Flex> */}
-
+          <VStack spacing={3} align="stretch">
             <Button
-              leftIcon={<LogOut size={16} />}
+              leftIcon={<LogOut size={15} />}
               variant="ghost"
               w="100%"
               justifyContent="flex-start"
@@ -216,9 +208,11 @@ function Sidebar({ collapsed }) {
               _hover={{ bg: "red.50", color: "red.600" }}
               onClick={handleLogout}
               borderRadius="xl"
-              fontSize="sm"
-              fontWeight="semibold"
-              h="45px"
+              fontSize="13.5px"
+              fontWeight="600"
+              h="42px"
+              px={3}
+              gap={3}
             >
               Log out
             </Button>
@@ -239,8 +233,9 @@ function Sidebar({ collapsed }) {
               color="gray.500"
               onClick={handleLogout}
               p={0}
+              minW={0}
             >
-              <LogOut size={20} />
+              <LogOut size={18} />
             </Button>
           </VStack>
         )}
