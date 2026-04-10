@@ -75,7 +75,7 @@ const navigate = useNavigate()
         key={'left'}
         size='default'
       >
-        <Sidebar/>
+        <Sidebar onCloseDrawer={onClose} />
       </Drawer>
     </div>
   );

@@ -11,6 +11,7 @@ router.post('/login', login);
 
 
 router.post('/request-password-reset', requestPasswordReset);
+router.post('/reset-password', resetPassword);
 router.put('/change-password', authMiddleware, changePassword);
 router.get('/form-data',authMiddleware, FromCount);
 router.post('/getFilteredData',authMiddleware, getFillterForms);

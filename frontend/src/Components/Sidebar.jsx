@@ -41,7 +41,7 @@ const iconMap = {
   "Wing Coordinator": ShieldCheck,
 };
 
-function Sidebar({ collapsed }) {
+function Sidebar({ collapsed, onCloseDrawer }) {
   const location = useLocation();
   const PATHROUTE = location.pathname;
   const userData = getUserId();
@@ -134,6 +134,7 @@ function Sidebar({ collapsed }) {
               <Flex
                 as={Link}
                 to={item.route}
+                onClick={onCloseDrawer}
                 key={`link-${index}`}
                 alignContent="center"                       /* single axis — guaranteed alignment */
                 gap={3}

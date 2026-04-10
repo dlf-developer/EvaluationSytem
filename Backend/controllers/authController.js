@@ -55,10 +55,10 @@ const requestPasswordReset = async (req, res) => {
 
     const resetToken = crypto.randomBytes(32).toString('hex');
     user.resetPasswordToken = resetToken;
-    user.resetPasswordExpires = Date.now() + 3600000; // 1 hour
+    user.resetPasswordExpires = Date.now() + 600000; // 10 minutes
     await user.save();
 
-    const resetUrl = `http://your-frontend-url.com/reset-password/${resetToken}`;
+    const resetUrl = `${process.env.APP_URL}/reset-password/${resetToken}`;
     const message = `Please use the following link to reset your password: ${resetUrl}`;
     
     try {

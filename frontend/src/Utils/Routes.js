@@ -2,6 +2,8 @@ import { Navigate } from "react-router-dom";
 import { getToken, getUserId } from "./auth";
 import Login from "../Pages/Login";
 import Register from "../Pages/Register";
+import ForgetPassword from "../Pages/ForgetPassword";
+import ResetPassword from "../Pages/ResetPassword";
 import DashboardLayout from "./DashboardLayout";
 import LoginLayout from "./LoginLayout";
 import ObserverLayout from "./ObserverLayout";
@@ -235,6 +237,8 @@ const protects = {
         { path: "/", element: <Login /> },
         { path: "/login", element: <Login /> },
         { path: "/signup", element: <Register /> },
+        { path: "/forget-password", element: <ForgetPassword /> },
+        { path: "/reset-password/:token", element: <ResetPassword /> },
         { path: "/test", element: <TextBox /> },
         { path: "*", element: <NotFound404 /> },
       ],

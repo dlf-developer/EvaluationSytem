@@ -1,7 +1,5 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
-import { useDispatch } from "react-redux";
-import { UserLogin } from "../redux/userSlice";
+import { Link, useParams, useNavigate } from "react-router-dom";
 import { message } from "antd";
 import {
   Box,
@@ -19,58 +17,55 @@ import {
   Text,
   VStack,
 } from "@chakra-ui/react";
-import {
-  AntDesignOutlined,
-  LockOutlined,
-  UserOutlined,
-  EyeOutlined,
-  EyeInvisibleOutlined,
-} from "@ant-design/icons";
-const EMAIL = process.env.REACT_APP_EMAIL;
+import { LockOutlined, CheckCircleOutlined, EyeOutlined, EyeInvisibleOutlined } from "@ant-design/icons";
+import { axiosInstance } from "../redux/instence";
 
-function Login() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+function ResetPassword() {
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [errors, setErrors] = useState({ password: "", confirm: "" });
   const [showPassword, setShowPassword] = useState(false);
-  const [errors, setErrors] = useState({ email: "", password: "" });
-  const dispatch = useDispatch();
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const { token } = useParams();
+  const navigate = useNavigate();
 
-  // Email validation function
-  const validateEmail = (email) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
+  const validatePassword = (pwd) => {
+    // 8 characters, 1 capital letter, 1 number
+    const regex = /^(?=.*[A-Z])(?=.*\d)[A-Za-z\d@$!%*?&]{8,}$/;
+    return regex.test(pwd);
   };
 
-  // Password validation function
-  const validatePassword = (password) => password.length >= 6;
-
-  // Form submission handler
-  const handleLogin = () => {
-    let emailError = "";
+  const handleResetPassword = async () => {
     let passwordError = "";
+    let confirmError = "";
 
-    if (!validateEmail(email)) {
-      emailError = "Please enter a valid email.";
+    if (!validatePassword(newPassword)) {
+      passwordError = "Password must be at least 8 characters, include 1 uppercase letter and 1 number.";
     }
 
-    if (!validatePassword(password)) {
-      passwordError = "Password must be at least 6 characters.";
+    if (newPassword !== confirmPassword) {
+      confirmError = "Passwords do not match.";
     }
 
-    setErrors({ email: emailError, password: passwordError });
+    setErrors({ password: passwordError, confirm: confirmError });
 
-    if (!emailError && !passwordError) {
-      dispatch(UserLogin({ email, password })).then((res) => {
-        if (res?.payload?.token) {
-          localStorage.setItem("token", res?.payload?.token);
-          message.success("Logging in...");
-          window.location.replace("/");
+    if (!passwordError && !confirmError) {
+      setLoading(true);
+      try {
+        const res = await axiosInstance.post("/auth/reset-password", { token, newPassword });
+        if (res.status === 200) {
+          message.success("Password has been reset successfully.");
+          navigate("/login");
         } else {
-          message.error(res?.payload?.message);
+          message.error(res.data?.message || "Failed to reset password. The link might be expired.");
         }
-      });
-    } else {
-      message.error("Please fix the errors before submitting.");
+      } catch (error) {
+        console.error(error);
+        message.error(error.response?.data?.message || "An error occurred. Please try again.");
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -93,7 +88,6 @@ function Login() {
         overflow="hidden"
         display={{ base: "none", md: "flex" }}
       >
-        {/* Glassmorphism Abstract Shapes */}
         <Box
           position="absolute"
           top="-10%"
@@ -127,11 +121,10 @@ function Login() {
             boxShadow="2xl"
           />
           <Heading as="h1" size="2xl" fontWeight="bold" lineHeight="tall">
-            Welcome to Teacher Portal
+            Secure Reset
           </Heading>
           <Text fontSize="lg" opacity={0.9}>
-            A comprehensive evaluation system to streamline academic and
-            administrative assessments with precision.
+            Set your new strong password to regain access to your account.
           </Text>
         </VStack>
       </Flex>
@@ -140,7 +133,7 @@ function Login() {
       <Flex flex={1} justify="center" align="center" p={{ base: 6, md: 10 }}>
         <Box
           w="full"
-          maxW="xl"
+          maxW="md"
           bg="white"
           p={10}
           borderRadius="2xl"
@@ -175,40 +168,14 @@ function Login() {
                 color="brand.text"
                 fontWeight="bold"
               >
-                Login
+                Create New Password
               </Heading>
               <Text color="brand.textMuted" fontSize="md">
-                Enter your credentials to access your account.
+                Your new password must be different from previous used passwords.
               </Text>
             </Box>
 
             <Stack spacing={5}>
-              <FormControl isInvalid={!!errors.email}>
-                <InputGroup size="lg">
-                  <InputLeftElement pointerEvents="none">
-                    <UserOutlined
-                      style={{ color: "var(--chakra-colors-brand-secondary)" }}
-                    />
-                  </InputLeftElement>
-                  <Input
-                    placeholder="Email Address"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    focusBorderColor="brand.primary"
-                    borderColor="gray.300"
-                    _hover={{ borderColor: "brand.secondary" }}
-                    borderRadius="lg"
-                    bg="gray.50"
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") handleLogin();
-                    }}
-                  />
-                </InputGroup>
-                {errors.email && (
-                  <FormErrorMessage>{errors.email}</FormErrorMessage>
-                )}
-              </FormControl>
-
               <FormControl isInvalid={!!errors.password}>
                 <InputGroup size="lg">
                   <InputLeftElement pointerEvents="none">
@@ -218,12 +185,10 @@ function Login() {
                   </InputLeftElement>
                   <Input
                     type={showPassword ? "text" : "password"}
-                    placeholder="Password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") handleLogin();
-                    }}
+                    placeholder="New Password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") handleResetPassword(); }}
                     focusBorderColor="brand.primary"
                     borderColor="gray.300"
                     _hover={{ borderColor: "brand.secondary" }}
@@ -236,49 +201,62 @@ function Login() {
                       size="sm"
                       onClick={() => setShowPassword(!showPassword)}
                     >
-                      {showPassword ? (
-                        <EyeOutlined />
-                      ) : (
-                        <EyeInvisibleOutlined />
-                      )}
+                      {showPassword ? <EyeOutlined /> : <EyeInvisibleOutlined />}
                     </Button>
                   </InputRightElement>
                 </InputGroup>
-                {errors.password && (
-                  <FormErrorMessage>{errors.password}</FormErrorMessage>
-                )}
+                {errors.password && <FormErrorMessage>{errors.password}</FormErrorMessage>}
+              </FormControl>
+
+              <FormControl isInvalid={!!errors.confirm}>
+                <InputGroup size="lg">
+                  <InputLeftElement pointerEvents="none">
+                    <CheckCircleOutlined
+                      style={{ color: "var(--chakra-colors-brand-secondary)" }}
+                    />
+                  </InputLeftElement>
+                  <Input
+                    type={showConfirmPassword ? "text" : "password"}
+                    placeholder="Confirm Password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") handleResetPassword(); }}
+                    focusBorderColor="brand.primary"
+                    borderColor="gray.300"
+                    _hover={{ borderColor: "brand.secondary" }}
+                    borderRadius="lg"
+                    bg="gray.50"
+                  />
+                  {confirmPassword && confirmPassword === newPassword ? (
+                    <InputRightElement>
+                      <CheckCircleOutlined style={{ color: "var(--chakra-colors-green-500)", fontSize: "20px" }} />
+                    </InputRightElement>
+                  ) : (
+                    <InputRightElement h="full" pr={2}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      >
+                        {showConfirmPassword ? <EyeOutlined /> : <EyeInvisibleOutlined />}
+                      </Button>
+                    </InputRightElement>
+                  )}
+                </InputGroup>
+                {errors.confirm && <FormErrorMessage>{errors.confirm}</FormErrorMessage>}
               </FormControl>
             </Stack>
-
-            <Flex justify="flex-end" align="center">
-              <Box
-                as={Link}
-                to={
-                  email
-                    ? `/forget-password?email=${encodeURIComponent(email)}`
-                    : "/forget-password"
-                }
-                color="brand.primary"
-                fontWeight="semibold"
-                fontSize="sm"
-                _hover={{
-                  color: "brand.secondary",
-                  textDecoration: "underline",
-                }}
-                transition="color 0.2s"
-              >
-                Forgot Password?
-              </Box>
-            </Flex>
 
             <Button
               colorScheme="brand"
               size="lg"
               w="full"
-              leftIcon={<AntDesignOutlined />}
-              onClick={handleLogin}
+              leftIcon={<CheckCircleOutlined />}
+              onClick={handleResetPassword}
+              isLoading={loading}
+              loadingText="Saving..."
               py={7}
-              mt={2}
+              mt={4}
               fontSize="md"
               fontWeight="bold"
               borderRadius="xl"
@@ -294,12 +272,25 @@ function Login() {
               }}
               transition="all 0.3s"
             >
-              Sign In
+              Reset Password
             </Button>
-            <Text>
-              If you're facing any issue, please email  {" "}
-              <a href={`mailto:${EMAIL}`}>{EMAIL}</a>
-            </Text>
+            
+            <Flex justify="center" align="center" mt={4}>
+              <Box
+                as={Link}
+                to="/login"
+                color="brand.primary"
+                fontWeight="semibold"
+                fontSize="sm"
+                _hover={{
+                  color: "brand.secondary",
+                  textDecoration: "underline",
+                }}
+                transition="color 0.2s"
+              >
+                Back to Login
+              </Box>
+            </Flex>
           </VStack>
         </Box>
       </Flex>
@@ -307,4 +298,4 @@ function Login() {
   );
 }
 
-export default Login;
+export default ResetPassword;

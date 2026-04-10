@@ -1,5 +1,7 @@
 import {
   Button,
+  Card,
+  Col,
   DatePicker,
   Empty,
   Form,
@@ -7,9 +9,9 @@ import {
   InputNumber,
   message,
   Radio,
+  Row,
   Spin,
 } from "antd";
-import { Box, Flex, SimpleGrid, Heading, Text, Badge } from "@chakra-ui/react";
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
@@ -24,7 +26,6 @@ import {
   questionsOld,
   cutoffDate,
 } from "../../Components/normalData";
-import { calculateScorenew } from "../../Utils/calculateScore";
 
 function FortnightlyMonitorEdit({ flag }) {
   const [form] = Form.useForm();
@@ -43,24 +44,9 @@ function FortnightlyMonitorEdit({ flag }) {
   const ObserverList = useSelector((state) => state.user.GetObserverLists);
   const [totalCount, setTotalCount] = useState(0);
   const [selfAssessCount, setSelfAssessCount] = useState();
-  const [currentQuestions, setCurrentQuestions] = useState([]);
-
-  useEffect(() => {
-    if (formDetails?.createdAt) {
-      if (new Date(formDetails.createdAt) < new Date(cutoffDate)) {
-        setCurrentQuestions(questionsOld);
-      } else {
-        setCurrentQuestions(questions);
-      }
-    } else {
-      setCurrentQuestions(questions);
-    }
-  }, [formDetails]);
 
   const yesNoNAOptions = ["Yes", "No", "Sometimes", "N/A"];
-  const role = getUserId()?.access;
-  const flagType = flag || (role === UserRole[1] ? "Teacher" : "Observer");
-  const type = flagType === "Teacher" ? "teacherForm" : "observerForm";
+  const flagType = flag || "Teacher";
 
   // Fetch form details
   useEffect(() => {
@@ -68,27 +54,36 @@ function FortnightlyMonitorEdit({ flag }) {
 
     dispatch(GetSingleFormsOne(Id))
       .then((response) => {
-        const data = response?.payload;
-        setFormDetails(data);
-        if (data?.[type]) {
-          form.setFieldsValue(data[type]);
-          const result = calculateScorenew(data[type], currentQuestions);
-          setSelfAssessmentScore(result.score);
-          setTotalCount(result.total);
-        }
+        setFormDetails(response?.payload);
         setIsLoading(false);
       })
       .catch(() => {
         message.error("Error fetching form details.");
         setIsLoading(false);
       });
-  }, [Id, navigate, !ObserverID, currentQuestions]);
+  }, [Id, navigate, !ObserverID]);
+
+  const type = "teacherForm";
+  useEffect(() => {
+    if (!formDetails || !formDetails[type]) return;
+
+    const validValues2 = ["Yes", "Sometimes"];
+    const Assesscount = Object.values(formDetails[type]).filter((value) =>
+      validValues2.includes(value),
+    ).length;
+    setSelfAssessCount(Assesscount);
+    const validValues = ["Yes", "No", "Sometimes"]; // Include these values
+    const count = Object.values(formDetails[type]).filter((value) =>
+      validValues.includes(value),
+    ).length;
+    setTotalCount(count);
+  }, [formDetails, type]);
 
   const onFinish = async (value) => {
     const payload = {
       id: Id,
       data: {
-        [type]: {
+        teacherForm: {
           ...value,
           OutOf: totalCount,
           totalScore: selfAssessmentScore,
@@ -105,124 +100,130 @@ function FortnightlyMonitorEdit({ flag }) {
   // Calculate self-assessment score
   const calculateScore = () => {
     const values = form.getFieldsValue();
-    const result = calculateScorenew(values, currentQuestions);
+    let score = 0;
 
-    setSelfAssessmentScore(result.score);
-    setTotalCount(result.total);
-    form.setFieldsValue({ selfEvaluationScore: result.score }); // Update hidden field
+    const currentQuestions =
+      formDetails?.createdAt < cutoffDate ? questionsOld : questions;
+
+    currentQuestions.forEach((key) => {
+      const answer = values[key?.key];
+      if (answer === "Yes")
+        score += 1; // Add 1 for "Yes"
+      else if (answer === "No")
+        score += 0; // No points for "No"
+      else if (answer === "Sometimes") score += 0.5; // Add 0.5 for "0.5"
+      // Ignore "N/A" (or any undefined answer)
+    });
+
+    setSelfAssessmentScore(score);
+    form.setFieldsValue({ selfEvaluationScore: score }); // Update hidden field
   };
   return (
-    <Box p={{ base: 4, md: 8 }} minH="calc(100vh - 72px)" bg="gray.50">
-      <Box maxW="1200px" mx="auto">
-        {isLoading ? (
-          <Flex justify="center" align="center" h="400px">
-            <Spin size="large" />
-          </Flex>
-        ) : (
-          <Box>
-            <Box mb={6} textAlign="center">
-              <Heading size="lg" color="gray.800" mb={1}>
-                Edit Your Observation
-              </Heading>
-              <Text color="gray.500">Update your evaluation responses</Text>
-            </Box>
-            <Form
-              form={form}
-              layout="vertical"
-              onFinish={onFinish}
-              onValuesChange={calculateScore} // Trigger score calculation
-            >
-              <SimpleGrid columns={{ base: 1, md: 2 }} spacing={8}>
-                <Box
-                  bg="white"
-                  p={6}
-                  borderRadius="2xl"
-                  boxShadow="sm"
-                  borderWidth="1px"
-                  borderColor="gray.100"
-                >
-                  <Heading size="md" mb={6} color="brand.primary">
-                    Your Observation
-                  </Heading>
+    <div className="modern-form-container">
+      {isLoading ? (
+        <div className="modern-loader">
+          <Spin size="large" />
+        </div>
+      ) : (
+        <>
+          <div className="modern-form-header">
+            <div className="header-section">
+              <h2 className="form-title">Edit Your Observation</h2>
+              <div className="form-subtitle">
+                Update your evaluation responses
+              </div>
+            </div>
+          </div>
+
+          <Form
+            form={form}
+            layout="vertical"
+            onFinish={onFinish}
+            onValuesChange={calculateScore}
+            className="modern-form"
+          >
+            <Row gutter={[24, 0]}>
+              <Col xs={24} lg={12}>
+                <div className="form-section">
                   {betaLoading && (
-                    <Box mb={6} p={5} borderRadius="xl" bg="gray.50">
-                      <Heading size="sm" mb={4} color="gray.700">
-                        Class Information
-                      </Heading>
-                      <Box mb={3}>
-                        <Form.Item
-                          label={<Text fontWeight="500">Class</Text>}
-                          name="className"
-                          rules={[
-                            { required: true, message: "Please enter a class" },
-                          ]}
-                        >
-                          <Input
-                            placeholder="Enter Class (e.g., 10th)"
-                            size="large"
-                          />
-                        </Form.Item>
-                      </Box>
-                      <Box mb={3}>
-                        <Form.Item
-                          label={<Text fontWeight="500">Section</Text>}
-                          name="section"
-                          rules={[
-                            {
-                              required: true,
-                              message: "Please enter a section",
-                            },
-                          ]}
-                        >
-                          <Input
-                            placeholder="Enter Section (e.g., A, B)"
-                            size="large"
-                          />
-                        </Form.Item>
-                      </Box>
-                      <Box>
-                        <Form.Item
-                          label={<Text fontWeight="500">Date</Text>}
-                          name="date"
-                          rules={[
-                            { required: true, message: "Please select a date" },
-                          ]}
-                        >
-                          <DatePicker
-                            className="w-100"
-                            size="large"
-                            format="YYYY-MM-DD"
-                          />
-                        </Form.Item>
-                      </Box>
-                    </Box>
+                    <div className="info-card">
+                      <h3 className="section-title">Class Information</h3>
+                      <Row gutter={[16, 16]}>
+                        <Col span={24}>
+                          <Form.Item
+                            label="Class"
+                            name="className"
+                            rules={[
+                              {
+                                required: true,
+                                message: "Please enter a class",
+                              },
+                            ]}
+                          >
+                            <Input
+                              placeholder="Enter Class (e.g., 10th)"
+                              size="large"
+                            />
+                          </Form.Item>
+                        </Col>
+
+                        <Col span={24}>
+                          <Form.Item
+                            label="Section"
+                            name="section"
+                            rules={[
+                              {
+                                required: true,
+                                message: "Please enter a section",
+                              },
+                            ]}
+                          >
+                            <Input
+                              placeholder="Enter Section (e.g., A, B)"
+                              size="large"
+                            />
+                          </Form.Item>
+                        </Col>
+
+                        <Col span={24}>
+                          <Form.Item
+                            label="Date"
+                            name="date"
+                            rules={[
+                              {
+                                required: true,
+                                message: "Please select a date",
+                              },
+                            ]}
+                          >
+                            <DatePicker
+                              className="w-100"
+                              size="large"
+                              format="YYYY-MM-DD"
+                            />
+                          </Form.Item>
+                        </Col>
+                      </Row>
+                    </div>
                   )}
 
-                  <Box mb={8}>
-                    {currentQuestions?.map((field, index) => {
+                  <div className="questions-section">
+                    <h3 className="section-title">Evaluation Questions</h3>
+                    {(formDetails?.createdAt < cutoffDate
+                      ? questionsOld
+                      : questions
+                    )?.map((field, index) => {
                       return (
-                        <Box
-                          key={field?.key}
-                          mb={4}
-                          p={5}
-                          borderRadius="xl"
-                          borderWidth="1px"
-                          borderColor="gray.100"
-                          bg="gray.50"
-                        >
+                        <div className="question-card" key={field?.key}>
                           <Form.Item
-                            className="mb-2"
+                            className="question-item"
                             name={field?.key}
                             label={
-                              <Text
-                                fontWeight="600"
-                                color="gray.700"
-                                fontSize="md"
-                              >
+                              <span className="question-label">
                                 {field?.name
                                   .replace(/([A-Z])/g, " $1")
                                   .replace(/^./, (str) => str.toUpperCase())}
-                              </Text>
+                              </span>
                             }
                             rules={[
                               {
@@ -231,188 +232,159 @@ function FortnightlyMonitorEdit({ flag }) {
                               },
                             ]}
                           >
-                            <Radio.Group
-                              block
-                              options={yesNoNAOptions}
-                              optionType="button"
-                              buttonStyle="solid"
-                              onChange={() => calculateScore()}
-                            />
+                            <div className="modern-radio-group">
+                              {yesNoNAOptions.map((option) => (
+                                <label key={option} className="radio-label">
+                                  <input
+                                    type="radio"
+                                    name={field?.key}
+                                    value={option}
+                                    className="radio-input"
+                                    onChange={(e) => {
+                                      form.setFieldValue(field?.key, option);
+                                      calculateScore();
+                                    }}
+                                    checked={
+                                      form.getFieldValue(field?.key) === option
+                                    }
+                                  />
+                                  <span className="radio-text">{option}</span>
+                                </label>
+                              ))}
+                            </div>
                           </Form.Item>
-                        </Box>
+                        </div>
                       );
                     })}
-                  </Box>
-                </Box>
+                  </div>
+                </div>
+              </Col>
 
-                <Box
-                  bg="white"
-                  p={6}
-                  borderRadius="2xl"
-                  boxShadow="sm"
-                  borderWidth="1px"
-                  borderColor="gray.100"
-                >
-                  <Box position="sticky" top="20px">
-                    <Heading size="md" mb={6} color="gray.700">
-                      Current Response
-                    </Heading>
-                    {(GetUserAccess === UserRole[1] &&
-                      !formDetails?.isCoordinatorComplete) ||
-                    (GetUserAccess === UserRole[2] &&
-                      !formDetails?.isTeacherComplete) ? (
-                      <Box textAlign="center" py={10}>
-                        <Empty
-                          image={Empty.PRESENTED_IMAGE_SIMPLE}
-                          description="No current response available"
-                        />
-                      </Box>
-                    ) : (
-                      ""
-                    )}
+              <Col xs={24} lg={12}>
+                <div className="sticky-sidebar">
+                  {(GetUserAccess === UserRole[1] &&
+                    !formDetails?.isCoordinatorComplete) ||
+                  (GetUserAccess === UserRole[2] &&
+                    !formDetails?.isTeacherComplete) ? (
+                    <div className="empty-state">
+                      <Empty
+                        image={Empty.PRESENTED_IMAGE_SIMPLE}
+                        description="No current response available"
+                      />
+                    </div>
+                  ) : (
+                    ""
+                  )}
 
-                    {GetUserAccess === UserRole[2] &&
-                    GetUserAccess === UserRole[1] &&
-                    flagType === "Teacher"
-                      ? formDetails?.isTeacherComplete
-                      : formDetails?.isCoordinatorComplete && (
-                          <Box w="100%">
-                            {console.log(formDetails, "kskskskks")}
-                            {currentQuestions?.map((item, index) => {
-                              const answer =
-                                flagType === "Teacher"
-                                  ? formDetails?.teacherForm[item?.key]
-                                  : formDetails?.observerForm[item?.key];
+                  {GetUserAccess === UserRole[2] &&
+                  GetUserAccess === UserRole[1] &&
+                  flagType === "Teacher"
+                    ? formDetails?.isTeacherComplete
+                    : formDetails?.isCoordinatorComplete && (
+                        <div className="response-section">
+                          {console.log(formDetails, "kskskskks")}
+                          <h3 className="section-title">Current Response</h3>
+                          {formDetails.createdAt < cutoffDate
+                            ? questionsOld?.map((item, index) => {
+                                const answer =
+                                  flagType === "Teacher"
+                                    ? formDetails?.teacherForm[item?.key]
+                                    : formDetails?.observerForm[item?.key];
 
-                              const badgeColor =
-                                answer === "Yes"
-                                  ? "green"
-                                  : answer === "No"
-                                    ? "red"
-                                    : answer === "Sometimes"
-                                      ? "orange"
-                                      : "blue";
-                              return (
-                                <Box
-                                  key={index + 1}
-                                  mb={4}
-                                  p={5}
-                                  borderRadius="xl"
-                                  borderWidth="1px"
-                                  borderColor="gray.100"
-                                  bg="gray.50"
-                                >
-                                  <Text
-                                    fontWeight="600"
-                                    color="gray.700"
-                                    fontSize="sm"
-                                    mb={3}
+                                return (
+                                  <div
+                                    className="response-card"
+                                    key={index + 1}
                                   >
-                                    {item?.name
-                                      .replace(/([A-Z])/g, " $1")
-                                      .replace(/^./, (str) =>
-                                        str.toUpperCase(),
-                                      )}
-                                  </Text>
-                                  <Badge
-                                    colorScheme={badgeColor}
-                                    px={3}
-                                    py={1}
-                                    borderRadius="full"
-                                    fontSize="sm"
+                                    <div className="response-question">
+                                      {item?.name
+                                        .replace(/([A-Z])/g, " $1")
+                                        .replace(/^./, (str) =>
+                                          str.toUpperCase(),
+                                        )}
+                                    </div>
+                                    <div
+                                      className={`response-badge badge-${answer?.toLowerCase()}`}
+                                    >
+                                      {answer}
+                                    </div>
+                                  </div>
+                                );
+                              })
+                            : questions?.map((item, index) => {
+                                const answer =
+                                  flagType === "Teacher"
+                                    ? formDetails?.teacherForm[item?.key]
+                                    : formDetails?.observerForm[item?.key];
+
+                                return (
+                                  <div
+                                    className="response-card"
+                                    key={index + 1}
                                   >
-                                    {answer || "No Answer"}
-                                  </Badge>
-                                </Box>
-                              );
-                            })}
+                                    <div className="response-question">
+                                      {item?.name
+                                        .replace(/([A-Z])/g, " $1")
+                                        .replace(/^./, (str) =>
+                                          str.toUpperCase(),
+                                        )}
+                                    </div>
+                                    <div
+                                      className={`response-badge badge-${answer?.toLowerCase()}`}
+                                    >
+                                      {answer}
+                                    </div>
+                                  </div>
+                                );
+                              })}
 
-                            <Box
-                              p={5}
-                              borderRadius="xl"
-                              borderWidth="1px"
-                              borderColor="brand.primary"
-                              bg="blue.50"
-                            >
-                              <Text
-                                fontWeight="600"
-                                color="brand.primary"
-                                fontSize="sm"
-                                mb={2}
-                              >
-                                Teacher Self Assessment Score
-                              </Text>
-                              <Text
-                                fontSize="2xl"
-                                fontWeight="bold"
-                                color="gray.800"
-                              >
-                                {
-                                  calculateScorenew(
-                                    flagType === "Teacher"
-                                      ? formDetails?.teacherForm
-                                      : formDetails?.observerForm,
-                                    currentQuestions,
-                                  ).score
-                                }{" "}
-                                /{" "}
-                                {
-                                  calculateScorenew(
-                                    flagType === "Teacher"
-                                      ? formDetails?.teacherForm
-                                      : formDetails?.observerForm,
-                                    currentQuestions,
-                                  ).total
-                                }
-                              </Text>
-                            </Box>
-                          </Box>
-                        )}
-                  </Box>
-                </Box>
-              </SimpleGrid>
+                          <div className="score-card">
+                            <div className="score-label">Self Assessment</div>
+                            <div className="score-value">
+                              <span className="score-number">
+                                {flagType === "Teacher"
+                                  ? formDetails?.teacherForm
+                                      ?.selfEvaluationScore
+                                  : formDetails?.observerForm
+                                      ?.selfEvaluationScore || "N/A"}
+                              </span>
+                              <span className="score-divider">/</span>
+                              <span className="score-total">{totalCount}</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                </div>
+              </Col>
+            </Row>
 
-              {/* Evaluation Score & Submit */}
-              <Flex direction="column" align="center" mt={10} mb={6}>
-                <Box
-                  bg="white"
-                  px={8}
-                  py={4}
-                  borderRadius="full"
-                  boxShadow="sm"
-                  borderWidth="1px"
-                  borderColor="gray.100"
-                  mb={6}
-                >
-                  <Text fontSize="lg" fontWeight="600" color="gray.700">
-                    Your Assessment Score:{" "}
-                    <Text as="span" color="brand.primary" fontSize="xl">
-                      {selfAssessmentScore} / {totalCount}
-                    </Text>
-                  </Text>
-                </Box>
-                <Form.Item name="selfEvaluationScore" hidden>
-                  <InputNumber value={selfAssessmentScore} disabled />
-                </Form.Item>
+            <div className="form-footer">
+              <div className="score-summary">
+                <span className="summary-label">Self Assessment Score</span>
+                <span className="summary-value">
+                  <span className="value-number">{selfAssessmentScore}</span>
+                  <span className="value-divider">/</span>
+                  <span className="value-total">{totalCount}</span>
+                </span>
+              </div>
 
-                <Button
-                  type="primary"
-                  htmlType="submit"
-                  size="large"
-                  style={{
-                    borderRadius: "8px",
-                    minWidth: "200px",
-                    boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
-                  }}
-                >
-                  Update Evaluation
-                </Button>
-              </Flex>
-            </Form>
-          </Box>
-        )}
-      </Box>
-    </Box>
+              <Form.Item name="selfEvaluationScore" hidden>
+                <InputNumber value={selfAssessmentScore} disabled />
+              </Form.Item>
+
+              <Button
+                type="primary"
+                htmlType="submit"
+                size="large"
+                className="submit-button"
+              >
+                Update Evaluation
+              </Button>
+            </div>
+          </Form>
+        </>
+      )}
+    </div>
   );
 }
 

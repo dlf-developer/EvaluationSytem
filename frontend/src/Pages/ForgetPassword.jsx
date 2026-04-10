@@ -1,7 +1,5 @@
-import React, { useState } from "react";
-import { Link } from "react-router-dom";
-import { useDispatch } from "react-redux";
-import { UserLogin } from "../redux/userSlice";
+import React, { useState, useEffect } from "react";
+import { Link, useLocation } from "react-router-dom";
 import { message } from "antd";
 import {
   Box,
@@ -14,63 +12,55 @@ import {
   Input,
   InputGroup,
   InputLeftElement,
-  InputRightElement,
   Stack,
   Text,
   VStack,
 } from "@chakra-ui/react";
-import {
-  AntDesignOutlined,
-  LockOutlined,
-  UserOutlined,
-  EyeOutlined,
-  EyeInvisibleOutlined,
-} from "@ant-design/icons";
-const EMAIL = process.env.REACT_APP_EMAIL;
+import { AntDesignOutlined, UserOutlined } from "@ant-design/icons";
+import { axiosInstance } from "../redux/instence";
+// Assuming baseURL is set globally or imported, or we can use a dynamic approach
+// Normally we'd use process.env.REACT_APP_API_URL or a proxy, this matches standard practice here.
 
-function Login() {
+function ForgetPassword() {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [errors, setErrors] = useState({ email: "", password: "" });
-  const dispatch = useDispatch();
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const location = useLocation();
 
-  // Email validation function
+  useEffect(() => {
+    // If we passed an email from Login via query param, populate it
+    const searchParams = new URLSearchParams(location.search);
+    if (searchParams.get("email")) {
+      setEmail(searchParams.get("email"));
+    }
+  }, [location.search]);
+
   const validateEmail = (email) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
   };
 
-  // Password validation function
-  const validatePassword = (password) => password.length >= 6;
-
-  // Form submission handler
-  const handleLogin = () => {
-    let emailError = "";
-    let passwordError = "";
-
+  const handleSendLink = async () => {
     if (!validateEmail(email)) {
-      emailError = "Please enter a valid email.";
+      setError("Please enter a valid email.");
+      return;
     }
+    setError("");
+    setLoading(true);
 
-    if (!validatePassword(password)) {
-      passwordError = "Password must be at least 6 characters.";
-    }
-
-    setErrors({ email: emailError, password: passwordError });
-
-    if (!emailError && !passwordError) {
-      dispatch(UserLogin({ email, password })).then((res) => {
-        if (res?.payload?.token) {
-          localStorage.setItem("token", res?.payload?.token);
-          message.success("Logging in...");
-          window.location.replace("/");
-        } else {
-          message.error(res?.payload?.message);
-        }
-      });
-    } else {
-      message.error("Please fix the errors before submitting.");
+    try {
+      // Using axiosInstance for correct base URL routing
+      const res = await axiosInstance.post("/auth/request-password-reset", { email });
+      if (res.status === 200) {
+        message.success("Password reset email sent. Please check your inbox.");
+      } else {
+        message.error(res.data?.message || "Failed to send reset email.");
+      }
+    } catch (error) {
+      console.error(error);
+      message.error(error.response?.data?.message || "An error occurred. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -93,7 +83,6 @@ function Login() {
         overflow="hidden"
         display={{ base: "none", md: "flex" }}
       >
-        {/* Glassmorphism Abstract Shapes */}
         <Box
           position="absolute"
           top="-10%"
@@ -127,11 +116,10 @@ function Login() {
             boxShadow="2xl"
           />
           <Heading as="h1" size="2xl" fontWeight="bold" lineHeight="tall">
-            Welcome to Teacher Portal
+            Forgot Password
           </Heading>
           <Text fontSize="lg" opacity={0.9}>
-            A comprehensive evaluation system to streamline academic and
-            administrative assessments with precision.
+            Enter your email to receive a secure link to reset your account password.
           </Text>
         </VStack>
       </Flex>
@@ -140,7 +128,7 @@ function Login() {
       <Flex flex={1} justify="center" align="center" p={{ base: 6, md: 10 }}>
         <Box
           w="full"
-          maxW="xl"
+          maxW="md"
           bg="white"
           p={10}
           borderRadius="2xl"
@@ -175,15 +163,15 @@ function Login() {
                 color="brand.text"
                 fontWeight="bold"
               >
-                Login
+                Reset Password
               </Heading>
               <Text color="brand.textMuted" fontSize="md">
-                Enter your credentials to access your account.
+                We'll send a password rest link to your email.
               </Text>
             </Box>
 
             <Stack spacing={5}>
-              <FormControl isInvalid={!!errors.email}>
+              <FormControl isInvalid={!!error}>
                 <InputGroup size="lg">
                   <InputLeftElement pointerEvents="none">
                     <UserOutlined
@@ -199,84 +187,21 @@ function Login() {
                     _hover={{ borderColor: "brand.secondary" }}
                     borderRadius="lg"
                     bg="gray.50"
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") handleLogin();
-                    }}
+                    onKeyDown={(e) => { if (e.key === "Enter") handleSendLink(); }}
                   />
                 </InputGroup>
-                {errors.email && (
-                  <FormErrorMessage>{errors.email}</FormErrorMessage>
-                )}
-              </FormControl>
-
-              <FormControl isInvalid={!!errors.password}>
-                <InputGroup size="lg">
-                  <InputLeftElement pointerEvents="none">
-                    <LockOutlined
-                      style={{ color: "var(--chakra-colors-brand-secondary)" }}
-                    />
-                  </InputLeftElement>
-                  <Input
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") handleLogin();
-                    }}
-                    focusBorderColor="brand.primary"
-                    borderColor="gray.300"
-                    _hover={{ borderColor: "brand.secondary" }}
-                    borderRadius="lg"
-                    bg="gray.50"
-                  />
-                  <InputRightElement h="full" pr={2}>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowPassword(!showPassword)}
-                    >
-                      {showPassword ? (
-                        <EyeOutlined />
-                      ) : (
-                        <EyeInvisibleOutlined />
-                      )}
-                    </Button>
-                  </InputRightElement>
-                </InputGroup>
-                {errors.password && (
-                  <FormErrorMessage>{errors.password}</FormErrorMessage>
-                )}
+                {error && <FormErrorMessage>{error}</FormErrorMessage>}
               </FormControl>
             </Stack>
-
-            <Flex justify="flex-end" align="center">
-              <Box
-                as={Link}
-                to={
-                  email
-                    ? `/forget-password?email=${encodeURIComponent(email)}`
-                    : "/forget-password"
-                }
-                color="brand.primary"
-                fontWeight="semibold"
-                fontSize="sm"
-                _hover={{
-                  color: "brand.secondary",
-                  textDecoration: "underline",
-                }}
-                transition="color 0.2s"
-              >
-                Forgot Password?
-              </Box>
-            </Flex>
 
             <Button
               colorScheme="brand"
               size="lg"
               w="full"
               leftIcon={<AntDesignOutlined />}
-              onClick={handleLogin}
+              onClick={handleSendLink}
+              isLoading={loading}
+              loadingText="Sending..."
               py={7}
               mt={2}
               fontSize="md"
@@ -294,12 +219,25 @@ function Login() {
               }}
               transition="all 0.3s"
             >
-              Sign In
+              Send Reset Link
             </Button>
-            <Text>
-              If you're facing any issue, please email  {" "}
-              <a href={`mailto:${EMAIL}`}>{EMAIL}</a>
-            </Text>
+            
+            <Flex justify="center" align="center" mt={4}>
+              <Box
+                as={Link}
+                to="/login"
+                color="brand.primary"
+                fontWeight="semibold"
+                fontSize="sm"
+                _hover={{
+                  color: "brand.secondary",
+                  textDecoration: "underline",
+                }}
+                transition="color 0.2s"
+              >
+                Back to Login
+              </Box>
+            </Flex>
           </VStack>
         </Box>
       </Flex>
@@ -307,4 +245,4 @@ function Login() {
   );
 }
 
-export default Login;
+export default ForgetPassword;

@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import {
   Form,
   InputNumber,
+  Row,
+  Col,
   message,
   Spin,
   Radio,
@@ -16,16 +18,6 @@ import {
   Input,
   Alert,
 } from "antd";
-import {
-  Box,
-  Flex,
-  Heading,
-  Text,
-  SimpleGrid,
-  VStack,
-  Grid,
-  GridItem,
-} from "@chakra-ui/react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   GetSingleFormComplete,
@@ -43,7 +35,6 @@ import {
   questionsOld,
   cutoffDate,
 } from "../../../Components/normalData";
-import { calculateScorenew } from "../../../Utils/calculateScore";
 import { CreateActivityApi } from "../../../redux/Activity/activitySlice";
 import "../../../App.css"; // Import the custom CSS
 
@@ -94,38 +85,27 @@ const Details = () => {
       .then((response) => {
         setFormDetails(response?.payload);
         setIsLoading(false);
-        const {
-          className,
-          date,
-          section,
-          isObserverInitiation,
-          isTeacherComplete,
-          isCoordinatorComplete,
-        } = response.payload;
-
-        const needsTeacherToFillClassInfo =
-          isObserverInitiation &&
-          !isTeacherComplete &&
-          GetUserAccess === UserRole[2];
-
-        if (!className || !date || !section || needsTeacherToFillClassInfo) {
+        const { className, date, section } = response.payload;
+        if (!className || !date || !section) {
           dispatch(GetObserverList());
-          setBetaLoading(true);
-          if (needsTeacherToFillClassInfo) {
-            form.setFieldsValue({
-              className: className || undefined,
-              section: section || undefined,
-            });
-          } else {
-            message.success("Fill All the data!");
-          }
-        } else if (isCoordinatorComplete && isTeacherComplete) {
+          setBetaLoading(!className || !date || !section);
+          message.success("Fill All the data!");
+        } else if (
+          response?.payload?.isCoordinatorComplete &&
+          response?.payload?.isTeacherComplete
+        ) {
           message.success("Form is already submitted!");
           navigate(`/fortnightly-monitor/report/${Id}`);
-        } else if (GetUserAccess === UserRole[1] && isCoordinatorComplete) {
+        } else if (
+          GetUserAccess === UserRole[1] &&
+          response?.payload?.isCoordinatorComplete
+        ) {
           message.success("Form is already submitted!");
           navigate(`/fortnightly-monitor/report/${Id}`);
-        } else if (GetUserAccess === UserRole[2] && isTeacherComplete) {
+        } else if (
+          GetUserAccess === UserRole[2] &&
+          response?.payload?.isTeacherComplete
+        ) {
           message.success("Form is already submitted!");
           navigate(`/fortnightly-monitor/report/${Id}`);
         }
@@ -141,19 +121,6 @@ const Details = () => {
 
   const [totalCount, setTotalCount] = useState(0);
   const [totalCountMein, setTotalCountMein] = useState(0);
-  const [currentQuestions, setCurrentQuestions] = useState([]);
-
-  useEffect(() => {
-    if (formDetails?.createdAt) {
-      if (new Date(formDetails.createdAt) < new Date(cutoffDate)) {
-        setCurrentQuestions(questionsOld);
-      } else {
-        setCurrentQuestions(questions);
-      }
-    } else {
-      setCurrentQuestions(questions);
-    }
-  }, [formDetails]);
   const type = "teacherForm";
 
   useEffect(() => {
@@ -201,9 +168,9 @@ const Details = () => {
       if (formDetails.isObserverInitiation) {
         payload.data = {
           ...payload.data,
-          className: values?.className || formDetails?.className,
+          className: values?.className,
           date: values?.date,
-          Section: values?.section || formDetails?.section,
+          Section: values?.section,
         };
       }
     } else {
@@ -278,22 +245,51 @@ const Details = () => {
   // Calculate self-assessment score
   const calculateScore = () => {
     const values = form.getFieldsValue();
-    const result = calculateScorenew(values, currentQuestions);
+    let score = 0;
 
-    setSelfAssessmentScore(result.score);
-    setTotalCountMein(result.total);
+    const currentQuestions =
+      formDetails?.createdAt < cutoffDate ? questionsOld : questions;
+
+    currentQuestions.forEach((key) => {
+      const answer = values[key?.key];
+      if (answer === "Yes")
+        score += 1; // Add 1 for "Yes"
+      else if (answer === "No")
+        score += 0; // No points for "No"
+      else if (answer === "Sometimes") score += 0.5; // Add 0.5 for "0.5"
+      // Ignore "N/A" (or any undefined answer)
+    });
+    setSelfAssessmentScore(score);
+    getTotalScorevalu(values);
+  };
+
+  const getTotalScorevalu = (formValue) => {
+    const validValues = ["Yes", "No", "Sometimes"]; // Include these values
+    const count = Object.values(formValue).filter((value) =>
+      validValues.includes(value),
+    ).length;
+    setTotalCountMein(count);
   };
 
   const getTotalScore = (type) => {
     if (!formDetails) return 0;
-    const result = calculateScorenew(formDetails[type], currentQuestions);
-    return result.total;
+
+    // Count "Yes", "Sometimes", and "No" as 1
+    const validValues = ["Yes", "Sometimes", "No"];
+    const scores = Object.values(formDetails[type]).reduce((sum, value) => {
+      return sum + (validValues.includes(value) ? 1 : 0); // Add 1 if value matches
+    }, 0);
+
+    return scores; // Return total score
   };
 
   const getSelfAssemnetScrore = (type) => {
     if (!formDetails) return 0;
-    const result = calculateScorenew(formDetails[type], currentQuestions);
-    return result.score;
+    const validValues = { Yes: 1, Sometimes: 0.5 };
+    const scores = Object.values(formDetails[type]).reduce((sum, value) => {
+      return sum + (validValues[value] || 0); // Add score if value matches, otherwise add 0
+    }, 0);
+    return scores;
   };
 
   const disableFutureDates = (current) => {
@@ -322,51 +318,35 @@ const Details = () => {
   };
 
   return (
-    <Box p={{ base: 4, md: 8 }} minH="80vh" bg="gray.50">
+    <div className="modern-form-container">
       {isLoading ? (
-        <Flex justify="center" align="center" minH="50vh">
+        <div className="modern-loader">
           <Spin size="large" />
-        </Flex>
+        </div>
       ) : (
-        <Box maxW="1200px" mx="auto">
-          <Box mb={8}>
-            <Heading size="lg" color="gray.800" mb={2}>
-              Observation Form
-            </Heading>
-            <Text color="gray.500">Complete your evaluation</Text>
-          </Box>
+        <>
+          <div className="modern-form-header">
+            <div className="header-section">
+              <h2 className="form-title">Observation Form</h2>
+              <div className="form-subtitle">Complete your evaluation</div>
+            </div>
+          </div>
 
           <Form
             form={form}
             layout="vertical"
             onFinish={onFinish}
             onValuesChange={calculateScore}
+            className="modern-form"
           >
-            <Flex direction={{ base: "column", lg: "row" }} gap={8}>
-              <Box flex="1">
-                <Box>
+            <Row gutter={[24, 0]}>
+              <Col xs={24} lg={12}>
+                <div className="form-section">
                   {betaLoading && (
-                    <Box
-                      bg="white"
-                      p={6}
-                      borderRadius="2xl"
-                      boxShadow="sm"
-                      borderWidth="1px"
-                      borderColor="gray.100"
-                      mb={8}
-                    >
-                      <Heading
-                        size="md"
-                        color="gray.800"
-                        mb={6}
-                        pb={4}
-                        borderBottom="1px solid"
-                        borderColor="gray.100"
-                      >
-                        Class Information
-                      </Heading>
-                      <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
-                        <Box>
+                    <div className="info-card">
+                      <h3 className="section-title">Class Information</h3>
+                      <Row gutter={[16, 16]}>
+                        <Col span={24}>
                           <Form.Item
                             label="Class"
                             name="className"
@@ -381,11 +361,6 @@ const Details = () => {
                               showSearch
                               placeholder="Select a class"
                               size="large"
-                              disabled={
-                                !!formDetails?.className &&
-                                formDetails?.isObserverInitiation &&
-                                GetUserAccess === UserRole[2]
-                              }
                               onChange={(value) => SectionSubject(value)}
                               options={
                                 newData &&
@@ -404,9 +379,9 @@ const Details = () => {
                               }
                             />
                           </Form.Item>
-                        </Box>
+                        </Col>
 
-                        <Box>
+                        <Col span={24}>
                           <Form.Item
                             label="Section"
                             name="section"
@@ -421,19 +396,12 @@ const Details = () => {
                               showSearch
                               placeholder="Select a section"
                               size="large"
-                              disabled={
-                                !!formDetails?.section &&
-                                formDetails?.isObserverInitiation &&
-                                GetUserAccess === UserRole[2]
-                              }
-                              options={
-                                sectionState?.sections?.map((item) => ({
-                                  key: item._id,
-                                  id: item._id,
-                                  value: item.name,
-                                  label: item.name,
-                                })) || []
-                              }
+                              options={sectionState?.sections?.map((item) => ({
+                                key: item._id,
+                                id: item._id,
+                                value: item.name,
+                                label: item.name,
+                              }))}
                               filterOption={(input, option) =>
                                 option.label
                                   .toLowerCase()
@@ -441,9 +409,9 @@ const Details = () => {
                               }
                             />
                           </Form.Item>
-                        </Box>
+                        </Col>
 
-                        <Box>
+                        <Col xs={24} sm={12}>
                           <Form.Item
                             label="Date"
                             name="date"
@@ -461,10 +429,10 @@ const Details = () => {
                               disabledDate={disableFutureDates}
                             />
                           </Form.Item>
-                        </Box>
+                        </Col>
 
                         {CurrectUserRole === UserRole[2] && (
-                          <Box>
+                          <Col xs={24} sm={12}>
                             <Form.Item label="Coordinator" name="coordinatorID">
                               <Select
                                 defaultValue={formDetails?.userId?.name}
@@ -498,52 +466,29 @@ const Details = () => {
                                 <Option value={true}>Yes</Option>
                               </Select>
                             </Form.Item>
-                          </Box>
+                          </Col>
                         )}
-                      </SimpleGrid>
-                    </Box>
+                      </Row>
+                    </div>
                   )}
 
-                  <Box
-                    bg="white"
-                    p={6}
-                    borderRadius="2xl"
-                    boxShadow="sm"
-                    borderWidth="1px"
-                    borderColor="gray.100"
-                    mb={8}
-                  >
-                    <Heading
-                      size="md"
-                      color="gray.800"
-                      mb={6}
-                      pb={4}
-                      borderBottom="1px solid"
-                      borderColor="gray.100"
-                    >
-                      Evaluation Questions
-                    </Heading>
-
-                    {currentQuestions?.map((field, index) => {
+                  <div className="questions-section">
+                    <h3 className="section-title">Evaluation Questions</h3>
+                    {(formDetails?.createdAt < cutoffDate
+                      ? questionsOld
+                      : questions
+                    )?.map((field, index) => {
                       return (
-                        <Box
-                          key={field?.key}
-                          bg="gray.50"
-                          p={5}
-                          borderRadius="xl"
-                          mb={4}
-                          borderWidth="1px"
-                          borderColor="gray.100"
-                        >
+                        <div className="question-card" key={field?.key}>
                           <Form.Item
-                            className="question-item mb-0"
+                            className="question-item"
                             name={field?.key}
                             label={
-                              <Text fontWeight="500" color="gray.800" mb={2}>
+                              <span className="question-label">
                                 {field?.name
                                   .replace(/([A-Z])/g, " $1")
                                   .replace(/^./, (str) => str.toUpperCase())}
-                              </Text>
+                              </span>
                             }
                             rules={[
                               {
@@ -566,142 +511,104 @@ const Details = () => {
                               ))}
                             </div>
                           </Form.Item>
-                        </Box>
+                        </div>
                       );
                     })}
-                  </Box>
-                </Box>
-              </Box>
+                  </div>
+                </div>
+              </Col>
 
-              <Box w={{ base: "100%", lg: "350px" }}>
-                <Box position="sticky" top="24px">
+              <Col xs={24} lg={12}>
+                <div className="sticky-sidebar">
                   {(GetUserAccess === UserRole[2] &&
                     !formDetails?.isCoordinatorComplete) ||
                   (GetUserAccess === UserRole[1] &&
                     !formDetails?.isTeacherComplete) ? (
-                    <Box
-                      bg="white"
-                      p={6}
-                      borderRadius="2xl"
-                      boxShadow="sm"
-                      borderWidth="1px"
-                      borderColor="gray.100"
-                    >
+                    <div className="empty-state">
                       <Empty
                         image={Empty.PRESENTED_IMAGE_SIMPLE}
                         description="Waiting for teacher response"
                       />
-                    </Box>
+                    </div>
                   ) : (
                     ""
                   )}
 
                   {GetUserAccess === UserRole[1] &&
                     formDetails?.isTeacherComplete && (
-                      <Box
-                        bg="white"
-                        p={6}
-                        borderRadius="2xl"
-                        boxShadow="sm"
-                        borderWidth="1px"
-                        borderColor="gray.100"
-                      >
-                        <Heading
-                          size="md"
-                          color="gray.800"
-                          mb={6}
-                          pb={4}
-                          borderBottom="1px solid"
-                          borderColor="gray.100"
-                        >
-                          Teacher Response
-                        </Heading>
-                        {currentQuestions?.map((item, index) => {
-                          const answer = formDetails?.teacherForm[item.key];
-                          return (
-                            <Box
-                              key={index + 1}
-                              p={4}
-                              bg="gray.50"
-                              borderRadius="lg"
-                              mb={3}
-                            >
-                              <Text color="gray.600" fontSize="sm" mb={2}>
-                                {item?.name
-                                  .replace(/([A-Z])/g, " $1")
-                                  .replace(/^./, (str) => str.toUpperCase())}
-                              </Text>
-                              <Text fontWeight="bold" color="brand.primary">
-                                {answer}
-                              </Text>
-                            </Box>
-                          );
-                        })}
+                      <div className="response-section">
+                        <h3 className="section-title">Teacher Response</h3>
+                        {formDetails.createdAt < cutoffDate
+                          ? questionsOld?.map((item, index) => {
+                              const answer = formDetails?.teacherForm[item.key];
+                              return (
+                                <div className="response-card" key={index + 1}>
+                                  <div className="response-question">
+                                    {item?.name
+                                      .replace(/([A-Z])/g, " $1")
+                                      .replace(/^./, (str) =>
+                                        str.toUpperCase(),
+                                      )}
+                                  </div>
+                                  <div
+                                    className={`response-badge badge-${answer?.toLowerCase()}`}
+                                  >
+                                    {answer}
+                                  </div>
+                                </div>
+                              );
+                            })
+                          : questions?.map((item, index) => {
+                              const answer = formDetails?.teacherForm[item.key];
+                              return (
+                                <div className="response-card" key={index + 1}>
+                                  <div className="response-question">
+                                    {item?.name
+                                      .replace(/([A-Z])/g, " $1")
+                                      .replace(/^./, (str) =>
+                                        str.toUpperCase(),
+                                      )}
+                                  </div>
+                                  <div
+                                    className={`response-badge badge-${answer?.toLowerCase()}`}
+                                  >
+                                    {answer}
+                                  </div>
+                                </div>
+                              );
+                            })}
 
-                        <Box
-                          mt={6}
-                          pt={4}
-                          borderTop="1px solid"
-                          borderColor="gray.100"
-                        >
-                          <Text color="gray.500" mb={1}>
-                            Self Assessment
-                          </Text>
-                          <Flex align="baseline" gap={1}>
-                            <Text
-                              color="brand.primary"
-                              fontSize="2xl"
-                              fontWeight="bold"
-                            >
+                        <div className="score-card">
+                          <div className="score-label">Self Assessment</div>
+                          <div className="score-value">
+                            <span className="score-number">
                               {getSelfAssemnetScrore("teacherForm") || "N/A"}
-                            </Text>
-                            <Text color="gray.400" fontSize="lg">
-                              /
-                            </Text>
-                            <Text
-                              color="gray.600"
-                              fontSize="lg"
-                              fontWeight="500"
-                            >
+                            </span>
+                            <span className="score-divider">/</span>
+                            <span className="score-total">
                               {getTotalScore("teacherForm")}
-                            </Text>
-                          </Flex>
-                        </Box>
-                      </Box>
+                            </span>
+                          </div>
+                        </div>
+                      </div>
                     )}
-                </Box>
-              </Box>
-            </Flex>
+                </div>
+              </Col>
+            </Row>
 
-            <Flex
-              justify="space-between"
-              align="center"
-              mt={8}
-              bg="white"
-              p={6}
-              borderRadius="2xl"
-              boxShadow="sm"
-              borderWidth="1px"
-              borderColor="gray.100"
-            >
-              <Box>
-                <Text color="gray.500" fontWeight="500" mb={1} fontSize="sm">
+            <div className="form-footer">
+              <div className="score-summary">
+                <span className="summary-label">
                   {getUserId().access === UserRole[1]
                     ? "Observer Score"
                     : "Self Assessment Score"}
-                </Text>
-                <Flex align="baseline" gap={1}>
-                  <Text color="brand.primary" fontSize="2xl" fontWeight="bold">
-                    {selfAssessmentScore}
-                  </Text>
-                  <Text color="gray.400" fontSize="lg">
-                    /
-                  </Text>
-                  <Text color="gray.600" fontSize="lg" fontWeight="500">
-                    {totalCountMein}
-                  </Text>
-                </Flex>
-              </Box>
+                </span>
+                <span className="summary-value">
+                  <span className="value-number">{selfAssessmentScore}</span>
+                  <span className="value-divider">/</span>
+                  <span className="value-total">{totalCountMein}</span>
+                </span>
+              </div>
 
               <Form.Item name="selfEvaluationScore" hidden>
                 <InputNumber value={selfAssessmentScore} disabled />
@@ -711,19 +618,15 @@ const Details = () => {
                 type="primary"
                 htmlType="submit"
                 size="large"
-                style={{
-                  borderRadius: "8px",
-                  minWidth: "150px",
-                  background: "#1a4d2e",
-                }}
+                className="submit-button"
               >
                 Submit Evaluation
               </Button>
-            </Flex>
+            </div>
           </Form>
-        </Box>
+        </>
       )}
-    </Box>
+    </div>
   );
 };
 
