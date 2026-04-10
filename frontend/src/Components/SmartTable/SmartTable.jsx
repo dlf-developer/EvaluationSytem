@@ -46,40 +46,7 @@ const flattenObject = (obj, prefix = "") => {
   }, {});
 };
 
-// ─── Build rows using column definitions (human-readable headers) ───────────
-const buildExcelRows = (columns, allFilteredData) => {
-  // header row
-  const headers = columns
-    .filter((c) => c.key !== "action") // skip action column
-    .map((c) => c.title);
-
-  // data rows — try column.dataIndex first, fall back to flatten
-  const rows = allFilteredData.map((record) => {
-    const flat = flattenObject(record);
-    return columns
-      .filter((c) => c.key !== "action")
-      .map((col) => {
-        const raw = record[col.dataIndex];
-        // If raw is a primitive — use it directly
-        if (raw !== null && raw !== undefined && typeof raw !== "object") return raw;
-        // If raw is an object, look in flattened map
-        const flatKey = Object.keys(flat).find((k) =>
-          k === col.dataIndex || k.startsWith(`${col.dataIndex}.`)
-        );
-        if (flatKey) {
-          // collect all sub-keys
-          const subVals = Object.entries(flat)
-            .filter(([k]) => k === col.dataIndex || k.startsWith(`${col.dataIndex}.`))
-            .map(([k, v]) => `${k.replace(`${col.dataIndex}.`, "")}: ${v}`)
-            .join(" | ");
-          return subVals || "";
-        }
-        return "";
-      });
-  });
-
-  return [headers, ...rows];
-};
+// buildExcelRows logic has been removed as we directly export flattened data
 
 const SmartTable = ({
   columns = [],
@@ -116,16 +83,25 @@ const SmartTable = ({
   // ── Download handler ──────────────────────────────────────────
   const handleDownload = useCallback(() => {
     const source = allFilteredData ?? data;
-    const sheetData = buildExcelRows(columns, source);
+    
+    // Flatten records to ensure all nested properties (like Observer/Teacher details) get their own column
+    const flattenedData = source.map(record => {
+      const flat = flattenObject(record);
+      // Optional: remove backend-specific keys if necessary
+      delete flat._id;
+      delete flat.__v;
+      return flat;
+    });
 
     const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.aoa_to_sheet(sheetData);
+    const ws = XLSX.utils.json_to_sheet(flattenedData);
 
-    // Auto-size columns (rough estimate)
-    const colWidths = sheetData[0].map((header, i) => {
+    // Auto-size columns based on headers and flattened row contents
+    const headers = Object.keys(flattenedData[0] || {});
+    const colWidths = headers.map((header) => {
       const maxLen = Math.max(
         String(header).length,
-        ...sheetData.slice(1).map((row) => String(row[i] ?? "").length)
+        ...flattenedData.map((row) => String(row[header] ?? "").length)
       );
       return { wch: Math.min(maxLen + 4, 40) };
     });
@@ -133,7 +109,7 @@ const SmartTable = ({
 
     XLSX.utils.book_append_sheet(wb, ws, "Data");
     XLSX.writeFile(wb, `${downloadFileName}_${new Date().toISOString().slice(0, 10)}.xlsx`);
-  }, [allFilteredData, data, columns, downloadFileName]);
+  }, [allFilteredData, data, downloadFileName]);
 
   // ── Smart page-number list ──────────────────────────────────
   const pageNumbers = (() => {

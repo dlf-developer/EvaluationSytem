@@ -16,7 +16,8 @@ const createWingCoordinator = async (req, res) => {
 // ✅ Get all WingCoordinator entries (Filter by userId if provided)
 const getWingCoordinators = async (req, res) => {
     try {
-        const filter = req.query.userId ? { userId: req.query.userId } : {};
+        const queryFilter = req.sessionDateFilter ? { createdAt: req.sessionDateFilter } : {};
+        const filter = req.query.userId ? { userId: req.query.userId, ...queryFilter } : { ...queryFilter };
         const wings = await WingCoordinator.find(filter);
         res.status(200).json({ success: true, data: wings });
     } catch (error) {
@@ -40,7 +41,8 @@ const getSingleWingCoordinatorById = async (req, res) => {
 
 const getWingCoordinatorById = async (req, res) => {
     try {
-        const wing = await WingCoordinator.find({userId:req.params.id}).populate("userId","-password -coordinator -designation -email -updatedAt -__v");
+        const queryFilter = req.sessionDateFilter ? { createdAt: req.sessionDateFilter } : {};
+        const wing = await WingCoordinator.find({userId:req.params.id, ...queryFilter}).populate("userId","-password -coordinator -designation -email -updatedAt -__v");
         if (!wing) return res.status(404).json({ success: false, message: 'WingCoordinator not found' });
 
         res.status(200).json({ success: true, data: wing });

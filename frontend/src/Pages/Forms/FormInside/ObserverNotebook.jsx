@@ -257,7 +257,7 @@ function ObserverNotebook() {
       id: FormId,
     };
     const response = await dispatch(ObserverNotebookComplete(payload));
-    if (response?.payload?.message) {
+    if (response?.payload?.success) {
       message.success(response?.payload?.message);
 
       const userInfo = response?.payload?.data?.grenralDetails;
@@ -279,7 +279,7 @@ function ObserverNotebook() {
 
       navigate(`/notebook-checking-proforma/report/${FormId}`);
     } else {
-      message.error(response?.payload?.message);
+      message.error(response?.payload?.message || response?.error?.message || "Failed to submit form.");
     }
   };
 

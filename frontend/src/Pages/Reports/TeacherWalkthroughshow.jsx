@@ -222,6 +222,46 @@ function TeacherWalkthroughshow() {
             </SimpleGrid>
           </Box>
 
+          {/* Score Summary Box */}
+          <Box
+            bg="green.50"
+            p={6}
+            borderRadius="xl"
+            mb={8}
+            borderWidth="1px"
+            borderColor="green.100"
+          >
+            <Heading size="md" color="green.800" mb={4}>
+              Evaluation Summary
+            </Heading>
+            <SimpleGrid columns={{ base: 2, md: 4 }} spacing={4}>
+              <Box>
+                <Text fontWeight="bold" color="green.900">Total Score</Text>
+                <Text color="green.800" fontSize="xl" fontWeight="600">
+                  {formDataList?.totalScores} <Text as="span" fontSize="md" color="green.700">/ {formDataList?.scoreOutof}</Text>
+                </Text>
+              </Box>
+              <Box>
+                <Text fontWeight="bold" color="green.900">Percentage</Text>
+                <Text color="green.800" fontSize="xl" fontWeight="600">
+                  {formDataList?.percentageScore}%
+                </Text>
+              </Box>
+              <Box>
+                <Text fontWeight="bold" color="green.900">Grade</Text>
+                <Text color="green.800" fontSize="xl" fontWeight="600">
+                  {formDataList?.Grade}
+                </Text>
+              </Box>
+              <Box>
+                <Text fontWeight="bold" color="green.900">N/A Parameters</Text>
+                <Text color="green.800" fontSize="xl" fontWeight="600">
+                  {formDataList?.NumberofParametersNotApplicable}
+                </Text>
+              </Box>
+            </SimpleGrid>
+          </Box>
+
           <Box mb={8}>
             <Heading size="md" color="gray.800" mb={4}>
               Essential Aggrements

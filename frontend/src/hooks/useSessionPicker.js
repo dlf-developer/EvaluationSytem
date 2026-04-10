@@ -56,6 +56,8 @@ export function useSessionPicker() {
           userId,
           session: newSession,
         });
+        // Reload the entire app so all components re-fetch data for the new session
+        window.location.reload();
       } catch (err) {
         console.error('Failed to persist session:', err);
       } finally {

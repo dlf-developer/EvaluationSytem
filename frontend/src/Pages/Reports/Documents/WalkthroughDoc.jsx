@@ -28,7 +28,6 @@ Font.register({
   ],
 });
 
-
 function WalkthroughDoc({ data }) {
   const RenderData = ({ keyName, keylenght }) => (
     <>
@@ -42,9 +41,7 @@ function WalkthroughDoc({ data }) {
               width: "10%",
             }}
           >
-            <Text style={styles.Question}>
-              {index + keylenght}
-            </Text>
+            <Text style={styles.Question}>{index + keylenght}</Text>
           </View>
 
           <View
@@ -55,9 +52,7 @@ function WalkthroughDoc({ data }) {
               width: "70%",
             }}
           >
-            <Text style={styles.Question}>
-              {item?.question}
-            </Text>
+            <Text style={styles.Question}>{item?.question}</Text>
           </View>
 
           <View
@@ -67,9 +62,7 @@ function WalkthroughDoc({ data }) {
               width: "20%",
             }}
           >
-            <Text style={styles.boldText}>
-              {item?.answer}
-            </Text>
+            <Text style={styles.boldText}>{item?.answer}</Text>
           </View>
         </View>
       ))}
@@ -89,9 +82,7 @@ function WalkthroughDoc({ data }) {
               minHeight: 120,
             }}
           >
-            <Text style={styles.boldText}>
-              {index + 1}
-            </Text>
+            <Text style={styles.boldText}>{index + 1}</Text>
           </View>
 
           <View
@@ -101,9 +92,7 @@ function WalkthroughDoc({ data }) {
               width: "80%",
             }}
           >
-            <Text style={styles.Question}>
-              {item?.question}
-            </Text>
+            <Text style={styles.Question}>{item?.question}</Text>
 
             <Text style={[styles.boldText, { marginTop: 6 }]}>
               {item?.answer}
@@ -134,26 +123,27 @@ function WalkthroughDoc({ data }) {
           <View style={styles.generalBox}>
             {[
               {
+                question: "Name of Observer",
+                ans: data?.createdBy?.name,
+              },
+              {
                 question: "Name of the Visiting Teacher",
                 ans: data?.grenralDetails?.NameoftheVisitingTeacher?.name,
               },
               {
                 question: "Date",
-                ans: getAllTimes(
-                  data?.grenralDetails?.DateOfObservation
-                )?.formattedDate2,
+                ans: getAllTimes(data?.grenralDetails?.DateOfObservation)
+                  ?.formattedDate2,
               },
               { question: "Class", ans: data?.grenralDetails?.className },
               { question: "Subject", ans: data?.grenralDetails?.Subject },
               { question: "Section", ans: data?.grenralDetails?.Section },
-              { question: "Topic", ans: data?.grenralDetails?.Topic },
+              // { question: "Topic", ans: data?.grenralDetails?.Topic },
             ].map((item, index) => (
               <View key={index} style={{ width: "50%", marginBottom: 8 }}>
                 <Text style={styles.Question}>
                   {item.question}:{" "}
-                  <Text style={styles.boldText}>
-                    {item.ans}
-                  </Text>
+                  <Text style={styles.boldText}>{item.ans}</Text>
                 </Text>
               </View>
             ))}
@@ -168,16 +158,12 @@ function WalkthroughDoc({ data }) {
             </View>
 
             <View style={styles.sectionHeader}>
-              <Text style={styles.centerText}>
-                ESSENTIAL AGREEMENTS
-              </Text>
+              <Text style={styles.centerText}>ESSENTIAL AGREEMENTS</Text>
             </View>
             <RenderData keyName="essentialAggrements" keylenght={1} />
 
             <View style={styles.sectionHeader}>
-              <Text style={styles.centerText}>
-                PLANNING AND PREPARATION
-              </Text>
+              <Text style={styles.centerText}>PLANNING AND PREPARATION</Text>
             </View>
             <RenderData keyName="planingAndPreparation" keylenght={6} />
           </View>
@@ -189,18 +175,36 @@ function WalkthroughDoc({ data }) {
         <View style={styles.container}>
           <View style={styles.table}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.centerText}>
-                CLASSROOM ENVIRONMENT
-              </Text>
+              <Text style={styles.centerText}>CLASSROOM ENVIRONMENT</Text>
             </View>
             <RenderData keyName="classRoomEnvironment" keylenght={13} />
 
             <View style={styles.sectionHeader}>
-              <Text style={styles.centerText}>
-                INSTRUCTION
-              </Text>
+              <Text style={styles.centerText}>INSTRUCTION</Text>
             </View>
             <RenderData keyName="instruction" keylenght={18} />
+          </View>
+
+          {/* Evaluation Summary */}
+          <View style={[styles.generalBox, { backgroundColor: "#f0fdf4", borderColor: "#bbf7d0", marginTop: 15 }]}>
+            <View style={{ width: "100%", marginBottom: 10 }}>
+               <Text style={[styles.boldText, { fontSize: 13, color: "#166534" }]}>Evaluation Summary</Text>
+            </View>
+            {[
+              { question: "Total Score", ans: `${data?.totalScores ?? 0} / ${data?.scoreOutof ?? 0}` },
+              { question: "Percentage", ans: `${data?.percentageScore ?? 0}%` },
+              { question: "Grade", ans: data?.Grade || "-" },
+              { question: "N/A Parameters", ans: data?.NumberofParametersNotApplicable ?? 0 },
+            ].map((item, index) => (
+              <View key={index} style={{ width: "25%", marginBottom: 4 }}>
+                <Text style={styles.Question}>
+                   {item.question}
+                </Text>
+                <Text style={[styles.boldText, { marginTop: 4, color: "#166534" }]}>
+                   {item.ans}
+                </Text>
+              </View>
+            ))}
           </View>
         </View>
       </Page>
@@ -217,18 +221,16 @@ function WalkthroughDoc({ data }) {
             <RenderFeedbackQuestion keyName="ObserverFeedback" />
 
             <View style={styles.sectionHeader}>
-              <Text style={styles.centerText}>
-                TEACHER'S REFLECTION
-              </Text>
+              <Text style={styles.centerText}>TEACHER'S REFLECTION</Text>
             </View>
             <RenderFeedbackQuestion keyName="TeacherFeedback" />
           </View>
 
           <View style={{ flexDirection: "row", marginTop: 20 }}>
-            <Text style={styles.Question}>
-              Principal's Signature
-            </Text>
-            <View style={{ width: 120, borderBottomWidth: 1, marginLeft: 10 }} />
+            <Text style={styles.Question}>Principal's Signature</Text>
+            <View
+              style={{ width: 120, borderBottomWidth: 1, marginLeft: 10 }}
+            />
           </View>
         </View>
       </Page>
@@ -286,14 +288,14 @@ const styles = StyleSheet.create({
   },
   headerCellSmall: {
     width: "10%",
-    fontSize:14,
+    fontSize: 14,
     padding: 5,
     borderRightWidth: 1,
     fontFamily: "NotoSansDevanagari",
   },
   headerCellLarge: {
     width: "70%",
-    fontSize:14,
+    fontSize: 14,
     padding: 5,
     borderRightWidth: 1,
     fontFamily: "NotoSansDevanagari",
@@ -301,7 +303,7 @@ const styles = StyleSheet.create({
   headerCellMedium: {
     width: "20%",
     padding: 5,
-    fontSize:14,
+    fontSize: 14,
     fontFamily: "NotoSansDevanagari",
   },
   sectionHeader: {
@@ -310,7 +312,7 @@ const styles = StyleSheet.create({
     padding: 5,
   },
   centerText: {
-    fontSize:14,
+    fontSize: 14,
     textAlign: "center",
     fontFamily: "NotoSansDevanagari",
   },

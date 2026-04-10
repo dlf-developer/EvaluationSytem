@@ -182,6 +182,11 @@ const NoteBookDetails = () => {
       select: (
         <Select
           size="large"
+          showSearch
+          optionFilterProp="children"
+          filterOption={(input, option) =>
+            (option?.children ?? "").toString().toLowerCase().includes(input.toLowerCase())
+          }
           placeholder={`Select ${label.toLowerCase()}`}
           onChange={(value) => SectionSubject(value)}
         >

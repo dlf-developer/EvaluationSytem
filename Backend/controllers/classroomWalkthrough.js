@@ -238,8 +238,9 @@ exports.GetTeahearsForm = async (req, res) => {
 
 exports.GetcreatedBy = async (req, res) => {
     const userId = req?.user?.id;
+    const queryFilter = req.sessionDateFilter ? { createdAt: req.sessionDateFilter } : {};
     try {
-        const Form = await Form2.find({ createdBy: userId })
+        const Form = await Form2.find({ createdBy: userId, ...queryFilter })
             .populate({
                 path: 'createdBy',
                 select: '-password -mobile -employeeId -customId'
@@ -267,8 +268,9 @@ exports.GetcreatedBy = async (req, res) => {
 
 exports.GetTeacherForm = async (req, res) => {
     const userId = req?.user?.id;
+    const queryFilter = req.sessionDateFilter ? { createdAt: req.sessionDateFilter } : {};
     try {
-        const Form = await Form2.find({ "grenralDetails.NameoftheVisitingTeacher": userId })
+        const Form = await Form2.find({ "grenralDetails.NameoftheVisitingTeacher": userId, ...queryFilter })
             .populate({
                 path: 'createdBy',
                 select: '-password -mobile -employeeId -customId'
@@ -343,8 +345,9 @@ The Admin Team
 
 exports.getClassRoomForms = async (req, res) => {
     const userId = req?.user?.id;
+    const queryFilter = req.sessionDateFilter ? { createdAt: req.sessionDateFilter } : {};
     try {
-        const GetAllForms = await Form2.find()
+        const GetAllForms = await Form2.find(queryFilter)
             .populate({
                 path: 'teacherID',
                 select: '-password -mobile -employeeId -customId'

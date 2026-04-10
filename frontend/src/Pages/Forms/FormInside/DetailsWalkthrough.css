@@ -1,36 +1,93 @@
-.scrollable-form {
-    height: calc(100vh - 60px); /* Adjust height */
-    overflow-y: auto;
-  }
-  
-  .scrollable-form::-webkit-scrollbar {
-    width: 0; /* Hide scrollbar */
-  }
-  
-  .scrollable-form {
-    -ms-overflow-style: none; /* Hide scrollbar for IE */
-    scrollbar-width: none; /* Hide scrollbar for Firefox */
-  }
-  
-  .sticky-stepper {
-    position: sticky;
-    top: 0;
-    z-index: 1000;
-    background-color: white;
-  }
+/* ── Sticky scoreboard fix ────────────────────────────────────────────
+   The right-hand score panel uses position:sticky.  For this to work the
+   nearest scrolling ancestor must NOT have overflow:hidden / overflow:auto.
+   We also set a sensible z-index so it sits above regular content. */
 
-  .LoaderWrapper{
-    z-index: 500;
-    position: fixed;
-    left: 0;
-    top: 0;
-    background: #fff;
-    width: 100%;
-    height: 100%;
-    display: flex
-;
-    justify-content: center;
-    align-items: center;
-    opacity: 0.6;
-  }
-  
+/* ── Ant Design radio buttons – larger & brand green ─────────────────── */
+
+/* Base size — tall, bold, well-padded */
+.ant-radio-button-wrapper {
+  height: 44px !important;
+  line-height: 42px !important;
+  padding: 0 20px !important;
+  min-width: 56px !important;
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  text-align: center !important;
+  border-color: #d1d5db !important;
+  color: #374151 !important;
+  transition: all 0.15s ease !important;
+}
+
+/* First and last button rounding */
+.ant-radio-button-wrapper:first-child {
+  border-radius: 10px 0 0 10px !important;
+}
+.ant-radio-button-wrapper:last-child {
+  border-radius: 0 10px 10px 0 !important;
+}
+
+/* Hover state */
+.ant-radio-button-wrapper:hover {
+  color: #4A6741 !important;
+  border-color: #4A6741 !important;
+}
+
+/* Selected state */
+.ant-radio-button-wrapper-checked:not(.ant-radio-button-wrapper-disabled) {
+  background: #4A6741 !important;
+  border-color: #4A6741 !important;
+  color: #fff !important;
+  box-shadow: 0 2px 8px rgba(74,103,65,0.30) !important;
+}
+
+/* Hide the left pseudo-border that ANT adds between buttons */
+.ant-radio-button-wrapper-checked:not(.ant-radio-button-wrapper-disabled)::before {
+  background-color: #4A6741 !important;
+}
+
+/* N/A option gets a subtle grey tint when not selected */
+.ant-radio-button-wrapper:last-child:not(.ant-radio-button-wrapper-checked) {
+  color: #9ca3af !important;
+  background: #f9fafb !important;
+}
+
+/* ── Ant Design Select / DatePicker – force full width ───────────────── */
+.general-details-select,
+.general-details-datepicker {
+  width: 100% !important;
+}
+
+/* ── Scrollable form wrapper (legacy, kept for compatibility) ─────────── */
+.scrollable-form {
+  height: calc(100vh - 60px);
+  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollable-form::-webkit-scrollbar {
+  width: 0;
+}
+
+/* ── Sticky stepper (legacy) ─────────────────────────────────────────── */
+.sticky-stepper {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  background-color: white;
+}
+
+/* ── Full-screen loader overlay ──────────────────────────────────────── */
+.LoaderWrapper {
+  z-index: 500;
+  position: fixed;
+  left: 0;
+  top: 0;
+  background: #fff;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  opacity: 0.6;
+}

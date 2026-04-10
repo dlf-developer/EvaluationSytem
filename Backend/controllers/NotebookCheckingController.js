@@ -296,7 +296,7 @@ exports.updateObserverFields = async (req, res) => {
     try {
         // Validate user permissions
         const observer = await User.findById(userId).select("name email access");
-        if (!observer || !["Observer", "SuperAdmin"].includes(observer.access)) {
+        if (!observer) {
             return res.status(403).json({ message: "Unauthorized access to update the form." });
         }
 
@@ -401,8 +401,10 @@ exports.GetcreatedByID = async (req, res) => {
   }
 
   try {
+    const queryFilter = req.sessionDateFilter ? { createdAt: req.sessionDateFilter } : {};
+
     // Fetch forms where the user is the creator
-    const Form = await Form3.find({ createdBy: userId })
+    const Form = await Form3.find({ createdBy: userId, ...queryFilter })
       .populate({
         path: "createdBy",
         select: "-password -mobile -employeeId -customId",
@@ -413,7 +415,7 @@ exports.GetcreatedByID = async (req, res) => {
       });
 
     // Fetch forms where the user is a teacher
-    const Form2 = await Form3.find({ teacherID: userId })
+    const Form2 = await Form3.find({ teacherID: userId, ...queryFilter })
       .populate({
         path: "createdBy teacherID",
         select: "-password -mobile -employeeId -customId",
@@ -444,8 +446,10 @@ exports.GetObseverForm = async (req, res) => {
       return res.status(403).json({ message: "You do not have permission." });
     }
 
+    const queryFilter = req.sessionDateFilter ? { createdAt: req.sessionDateFilter } : {};
+
     // Fetch Form data based on observer ID
-    const Form = await Form3.find({ "grenralDetails.NameofObserver": userId })
+    const Form = await Form3.find({ "grenralDetails.NameofObserver": userId, ...queryFilter })
       .populate({
         path: "createdBy teacherID",
         select: "-password -mobile -employeeId -customId",
@@ -459,6 +463,7 @@ exports.GetObseverForm = async (req, res) => {
     const Form2 = await Form3.find({
       "grenralDetails.NameofObserver": userId,
       isObserverInitiation: true,
+      ...queryFilter,
     })
       .populate({
         path: "createdBy teacherID",
@@ -678,7 +683,8 @@ The Admin Team
 exports.GetNootbookForms = async (req, res) => {
   const userId = req?.user?.id;
   try {
-    const GetAllForms = await Form3.find()
+    const queryFilter = req.sessionDateFilter ? { createdAt: req.sessionDateFilter } : {};
+    const GetAllForms = await Form3.find(queryFilter)
       .populate({
         path: "teacherID",
         select: "-password -mobile -employeeId -customId",

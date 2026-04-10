@@ -149,10 +149,12 @@ exports.getUserForm = async (req, res) => {
   const userId = req?.user?.id;
 
   try {
-    const initiatedForms = await Form1.find({ userId }).populate(
+    const queryFilter = req.sessionDateFilter ? { createdAt: req.sessionDateFilter } : {};
+
+    const initiatedForms = await Form1.find({ userId, ...queryFilter }).populate(
       "teacherID coordinatorID userId",
     );
-    const assignedForms = await Form1.find({ teacherID: userId }).populate(
+    const assignedForms = await Form1.find({ teacherID: userId, ...queryFilter }).populate(
       "teacherID coordinatorID userId",
     );
 
@@ -186,11 +188,12 @@ exports.getObserverDashboard = async (req, res) => {
   const { observerID, TeacherID } = req.body;
 
   try {
-    let query = {};
+    const queryFilter = req.sessionDateFilter ? { createdAt: req.sessionDateFilter } : {};
+    let query = { ...queryFilter };
     if (observerID) {
-      query = { isCoordinatorComplete: false, coordinatorID: observerID };
+      query = { isCoordinatorComplete: false, coordinatorID: observerID, ...queryFilter };
     } else if (TeacherID) {
-      query = { isTeacherComplete: false, teacherID: TeacherID };
+      query = { isTeacherComplete: false, teacherID: TeacherID, ...queryFilter };
     }
 
     const forms = await Form1.find(query)
@@ -235,14 +238,16 @@ exports.GetObserverForm01 = async (req, res) => {
   }
 
   try {
+    const queryFilter = req.sessionDateFilter ? { createdAt: req.sessionDateFilter } : {};
+
     // Query forms assigned to the user
-    const Assigned = await Form1.find({ coordinatorID: userId })
+    const Assigned = await Form1.find({ coordinatorID: userId, ...queryFilter })
       .populate(populateOptions)
       .populate("className")
       .sort({ createdAt: -1 });
 
     // Query forms with observer initiation
-    const Initiated = await Form1.find({ userId, isObserverInitiation: true })
+    const Initiated = await Form1.find({ userId, isObserverInitiation: true, ...queryFilter })
       .populate(populateOptions)
       .populate("className")
       .sort({ createdAt: -1 });

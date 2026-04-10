@@ -222,6 +222,11 @@ function OB_WalkthroughEdit() {
             {type === "select" ? (
               <Select
                 size="large"
+                showSearch
+                optionFilterProp="children"
+                filterOption={(input, option) =>
+                  (option?.children ?? "").toString().toLowerCase().includes(input.toLowerCase())
+                }
                 className="general-details-select"
                 placeholder={`Select ${label.toLowerCase()}`}
               >

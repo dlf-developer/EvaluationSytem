@@ -11,6 +11,7 @@ const ClassRoutes = require('./routes/ClassRoutes');
 const Weekly4Routes = require('./routes/Weekly4Routes');
 const activityRoutes = require('./routes/activityRoutes');
 const wingCoordinatorRoutes = require('./routes/wingCoordinatorRoutes');
+const sessionRoutes = require('./routes/sessionRoutes');
 require('dotenv').config();
 const cors = require('cors')
 const app = express();
@@ -42,6 +43,7 @@ app.use('/api/class', ClassRoutes)
 app.use('/api', Weekly4Routes);
 app.use('/api/activity', activityRoutes);
 app.use('/api/wing-coordinator', wingCoordinatorRoutes)
+app.use('/api/session', sessionRoutes);
 app.get('/', (req, res) => {
     return res.json({ message: "hello" })
 })

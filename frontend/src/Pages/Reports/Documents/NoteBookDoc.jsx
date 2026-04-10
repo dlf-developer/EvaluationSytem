@@ -37,7 +37,28 @@ function NoteBookDoc({ data }) {
         ]
     };
 
+    const calculateScore = (formName) => {
+        let totalScore = 0, outOfScore = 0, numOfParametersNA = 0;
+        const keys = ["maintenanceOfNotebooks", "qualityOfOppurtunities", "qualityOfTeacherFeedback", "qualityOfLearner"];
+        keys.forEach((section) => {
+            if (formName?.[section]) {
+                formName[section].forEach((item) => {
+                    const ans = item?.answer;
+                    if (["1", "2", "3"].includes(ans)) {
+                        totalScore += parseInt(ans, 10);
+                        outOfScore += 3;
+                    }
+                    if (["N/A", "NA", "N"].includes(ans)) numOfParametersNA++;
+                });
+            }
+        });
+        const percentage = outOfScore > 0 ? ((totalScore / outOfScore) * 100).toFixed(2) : 0;
+        const grade = percentage >= 90 ? "A" : percentage >= 80 ? "B" : percentage >= 70 ? "C" : percentage >= 60 ? "D" : "F";
+        return { totalScore, outOfScore, percentage, grade, numOfParametersNA };
+    };
 
+    const observerScore = calculateScore(data?.ObserverForm);
+    const teacherScore = calculateScore(data?.TeacherForm);
 
     return (
         <Document>
@@ -49,25 +70,26 @@ function NoteBookDoc({ data }) {
                         <Image src={LogoBanner} style={styles.logoBanner} />
                     </View>
 
-                    <View style={styles.titleSection}>
-                        <Text style={styles.titleText}>SELF ASSESSMENT - NOTEBOOKS</Text>
-                    </View>
-
                     {/* Section One */}
                     <View style={styles.sectionRow}>
                         {[
-                            {
-                                label: "NAME OF THE OBSERVER",
-                                value: data?.grenralDetails?.NameofObserver?.name
-                            },
-                            {
-                                label: "CLASS & SECTION",
-                                value: `${data?.grenralDetails?.className} / ${data?.grenralDetails?.Section}`
-                            },
-                            {
-                                label: "DATE",
-                                value: getAllTimes(data?.grenralDetails?.DateOfObservation).formattedDate2
-                            }
+                            { label: "NAME OF OBSERVER", value: data?.grenralDetails?.NameofObserver?.name || data?.createdBy?.name },
+                            { label: "CLASS & SECTION", value: `${data?.grenralDetails?.className} / ${data?.grenralDetails?.Section}` },
+                            { label: "SUBJECT", value: data?.grenralDetails?.Subject },
+                            { label: "DATE", value: getAllTimes(data?.grenralDetails?.DateOfObservation).formattedDate2 }
+                        ].map((item, index) => (
+                            <View key={index} style={styles.columnSection}>
+                                <Text style={styles.cellHeader}>{item.label}</Text>
+                                <Text style={styles.cellAnswer}>{item.value}</Text>
+                            </View>
+                        ))}
+                    </View>
+                    <View style={[styles.sectionRow, { borderTopWidth: 0 }]}>
+                        {[
+                            { label: "ABSENTEES", value: data?.NotebooksObserver?.Absentees || "0" },
+                            { label: "CLASS STRENGTH", value: data?.NotebooksObserver?.ClassStrength || "0" },
+                            { label: "DEFAULTERS", value: data?.NotebooksObserver?.Defaulters || "0" },
+                            { label: "SUBMITTED", value: data?.NotebooksObserver?.NotebooksSubmitted || "0" }
                         ].map((item, index) => (
                             <View key={index} style={styles.columnSection}>
                                 <Text style={styles.cellHeader}>{item.label}</Text>
@@ -127,25 +149,26 @@ function NoteBookDoc({ data }) {
                         <Image src={LogoBanner} style={styles.logoBanner} />
                     </View>
 
-                    <View style={styles.titleSection}>
-                        <Text style={styles.titleText}>SELF ASSESSMENT - NOTEBOOKS</Text>
-                    </View>
-
                     {/* Section One */}
                     <View style={styles.sectionRow}>
                         {[
-                            {
-                                label: "NAME OF THE TEACHER",
-                                value: data?.createdBy?.name
-                            },
-                            {
-                                label: "CLASS & SECTION",
-                                value: `${data?.grenralDetails?.className} / ${data?.grenralDetails?.Section}`
-                            },
-                            {
-                                label: "DATE",
-                                value: getAllTimes(data?.grenralDetails?.DateOfObservation).formattedDate2
-                            }
+                            { label: "NAME OF THE TEACHER", value: data?.teacherID?.name || data?.createdBy?.name },
+                            { label: "CLASS & SECTION", value: `${data?.grenralDetails?.className} / ${data?.grenralDetails?.Section}` },
+                            { label: "SUBJECT", value: data?.grenralDetails?.Subject },
+                            { label: "DATE", value: getAllTimes(data?.grenralDetails?.DateOfObservation).formattedDate2 }
+                        ].map((item, index) => (
+                            <View key={index} style={styles.columnSection}>
+                                <Text style={styles.cellHeader}>{item.label}</Text>
+                                <Text style={styles.cellAnswer}>{item.value}</Text>
+                            </View>
+                        ))}
+                    </View>
+                    <View style={[styles.sectionRow, { borderTopWidth: 0 }]}>
+                        {[
+                            { label: "ABSENTEES", value: data?.NotebooksTeacher?.Absentees || "0" },
+                            { label: "CLASS STRENGTH", value: data?.NotebooksTeacher?.ClassStrength || "0" },
+                            { label: "DEFAULTERS", value: data?.NotebooksTeacher?.Defaulters || "0" },
+                            { label: "SUBMITTED", value: data?.NotebooksTeacher?.NotebooksSubmitted || "0" }
                         ].map((item, index) => (
                             <View key={index} style={styles.columnSection}>
                                 <Text style={styles.cellHeader}>{item.label}</Text>
@@ -196,6 +219,58 @@ function NoteBookDoc({ data }) {
                 </View>
             </Page>
 
+            <Page size="A4" style={styles.page}>
+                <View style={styles.container}>
+                    {/* Comments Section */}
+                    <View style={styles.observationSection}>
+                        <Text style={styles.subTitle}>OBSERVER'S COMMENTS</Text>
+                        <View style={{ borderWidth: 1, padding: 10, minHeight: 60, borderColor: '#000' }}>
+                            <Text style={{ fontSize: 10, lineHeight: 1.5 }}>
+                                {data?.observerFeedback || "No feedback provided."}
+                            </Text>
+                        </View>
+                    </View>
+
+                    <View style={styles.observationSection}>
+                        <Text style={styles.subTitle}>TEACHER'S REFLECTION / COMMENTS</Text>
+                        <View style={{ borderWidth: 1, padding: 10, minHeight: 60, borderColor: '#000' }}>
+                            <Text style={{ fontSize: 10, lineHeight: 1.5 }}>
+                                {data?.teacherReflationFeedback || "No reflection provided."}
+                            </Text>
+                        </View>
+                    </View>
+
+                    {/* Total Tables Section */}
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 30 }}>
+                        {/* Teacher Score */}
+                        <View style={{ width: '48%', borderWidth: 1, borderColor: '#000', borderRadius: 4 }}>
+                            <View style={{ padding: 5, backgroundColor: '#f0fdf4', borderBottomWidth: 1, borderColor: '#000' }}>
+                                <Text style={[styles.subTitle, { marginBottom: 0, textAlign: 'center', color: '#166534' }]}>TEACHER SELF-ASSESSMENT SCORE</Text>
+                            </View>
+                            <View style={{ padding: 10 }}>
+                                <Text style={[styles.parameter, { width: '100%', marginBottom: 6, fontSize: 11 }]}>Total Score:      <Text style={{fontWeight: 'bold', color: '#166534'}}>{teacherScore.totalScore} / {teacherScore.outOfScore}</Text></Text>
+                                <Text style={[styles.parameter, { width: '100%', marginBottom: 6, fontSize: 11 }]}>Percentage:    <Text style={{fontWeight: 'bold', color: '#166534'}}>{teacherScore.percentage}%</Text></Text>
+                                <Text style={[styles.parameter, { width: '100%', marginBottom: 6, fontSize: 11 }]}>Grade:              <Text style={{fontWeight: 'bold', color: '#166534'}}>{teacherScore.grade}</Text></Text>
+                                <Text style={[styles.parameter, { width: '100%', marginBottom: 6, fontSize: 11 }]}>N/A:                   <Text style={{fontWeight: 'bold', color: '#166534'}}>{teacherScore.numOfParametersNA}</Text></Text>
+                            </View>
+                        </View>
+
+                        {/* Observer Score */}
+                        <View style={{ width: '48%', borderWidth: 1, borderColor: '#000', borderRadius: 4 }}>
+                            <View style={{ padding: 5, backgroundColor: '#eff6ff', borderBottomWidth: 1, borderColor: '#000' }}>
+                                <Text style={[styles.subTitle, { marginBottom: 0, textAlign: 'center', color: '#1e3a8a' }]}>OBSERVER EVALUATION SCORE</Text>
+                            </View>
+                            <View style={{ padding: 10 }}>
+                                <Text style={[styles.parameter, { width: '100%', marginBottom: 6, fontSize: 11 }]}>Total Score:      <Text style={{fontWeight: 'bold', color: '#1e3a8a'}}>{observerScore.totalScore} / {observerScore.outOfScore}</Text></Text>
+                                <Text style={[styles.parameter, { width: '100%', marginBottom: 6, fontSize: 11 }]}>Percentage:    <Text style={{fontWeight: 'bold', color: '#1e3a8a'}}>{observerScore.percentage}%</Text></Text>
+                                <Text style={[styles.parameter, { width: '100%', marginBottom: 6, fontSize: 11 }]}>Grade:              <Text style={{fontWeight: 'bold', color: '#1e3a8a'}}>{observerScore.grade}</Text></Text>
+                                <Text style={[styles.parameter, { width: '100%', marginBottom: 6, fontSize: 11 }]}>N/A:                   <Text style={{fontWeight: 'bold', color: '#1e3a8a'}}>{observerScore.numOfParametersNA}</Text></Text>
+                            </View>
+                        </View>
+                    </View>
+                </View>
+            </Page>
+
         </Document>
     );
 }
@@ -237,7 +312,7 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
     },
     columnSection: {
-        width: '33.33%',
+        width: '25%',
         borderWidth: 1,
         borderColor: '#000',
     },

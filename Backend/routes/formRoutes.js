@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middleware/authMiddleware');
+const sessionMiddleware = require('../middleware/sessionMiddleware');
 const { createForm, getObserverDashboard, getSingleuserForm, FormFill, FormInitiation, GetFormOneAdmin,  ReminderFormOne } = require('../controllers/FormOneController');
 const { getUserForm,GetObserverForm01, EditUpdate } = require('../controllers/FortFormController');
 
@@ -18,13 +19,13 @@ router.post('/fortnightly-monitor/reminder/:id', authMiddleware, ReminderFormOne
 // router.post('/fortnightly-monitor/submit',authMiddleware, fillForm);
 
 // 5. Route to get forms displayed on Observer's Dashboard
-router.post('/fortnightly-monitor/observer-dashboard',authMiddleware, getObserverDashboard);
-router.get('/fortnightly-monitor',authMiddleware, getUserForm);
-router.get('/fortnightly-monitor/oberver/get',authMiddleware, GetObserverForm01);
+router.post('/fortnightly-monitor/observer-dashboard',authMiddleware, sessionMiddleware, getObserverDashboard);
+router.get('/fortnightly-monitor',authMiddleware, sessionMiddleware, getUserForm);
+router.get('/fortnightly-monitor/oberver/get',authMiddleware, sessionMiddleware, GetObserverForm01);
 router.get('/fortnightly-monitor/:id',authMiddleware, getSingleuserForm);
 router.put('/fortnightly-monitor/:id',authMiddleware, FormFill);
 router.put('/fortnightly-monitor/update/:id',authMiddleware, EditUpdate);
 router.post('/fortnightly-monitor/form-initiation',authMiddleware, FormInitiation);
-router.get('/fortnightly-monitor/get/all',authMiddleware, GetFormOneAdmin);
+router.get('/fortnightly-monitor/get/all',authMiddleware, sessionMiddleware, GetFormOneAdmin);
 
 module.exports = router;

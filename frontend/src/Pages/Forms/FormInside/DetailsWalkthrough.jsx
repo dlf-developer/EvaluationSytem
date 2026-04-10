@@ -1,6 +1,15 @@
 import React, { useEffect, useState, useMemo } from "react";
 import CommonStepper from "../../../Components/CommonStepper";
-import { Box, Flex, SimpleGrid, Heading, Text, VStack } from "@chakra-ui/react";
+import {
+  Box,
+  Flex,
+  SimpleGrid,
+  Heading,
+  Text,
+  VStack,
+  Divider,
+  Badge,
+} from "@chakra-ui/react";
 import {
   DatePicker,
   Select,
@@ -8,7 +17,6 @@ import {
   Form,
   message,
   Input,
-  Card,
   Radio,
   Spin,
 } from "antd";
@@ -28,6 +36,14 @@ import { CreateActivityApi } from "../../../redux/Activity/activitySlice";
 
 const { Option } = Select;
 const { TextArea } = Input;
+
+/* ─── Grade helpers ────────────────────────────────────────────────── */
+const gradeColor = (g) => {
+  if (g === "A" || g === "B") return "brand.primary";
+  if (g === "C") return "#B45309";
+  if (g) return "#B91C1C";
+  return "gray.300";
+};
 
 function DetailsWalkthrough() {
   const [currStep, setCurrStep] = useState(0);
@@ -55,12 +71,10 @@ function DetailsWalkthrough() {
         message.error("Failed to fetch class data.");
       }
     } catch (error) {
-      console.error("Error fetching class data:", error);
       message.error("An error occurred while fetching class data.");
     }
   };
 
-  // Fetching Data
   useEffect(() => {
     if (FormId) {
       dispatch(GetWalkThroughForm(FormId)).then(({ payload }) => {
@@ -89,11 +103,8 @@ function DetailsWalkthrough() {
   );
 
   const disableFutureDates = (current) => {
-    // Get the current date without the time part
     const today = new Date();
-    today.setHours(0, 0, 0, 0); // Reset time to 00:00:00 to compare only the date
-
-    // Disable dates that are in the future
+    today.setHours(0, 0, 0, 0);
     return current && current.toDate() > today;
   };
 
@@ -103,7 +114,6 @@ function DetailsWalkthrough() {
   const [getOutOfScore, setGetOutOfScore] = useState(0);
   const [grade, setGrade] = useState("");
   const [sectionState, setSectionState] = useState([]);
-  const [subject, setSubject] = useState([]);
 
   const sections = [
     "essentialAggrements",
@@ -114,104 +124,85 @@ function DetailsWalkthrough() {
 
   const validValues = ["1", "2", "3", "4"];
 
-  // Calculate self-assessment score
-  // Calculate Total Score and Out Of Score
-
   const calculateScore = () => {
     const formValues = form.getFieldsValue();
-    let totalScore = 0; // Total points scored
-    let outOfScore = 0; // Maximum possible score based on valid answers
-    let numOfParametersNA = 0; // Counter for "N/A" answers
+    let total = 0;
+    let outOf = 0;
+    let naCount = 0;
 
     sections.forEach((section) => {
       if (formValues[section]) {
         formValues[section].forEach((item) => {
           const answer = item?.answer;
-
-          // Only consider valid answers for both totalScore and outOfScore
-          if (validValues?.includes(answer)) {
-            totalScore += parseInt(answer, 10); // Accumulate score
-            outOfScore += 4; // Increment max score (4 points per question)
+          if (validValues.includes(answer)) {
+            total += parseInt(answer, 10);
+            outOf += 4;
           }
-
-          // Count "N/A" answers
-          if (["N/A", "NA", "N"].includes(answer)) {
-            numOfParametersNA++; // Increment the count for "N/A"
-          }
+          if (["N/A", "NA", "N"].includes(answer)) naCount++;
         });
       }
     });
 
-    setTotalScore(totalScore); // Set total score
-    setGetOutOfScore(outOfScore); // Set maximum possible score
-    setNumOfParameters(numOfParametersNA); // Update state with total "N/A" answers
-
-    // Calculate percentage
-    const percentage = outOfScore > 0 ? (totalScore / outOfScore) * 100 : 0;
-    setPercentageScore(parseFloat(percentage.toFixed(2))); // Set percentage
-
-    // Determine grade
-    const grade =
-      percentage >= 90
+    const pct = outOf > 0 ? (total / outOf) * 100 : 0;
+    const g =
+      pct >= 90
         ? "A"
-        : percentage >= 80
+        : pct >= 80
           ? "B"
-          : percentage >= 70
+          : pct >= 70
             ? "C"
-            : percentage >= 60
+            : pct >= 60
               ? "D"
               : "F";
-    setGrade(grade); // Set grade
 
-    // Update form values
+    setTotalScore(total);
+    setGetOutOfScore(outOf);
+    setNumOfParameters(naCount);
+    setPercentageScore(parseFloat(pct.toFixed(2)));
+    setGrade(g);
+
     form.setFieldsValue({
-      totalScores: totalScore,
-      scoreOutof: outOfScore,
-      percentageScore: percentage,
-      Grade: grade,
-      NumberofParametersNotApplicable: numOfParametersNA, // Add the N/A count
+      totalScores: total,
+      scoreOutof: outOf,
+      percentageScore: pct,
+      Grade: g,
+      NumberofParametersNotApplicable: naCount,
     });
   };
 
-  const resetState = () => {
-    setSectionState([]);
-    setSubject([]);
-  };
-
-  // const updateState = (item) => {
-  //   setSectionState(item?.sections);
-  //   setSubject(item?.subjects);
-  // };
+  const resetState = () => setSectionState([]);
 
   const SectionSubject = (value) => {
     if (value) {
-      const filteredData = newData.filter((data) => data?._id === value);
-      setSectionState(filteredData[0]);
-      // return filteredData; // Return the filtered data if needed
+      const filtered = newData.filter((d) => d?._id === value);
+      setSectionState(filtered[0]);
     }
-    return []; // Return an empty array if value is falsy
+    return [];
   };
 
-  // Dynamic Rendering Helpers
+  /* ─── Render helpers ─────────────────────────────────────────────── */
   const renderRadioFormItem = ({ name, label, question, isTextArea }) => (
     <>
       <Form.Item
         className="mb-0"
         name={[...name, "answer"]}
-        label={<h6 className="text-gray mb-0">{label}</h6>}
+        label={
+          <Text fontSize="sm" color="gray.700" fontWeight="500" mb={1}>
+            {label}
+          </Text>
+        }
         rules={[{ required: true, message: "Please select an answer!" }]}
       >
         {isTextArea ? (
-          <>
-            <TextArea rows={4} placeholder="Enter Your Feedback" />
-          </>
+          <TextArea
+            rows={4}
+            placeholder="Enter your feedback…"
+            style={{ borderRadius: 10 }}
+          />
         ) : (
           <Radio.Group
-            size="small"
-            options={yesNoNAOptions.map((value) => ({
-              label: value,
-              value: value,
-            }))}
+            size="large"
+            options={yesNoNAOptions.map((v) => ({ label: v, value: v }))}
             optionType="button"
             buttonStyle="solid"
           />
@@ -230,44 +221,67 @@ function DetailsWalkthrough() {
 
   const renderSections = (title, questions, namePrefix) => (
     <Box w="100%" mb={8}>
-      <Heading
-        size="md"
-        color="brand.primary"
-        bg="gray.50"
-        p={4}
-        borderRadius="lg"
-        mb={6}
+      {/* Section header */}
+      <Flex
+        align="center"
+        gap={3}
+        mb={5}
+        pb={3}
+        borderBottom="1.5px solid"
+        borderColor="rgba(74,103,65,0.15)"
       >
-        {title}
-      </Heading>
-      <VStack spacing={4} align="stretch">
+        <Box
+          w={1}
+          h="22px"
+          bg="brand.primary"
+          borderRadius="full"
+          flexShrink={0}
+        />
+        <Heading size="sm" color="brand.secondary" fontWeight="700">
+          {title}
+        </Heading>
+        <Badge
+          ml="auto"
+          fontSize="10px"
+          colorScheme="green"
+          variant="subtle"
+          borderRadius="full"
+          px={2}
+        >
+          {questions.length} items
+        </Badge>
+      </Flex>
+
+      <VStack spacing={3} align="stretch">
         {questions.map((question, index) => (
-          <Box key={`${namePrefix}${index}`}>
-            <Box
-              bg="white"
-              p={6}
-              borderRadius="xl"
-              boxShadow="sm"
-              borderWidth="1px"
-              borderColor="gray.100"
-            >
-              {renderRadioFormItem({
-                name: [namePrefix, index],
-                label: question,
-                question,
-                isTextArea: currStep === 2,
-              })}
-            </Box>
+          <Box
+            key={`${namePrefix}${index}`}
+            bg="white"
+            px={5}
+            py={4}
+            borderRadius="xl"
+            borderWidth="1px"
+            borderColor="gray.100"
+            _hover={{ borderColor: "rgba(74,103,65,0.25)", boxShadow: "sm" }}
+            transition="all 0.18s ease"
+          >
+            {renderRadioFormItem({
+              name: [namePrefix, index],
+              label: `${index + 1}. ${question}`,
+              question,
+              isTextArea: currStep === 2,
+            })}
           </Box>
         ))}
       </VStack>
     </Box>
   );
+
   const generalDetails = useMemo(
     () => [
       {
         name: "NameoftheVisitingTeacher",
-        label: "Name of the Visiting Teacher",
+        label: "Visiting Teacher",
         type: "select",
         options: GetTeachersLists?.map((item) => ({
           id: item?._id,
@@ -278,7 +292,7 @@ function DetailsWalkthrough() {
       { name: "DateOfObservation", label: "Date of Observation", type: "date" },
       {
         name: "className",
-        label: "Class Name / Section",
+        label: "Class / Section",
         type: "select",
         options: newData?.map((item) => ({
           id: item._id,
@@ -312,28 +326,35 @@ function DetailsWalkthrough() {
   );
 
   const renderGeneralDetails = () => (
-    <Box w="100%" mt={4}>
-      <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
+    <Box w="100%" mt={2}>
+      <SimpleGrid columns={{ base: 1, md: 2 }} spacing={5}>
         {generalDetails.map(({ name, label, type, options }) => (
           <Box key={name}>
             <Form.Item
-              key={name}
               name={name}
               label={
-                <Text fontWeight="500" color="gray.700" mb={1}>
+                <Text fontSize="sm" fontWeight="600" color="gray.700">
                   {label}
                 </Text>
               }
               rules={[
                 {
                   required: true,
-                  message: `Please provide a valid ${label.toLowerCase()}!`,
+                  message: `Please provide ${label.toLowerCase()}.`,
                 },
               ]}
             >
               {type === "select" ? (
                 <Select
                   size="large"
+                  showSearch
+                  optionFilterProp="children"
+                  filterOption={(input, option) =>
+                    (option?.children ?? "")
+                      .toString()
+                      .toLowerCase()
+                      .includes(input.toLowerCase())
+                  }
                   className="general-details-select"
                   placeholder={`Select ${label.toLowerCase()}`}
                   onChange={
@@ -342,12 +363,9 @@ function DetailsWalkthrough() {
                       : () => {}
                   }
                 >
-                  {options?.map((option) => (
-                    <Option
-                      key={option?.id || option}
-                      value={option?.value || option}
-                    >
-                      {option?.name || option}
+                  {options?.map((opt) => (
+                    <Option key={opt?.id || opt} value={opt?.value || opt}>
+                      {opt?.name || opt}
                     </Option>
                   ))}
                 </Select>
@@ -355,7 +373,7 @@ function DetailsWalkthrough() {
                 <DatePicker
                   size="large"
                   className="general-details-datepicker w-100"
-                  placeholder={`Select ${label.toLowerCase()}`}
+                  placeholder={`Select date`}
                   disabledDate={disableFutureDates}
                 />
               ) : (
@@ -398,11 +416,10 @@ function DetailsWalkthrough() {
         ],
         "planingAndPreparation",
       )}
-
       {renderSections(
         "Classroom Environment",
         [
-          "Classroom interactions among the teacher and individual students are highly respectful; active listening is encouraged .",
+          "Classroom interactions among the teacher and individual students are highly respectful; active listening is encouraged.",
           "Teacher displays awareness of her students' backgrounds, cultures, skills, knowledge proficiency, interests and special needs.",
           "Teacher ensures that all students receive opportunities to respond to questions.",
           "Student thinking is visible through display of responses and doubts.",
@@ -410,7 +427,6 @@ function DetailsWalkthrough() {
         ],
         "classRoomEnvironment",
       )}
-
       {renderSections(
         "Instruction",
         [
@@ -433,13 +449,14 @@ function DetailsWalkthrough() {
   const renderFinalDetails = () => (
     <>
       {renderSections(
-        "Feedback",
+        "Observer Feedback",
         ["What went well?", "Areas that need work"],
         "ObserverFeedback",
       )}
     </>
   );
 
+  /* ─── Navigation ─────────────────────────────────────────────────── */
   const handleNext = () => {
     form
       .validateFields()
@@ -447,6 +464,7 @@ function DetailsWalkthrough() {
         setFormData((prev) => ({ ...prev, ...values }));
         if (currStep < steps.length - 1) {
           setCurrStep((prev) => prev + 1);
+          window.scrollTo({ top: 0, behavior: "smooth" });
         } else {
           handleSubmit({ ...formData, ...values });
         }
@@ -454,40 +472,46 @@ function DetailsWalkthrough() {
       .catch(() => message.error("Please complete all required fields."));
   };
 
-  // const handleSubmit = async (data) => {
-  //   const response = await dispatch(CreateWalkThrough(data));
-  //   if (response?.payload?.status) {
-  //     message.success(response?.payload?.message);
-  //     navigate(`/classroom-walkthrough/report/${response?.payload?.form?._id}`);
-  //   } else {
-  //     message.error(response?.payload?.message);
-  //   }
-  // };
+  const calculateScoreFromData = (data) => {
+    let total = 0;
+    let outOf = 0;
+    let naCount = 0;
 
-  //   const handleSubmit = async (data) => {
-  //   // Add the calculated scores to the data object
-  //   const submissionData = {
-  //     ...data,
-  //     totalScores: totalScore,
-  //     scoreOutof: getOutOfScore,
-  //     percentageScore: percentageScore,
-  //     Grade: grade,
-  //     NumberofParametersNotApplicable: numOfParameters,
-  //   };
+    sections.forEach((section) => {
+      if (data[section]) {
+        data[section].forEach((item) => {
+          const answer = item?.answer;
+          if (validValues.includes(answer)) {
+            total += parseInt(answer, 10);
+            outOf += 4;
+          }
+          if (["N/A", "NA", "N"].includes(answer)) naCount++;
+        });
+      }
+    });
 
-  //   // Dispatch the action to create the walkthrough with the updated data
-  //   const response = await dispatch(CreateWalkThrough(submissionData));
+    const pct = outOf > 0 ? (total / outOf) * 100 : 0;
+    const g =
+      pct >= 90
+        ? "A"
+        : pct >= 80
+          ? "B"
+          : pct >= 70
+            ? "C"
+            : pct >= 60
+              ? "D"
+              : "F";
 
-  //   if (response?.payload?.status) {
-  //     message.success(response?.payload?.message);
-  //     navigate(`/classroom-walkthrough/report/${response?.payload?.form?._id}`);
-  //   } else {
-  //     message.error(response?.payload?.message);
-  //   }
-  // };
+    return {
+      totalScore: total,
+      getOutOfScore: outOf,
+      percentageScore: parseFloat(pct.toFixed(2)),
+      grade: g,
+      numOfParameters: naCount,
+    };
+  };
 
   const handleSubmit = async (data) => {
-    // Calculate scores directly from form values
     const {
       totalScore,
       getOutOfScore,
@@ -500,7 +524,7 @@ function DetailsWalkthrough() {
       ...data,
       totalScores: totalScore,
       scoreOutof: getOutOfScore,
-      percentageScore: percentageScore,
+      percentageScore,
       Grade: grade,
       NumberofParametersNotApplicable: numOfParameters,
     };
@@ -535,64 +559,40 @@ function DetailsWalkthrough() {
     }
   };
 
-  const calculateScoreFromData = (data) => {
-    let totalScore = 0;
-    let outOfScore = 0;
-    let numOfParametersNA = 0;
-
-    sections.forEach((section) => {
-      if (data[section]) {
-        data[section].forEach((item) => {
-          const answer = item?.answer;
-          if (validValues?.includes(answer)) {
-            totalScore += parseInt(answer, 10);
-            outOfScore += 4;
-          }
-          if (["N/A", "NA", "N"].includes(answer)) {
-            numOfParametersNA++;
-          }
-        });
-      }
-    });
-
-    const percentage = outOfScore > 0 ? (totalScore / outOfScore) * 100 : 0;
-    const grade =
-      percentage >= 90
-        ? "A"
-        : percentage >= 80
-          ? "B"
-          : percentage >= 70
-            ? "C"
-            : percentage >= 60
-              ? "D"
-              : "F";
-
-    return {
-      totalScore,
-      getOutOfScore: outOfScore,
-      percentageScore: parseFloat(percentage.toFixed(2)),
-      grade,
-      numOfParameters: numOfParametersNA,
-    };
-  };
-
+  /* ─── Main render ────────────────────────────────────────────────── */
   return (
-    <Box p={{ base: 4, md: 8 }} minH="80vh" bg="transparent">
-      <Box maxW="1200px" mx="auto">
+    <Box px={{ base: 4, md: 8 }} py={6} minH="80vh" bg="transparent">
+      <Box maxW="1280px" mx="auto">
+        {/* Page header */}
+        <Box mb={6}>
+          <Heading size="lg" color="brand.secondary" fontWeight="800" mb={1}>
+            Classroom Walkthrough
+          </Heading>
+          <Text fontSize="sm" color="gray.500">
+            Complete all steps to submit the observation record.
+          </Text>
+        </Box>
+
+        {/* Stepper */}
         <Box
           mb={8}
           bg="white"
-          p={6}
+          px={6}
+          py={5}
+          top="90"
+          zIndex="1000"
           borderRadius="2xl"
-          boxShadow="sm"
           borderWidth="1px"
           borderColor="gray.100"
+          boxShadow="0 1px 4px rgba(0,0,0,0.05)"
         >
           <CommonStepper steps={steps} current={currStep} />
         </Box>
 
-        <Flex direction={{ base: "column", lg: "row" }} gap={8}>
-          <Box flex="1">
+        {/* Two-column layout */}
+        <Flex direction={{ base: "column", lg: "row" }} gap={6} align="stretch">
+          {/* ── Left: form ─────────────────────────────────────────── */}
+          <Box  flex="1" minW={0}>
             <Spin spinning={loading || isLoading}>
               <Form
                 form={form}
@@ -601,11 +601,12 @@ function DetailsWalkthrough() {
               >
                 <Box
                   bg="white"
-                  p={{ base: 4, md: 8 }}
+                  px={{ base: 5, md: 8 }}
+                  py={{ base: 6, md: 8 }}
                   borderRadius="2xl"
-                  boxShadow="sm"
                   borderWidth="1px"
                   borderColor="gray.100"
+                  boxShadow="0 1px 4px rgba(0,0,0,0.05)"
                   minH="50vh"
                 >
                   {currStep === 0
@@ -615,14 +616,18 @@ function DetailsWalkthrough() {
                       : renderFinalDetails()}
                 </Box>
 
-                <Flex justify="space-between" mt={6}>
+                {/* Navigation buttons */}
+                <Flex justify="space-between" mt={5}>
                   {currStep > 0 ? (
                     <Button
                       size="large"
-                      onClick={() => setCurrStep((prev) => prev - 1)}
-                      style={{ borderRadius: "8px", minWidth: "120px" }}
+                      onClick={() => {
+                        setCurrStep((p) => p - 1);
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                      }}
+                      style={{ borderRadius: "10px", minWidth: "120px" }}
                     >
-                      Back
+                      ← Back
                     </Button>
                   ) : (
                     <Box />
@@ -632,128 +637,156 @@ function DetailsWalkthrough() {
                     size="large"
                     onClick={handleNext}
                     style={{
-                      borderRadius: "8px",
-                      minWidth: "120px",
-                      background: "#1a4d2e",
+                      borderRadius: "10px",
+                      minWidth: "140px",
+                      background: "#4A6741",
+                      border: "none",
+                      fontWeight: 600,
                     }}
                   >
-                    {currStep < steps.length - 1 ? "Next" : "Submit"}
+                    {currStep < steps.length - 1 ? "Next →" : "Submit"}
                   </Button>
                 </Flex>
               </Form>
             </Spin>
           </Box>
 
-          <Box w={{ base: "100%", lg: "350px" }}>
+          {/* ── Right: score panel (sticky) ─────────────────────────── */}
+          <Box
+            w={{ base: "100%", lg: "280px" }}
+            flexShrink={0}
+          >
             <Box
-              p={6}
-              borderRadius="2xl"
-              boxShadow="sm"
+            position={{ base: "sticky", md: "sticky" }}
+
+              top="16px"
               bg="white"
+              borderRadius="2xl"
               borderWidth="1px"
               borderColor="gray.100"
-              position="sticky"
-              top="24px"
+              overflow="hidden"
             >
-              <Heading
-                size="md"
-                color="gray.800"
-                mb={6}
-                pb={4}
-                borderBottom="1px solid"
-                borderColor="gray.100"
-              >
-                Score Summary
-              </Heading>
-
-              <VStack spacing={4} align="stretch">
-                <Flex
-                  justify="space-between"
-                  p={3}
-                  bg="gray.50"
-                  borderRadius="lg"
+              {/* ── Header ── */}
+              <Box px={5} pt={5} pb={4}>
+                <Text
+                  fontSize="10px"
+                  fontWeight="700"
+                  color="brand.primary"
+                  textTransform="uppercase"
+                  letterSpacing="1.5px"
+                  mb={0.5}
                 >
-                  <Text color="gray.600" fontWeight="500">
-                    Total Score
+                  Live Score
+                </Text>
+
+                {/* Big percentage display */}
+                <Flex align="baseline" gap={1} mt={3}>
+                  <Text
+                    fontSize="48px"
+                    fontWeight="800"
+                    color={percentageScore > 0 ? "brand.secondary" : "gray.200"}
+                    lineHeight="1"
+                    transition="color 0.3s"
+                  >
+                    {percentageScore || "0"}
                   </Text>
-                  <Text color="brand.primary" fontWeight="bold" fontSize="lg">
-                    {totalScore}
+                  <Text
+                    fontSize="18px"
+                    fontWeight="600"
+                    color="gray.400"
+                    pb={1}
+                  >
+                    %
                   </Text>
                 </Flex>
 
-                <Flex
-                  justify="space-between"
-                  p={3}
-                  bg="gray.50"
-                  borderRadius="lg"
+                {/* Thin progress bar */}
+                <Box
+                  mt={4}
+                  h="4px"
+                  bg="gray.100"
+                  borderRadius="full"
+                  overflow="hidden"
                 >
-                  <Text color="gray.600" fontWeight="500">
-                    Out of
-                  </Text>
-                  <Text color="gray.800" fontWeight="bold">
-                    {getOutOfScore}
-                  </Text>
-                </Flex>
+                  <Box
+                    h="100%"
+                    w={`${percentageScore}%`}
+                    bg={
+                      percentageScore >= 80
+                        ? "brand.primary"
+                        : percentageScore >= 60
+                          ? "#D97706"
+                          : percentageScore > 0
+                            ? "#DC2626"
+                            : "transparent"
+                    }
+                    borderRadius="full"
+                    transition="width 0.4s ease, background 0.3s"
+                  />
+                </Box>
 
-                <Flex
-                  justify="space-between"
-                  p={3}
-                  bg="blue.50"
-                  borderRadius="lg"
-                >
-                  <Text color="blue.700" fontWeight="500">
-                    Percentage
-                  </Text>
-                  <Text color="blue.700" fontWeight="bold">
-                    {percentageScore}%
-                  </Text>
-                </Flex>
-
-                <Flex
-                  justify="space-between"
-                  p={3}
-                  bg={
-                    grade === "A" || grade === "B"
-                      ? "green.50"
-                      : grade === "C"
-                        ? "yellow.50"
-                        : "red.50"
-                  }
-                  borderRadius="lg"
-                >
-                  <Text color="gray.700" fontWeight="500">
+                {/* Grade inline */}
+                <Flex align="center" justify="space-between" mt={4}>
+                  <Text fontSize="xs" color="gray.400" fontWeight="500">
                     Grade
                   </Text>
                   <Text
-                    color={
-                      grade === "A" || grade === "B"
-                        ? "green.600"
-                        : grade === "C"
-                          ? "yellow.600"
-                          : "red.600"
-                    }
-                    fontWeight="bold"
-                    fontSize="xl"
+                    fontSize="22px"
+                    fontWeight="800"
+                    color={gradeColor(grade)}
+                    lineHeight="1"
+                    transition="color 0.3s"
                   >
-                    {grade}
+                    {grade || "—"}
                   </Text>
                 </Flex>
+              </Box>
 
-                <Flex
-                  justify="space-between"
-                  p={3}
-                  bg="gray.100"
-                  borderRadius="lg"
-                  mt={2}
-                >
-                  <Text color="gray.600" fontSize="sm">
-                    Excluded Parameters (N/A)
-                  </Text>
-                  <Text color="gray.600" fontWeight="bold">
-                    {numOfParameters}
-                  </Text>
-                </Flex>
+              <Divider borderColor="gray.100" />
+
+              {/* ── Stat rows ── */}
+              <VStack spacing={0} align="stretch" px={5} py={4}>
+                {[
+                  { label: "Score", value: totalScore },
+                  { label: "Out of", value: getOutOfScore || "—" },
+                  { label: "N/A", value: numOfParameters },
+                ].map(({ label, value }, i, arr) => (
+                  <Box key={label}>
+                    <Flex justify="space-between" align="center" py={3}>
+                      <Text fontSize="sm" color="gray.500" fontWeight="400">
+                        {label}
+                      </Text>
+                      <Text
+                        fontSize="sm"
+                        fontWeight="600"
+                        color={
+                          label === "Score" && totalScore > 0
+                            ? "brand.primary"
+                            : "gray.700"
+                        }
+                      >
+                        {value}
+                      </Text>
+                    </Flex>
+                    {i < arr.length - 1 && <Divider borderColor="gray.50" />}
+                  </Box>
+                ))}
               </VStack>
+
+              <Divider borderColor="gray.100" />
+
+              {/* ── Legend ── */}
+              <Box px={5} py={4}>
+                <Text
+                  fontSize="10px"
+                  color="gray.400"
+                  lineHeight="1.8"
+                  fontWeight="400"
+                >
+                  1 Unsatisfactory · 2 Basic
+                  <br />3 Proficient · 4 Distinguished
+                </Text>
+              </Box>
             </Box>
           </Box>
         </Flex>

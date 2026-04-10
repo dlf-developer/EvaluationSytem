@@ -15,6 +15,7 @@ import {
   ShieldCheck,
   LogOut,
   ChevronRight,
+  CalendarDays,
 } from "lucide-react";
 import {
   Box,
@@ -26,7 +27,11 @@ import {
   Heading,
   Divider,
   Avatar,
+  Select,
+  Spinner,
+  Tooltip,
 } from "@chakra-ui/react";
+import { useSessionPicker, SESSIONS } from "../hooks/useSessionPicker";
 
 const iconMap = {
   Dashboard: LayoutDashboard,
@@ -49,6 +54,7 @@ function Sidebar({ collapsed, onCloseDrawer }) {
   const userName = userData?.name || "User";
 
   const menuItems = useMemo(() => Menu[Role] || [], [Role]);
+  const { session, changeSession, loading } = useSessionPicker();
 
   const handleLogout = () => {
     localStorage.clear();
@@ -72,7 +78,7 @@ function Sidebar({ collapsed, onCloseDrawer }) {
       <Box>
         {/* ── Logo ────────────────────────────────────────────── */}
         <Flex
-          mb={10}
+          mb={6}
           align="center"
           justify={collapsed ? "center" : "flex-start"}
           px={collapsed ? 0 : 2}
@@ -102,6 +108,91 @@ function Sidebar({ collapsed, onCloseDrawer }) {
             </Heading>
           )}
         </Flex>
+
+        {/* ── Session Picker ───────────────────────────────────── */}
+        {collapsed ? (
+          // Compact badge when sidebar is collapsed
+          <Tooltip label={`Session: ${session}`} placement="right" hasArrow>
+            <Flex
+              direction="column"
+              align="center"
+              mb={5}
+              gap={1}
+              cursor="default"
+            >
+              <Box
+                p={1.5}
+                borderRadius="lg"
+                bg="brand.background"
+                display="flex"
+                alignItems="center"
+                justifyContent="center"
+              >
+                <CalendarDays size={15} color="#4A6741" />
+              </Box>
+              <Text
+                fontSize="9px"
+                fontWeight="700"
+                color="brand.primary"
+                letterSpacing="-0.02em"
+                lineHeight="1"
+              >
+                {session.slice(0, 4)}
+              </Text>
+            </Flex>
+          </Tooltip>
+        ) : (
+          // Full session dropdown in expanded mode
+          <Box
+            mb={6}
+            px={2}
+            py={3}
+            bg="brand.background"
+            borderRadius="xl"
+            border="1px solid"
+            borderColor="brand.mid"
+            opacity={0.95}
+          >
+            <Flex align="center" gap={2} mb={2} px={1}>
+              <CalendarDays size={13} color="#4A6741" />
+              <Text
+                fontSize="10px"
+                fontWeight="700"
+                color="brand.primary"
+                textTransform="uppercase"
+                letterSpacing="1px"
+              >
+                Academic Session
+              </Text>
+              {loading && <Spinner size="xs" color="brand.primary" ml="auto" />}
+            </Flex>
+            <Select
+              size="sm"
+              value={session}
+              onChange={(e) => changeSession(e.target.value)}
+              borderRadius="lg"
+              border="1px solid"
+              borderColor="brand.mid"
+              bg="white"
+              color="brand.text"
+              fontWeight="600"
+              fontSize="13px"
+              _focus={{
+                borderColor: "brand.primary",
+                boxShadow: "0 0 0 1px #4A6741",
+              }}
+              _hover={{ borderColor: "brand.primary" }}
+              cursor="pointer"
+              iconColor="brand.primary"
+            >
+              {SESSIONS.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </Select>
+          </Box>
+        )}
 
         {/* ── Navigation Items ────────────────────────────────── */}
         <VStack spacing={0.5} align="stretch">

@@ -224,9 +224,11 @@ The Admin Team
 exports.getuserForm = async (req, res) => {
   const userId = req?.user?.id;
   try {
+    const queryFilter = req.sessionDateFilter ? { createdAt: req.sessionDateFilter } : {};
+    
     // Fetch both sets of data
-    const data = await Form1.find({ userId });
-    const Form = await Form1.find({ teacherID: userId }).populate(
+    const data = await Form1.find({ userId, ...queryFilter });
+    const Form = await Form1.find({ teacherID: userId, ...queryFilter }).populate(
       "teacherID coordinatorID",
     );
 
@@ -250,7 +252,9 @@ exports.getuserForm = async (req, res) => {
 exports.GetObseverForm1 = async (req, res) => {
   const userId = req?.user?.id;
   try {
-    const Form = await Form1.find({ coordinatorID: userId })
+    const queryFilter = req.sessionDateFilter ? { createdAt: req.sessionDateFilter } : {};
+
+    const Form = await Form1.find({ coordinatorID: userId, ...queryFilter })
       .populate({
         path: "teacherID",
         select: "-password -mobile -employeeId -customId",
@@ -263,7 +267,7 @@ exports.GetObseverForm1 = async (req, res) => {
         path: "coordinatorID",
         select: "-password -mobile -employeeId -customId",
       });
-    const FormInitiation = await Form1.find({ isObserverInitiation: true })
+    const FormInitiation = await Form1.find({ isObserverInitiation: true, ...queryFilter })
       .populate({
         path: "teacherID",
         select: "-password -mobile -employeeId -customId",
@@ -485,11 +489,13 @@ The Admin Team
 exports.getObserverDashboard = async (req, res) => {
   const { observerID, TeacherID } = req.body;
   try {
+    const queryFilter = req.sessionDateFilter ? { createdAt: req.sessionDateFilter } : {};
     let forms;
     if (observerID) {
       forms = await Form1.find({
         isCoordinatorComplete: false,
         coordinatorID: observerID,
+        ...queryFilter,
       })
         .populate("teacherID", "-password") // Exclude password field
         .populate("coordinatorID", "-password") // Exclude password field
@@ -498,6 +504,7 @@ exports.getObserverDashboard = async (req, res) => {
       forms = await Form1.find({
         isTeacherComplete: false,
         teacherID: TeacherID,
+        ...queryFilter,
       })
         .populate("teacherID", "-password") // Exclude password field
         .populate("coordinatorID", "-password") // Exclude password field
@@ -521,7 +528,9 @@ exports.GetFormOneAdmin = async (req, res) => {
   const userId = req?.user?.id;
 
   try {
-    const GetAllForms = await Form1.find()
+    const queryFilter = req.sessionDateFilter ? { createdAt: req.sessionDateFilter } : {};
+
+    const GetAllForms = await Form1.find(queryFilter)
       .sort({ createdAt: -1 })
       .populate({
         path: "teacherID",
