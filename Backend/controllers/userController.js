@@ -30,7 +30,6 @@ const createUser = async (req, res) => {
     const {
       employeeId,
       name,
-      email,
       mobile,
       access,
       designation,
@@ -43,6 +42,7 @@ const createUser = async (req, res) => {
       password,
     } = req.body;
 
+    const email = req.body.email?.toLowerCase().trim();
     const customId = generateCustomerId();
     const existingUser = await User.findOne({ email });
     if (existingUser)
@@ -204,9 +204,10 @@ const BulkUserCreate = async (req, res) => {
   const users = req.body;
 
   try {
-    // Map users with custom IDs
+    // Normalize emails to lowercase and assign custom IDs
     const usersWithCustomIds = users.map((user) => ({
       ...user,
+      email: user.email?.toLowerCase().trim(),
       customId: generateCustomerId(),
     }));
 

@@ -10,7 +10,8 @@ const Weekly4Form = require('../models/Weekly4Form');
 
 const register = async (req, res) => {
     try {
-        const { employeeId, customerId, name, email, mobile, access, designation, password } = req.body;
+        const { employeeId, customerId, name, mobile, access, designation, password } = req.body;
+        const email = req.body.email?.toLowerCase().trim();
         const existingUser = await User.findOne({ email });
         if (existingUser) return res.status(400).json({ message: 'User already exists' });
 
@@ -24,14 +25,14 @@ const register = async (req, res) => {
 
 const login = async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const email = req.body.email?.toLowerCase().trim();
+        const { password } = req.body;
         const user = await User.findOne({ email });
         if (!user) return res?.json({ message: 'User not found' });
 
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) return res?.json({ message: 'Invalid credentials' });
 
-        // const token = jwt.sign({ id: user._id, access: user.access,name:user.name }, process.env.JWT_SECRET, { expiresIn: '1h' });
         const token = jwt.sign(
             { id: user._id, access: user.access, name: user.name },
             process.env.JWT_SECRET
