@@ -9,8 +9,10 @@ const getRecentActivities = async (req, res) => {
       return res.status(401).json({ message: "Unauthorized: User ID missing" });
     }
 
-    // Sirf usi user ki activities fetch karna
-    const activities = await Activity.find({ userId })
+    const queryFilter = req.sessionDateFilter ? { createdAt: req.sessionDateFilter } : {};
+
+    // Sirf usi user ki activities fetch karna, filtered by active session
+    const activities = await Activity.find({ userId, ...queryFilter })
       .sort({ createdAt: -1 })
       .limit(10);
 
@@ -20,6 +22,7 @@ const getRecentActivities = async (req, res) => {
     res.status(500).json({ message: "Error fetching activities", error });
   }
 };
+
 
 
 const CreateActivityModal = async (req,res)=>{

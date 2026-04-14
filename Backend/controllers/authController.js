@@ -120,36 +120,41 @@ const changePassword = async (req, res) => {
 const FromCount = async (req, res) => {
     const user = req?.user?.id
     try {
+        const queryFilter = req.sessionDateFilter ? { createdAt: req.sessionDateFilter } : {};
+
         // Use await to ensure proper execution of asynchronous queries
-        // Use $or to check if any of the specified fields are false
-        const formTotalOneCount = await Form1.countDocuments({$or:[{coordinatorID:user},{teacherID:user},{userId:user}]});
-        const formTotalTwoCount = await Form2.countDocuments({$or:[{teacherID:user},{'grenralDetails.NameoftheVisitingTeacher':user},{createdBy:user}]});
-        const formTotalThreeCount = await Form3.countDocuments({$or:[{teacherID:user},{'grenralDetails.NameofObserver':user},{createdBy:user}]});
-        const formTotalFourCount = await Weekly4Form.countDocuments({$or:[{teacherId:user},{userId:user},{coordinatorID:user}]});
+        const formTotalOneCount = await Form1.countDocuments({ $or:[{coordinatorID:user},{teacherID:user},{userId:user}], ...queryFilter });
+        const formTotalTwoCount = await Form2.countDocuments({ $or:[{teacherID:user},{'grenralDetails.NameoftheVisitingTeacher':user},{createdBy:user}], ...queryFilter });
+        const formTotalThreeCount = await Form3.countDocuments({ $or:[{teacherID:user},{'grenralDetails.NameofObserver':user},{createdBy:user}], ...queryFilter });
+        const formTotalFourCount = await Weekly4Form.countDocuments({ $or:[{teacherId:user},{userId:user},{coordinatorID:user}], ...queryFilter });
         const formOneCount = await Form1.countDocuments({
             $and: [
                 { $or: [{ coordinatorID: user }, { teacherID: user }, { userId: user }] },
                 { $or: [{ isTeacherComplete: false }, { isCoordinatorComplete: false }] }
-            ]
+            ],
+            ...queryFilter
         });
 
         const formTwoCount = await Form2.countDocuments({
             $and: [
                 { $or: [{ teacherID: user }, { 'grenralDetails.NameoftheVisitingTeacher': user }, { createdBy: user }] },
                 { $or: [{ isTeacherCompletes: false }, { isObserverCompleted: false }] }
-            ]
+            ],
+            ...queryFilter
         });
 
         const formThreeCount = await Form3.countDocuments({
             $and:[
                 {$or:[{teacherID:user},{'grenralDetails.NameofObserver':user},{createdBy:user}]},
-            {$or: [{ isTeacherComplete: false }, { isObserverComplete: false }]}
-            ]
+                {$or: [{ isTeacherComplete: false }, { isObserverComplete: false }]}
+            ],
+            ...queryFilter
         });
         const formFourCount = await Weekly4Form.countDocuments({
-                $or:[{teacherId:user},{userId:user},{coordinatorID:user}],
-                isCompleted: false
-            });
+            $or:[{teacherId:user},{userId:user},{coordinatorID:user}],
+            isCompleted: false,
+            ...queryFilter
+        });
 
         const payload = [
             {
@@ -175,8 +180,8 @@ const FromCount = async (req, res) => {
             },
             {
                 fromName: "Weekly Learning Checklist",
-                count: formFourCount,
-                pending: formTotalFourCount,
+                count: formTotalFourCount,
+                pending: formFourCount,
                 color: "#F9F0FF",
                 route: "/weekly4form",
             },
