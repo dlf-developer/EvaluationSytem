@@ -123,7 +123,7 @@ const GetAllTeachers = async (req, res) => {
         access: { $in: ["Teacher"] },
       },
       "-password",
-    );
+    ).sort({ createdAt: -1 });
     res.status(200).json(users);
   } catch (err) {
     res.status(400).send(err);
@@ -137,7 +137,7 @@ const GetAllObserver = async (req, res) => {
         access: { $in: ["Observer"] },
       },
       "-password",
-    );
+    ).sort({ createdAt: -1 });
     res.status(200).json(users);
   } catch (err) {
     res.status(400).send(err);

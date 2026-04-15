@@ -151,14 +151,14 @@ exports.getUserForm = async (req, res) => {
   try {
     const queryFilter = req.sessionDateFilter ? { createdAt: req.sessionDateFilter } : {};
 
-    const initiatedForms = await Form1.find({ userId, ...queryFilter }).populate(
+    const initiatedForms = await Form1.find({ userId, ...queryFilter }).sort({ date: -1 }).populate(
       "teacherID coordinatorID userId",
     );
-    const assignedForms = await Form1.find({ teacherID: userId, ...queryFilter }).populate(
+    const assignedForms = await Form1.find({ teacherID: userId, ...queryFilter }).sort({ date: -1 }).populate(
       "teacherID coordinatorID userId",
     );
 
-    // Combine both arrays while avoiding duplicates based on _id
+    // Combine both arrays while avoiding duplicates, then re-sort by date desc
     const combinedForms = [
       ...initiatedForms,
       ...assignedForms.filter(
@@ -168,7 +168,7 @@ exports.getUserForm = async (req, res) => {
               initiatedForm._id.toString() === assignedForm._id.toString(),
           ),
       ),
-    ];
+    ].sort((a, b) => new Date(b.date) - new Date(a.date));
 
     res
       .status(200)
@@ -244,15 +244,15 @@ exports.GetObserverForm01 = async (req, res) => {
     const Assigned = await Form1.find({ coordinatorID: userId, ...queryFilter })
       .populate(populateOptions)
       .populate("className")
-      .sort({ createdAt: -1 });
+      .sort({ date: -1 });
 
     // Query forms with observer initiation
     const Initiated = await Form1.find({ userId, isObserverInitiation: true, ...queryFilter })
       .populate(populateOptions)
       .populate("className")
-      .sort({ createdAt: -1 });
+      .sort({ date: -1 });
 
-    // Combine both arrays while avoiding duplicates based on _id
+    // Combine both arrays while avoiding duplicates, then re-sort by date desc
     const Combined = [
       ...Assigned,
       ...Initiated.filter(
@@ -262,7 +262,7 @@ exports.GetObserverForm01 = async (req, res) => {
               assignedForm._id.toString() === initiatedForm._id.toString(),
           ),
       ),
-    ];
+    ].sort((a, b) => new Date(b.date) - new Date(a.date));
 
     // Return combined forms along with separate arrays
     res.status(200).json({ Combined, Assigned, Initiated });

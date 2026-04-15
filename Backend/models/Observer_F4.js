@@ -32,6 +32,6 @@ const Observer_F4 = new Schema({
     isObserverComplete: { type: Boolean, required: true },
     SartDate: { type: String, required: true },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-});
+}, { timestamps: true });
 
 module.exports = mongoose.model('Observer_F4', Observer_F4);

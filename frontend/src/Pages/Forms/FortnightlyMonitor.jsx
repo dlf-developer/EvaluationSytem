@@ -36,13 +36,7 @@ function FortnightlyMonitor() {
 
   const sortedData = useMemo(
     () =>
-      [...CombinedData].sort((a, b) =>
-        a.isTeacherComplete === b.isTeacherComplete
-          ? 0
-          : a.isTeacherComplete
-          ? 1
-          : -1
-      ),
+      [...CombinedData].sort((a, b) => new Date(b.date) - new Date(a.date)),
     [CombinedData]
   );
 

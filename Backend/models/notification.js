@@ -8,6 +8,6 @@ const notification = new Schema({
     date:{ type: Date, required: true },
     reciverId:{ type: Schema.Types.ObjectId, ref: 'User' },
     status:{ type: String, enum: ['seen', 'unSeen'], default: 'unSeen' }
-})
+}, { timestamps: true })
 
 module.exports = mongoose.model('notification', notification);

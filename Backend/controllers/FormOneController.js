@@ -227,12 +227,12 @@ exports.getuserForm = async (req, res) => {
     const queryFilter = req.sessionDateFilter ? { createdAt: req.sessionDateFilter } : {};
     
     // Fetch both sets of data
-    const data = await Form1.find({ userId, ...queryFilter });
-    const Form = await Form1.find({ teacherID: userId, ...queryFilter }).populate(
+    const data = await Form1.find({ userId, ...queryFilter }).sort({ date: -1 });
+    const Form = await Form1.find({ teacherID: userId, ...queryFilter }).sort({ date: -1 }).populate(
       "teacherID coordinatorID",
     );
 
-    // Combine both arrays without duplicates based on _id
+    // Combine both arrays without duplicates based on _id, then re-sort by date desc
     const combinedArray = [
       ...data,
       ...Form.filter(
@@ -241,7 +241,7 @@ exports.getuserForm = async (req, res) => {
             (dataItem) => dataItem._id.toString() === formItem._id.toString(),
           ),
       ),
-    ];
+    ].sort((a, b) => new Date(b.date) - new Date(a.date));
 
     res.status(200).send({ CombinedForm: combinedArray });
   } catch (err) {
@@ -255,6 +255,7 @@ exports.GetObseverForm1 = async (req, res) => {
     const queryFilter = req.sessionDateFilter ? { createdAt: req.sessionDateFilter } : {};
 
     const Form = await Form1.find({ coordinatorID: userId, ...queryFilter })
+      .sort({ date: -1 })
       .populate({
         path: "teacherID",
         select: "-password -mobile -employeeId -customId",
@@ -268,6 +269,7 @@ exports.GetObseverForm1 = async (req, res) => {
         select: "-password -mobile -employeeId -customId",
       });
     const FormInitiation = await Form1.find({ isObserverInitiation: true, ...queryFilter })
+      .sort({ date: -1 })
       .populate({
         path: "teacherID",
         select: "-password -mobile -employeeId -customId",
@@ -531,7 +533,7 @@ exports.GetFormOneAdmin = async (req, res) => {
     const queryFilter = req.sessionDateFilter ? { createdAt: req.sessionDateFilter } : {};
 
     const GetAllForms = await Form1.find(queryFilter)
-      .sort({ createdAt: -1 })
+      .sort({ date: -1 })
       .populate({
         path: "teacherID",
         select: "-password -mobile -employeeId -customId",

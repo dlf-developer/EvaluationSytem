@@ -188,7 +188,7 @@ exports.getAllWeekly4Forms = async (req, res) => {
         { 'isInitiated.Observer': userId }
       ],
       ...queryFilter
-    }).lean()
+    }).sort({ createdAt: -1 }).lean()
       .populate('isInitiated.Observer', '-password -coordinator -designation -email -updatedAt -__v')
       .populate('teacherId', '-password -coordinator -designation -email -updatedAt ');
     res.status(200).json(forms);
@@ -368,7 +368,9 @@ exports.deleteWeekly4Form = async (req, res) => {
 exports.getAllweeklyForms = async (req, res) => {
   try {
     const queryFilter = req.sessionDateFilter ? { createdAt: req.sessionDateFilter } : {};
-    const getAllFrom = await Weekly4Form.find(queryFilter).populate(`isInitiated.Observer teacherId`,'-password -coordinator -designation -email -updatedAt -__v')
+    const getAllFrom = await Weekly4Form.find(queryFilter)
+      .sort({ createdAt: -1 })
+      .populate(`isInitiated.Observer teacherId`,'-password -coordinator -designation -email -updatedAt -__v')
 
     if (!getAllFrom) {
       return res.status(404).json({ message: 'Form not found' });

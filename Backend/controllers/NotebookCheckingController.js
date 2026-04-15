@@ -405,6 +405,7 @@ exports.GetcreatedByID = async (req, res) => {
 
     // Fetch forms where the user is the creator
     const Form = await Form3.find({ createdBy: userId, ...queryFilter })
+      .sort({ createdAt: -1 })
       .populate({
         path: "createdBy",
         select: "-password -mobile -employeeId -customId",
@@ -416,6 +417,7 @@ exports.GetcreatedByID = async (req, res) => {
 
     // Fetch forms where the user is a teacher
     const Form2 = await Form3.find({ teacherID: userId, ...queryFilter })
+      .sort({ createdAt: -1 })
       .populate({
         path: "createdBy teacherID",
         select: "-password -mobile -employeeId -customId",
@@ -425,10 +427,10 @@ exports.GetcreatedByID = async (req, res) => {
         select: "-password -mobile -employeeId -customId",
       });
 
-    // Merge arrays and remove duplicates based on _id
+    // Merge arrays, remove duplicates, then re-sort by createdAt desc
     const uniqueForms = Array.from(
       new Map([...Form, ...Form2].map((item) => [item._id.toString(), item])).values()
-    );
+    ).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
     res.status(200).json(uniqueForms);
   } catch (error) {
@@ -450,6 +452,7 @@ exports.GetObseverForm = async (req, res) => {
 
     // Fetch Form data based on observer ID
     const Form = await Form3.find({ "grenralDetails.NameofObserver": userId, ...queryFilter })
+      .sort({ createdAt: -1 })
       .populate({
         path: "createdBy teacherID",
         select: "-password -mobile -employeeId -customId",
@@ -465,6 +468,7 @@ exports.GetObseverForm = async (req, res) => {
       isObserverInitiation: true,
       ...queryFilter,
     })
+      .sort({ createdAt: -1 })
       .populate({
         path: "createdBy teacherID",
         select: "-password -mobile -employeeId -customId",
@@ -474,15 +478,13 @@ exports.GetObseverForm = async (req, res) => {
         select: "-password -mobile -employeeId -customId",
       });
 
-    // Combine both Form and Form2 data
-    const combinedForms = [...Form, ...Form2];
-
-    // Remove duplicates based on a unique property (e.g., _id)
-    const uniqueForms = combinedForms.filter(
-      (form, index, self) =>
-        index ===
-        self.findIndex((f) => f._id.toString() === form._id.toString())
-    );
+    // Combine both Form and Form2 data, remove duplicates, then re-sort by createdAt desc
+    const uniqueForms = [...Form, ...Form2]
+      .filter(
+        (form, index, self) =>
+          index === self.findIndex((f) => f._id.toString() === form._id.toString())
+      )
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
     // Send combined data as response
     res.status(200).json(uniqueForms);
@@ -685,6 +687,7 @@ exports.GetNootbookForms = async (req, res) => {
   try {
     const queryFilter = req.sessionDateFilter ? { createdAt: req.sessionDateFilter } : {};
     const GetAllForms = await Form3.find(queryFilter)
+      .sort({ createdAt: -1 })
       .populate({
         path: "teacherID",
         select: "-password -mobile -employeeId -customId",

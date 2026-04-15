@@ -419,18 +419,18 @@ export const getNotebookColumns = ({ data = [], currentUserRole }) => [
     sorter: (a, b) => {
       const aName =
         currentUserRole === UserRole[1]
-          ? a?.createdBy?.name || ""
+          ? a?.teacherID?.name || a?.createdBy?.name || ""
           : a?.grenralDetails?.NameofObserver?.name || "";
       const bName =
         currentUserRole === UserRole[1]
-          ? b?.createdBy?.name || ""
+          ? b?.teacherID?.name || b?.createdBy?.name || ""
           : b?.grenralDetails?.NameofObserver?.name || "";
       return aName.localeCompare(bName);
     },
     render: (val, record) => (
       <Text fontWeight="500" fontSize="sm">
         {currentUserRole === UserRole[1]
-          ? record?.createdBy?.name
+          ? record?.teacherID?.name || record?.createdBy?.name || "—"
           : val?.NameofObserver?.name || "—"}
       </Text>
     ),
@@ -439,14 +439,14 @@ export const getNotebookColumns = ({ data = [], currentUserRole }) => [
       options: uniq(
         data.map((r) =>
           currentUserRole === UserRole[1]
-            ? r?.createdBy?.name
+            ? r?.teacherID?.name || r?.createdBy?.name
             : r?.grenralDetails?.NameofObserver?.name
         )
       ),
       matchFn: (record, vals) => {
         const name =
           currentUserRole === UserRole[1]
-            ? record?.createdBy?.name
+            ? record?.teacherID?.name || record?.createdBy?.name
             : record?.grenralDetails?.NameofObserver?.name;
         return vals.includes(name || "");
       },

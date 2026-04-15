@@ -16,7 +16,7 @@ exports.createClassDetail = async (req, res) => {
 // Get all class details
 exports.getAllClassDetails = async (req, res) => {
     try {
-        const classDetails = await ClassDetails.find({});
+        const classDetails = await ClassDetails.find({}).sort({ createdAt: -1 });
         res.status(200).send({success:true, message:"Class Fetch successfully", classDetails});
     } catch (error) {
         res.status(500).send({success:false, message:"Something Went Wrong", error:error});
