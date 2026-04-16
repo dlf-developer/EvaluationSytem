@@ -21,17 +21,19 @@ function OB_Notebook() {
   const Fectch = async () => {
     const data = await dispatch(GetNoteBookForm(FormId));
     // Set initial form values
-    form.setFieldsValue({
-      ...data.payload,
-      ...data.payload.grenralDetails,
-      ...data.payload.NotebooksObserver,
-      maintenanceOfNotebooks: data.payload.TeacherForm.maintenanceOfNotebooks,
-      qualityOfOppurtunities: data.payload.TeacherForm.qualityOfOppurtunities,
-      qualityOfTeacherFeedback:
-        data.payload.TeacherForm.qualityOfTeacherFeedback,
-      qualityOfLearner: data.payload.TeacherForm.qualityOfLearner,
-      observerFeedback: data.payload.observerFeedback,
-    });
+    if (data?.payload) {
+      form.setFieldsValue({
+        ...data?.payload,
+        ...data?.payload?.grenralDetails,
+        ...data?.payload?.NotebooksObserver,
+        maintenanceOfNotebooks: data?.payload?.TeacherForm?.maintenanceOfNotebooks,
+        qualityOfOppurtunities: data?.payload?.TeacherForm?.qualityOfOppurtunities,
+        qualityOfTeacherFeedback:
+          data?.payload?.TeacherForm?.qualityOfTeacherFeedback,
+        qualityOfLearner: data?.payload?.TeacherForm?.qualityOfLearner,
+        observerFeedback: data?.payload?.observerFeedback,
+      });
+    }
   };
 
   useEffect(() => {

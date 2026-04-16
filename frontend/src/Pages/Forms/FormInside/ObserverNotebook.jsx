@@ -22,11 +22,10 @@ function ObserverNotebook() {
   const [form] = Form.useForm();
   const Fectch = async () => {
     const data = await dispatch(GetNoteBookForm(FormId));
-    const { isObserverComplete } = data?.payload;
+    const isObserverComplete = data?.payload?.isObserverComplete || false;
+    
     if (isObserverComplete) {
       navigate(`/notebook-checking-proforma/report/${FormId}`);
-    } else {
-      message.success("Add your feedback");
     }
   };
   useEffect(() => {

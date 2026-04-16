@@ -520,26 +520,45 @@ export const getNotebookColumns = ({ data = [], currentUserRole }) => [
     dataIndex: "action",
     width: "180px",
     render: (_, record) => {
-      const { isObserverComplete } = record;
-      return (
-        <Flex gap={1}>
-          {isObserverComplete ? (
+      const { isObserverComplete, isTeacherComplete } = record;
+
+      if (isObserverComplete) {
+        return (
+          <Flex gap={1}>
             <Link to={`/notebook-checking-proforma/report/${record._id}`}>
               <button className="text-nowrap px-3 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-md text-sm font-medium transition-colors">
                 View Report
               </button>
             </Link>
-          ) : currentUserRole === UserRole[1] ? (
-            <Reminder id={record?._id} type="form3" />
-          ) : (
-            <Link to={`/NoteBook-checking-proforma/create/${record._id}`}>
+          </Flex>
+        );
+      }
+
+      if (isTeacherComplete) {
+        if (currentUserRole === UserRole[1]) {
+          return (
+            <Link to={`/notebook-checking-proforma/create/${record._id}`}>
               <button className="text-nowrap px-3 py-1 text-blue-600 hover:text-blue-900 rounded-md text-sm font-medium transition-colors">
                 Continue Form
               </button>
             </Link>
-          )}
-        </Flex>
-      );
+          );
+        } else {
+          return <Reminder id={record?._id} type="form3" />;
+        }
+      } else {
+        if (currentUserRole === UserRole[2]) {
+          return (
+            <Link to={`/notebook-checking-proforma/edit/${record._id}`}>
+              <button className="text-nowrap px-3 py-1 text-blue-600 hover:text-blue-900 rounded-md text-sm font-medium transition-colors">
+                Continue Form
+              </button>
+            </Link>
+          );
+        } else {
+          return <Reminder id={record?._id} type="form3" />;
+        }
+      }
     },
   },
 ];

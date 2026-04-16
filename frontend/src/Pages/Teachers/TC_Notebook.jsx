@@ -54,18 +54,20 @@ function TC_Notebook() {
   const Fectch = async () => {
     const data = await dispatch(GetNoteBookForm(FormId));
     // Set initial form values
-    form.setFieldsValue({
-      ...data.payload,
-      ...data.payload?.grenralDetails,
-      ...data.payload?.NotebooksTeacher,
-      maintenanceOfNotebooks: data.payload?.TeacherForm?.maintenanceOfNotebooks,
-      qualityOfOppurtunities: data.payload?.TeacherForm?.qualityOfOppurtunities,
-      qualityOfTeacherFeedback:
-        data.payload?.TeacherForm?.qualityOfTeacherFeedback,
-      qualityOfLearner: data.payload?.TeacherForm?.qualityOfLearner,
-      observerFeedback: data.payload?.observerFeedback,
-      isTeacherComplete: true,
-    });
+    if (data?.payload) {
+      form.setFieldsValue({
+        ...data.payload,
+        ...data.payload?.grenralDetails,
+        ...data.payload?.NotebooksTeacher,
+        maintenanceOfNotebooks: data.payload?.TeacherForm?.maintenanceOfNotebooks,
+        qualityOfOppurtunities: data.payload?.TeacherForm?.qualityOfOppurtunities,
+        qualityOfTeacherFeedback:
+          data.payload?.TeacherForm?.qualityOfTeacherFeedback,
+        qualityOfLearner: data.payload?.TeacherForm?.qualityOfLearner,
+        observerFeedback: data.payload?.observerFeedback,
+        isTeacherComplete: true,
+      });
+    }
   };
 
   useEffect(() => {
