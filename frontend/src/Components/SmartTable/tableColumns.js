@@ -506,13 +506,53 @@ export const getNotebookColumns = ({ data = [], currentUserRole }) => [
           new Date(val).toDateString(),
     },
   },
+
   {
-    title: "Status",
-    key: "isObserverComplete",
-    dataIndex: "isObserverComplete",
-    width: "130px",
+    title: "Teacher Status",
+    key: "isTeacherComplete",
+    dataIndex: "isTeacherComplete",
+    width: "145px",
     render: (val) => <StatusBadge value={val} />,
     filterConfig: { type: "boolean", trueLabel: "Completed", falseLabel: "Pending" },
+  },
+  {
+    title: "Observer Status",
+    key: "isObserverComplete",
+    dataIndex: "isObserverComplete",
+    width: "150px",
+    render: (val) => <StatusBadge value={val} />,
+    filterConfig: { type: "boolean", trueLabel: "Completed", falseLabel: "Pending" },
+  },
+
+  {
+    title: "Teacher Score",
+    key: "teacherScore",
+    width: "140px",
+    render: (_, record) => {
+      const score = calculateNotebookScore(record?.TeacherForm);
+      return score.outOfScore > 0 ? (
+        <Text fontSize="sm" fontWeight="600" color="brand.primary">
+          {score.totalScore} / {score.outOfScore}
+        </Text>
+      ) : (
+        <Text fontSize="sm" color="gray.400">—</Text>
+      );
+    }
+  },
+  {
+    title: "Observer Score",
+    key: "observerScore",
+    width: "145px",
+    render: (_, record) => {
+      const score = calculateNotebookScore(record?.ObserverForm);
+      return score.outOfScore > 0 ? (
+        <Text fontSize="sm" fontWeight="600" color="brand.primary">
+          {score.totalScore} / {score.outOfScore}
+        </Text>
+      ) : (
+        <Text fontSize="sm" color="gray.400">—</Text>
+      );
+    }
   },
   {
     title: "Action",
@@ -1184,6 +1224,23 @@ export const getReportForm2Columns = ({ data = [] }) => [
 // ─────────────────────────────────────────────────────────────────────────────
 // 10. REPORTS — Form 3 (Notebook Checking Report)
 // ─────────────────────────────────────────────────────────────────────────────
+const calculateNotebookScore = (formName) => {
+  let totalScore = 0, outOfScore = 0;
+  const keys = ["maintenanceOfNotebooks", "qualityOfOppurtunities", "qualityOfTeacherFeedback", "qualityOfLearner"];
+  keys.forEach((section) => {
+      if (formName?.[section]) {
+          formName[section].forEach((item) => {
+              const ans = item?.answer;
+              if (["1", "2", "3"].includes(ans)) {
+                  totalScore += parseInt(ans, 10);
+                  outOfScore += 3;
+              }
+          });
+      }
+  });
+  return { totalScore, outOfScore };
+};
+
 export const getReportForm3Columns = ({ data = [] }) => [
   {
     title: "Observer Name",
@@ -1301,6 +1358,7 @@ export const getReportForm3Columns = ({ data = [] }) => [
           new Date(val).toDateString(),
     },
   },
+
   {
     title: "Teacher Status",
     key: "isTeacherComplete",
@@ -1317,13 +1375,36 @@ export const getReportForm3Columns = ({ data = [] }) => [
     render: (val) => <StatusBadge value={val} />,
     filterConfig: { type: "boolean", trueLabel: "Completed", falseLabel: "Pending" },
   },
+
   {
-    title: "Reflection Status",
-    key: "isReflation",
-    dataIndex: "isReflation",
-    width: "155px",
-    render: (val) => <StatusBadge value={val} trueLabel="Completed" falseLabel="Pending" />,
-    filterConfig: { type: "boolean", trueLabel: "Completed", falseLabel: "Pending" },
+    title: "Teacher Score",
+    key: "teacherScore",
+    width: "140px",
+    render: (_, record) => {
+      const score = calculateNotebookScore(record?.TeacherForm);
+      return score.outOfScore > 0 ? (
+        <Text fontSize="sm" fontWeight="600" color="brand.primary">
+          {score.totalScore} / {score.outOfScore}
+        </Text>
+      ) : (
+        <Text fontSize="sm" color="gray.400">N/A</Text>
+      );
+    }
+  },
+  {
+    title: "Observer Score",
+    key: "observerScore",
+    width: "145px",
+    render: (_, record) => {
+      const score = calculateNotebookScore(record?.ObserverForm);
+      return score.outOfScore > 0 ? (
+        <Text fontSize="sm" fontWeight="600" color="brand.primary">
+          {score.totalScore} / {score.outOfScore}
+        </Text>
+      ) : (
+        <Text fontSize="sm" color="gray.400">N/A</Text>
+      );
+    }
   },
   {
     title: "Action",
