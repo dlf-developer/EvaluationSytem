@@ -181,6 +181,10 @@ exports.getSignleForm = async (req, res) => {
         select: "-password -mobile -employeeId -customId",
       })
       .populate({
+        path: "teacherID",
+        select: "-password -mobile -employeeId -customId",
+      })
+      .populate({
         path: "grenralDetails.NameofObserver",
         select: "-password -mobile -employeeId -customId",
       });
