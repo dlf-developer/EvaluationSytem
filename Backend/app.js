@@ -12,7 +12,18 @@ const Weekly4Routes = require('./routes/Weekly4Routes');
 const activityRoutes = require('./routes/activityRoutes');
 const wingCoordinatorRoutes = require('./routes/wingCoordinatorRoutes');
 const sessionRoutes = require('./routes/sessionRoutes');
-require('dotenv').config();
+const fs = require('fs');
+const path = require('path');
+const dotenv = require('dotenv');
+
+const envFile = process.env.NODE_ENV ? `.env.${process.env.NODE_ENV}` : '.env';
+const envPath = path.resolve(__dirname, envFile);
+
+if (fs.existsSync(envPath)) {
+    dotenv.config({ path: envPath });
+} else {
+    dotenv.config(); // fallback to standard .env
+}
 const cors = require('cors')
 const app = express();
 app.use(cors({
