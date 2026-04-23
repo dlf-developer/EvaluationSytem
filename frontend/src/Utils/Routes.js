@@ -51,6 +51,7 @@ import TextBox from "../Pages/TextBox";
 import AdminReport from "../Pages/Admin/AdminReport";
 import ObserverReports from "../Pages/Observer/ObserverReports";
 import OB_Wing from "../Pages/Observer/Form/wing-coordinator/OB_Wing";
+import WingCoordinatorReport from "../Pages/Reports/WingCoordinatorReport";
 
 const role = getUserId()?.access;
 const isLoggedIn = getToken() !== null ? getToken() : null;
@@ -225,6 +226,7 @@ const protects = {
         { path: "/weekly4form/report/:id", element: <Weekly4FormReport /> },
         { path: "/wing-coordinator", element: <WingCoordinator /> },
         { path: "/wing-coordinator/:id", element: <OB_Wing /> },
+        { path: "/wing-coordinator/report/:id", element: <WingCoordinatorReport /> },
         { path: "*", element: <NotFound404 /> },
       ],
     },

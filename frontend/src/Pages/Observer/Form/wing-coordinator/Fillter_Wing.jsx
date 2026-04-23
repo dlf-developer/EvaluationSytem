@@ -1,15 +1,24 @@
 import { Button, Col, DatePicker, Form, message, Row, Select } from 'antd'
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux';
 import { getCreateClassSection, getFilteredData, GetObserverList } from '../../../../redux/userSlice';
 import dayjs from 'dayjs';  // Import Day.js
 const { RangePicker } = DatePicker;
+
+const FORM_TYPE_OPTIONS = [
+    { value: 'form1', label: 'Fortnightly Monitor' },
+    { value: 'form2', label: 'Classroom Walkthrough' },
+    { value: 'form3', label: 'Notebook Checking Proforma' },
+    { value: 'form4', label: 'Learning Progress Checklist' },
+];
 
 function Fillter_Wing({ saveData, data }) {
 
     const [form] = Form.useForm();
     const dispatch = useDispatch();
     const [newData, setNewData] = useState([]);
+    // Guard: only auto-fetch once when saved form data first loads
+    const didAutoFetch = useRef(false);
 
     useEffect(() => {
         const fetchClassData = async () => {
@@ -33,28 +42,37 @@ function Fillter_Wing({ saveData, data }) {
     const [selectedItems, setSelectedItems] = useState({
         range: [],
         className: '',
+        formTypes: ['form1', 'form2', 'form3', 'form4'],
     });
 
     useEffect(() => {
-        if (data) {
-            if (data?.className) {
-                const payload = {
-                    range: data?.range,
-                    className: data?.className
-                }
-                onFinish(payload)
-            }
+        if (data && !didAutoFetch.current) {
+            // Populate form fields with saved values
             form.setFieldsValue({
                 range: data?.range ? [dayjs(data.range[0]), dayjs(data.range[1])] : [],
                 className: data?.className || '',
+                formTypes: data?.formTypes || ['form1', 'form2', 'form3', 'form4'],
             });
 
             setSelectedItems({
                 range: data?.range ? [dayjs(data.range[0]), dayjs(data.range[1])] : [],
                 className: data?.className || '',
+                formTypes: data?.formTypes || ['form1', 'form2', 'form3', 'form4'],
             });
+
+            // Auto-trigger search only once if saved data has className + range
+            if (data?.className) {
+                const payload = {
+                    range: data?.range,
+                    className: data?.className,
+                    formTypes: data?.formTypes || ['form1', 'form2', 'form3', 'form4'],
+                };
+                didAutoFetch.current = true;
+                onFinish(payload);
+            }
         }
-    }, [data, form]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [data]);
 
     const onFinish = async (values) => {
         saveData(values);
@@ -69,14 +87,16 @@ function Fillter_Wing({ saveData, data }) {
             initialValues={{
                 range: data?.range || [],
                 className: data?.className || '',
+                formTypes: data?.formTypes || ['form1', 'form2', 'form3', 'form4'],
             }}
         >
             <div className="container">
                 <Row gutter={24} justify={"start"} align={"middle"}>
-                    <Col xl={8} lg={8} md={8} sm={24} xs={24}>
+                    {/* Date Range */}
+                    <Col xl={6} lg={6} md={12} sm={24} xs={24}>
                         <Form.Item
                             className="w-full"
-                            label="From To"
+                            label="Date Range"
                             name="range"
                             rules={[
                                 {
@@ -88,7 +108,33 @@ function Fillter_Wing({ saveData, data }) {
                             <RangePicker className="w-full" />
                         </Form.Item>
                     </Col>
-                    <Col xl={8} lg={8} md={8} sm={24} xs={24}>
+
+                    {/* Form Type */}
+                    <Col xl={6} lg={6} md={12} sm={24} xs={24}>
+                        <Form.Item
+                            label="Form Type"
+                            name="formTypes"
+                            rules={[
+                                {
+                                    required: true,
+                                    message: "Please select at least one form type",
+                                },
+                            ]}
+                        >
+                            <Select
+                                mode="multiple"
+                                placeholder="Select form types"
+                                options={FORM_TYPE_OPTIONS}
+                                maxTagCount={2}
+                                filterOption={(input, option) =>
+                                    option.label.toLowerCase().includes(input.toLowerCase())
+                                }
+                            />
+                        </Form.Item>
+                    </Col>
+
+                    {/* Class */}
+                    <Col xl={6} lg={6} md={12} sm={24} xs={24}>
                         <Form.Item
                             label="Class"
                             name="className"
@@ -114,11 +160,20 @@ function Fillter_Wing({ saveData, data }) {
                             />
                         </Form.Item>
                     </Col>
-                    <Form.Item className="m-0">
-                        <Button type="primary" htmlType="submit" className="px-4 py-3">
-                            Search
-                        </Button>
-                    </Form.Item>
+
+                    {/* Search Button */}
+                    <Col xl={6} lg={6} md={12} sm={24} xs={24}>
+                        <Form.Item className="m-0" label=" ">
+                            <Button
+                                type="primary"
+                                htmlType="button"
+                                onClick={() => form.submit()}
+                                className="px-6 py-2 w-full"
+                            >
+                                Search
+                            </Button>
+                        </Form.Item>
+                    </Col>
                 </Row>
             </div>
         </Form>

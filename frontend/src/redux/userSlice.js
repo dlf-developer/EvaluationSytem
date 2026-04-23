@@ -290,8 +290,8 @@ const userSlice = createSlice({
         state.error = null;
       })
       .addCase(getUserNotification.fulfilled, (state, action) => {
+        state.loading = false;
         state.Notification = action.payload;
-        state.error = action.payload;
       })
       .addCase(getUserNotification.rejected, (state, action) => {
         state.loading = false;
@@ -359,7 +359,6 @@ const userSlice = createSlice({
       .addCase(GetObserverList.fulfilled, (state, action) => {
         state.loading = false;
         state.GetObserverLists = action.payload;
-        state.error = action.payload;
       })
       .addCase(GetObserverList.rejected, (state, action) => {
         state.loading = false;
@@ -374,7 +373,6 @@ const userSlice = createSlice({
       .addCase(getAllWeeklyFrom.fulfilled, (state, action) => {
         state.loading = false;
         state.getAllWeeklyFroms = action.payload;
-        state.error = action.payload;
       })
       .addCase(getAllWeeklyFrom.rejected, (state, action) => {
         state.loading = false;
@@ -388,7 +386,6 @@ const userSlice = createSlice({
       .addCase(getAllWeeklyFromAll.fulfilled, (state, action) => {
         state.loading = false;
         state.getAllWeeklyFroms = action.payload;
-        state.error = action.payload;
       })
       .addCase(getAllWeeklyFromAll.rejected, (state, action) => {
         state.loading = false;
