@@ -657,3 +657,17 @@ The Admin Team`;
       .json({ message: "Internal Server Error", error: error.message });
   }
 };
+
+exports.deleteFormOne = async (req, res) => {
+  const formId = req.params.id;
+  try {
+    const deletedForm = await Form1.findByIdAndDelete(formId);
+    if (!deletedForm) {
+      return res.status(404).json({ message: "Form not found." });
+    }
+    res.status(200).json({ message: "Form deleted successfully.", success: true });
+  } catch (error) {
+    console.error("Error deleting form:", error);
+    res.status(500).json({ message: "Error deleting form.", error: error.message });
+  }
+};

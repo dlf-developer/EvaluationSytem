@@ -21,7 +21,11 @@ import Reminder from "../Reminder";
 
 // ─── Shared cell helpers ────────────────────────────────────────────────────
 
-const StatusBadge = ({ value, trueLabel = "Completed", falseLabel = "Pending" }) => (
+const StatusBadge = ({
+  value,
+  trueLabel = "Completed",
+  falseLabel = "Pending",
+}) => (
   <Box
     as="span"
     display="inline-flex"
@@ -50,11 +54,14 @@ const StatusBadge = ({ value, trueLabel = "Completed", falseLabel = "Pending" })
 
 const uniq = (arr) => [...new Set(arr.filter(Boolean))];
 
-
 // ─────────────────────────────────────────────────────────────────────────────
 // 1. FORTNIGHTLY MONITOR — Admin / Observer / Teacher list view
 // ─────────────────────────────────────────────────────────────────────────────
-export const getFortnightlyColumns = ({ data = [], currentUserRole }) => [
+export const getFortnightlyColumns = ({
+  data = [],
+  currentUserRole,
+  onDelete,
+}) => [
   {
     title: "Teacher",
     key: "teacherName",
@@ -63,7 +70,7 @@ export const getFortnightlyColumns = ({ data = [], currentUserRole }) => [
     sortable: true,
     sorter: (a, b) =>
       (a?.teacherID?.name || a?.userId?.name || "").localeCompare(
-        b?.teacherID?.name || b?.userId?.name || ""
+        b?.teacherID?.name || b?.userId?.name || "",
       ),
     render: (val, record) => (
       <Text fontWeight="500" fontSize="sm">
@@ -85,7 +92,7 @@ export const getFortnightlyColumns = ({ data = [], currentUserRole }) => [
     sortable: true,
     sorter: (a, b) =>
       (a?.coordinatorID?.name || a?.userId?.name || "").localeCompare(
-        b?.coordinatorID?.name || b?.userId?.name || ""
+        b?.coordinatorID?.name || b?.userId?.name || "",
       ),
     render: (val, record) => (
       <Text fontSize="sm" color="gray.600">
@@ -96,7 +103,9 @@ export const getFortnightlyColumns = ({ data = [], currentUserRole }) => [
       type: "select",
       options: uniq(data.map((r) => r?.coordinatorID?.name || r?.userId?.name)),
       matchFn: (record, vals) =>
-        vals.includes(record?.coordinatorID?.name || record?.userId?.name || ""),
+        vals.includes(
+          record?.coordinatorID?.name || record?.userId?.name || "",
+        ),
     },
   },
   {
@@ -147,7 +156,11 @@ export const getFortnightlyColumns = ({ data = [], currentUserRole }) => [
     dataIndex: "isTeacherComplete",
     width: "140px",
     render: (val) => <StatusBadge value={val} />,
-    filterConfig: { type: "boolean", trueLabel: "Completed", falseLabel: "Pending" },
+    filterConfig: {
+      type: "boolean",
+      trueLabel: "Completed",
+      falseLabel: "Pending",
+    },
   },
   {
     title: "Observer Status",
@@ -155,7 +168,11 @@ export const getFortnightlyColumns = ({ data = [], currentUserRole }) => [
     dataIndex: "isCoordinatorComplete",
     width: "150px",
     render: (val) => <StatusBadge value={val} />,
-    filterConfig: { type: "boolean", trueLabel: "Completed", falseLabel: "Pending" },
+    filterConfig: {
+      type: "boolean",
+      trueLabel: "Completed",
+      falseLabel: "Pending",
+    },
   },
   {
     title: "Action",
@@ -163,73 +180,107 @@ export const getFortnightlyColumns = ({ data = [], currentUserRole }) => [
     dataIndex: "action",
     width: "190px",
     render: (_, record) => {
-      const { isTeacherComplete, isCoordinatorComplete, isObserverInitiation } = record;
-      if (isTeacherComplete && isCoordinatorComplete) {
-        return (
-          <Flex gap={1}>
-            <Link to={`/fortnightly-monitor/report/${record._id}`}>
-              <button className="text-nowrap px-3 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-md text-sm font-medium transition-colors">
-                View Report
-              </button>
+      const { isTeacherComplete, isCoordinatorComplete, isObserverInitiation } =
+        record;
+      const renderAction = () => {
+        if (isTeacherComplete && isCoordinatorComplete) {
+          return (
+            <Flex gap={1} align="center">
+              <Link to={`/fortnightly-monitor/report/${record._id}`}>
+                <Button size="md" variant="outline" colorScheme="blue" fontWeight="medium" flexShrink={0}>
+                  View Report
+                </Button>
+              </Link>
+              <Link to={`/fortnightly-monitor/edit/${record._id}`}>
+                <Button size="md" variant="outline" colorScheme="green" fontWeight="medium" flexShrink={0}>
+                  Edit
+                </Button>
+              </Link>
+            </Flex>
+          );
+        }
+        if (
+          currentUserRole === UserRole[1] &&
+          !isTeacherComplete &&
+          !isCoordinatorComplete &&
+          !isObserverInitiation
+        )
+          return <Reminder id={record?._id} />;
+
+        if (
+          currentUserRole === UserRole[2] &&
+          !isTeacherComplete &&
+          !isCoordinatorComplete &&
+          isObserverInitiation
+        )
+          return (
+            <Link to={`/fortnightly-monitor/create/${record._id}`}>
+              <Button size="md" variant="outline" colorScheme="blue" fontWeight="medium" flexShrink={0}>
+                Continue Form
+              </Button>
             </Link>
-            <Link to={`/fortnightly-monitor/edit/${record._id}`}>
-              <button className="text-nowrap px-3 py-1 bg-red-50 text-red-600 hover:bg-red-100 rounded-md text-sm font-medium transition-colors">
-                Edit
-              </button>
+          );
+
+        if (
+          currentUserRole === UserRole[2] &&
+          isTeacherComplete &&
+          !isCoordinatorComplete
+        )
+          return (
+            <Flex gap={1} align="center">
+              <Reminder id={record?._id} />
+              <Link to={`/fortnightly-monitor/edit/${record._id}`}>
+                <Button size="md" variant="outline" colorScheme="green" fontWeight="medium" flexShrink={0}>
+                  Edit
+                </Button>
+              </Link>
+            </Flex>
+          );
+
+        if (
+          currentUserRole === UserRole[1] &&
+          isTeacherComplete &&
+          !isCoordinatorComplete
+        )
+          return (
+            <Link to={`/fortnightly-monitor/create/${record._id}`}>
+              <Button size="md" variant="outline" colorScheme="blue" fontWeight="medium" flexShrink={0}>
+                Continue Form
+              </Button>
             </Link>
-          </Flex>
-        );
-      }
-      if (
-        currentUserRole === UserRole[1] &&
-        !isTeacherComplete &&
-        !isCoordinatorComplete &&
-        !isObserverInitiation
-      )
-        return <Reminder id={record?._id} />;
+          );
 
-      if (
-        currentUserRole === UserRole[2] &&
-        !isTeacherComplete &&
-        !isCoordinatorComplete &&
-        isObserverInitiation
-      )
-        return (
-          <Link to={`/fortnightly-monitor/create/${record._id}`}>
-            <button className="text-nowrap px-3 py-1 text-blue-600 hover:text-blue-900 rounded-md text-sm font-medium transition-colors">
-              Continue Form
-            </button>
-          </Link>
-        );
+        if (
+          (currentUserRole === UserRole[1] &&
+            !isTeacherComplete &&
+            isObserverInitiation) ||
+          (currentUserRole === UserRole[1] &&
+            !isTeacherComplete &&
+            isCoordinatorComplete)
+        )
+          return <Reminder id={record?._id} />;
 
-      if (currentUserRole === UserRole[2] && isTeacherComplete && !isCoordinatorComplete)
-        return (
-          <Flex gap={1} align="center">
-            <Reminder id={record?._id} />
-            <Link to={`/fortnightly-monitor/edit/${record._id}`}>
-              <button className="text-nowrap px-3 py-1 bg-red-50 text-red-600 hover:bg-red-100 rounded-md text-sm font-medium transition-colors">
-                Edit
-              </button>
-            </Link>
-          </Flex>
-        );
+        return null;
+      };
 
-      if (currentUserRole === UserRole[1] && isTeacherComplete && !isCoordinatorComplete)
-        return (
-          <Link to={`/fortnightly-monitor/create/${record._id}`}>
-            <button className="text-nowrap px-3 py-1 text-blue-600 hover:text-blue-900 rounded-md text-sm font-medium transition-colors">
-              Continue Form
-            </button>
-          </Link>
-        );
-
-      if (
-        (currentUserRole === UserRole[1] && !isTeacherComplete && isObserverInitiation) ||
-        (currentUserRole === UserRole[1] && !isTeacherComplete && isCoordinatorComplete)
-      )
-        return <Reminder id={record?._id} />;
-
-      return null;
+      return (
+        <Flex gap={1} align="center">
+          {renderAction()}
+          {currentUserRole === UserRole[1] && onDelete && (
+            <Button
+              size="md"
+              variant="outline"
+              colorScheme="red"
+              px={2}
+              flexShrink={0}
+              onClick={() => onDelete(record._id)}
+              title="Delete"
+            >
+              <DeleteFilled />
+            </Button>
+          )}
+        </Flex>
+      );
     },
   },
 ];
@@ -237,7 +288,11 @@ export const getFortnightlyColumns = ({ data = [], currentUserRole }) => [
 // ─────────────────────────────────────────────────────────────────────────────
 // 2. CLASSROOM WALKTHROUGH columns
 // ─────────────────────────────────────────────────────────────────────────────
-export const getClassroomColumns = ({ data = [], currentUserRole }) => [
+export const getClassroomColumns = ({
+  data = [],
+  currentUserRole,
+  onDelete,
+}) => [
   {
     title: currentUserRole === UserRole[2] ? "Observer Name" : "Teacher Name",
     key: "personName",
@@ -268,8 +323,8 @@ export const getClassroomColumns = ({ data = [], currentUserRole }) => [
         data.map((r) =>
           currentUserRole === UserRole[2]
             ? r?.createdBy?.name
-            : r?.grenralDetails?.NameoftheVisitingTeacher?.name
-        )
+            : r?.grenralDetails?.NameoftheVisitingTeacher?.name,
+        ),
       ),
       matchFn: (record, vals) => {
         const name =
@@ -287,7 +342,9 @@ export const getClassroomColumns = ({ data = [], currentUserRole }) => [
     width: "110px",
     sortable: true,
     sorter: (a, b) =>
-      (a?.grenralDetails?.className || "").localeCompare(b?.grenralDetails?.className || ""),
+      (a?.grenralDetails?.className || "").localeCompare(
+        b?.grenralDetails?.className || "",
+      ),
     render: (val) => <Text fontSize="sm">{val?.className || "—"}</Text>,
     filterConfig: {
       type: "select",
@@ -303,7 +360,9 @@ export const getClassroomColumns = ({ data = [], currentUserRole }) => [
     width: "90px",
     sortable: true,
     sorter: (a, b) =>
-      (a?.grenralDetails?.Section || "").localeCompare(b?.grenralDetails?.Section || ""),
+      (a?.grenralDetails?.Section || "").localeCompare(
+        b?.grenralDetails?.Section || "",
+      ),
     render: (val) => <Text fontSize="sm">{val?.Section || "—"}</Text>,
     filterConfig: {
       type: "select",
@@ -319,7 +378,9 @@ export const getClassroomColumns = ({ data = [], currentUserRole }) => [
     width: "110px",
     sortable: true,
     sorter: (a, b) =>
-      (a?.grenralDetails?.Subject || "").localeCompare(b?.grenralDetails?.Subject || ""),
+      (a?.grenralDetails?.Subject || "").localeCompare(
+        b?.grenralDetails?.Subject || "",
+      ),
     render: (val) => <Text fontSize="sm">{val?.Subject || "—"}</Text>,
     filterConfig: {
       type: "select",
@@ -356,7 +417,11 @@ export const getClassroomColumns = ({ data = [], currentUserRole }) => [
     dataIndex: "isTeacherCompletes",
     width: "140px",
     render: (val) => <StatusBadge value={val} />,
-    filterConfig: { type: "boolean", trueLabel: "Completed", falseLabel: "Pending" },
+    filterConfig: {
+      type: "boolean",
+      trueLabel: "Completed",
+      falseLabel: "Pending",
+    },
   },
   {
     title: "Observer Status",
@@ -364,7 +429,11 @@ export const getClassroomColumns = ({ data = [], currentUserRole }) => [
     dataIndex: "isObserverCompleted",
     width: "145px",
     render: (val) => <StatusBadge value={val} />,
-    filterConfig: { type: "boolean", trueLabel: "Completed", falseLabel: "Pending" },
+    filterConfig: {
+      type: "boolean",
+      trueLabel: "Completed",
+      falseLabel: "Pending",
+    },
   },
   {
     title: "Action",
@@ -373,33 +442,59 @@ export const getClassroomColumns = ({ data = [], currentUserRole }) => [
     width: "190px",
     render: (_, record) => {
       const { isTeacherCompletes, isObserverCompleted } = record;
-      return (
-        <Flex gap={1} align="center">
-          {isTeacherCompletes && isObserverCompleted ? (
+      const renderAction = () => {
+        if (isTeacherCompletes && isObserverCompleted) {
+          return (
             <>
               <Link to={`/classroom-walkthrough/report/${record._id}`}>
-                <button className="text-nowrap px-3 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-md text-sm font-medium transition-colors">
+                <Button size="md" variant="outline" colorScheme="blue" fontWeight="medium" flexShrink={0}>
                   View Report
-                </button>
+                </Button>
               </Link>
               {currentUserRole === UserRole[1] && (
                 <Link to={`/classroom-walkthrough/edit/${record._id}`}>
-                  <button className="text-nowrap px-3 py-1 bg-red-50 text-red-600 hover:bg-red-100 rounded-md text-sm font-medium transition-colors">
+                  <Button size="md" variant="outline" colorScheme="green" fontWeight="medium" flexShrink={0}>
                     Edit
-                  </button>
+                  </Button>
                 </Link>
               )}
             </>
-          ) : currentUserRole === UserRole[1] ? (
-            <Reminder id={record?._id} type="form2" />
-          ) : currentUserRole === UserRole[2] &&
-            (!isTeacherCompletes || !isObserverCompleted) ? (
+          );
+        }
+        if (currentUserRole === UserRole[1]) {
+          return <Reminder id={record?._id} type="form2" />;
+        }
+        if (
+          currentUserRole === UserRole[2] &&
+          (!isTeacherCompletes || !isObserverCompleted)
+        ) {
+          return (
             <Link to={`/classroom-walkthrough/create/${record._id}`}>
-              <button className="text-nowrap px-3 py-1 text-blue-600 hover:text-blue-900 rounded-md text-sm font-medium transition-colors">
+              <Button size="md" variant="outline" colorScheme="blue" fontWeight="medium" flexShrink={0}>
                 Continue Form
-              </button>
+              </Button>
             </Link>
-          ) : null}
+          );
+        }
+        return null;
+      };
+
+      return (
+        <Flex gap={1} align="center">
+          {renderAction()}
+          {currentUserRole === UserRole[1] && onDelete && (
+            <Button
+              size="md"
+              variant="outline"
+              colorScheme="red"
+              px={2}
+              flexShrink={0}
+              onClick={() => onDelete(record._id)}
+              title="Delete"
+            >
+              <DeleteFilled />
+            </Button>
+          )}
         </Flex>
       );
     },
@@ -409,7 +504,11 @@ export const getClassroomColumns = ({ data = [], currentUserRole }) => [
 // ─────────────────────────────────────────────────────────────────────────────
 // 3. NOTEBOOK CHECKING columns
 // ─────────────────────────────────────────────────────────────────────────────
-export const getNotebookColumns = ({ data = [], currentUserRole }) => [
+export const getNotebookColumns = ({
+  data = [],
+  currentUserRole,
+  onDelete,
+}) => [
   {
     title: currentUserRole === UserRole[1] ? "Teacher Name" : "Observer Name",
     key: "personName",
@@ -440,8 +539,8 @@ export const getNotebookColumns = ({ data = [], currentUserRole }) => [
         data.map((r) =>
           currentUserRole === UserRole[1]
             ? r?.teacherID?.name || r?.createdBy?.name
-            : r?.grenralDetails?.NameofObserver?.name
-        )
+            : r?.grenralDetails?.NameofObserver?.name,
+        ),
       ),
       matchFn: (record, vals) => {
         const name =
@@ -459,7 +558,9 @@ export const getNotebookColumns = ({ data = [], currentUserRole }) => [
     width: "110px",
     sortable: true,
     sorter: (a, b) =>
-      (a?.grenralDetails?.className || "").localeCompare(b?.grenralDetails?.className || ""),
+      (a?.grenralDetails?.className || "").localeCompare(
+        b?.grenralDetails?.className || "",
+      ),
     render: (val) => <Text fontSize="sm">{val?.className || "—"}</Text>,
     filterConfig: {
       type: "select",
@@ -475,7 +576,9 @@ export const getNotebookColumns = ({ data = [], currentUserRole }) => [
     width: "90px",
     sortable: true,
     sorter: (a, b) =>
-      (a?.grenralDetails?.Section || "").localeCompare(b?.grenralDetails?.Section || ""),
+      (a?.grenralDetails?.Section || "").localeCompare(
+        b?.grenralDetails?.Section || "",
+      ),
     render: (val) => <Text fontSize="sm">{val?.Section || "—"}</Text>,
     filterConfig: {
       type: "select",
@@ -513,7 +616,11 @@ export const getNotebookColumns = ({ data = [], currentUserRole }) => [
     dataIndex: "isTeacherComplete",
     width: "145px",
     render: (val) => <StatusBadge value={val} />,
-    filterConfig: { type: "boolean", trueLabel: "Completed", falseLabel: "Pending" },
+    filterConfig: {
+      type: "boolean",
+      trueLabel: "Completed",
+      falseLabel: "Pending",
+    },
   },
   {
     title: "Observer Status",
@@ -521,7 +628,11 @@ export const getNotebookColumns = ({ data = [], currentUserRole }) => [
     dataIndex: "isObserverComplete",
     width: "150px",
     render: (val) => <StatusBadge value={val} />,
-    filterConfig: { type: "boolean", trueLabel: "Completed", falseLabel: "Pending" },
+    filterConfig: {
+      type: "boolean",
+      trueLabel: "Completed",
+      falseLabel: "Pending",
+    },
   },
 
   {
@@ -535,9 +646,11 @@ export const getNotebookColumns = ({ data = [], currentUserRole }) => [
           {score.totalScore} / {score.outOfScore}
         </Text>
       ) : (
-        <Text fontSize="sm" color="gray.400">—</Text>
+        <Text fontSize="sm" color="gray.400">
+          —
+        </Text>
       );
-    }
+    },
   },
   {
     title: "Observer Score",
@@ -550,9 +663,11 @@ export const getNotebookColumns = ({ data = [], currentUserRole }) => [
           {score.totalScore} / {score.outOfScore}
         </Text>
       ) : (
-        <Text fontSize="sm" color="gray.400">—</Text>
+        <Text fontSize="sm" color="gray.400">
+          —
+        </Text>
       );
-    }
+    },
   },
   {
     title: "Action",
@@ -562,43 +677,64 @@ export const getNotebookColumns = ({ data = [], currentUserRole }) => [
     render: (_, record) => {
       const { isObserverComplete, isTeacherComplete } = record;
 
-      if (isObserverComplete) {
-        return (
-          <Flex gap={1}>
-            <Link to={`/notebook-checking-proforma/report/${record._id}`}>
-              <button className="text-nowrap px-3 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-md text-sm font-medium transition-colors">
-                View Report
-              </button>
-            </Link>
-          </Flex>
-        );
-      }
+      const renderAction = () => {
+        if (isObserverComplete) {
+          return (
+            <Flex gap={1} align="center">
+              <Link to={`/notebook-checking-proforma/report/${record._id}`}>
+                <Button size="md" variant="outline" colorScheme="blue" fontWeight="medium" flexShrink={0}>
+                  View Report
+                </Button>
+              </Link>
+            </Flex>
+          );
+        }
 
-      if (isTeacherComplete) {
-        if (currentUserRole === UserRole[1]) {
-          return (
-            <Link to={`/notebook-checking-proforma/create/${record._id}`}>
-              <button className="text-nowrap px-3 py-1 text-blue-600 hover:text-blue-900 rounded-md text-sm font-medium transition-colors">
-                Continue Form
-              </button>
-            </Link>
-          );
+        if (isTeacherComplete) {
+          if (currentUserRole === UserRole[1]) {
+            return (
+              <Link to={`/notebook-checking-proforma/create/${record._id}`}>
+                <Button size="md" variant="outline" colorScheme="blue" fontWeight="medium" flexShrink={0}>
+                  Continue Form
+                </Button>
+              </Link>
+            );
+          } else {
+            return <Reminder id={record?._id} type="form3" />;
+          }
         } else {
-          return <Reminder id={record?._id} type="form3" />;
+          if (currentUserRole === UserRole[2]) {
+            return (
+              <Link to={`/notebook-checking-proforma/edit/${record._id}`}>
+                <Button size="md" variant="outline" colorScheme="blue" fontWeight="medium" flexShrink={0}>
+                  Continue Form
+                </Button>
+              </Link>
+            );
+          } else {
+            return <Reminder id={record?._id} type="form3" />;
+          }
         }
-      } else {
-        if (currentUserRole === UserRole[2]) {
-          return (
-            <Link to={`/notebook-checking-proforma/edit/${record._id}`}>
-              <button className="text-nowrap px-3 py-1 text-blue-600 hover:text-blue-900 rounded-md text-sm font-medium transition-colors">
-                Continue Form
-              </button>
-            </Link>
-          );
-        } else {
-          return <Reminder id={record?._id} type="form3" />;
-        }
-      }
+      };
+
+      return (
+        <Flex gap={1} align="center">
+          {renderAction()}
+          {currentUserRole === UserRole[1] && onDelete && (
+            <Button
+              size="md"
+              variant="outline"
+              colorScheme="red"
+              px={2}
+              flexShrink={0}
+              onClick={() => onDelete(record._id)}
+              title="Delete"
+            >
+              <DeleteFilled />
+            </Button>
+          )}
+        </Flex>
+      );
     },
   },
 ];
@@ -616,7 +752,9 @@ export const getWeeklyColumns = ({ data = [], currentUserRole }) => [
     sorter: (a, b) =>
       (a?.teacherId?.name || "").localeCompare(b?.teacherId?.name || ""),
     render: (val) => (
-      <Text fontWeight="500" fontSize="sm">{val?.name || "N/A"}</Text>
+      <Text fontWeight="500" fontSize="sm">
+        {val?.name || "N/A"}
+      </Text>
     ),
     filterConfig: {
       type: "select",
@@ -632,10 +770,12 @@ export const getWeeklyColumns = ({ data = [], currentUserRole }) => [
     sortable: true,
     sorter: (a, b) =>
       (a?.isInitiated?.Observer?.name || "").localeCompare(
-        b?.isInitiated?.Observer?.name || ""
+        b?.isInitiated?.Observer?.name || "",
       ),
     render: (val) => (
-      <Text fontSize="sm" color="gray.600">{val?.Observer?.name || "N/A"}</Text>
+      <Text fontSize="sm" color="gray.600">
+        {val?.Observer?.name || "N/A"}
+      </Text>
     ),
     filterConfig: {
       type: "select",
@@ -669,7 +809,11 @@ export const getWeeklyColumns = ({ data = [], currentUserRole }) => [
     dataIndex: "isCompleted",
     width: "130px",
     render: (val) => <StatusBadge value={val} />,
-    filterConfig: { type: "boolean", trueLabel: "Completed", falseLabel: "Pending" },
+    filterConfig: {
+      type: "boolean",
+      trueLabel: "Completed",
+      falseLabel: "Pending",
+    },
   },
   {
     title: "Action",
@@ -680,15 +824,15 @@ export const getWeeklyColumns = ({ data = [], currentUserRole }) => [
       <Stack direction="row" spacing={2}>
         {record?.isCompleted ? (
           <Link to={`/weekly4form/report/${record._id}`}>
-            <button className="text-nowrap px-3 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-md text-sm font-medium transition-colors">
+            <Button size="md" variant="outline" colorScheme="blue" fontWeight="medium" flexShrink={0}>
               View Report
-            </button>
+            </Button>
           </Link>
         ) : currentUserRole === UserRole[2] ? (
           <Link to={`/weekly4form/create/${record?._id}`}>
-            <button className="text-nowrap px-3 py-1 text-blue-600 hover:text-blue-900 rounded-md text-sm font-medium transition-colors">
+            <Button size="md" variant="outline" colorScheme="blue" fontWeight="medium" flexShrink={0}>
               Continue Form
-            </button>
+            </Button>
           </Link>
         ) : null}
         {currentUserRole === UserRole[1] && !record?.isCompleted && (
@@ -727,7 +871,11 @@ export const getUserColumns = ({ onDelete }) => [
     render: (val) => (
       <Tag
         colorScheme={
-          val === "Superadmin" ? "purple" : val === "Observer" ? "blue" : "green"
+          val === "Superadmin"
+            ? "purple"
+            : val === "Observer"
+              ? "blue"
+              : "green"
         }
         variant="subtle"
       >
@@ -802,7 +950,11 @@ export const getClassSectionColumns = ({ onDelete }) => [
     dataIndex: "className",
     width: "150px",
     sortable: true,
-    render: (val) => <Text fontWeight="600" fontSize="sm">{val || "—"}</Text>,
+    render: (val) => (
+      <Text fontWeight="600" fontSize="sm">
+        {val || "—"}
+      </Text>
+    ),
     filterConfig: { type: "text" },
   },
   {
@@ -867,7 +1019,9 @@ export const getWingCoordinatorColumns = ({ data = [] }) => [
     sorter: (a, b) =>
       (a?.teacherID?.name || "").localeCompare(b?.teacherID?.name || ""),
     render: (val) => (
-      <Text fontWeight="500" fontSize="sm">{val?.name || "—"}</Text>
+      <Text fontWeight="500" fontSize="sm">
+        {val?.name || "—"}
+      </Text>
     ),
     filterConfig: {
       type: "select",
@@ -894,7 +1048,11 @@ export const getWingCoordinatorColumns = ({ data = [] }) => [
     dataIndex: "isCompleted",
     width: "130px",
     render: (val) => <StatusBadge value={val} />,
-    filterConfig: { type: "boolean", trueLabel: "Completed", falseLabel: "Pending" },
+    filterConfig: {
+      type: "boolean",
+      trueLabel: "Completed",
+      falseLabel: "Pending",
+    },
   },
   {
     title: "Action",
@@ -904,15 +1062,15 @@ export const getWingCoordinatorColumns = ({ data = [] }) => [
     render: (_, record) =>
       record?.isCompleted ? (
         <Link to={`/wing-coordinator/report/${record._id}`}>
-          <button className="text-nowrap px-3 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-md text-sm font-medium transition-colors">
+          <Button size="md" variant="outline" colorScheme="blue" fontWeight="medium" flexShrink={0}>
             View Report
-          </button>
+          </Button>
         </Link>
       ) : (
         <Link to={`/wing-coordinator/create/${record._id}`}>
-          <button className="text-nowrap px-3 py-1 text-blue-600 hover:text-blue-900 rounded-md text-sm font-medium transition-colors">
+          <Button size="md" variant="outline" colorScheme="blue" fontWeight="medium" flexShrink={0}>
             Continue
-          </button>
+          </Button>
         </Link>
       ),
   },
@@ -921,7 +1079,11 @@ export const getWingCoordinatorColumns = ({ data = [] }) => [
 // ─────────────────────────────────────────────────────────────────────────────
 // 8. REPORTS — Form 1 (Fortnightly Monitor Report)
 // ─────────────────────────────────────────────────────────────────────────────
-export const getReportForm1Columns = ({ data = [] }) => [
+export const getReportForm1Columns = ({
+  data = [],
+  currentUserRole,
+  onDelete,
+}) => [
   {
     title: "Observer Name",
     key: "observerName",
@@ -930,7 +1092,7 @@ export const getReportForm1Columns = ({ data = [] }) => [
     sortable: true,
     sorter: (a, b) =>
       (a?.coordinatorID?.name || a?.userId?.name || "").localeCompare(
-        b?.coordinatorID?.name || b?.userId?.name || ""
+        b?.coordinatorID?.name || b?.userId?.name || "",
       ),
     render: (val, record) => (
       <Text fontSize="sm" fontWeight="500">
@@ -941,7 +1103,9 @@ export const getReportForm1Columns = ({ data = [] }) => [
       type: "select",
       options: uniq(data.map((r) => r?.coordinatorID?.name || r?.userId?.name)),
       matchFn: (record, vals) =>
-        vals.includes(record?.coordinatorID?.name || record?.userId?.name || ""),
+        vals.includes(
+          record?.coordinatorID?.name || record?.userId?.name || "",
+        ),
     },
   },
   {
@@ -952,7 +1116,7 @@ export const getReportForm1Columns = ({ data = [] }) => [
     sortable: true,
     sorter: (a, b) =>
       (a?.teacherID?.name || a?.userId?.name || "").localeCompare(
-        b?.teacherID?.name || b?.userId?.name || ""
+        b?.teacherID?.name || b?.userId?.name || "",
       ),
     render: (val, record) => (
       <Text fontSize="sm">{val?.name || record?.userId?.name || "N/A"}</Text>
@@ -1002,7 +1166,8 @@ export const getReportForm1Columns = ({ data = [] }) => [
     filterConfig: {
       type: "date",
       matchFn: (record, val) =>
-        !val || new Date(record.date).toDateString() === new Date(val).toDateString(),
+        !val ||
+        new Date(record.date).toDateString() === new Date(val).toDateString(),
     },
   },
   {
@@ -1011,7 +1176,11 @@ export const getReportForm1Columns = ({ data = [] }) => [
     dataIndex: "isTeacherComplete",
     width: "145px",
     render: (val) => <StatusBadge value={val} />,
-    filterConfig: { type: "boolean", trueLabel: "Completed", falseLabel: "Pending" },
+    filterConfig: {
+      type: "boolean",
+      trueLabel: "Completed",
+      falseLabel: "Pending",
+    },
   },
   {
     title: "Observer Status",
@@ -1019,7 +1188,11 @@ export const getReportForm1Columns = ({ data = [] }) => [
     dataIndex: "isCoordinatorComplete",
     width: "150px",
     render: (val) => <StatusBadge value={val} />,
-    filterConfig: { type: "boolean", trueLabel: "Completed", falseLabel: "Pending" },
+    filterConfig: {
+      type: "boolean",
+      trueLabel: "Completed",
+      falseLabel: "Pending",
+    },
   },
   {
     title: "Teacher Score",
@@ -1029,7 +1202,11 @@ export const getReportForm1Columns = ({ data = [] }) => [
     sortable: true,
     sorter: (a, b) => (a.teacherScore || 0) - (b.teacherScore || 0),
     render: (val, record) => (
-      <Text fontSize="sm" fontWeight="600" color={val ? "brand.primary" : "gray.400"}>
+      <Text
+        fontSize="sm"
+        fontWeight="600"
+        color={val ? "brand.primary" : "gray.400"}
+      >
         {val ? `${val} / ${record.teacherTotal}` : "N/A"}
       </Text>
     ),
@@ -1042,7 +1219,11 @@ export const getReportForm1Columns = ({ data = [] }) => [
     sortable: true,
     sorter: (a, b) => (a.observerScore || 0) - (b.observerScore || 0),
     render: (val, record) => (
-      <Text fontSize="sm" fontWeight="600" color={val ? "brand.primary" : "gray.400"}>
+      <Text
+        fontSize="sm"
+        fontWeight="600"
+        color={val ? "brand.primary" : "gray.400"}
+      >
         {val ? `${val} / ${record.observerTotal}` : "N/A"}
       </Text>
     ),
@@ -1053,11 +1234,26 @@ export const getReportForm1Columns = ({ data = [] }) => [
     dataIndex: "action",
     width: "150px",
     render: (_, record) => (
-      <Link to={`/fortnightly-monitor/report/${record._id}`}>
-        <button className="px-3 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-md text-sm font-medium transition-colors">
-          View Report
-        </button>
-      </Link>
+      <Flex gap={1} align="center">
+        <Link to={`/fortnightly-monitor/report/${record._id}`}>
+          <Button size="md" variant="outline" colorScheme="blue" fontWeight="medium" flexShrink={0}>
+            View Report
+          </Button>
+        </Link>
+        {currentUserRole === UserRole[1] && onDelete && (
+          <Button
+            size="md"
+            variant="outline"
+            colorScheme="red"
+            px={2}
+            flexShrink={0}
+            onClick={() => onDelete(record._id)}
+            title="Delete"
+          >
+            <DeleteFilled />
+          </Button>
+        )}
+      </Flex>
     ),
   },
 ];
@@ -1065,7 +1261,11 @@ export const getReportForm1Columns = ({ data = [] }) => [
 // ─────────────────────────────────────────────────────────────────────────────
 // 9. REPORTS — Form 2 (Classroom Walkthrough Report)
 // ─────────────────────────────────────────────────────────────────────────────
-export const getReportForm2Columns = ({ data = [] }) => [
+export const getReportForm2Columns = ({
+  data = [],
+  currentUserRole,
+  onDelete,
+}) => [
   {
     title: "Observer Name",
     key: "observerName",
@@ -1075,7 +1275,9 @@ export const getReportForm2Columns = ({ data = [] }) => [
     sorter: (a, b) =>
       (a?.createdBy?.name || "").localeCompare(b?.createdBy?.name || ""),
     render: (val) => (
-      <Text fontSize="sm" fontWeight="500">{val?.name || "N/A"}</Text>
+      <Text fontSize="sm" fontWeight="500">
+        {val?.name || "N/A"}
+      </Text>
     ),
     filterConfig: {
       type: "select",
@@ -1091,7 +1293,7 @@ export const getReportForm2Columns = ({ data = [] }) => [
     sortable: true,
     sorter: (a, b) =>
       (a?.grenralDetails?.NameoftheVisitingTeacher?.name || "").localeCompare(
-        b?.grenralDetails?.NameoftheVisitingTeacher?.name || ""
+        b?.grenralDetails?.NameoftheVisitingTeacher?.name || "",
       ),
     render: (val) => (
       <Text fontSize="sm">{val?.NameoftheVisitingTeacher?.name || "N/A"}</Text>
@@ -1099,11 +1301,11 @@ export const getReportForm2Columns = ({ data = [] }) => [
     filterConfig: {
       type: "select",
       options: uniq(
-        data.map((r) => r?.grenralDetails?.NameoftheVisitingTeacher?.name)
+        data.map((r) => r?.grenralDetails?.NameoftheVisitingTeacher?.name),
       ),
       matchFn: (record, vals) =>
         vals.includes(
-          record?.grenralDetails?.NameoftheVisitingTeacher?.name || ""
+          record?.grenralDetails?.NameoftheVisitingTeacher?.name || "",
         ),
     },
   },
@@ -1115,7 +1317,7 @@ export const getReportForm2Columns = ({ data = [] }) => [
     sortable: true,
     sorter: (a, b) =>
       (a?.grenralDetails?.className || "").localeCompare(
-        b?.grenralDetails?.className || ""
+        b?.grenralDetails?.className || "",
       ),
     render: (val) => <Text fontSize="sm">{val?.className || "N/A"}</Text>,
     filterConfig: {
@@ -1184,9 +1386,17 @@ export const getReportForm2Columns = ({ data = [] }) => [
     width: "120px",
     sortable: true,
     sorter: (a, b) => (a.totalScores || 0) - (b.totalScores || 0),
-    render: (val) => (
-      <Text fontSize="sm" fontWeight="600" color={val ? "brand.primary" : "gray.400"}>
-        {val || "N/A"}
+    render: (val, record) => (
+      <Text
+        fontSize="sm"
+        fontWeight="600"
+        color={val ? "brand.primary" : "gray.400"}
+      >
+        {val
+          ? record?.scoreOutof > 0
+            ? `${val} / ${record.scoreOutof}`
+            : val
+          : "N/A"}
       </Text>
     ),
   },
@@ -1196,7 +1406,11 @@ export const getReportForm2Columns = ({ data = [] }) => [
     dataIndex: "isTeacherCompletes",
     width: "145px",
     render: (val) => <StatusBadge value={val} />,
-    filterConfig: { type: "boolean", trueLabel: "Completed", falseLabel: "Pending" },
+    filterConfig: {
+      type: "boolean",
+      trueLabel: "Completed",
+      falseLabel: "Pending",
+    },
   },
   {
     title: "Observer Status",
@@ -1204,7 +1418,11 @@ export const getReportForm2Columns = ({ data = [] }) => [
     dataIndex: "isObserverCompleted",
     width: "150px",
     render: (val) => <StatusBadge value={val} />,
-    filterConfig: { type: "boolean", trueLabel: "Completed", falseLabel: "Pending" },
+    filterConfig: {
+      type: "boolean",
+      trueLabel: "Completed",
+      falseLabel: "Pending",
+    },
   },
   {
     title: "Action",
@@ -1212,11 +1430,26 @@ export const getReportForm2Columns = ({ data = [] }) => [
     dataIndex: "action",
     width: "150px",
     render: (_, record) => (
-      <Link to={`/classroom-walkthrough/report/${record._id}`}>
-        <button className="px-3 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-md text-sm font-medium transition-colors">
-          View Report
-        </button>
-      </Link>
+      <Flex gap={1} align="center">
+        <Link to={`/classroom-walkthrough/report/${record._id}`}>
+          <Button size="md" variant="outline" colorScheme="blue" fontWeight="medium" flexShrink={0}>
+            View Report
+          </Button>
+        </Link>
+        {currentUserRole === UserRole[1] && onDelete && (
+          <Button
+            size="md"
+            variant="outline"
+            colorScheme="red"
+            px={2}
+            flexShrink={0}
+            onClick={() => onDelete(record._id)}
+            title="Delete"
+          >
+            <DeleteFilled />
+          </Button>
+        )}
+      </Flex>
     ),
   },
 ];
@@ -1225,23 +1458,33 @@ export const getReportForm2Columns = ({ data = [] }) => [
 // 10. REPORTS — Form 3 (Notebook Checking Report)
 // ─────────────────────────────────────────────────────────────────────────────
 const calculateNotebookScore = (formName) => {
-  let totalScore = 0, outOfScore = 0;
-  const keys = ["maintenanceOfNotebooks", "qualityOfOppurtunities", "qualityOfTeacherFeedback", "qualityOfLearner"];
+  let totalScore = 0,
+    outOfScore = 0;
+  const keys = [
+    "maintenanceOfNotebooks",
+    "qualityOfOppurtunities",
+    "qualityOfTeacherFeedback",
+    "qualityOfLearner",
+  ];
   keys.forEach((section) => {
-      if (formName?.[section]) {
-          formName[section].forEach((item) => {
-              const ans = item?.answer;
-              if (["1", "2", "3"].includes(ans)) {
-                  totalScore += parseInt(ans, 10);
-                  outOfScore += 3;
-              }
-          });
-      }
+    if (formName?.[section]) {
+      formName[section].forEach((item) => {
+        const ans = item?.answer;
+        if (["1", "2", "3"].includes(ans)) {
+          totalScore += parseInt(ans, 10);
+          outOfScore += 3;
+        }
+      });
+    }
   });
   return { totalScore, outOfScore };
 };
 
-export const getReportForm3Columns = ({ data = [] }) => [
+export const getReportForm3Columns = ({
+  data = [],
+  currentUserRole,
+  onDelete,
+}) => [
   {
     title: "Observer Name",
     key: "observerName",
@@ -1249,8 +1492,12 @@ export const getReportForm3Columns = ({ data = [] }) => [
     width: "160px",
     sortable: true,
     sorter: (a, b) =>
-      (a?.grenralDetails?.NameofObserver?.name || a?.createdBy?.name || "").localeCompare(
-        b?.grenralDetails?.NameofObserver?.name || b?.createdBy?.name || ""
+      (
+        a?.grenralDetails?.NameofObserver?.name ||
+        a?.createdBy?.name ||
+        ""
+      ).localeCompare(
+        b?.grenralDetails?.NameofObserver?.name || b?.createdBy?.name || "",
       ),
     render: (val, record) => (
       <Text fontSize="sm" fontWeight="500">
@@ -1260,11 +1507,15 @@ export const getReportForm3Columns = ({ data = [] }) => [
     filterConfig: {
       type: "select",
       options: uniq(
-        data.map((r) => r?.grenralDetails?.NameofObserver?.name || r?.createdBy?.name)
+        data.map(
+          (r) => r?.grenralDetails?.NameofObserver?.name || r?.createdBy?.name,
+        ),
       ),
       matchFn: (record, vals) =>
         vals.includes(
-          record?.grenralDetails?.NameofObserver?.name || record?.createdBy?.name || ""
+          record?.grenralDetails?.NameofObserver?.name ||
+            record?.createdBy?.name ||
+            "",
         ),
     },
   },
@@ -1276,7 +1527,7 @@ export const getReportForm3Columns = ({ data = [] }) => [
     sortable: true,
     sorter: (a, b) =>
       (a?.teacherID?.name || a?.createdBy?.name || "").localeCompare(
-        b?.teacherID?.name || b?.createdBy?.name || ""
+        b?.teacherID?.name || b?.createdBy?.name || "",
       ),
     render: (val, record) => (
       <Text fontSize="sm">{val?.name || record?.createdBy?.name || "N/A"}</Text>
@@ -1296,7 +1547,7 @@ export const getReportForm3Columns = ({ data = [] }) => [
     sortable: true,
     sorter: (a, b) =>
       (a?.grenralDetails?.className || "").localeCompare(
-        b?.grenralDetails?.className || ""
+        b?.grenralDetails?.className || "",
       ),
     render: (val) => <Text fontSize="sm">{val?.className || "N/A"}</Text>,
     filterConfig: {
@@ -1365,7 +1616,11 @@ export const getReportForm3Columns = ({ data = [] }) => [
     dataIndex: "isTeacherComplete",
     width: "145px",
     render: (val) => <StatusBadge value={val} />,
-    filterConfig: { type: "boolean", trueLabel: "Completed", falseLabel: "Pending" },
+    filterConfig: {
+      type: "boolean",
+      trueLabel: "Completed",
+      falseLabel: "Pending",
+    },
   },
   {
     title: "Observer Status",
@@ -1373,7 +1628,11 @@ export const getReportForm3Columns = ({ data = [] }) => [
     dataIndex: "isObserverComplete",
     width: "150px",
     render: (val) => <StatusBadge value={val} />,
-    filterConfig: { type: "boolean", trueLabel: "Completed", falseLabel: "Pending" },
+    filterConfig: {
+      type: "boolean",
+      trueLabel: "Completed",
+      falseLabel: "Pending",
+    },
   },
 
   {
@@ -1387,9 +1646,11 @@ export const getReportForm3Columns = ({ data = [] }) => [
           {score.totalScore} / {score.outOfScore}
         </Text>
       ) : (
-        <Text fontSize="sm" color="gray.400">N/A</Text>
+        <Text fontSize="sm" color="gray.400">
+          N/A
+        </Text>
       );
-    }
+    },
   },
   {
     title: "Observer Score",
@@ -1402,9 +1663,11 @@ export const getReportForm3Columns = ({ data = [] }) => [
           {score.totalScore} / {score.outOfScore}
         </Text>
       ) : (
-        <Text fontSize="sm" color="gray.400">N/A</Text>
+        <Text fontSize="sm" color="gray.400">
+          N/A
+        </Text>
       );
-    }
+    },
   },
   {
     title: "Action",
@@ -1412,11 +1675,26 @@ export const getReportForm3Columns = ({ data = [] }) => [
     dataIndex: "action",
     width: "150px",
     render: (_, record) => (
-      <Link to={`/notebook-checking-proforma/report/${record._id}`}>
-        <button className="text-nowrap px-3 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-md text-sm font-medium transition-colors">
-          View Report
-        </button>
-      </Link>
+      <Flex gap={1} align="center">
+        <Link to={`/notebook-checking-proforma/report/${record._id}`}>
+          <Button size="md" variant="outline" colorScheme="blue" fontWeight="medium" flexShrink={0}>
+            View Report
+          </Button>
+        </Link>
+        {currentUserRole === UserRole[1] && onDelete && (
+          <Button
+            size="md"
+            variant="outline"
+            colorScheme="red"
+            px={2}
+            flexShrink={0}
+            onClick={() => onDelete(record._id)}
+            title="Delete"
+          >
+            <DeleteFilled />
+          </Button>
+        )}
+      </Flex>
     ),
   },
 ];
@@ -1433,10 +1711,12 @@ export const getReportForm4Columns = ({ data = [] }) => [
     sortable: true,
     sorter: (a, b) =>
       (a?.isInitiated?.Observer?.name || "").localeCompare(
-        b?.isInitiated?.Observer?.name || ""
+        b?.isInitiated?.Observer?.name || "",
       ),
     render: (val) => (
-      <Text fontSize="sm" fontWeight="500">{val?.Observer?.name || "N/A"}</Text>
+      <Text fontSize="sm" fontWeight="500">
+        {val?.Observer?.name || "N/A"}
+      </Text>
     ),
     filterConfig: {
       type: "select",
@@ -1487,7 +1767,11 @@ export const getReportForm4Columns = ({ data = [] }) => [
     dataIndex: "isCompleted",
     width: "130px",
     render: (val) => <StatusBadge value={val} />,
-    filterConfig: { type: "boolean", trueLabel: "Completed", falseLabel: "Pending" },
+    filterConfig: {
+      type: "boolean",
+      trueLabel: "Completed",
+      falseLabel: "Pending",
+    },
   },
   {
     title: "Action",
@@ -1496,9 +1780,9 @@ export const getReportForm4Columns = ({ data = [] }) => [
     width: "150px",
     render: (_, record) => (
       <Link to={`/weekly4form/report/${record._id}`}>
-        <button className="px-3 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-md text-sm font-medium transition-colors">
+        <Button size="md" variant="outline" colorScheme="blue" fontWeight="medium" flexShrink={0}>
           View Report
-        </button>
+        </Button>
       </Link>
     ),
   },

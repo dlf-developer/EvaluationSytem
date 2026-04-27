@@ -496,8 +496,16 @@ The Admin Team`;
     }
 };
 
-
-
-
-
-
+exports.deleteFormTwo = async (req, res) => {
+    const formId = req.params.id;
+    try {
+        const deletedForm = await Form2.findByIdAndDelete(formId);
+        if (!deletedForm) {
+            return res.status(404).json({ message: "Form not found." });
+        }
+        res.status(200).json({ message: "Form deleted successfully.", success: true });
+    } catch (error) {
+        console.error("Error deleting form:", error);
+        res.status(500).json({ message: "Error deleting form.", error: error.message });
+    }
+};

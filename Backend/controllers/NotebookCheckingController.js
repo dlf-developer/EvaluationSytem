@@ -109,10 +109,17 @@ The Admin Team
   }
 };
 exports.createInitiate = async (req, res) => {
-  const { isTeacher, teacherIDs } = req.body;
+  const { isTeacher, teacherIDs, className, Section, Subject } = req.body;
   const userId = req?.user?.id;
 
   try {
+    const mongoose = require("mongoose");
+    let finalClassName = className;
+    if (className && mongoose.Types.ObjectId.isValid(className)) {
+      const classData = await ClassDetails.findById(className);
+      if (classData) finalClassName = classData.className;
+    }
+
     if (isTeacher && Array.isArray(teacherIDs) && teacherIDs.length > 0) {
       const teacherForms = await Promise.all(
         teacherIDs.map(async (teacherId) => {
@@ -127,10 +134,12 @@ exports.createInitiate = async (req, res) => {
             grenralDetails: {
               NameofObserver: userId,
               DateOfObservation: new Date(),
+              className: finalClassName,
+              Section: Section,
+              Subject: Subject,
             },
             TeacherForm: {},
             ObserverForm: {},
-            TeacherForm: {},
           }).save();
 
           const recipientEmail = await User.findById(userId);
@@ -849,5 +858,16 @@ The Admin Team`;
   }
 };
 
-
-
+exports.deleteFormThree = async (req, res) => {
+  const formId = req.params.id;
+  try {
+    const deletedForm = await Form3.findByIdAndDelete(formId);
+    if (!deletedForm) {
+      return res.status(404).json({ message: "Form not found." });
+    }
+    res.status(200).json({ message: "Form deleted successfully.", success: true });
+  } catch (error) {
+    console.error("Error deleting form:", error);
+    res.status(500).json({ message: "Error deleting form.", error: error.message });
+  }
+};

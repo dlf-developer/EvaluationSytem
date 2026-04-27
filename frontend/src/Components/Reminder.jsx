@@ -1,4 +1,4 @@
-import { Button } from 'antd'
+import { Button } from '@chakra-ui/react'
 import React from 'react'
 import { useDispatch } from 'react-redux';
 import { FormOneReminder, FormThreeReminder, FormTwoReminder, FormFourReminder } from '../redux/userSlice';
@@ -26,9 +26,9 @@ function Reminder({id,type}) {
                
             }
   return (
-    <Button onClick={()=>sendEmailReminder(id)} size="large" className="btn-outline-primary">
+    <Button onClick={()=>sendEmailReminder(id)} size="md" variant="outline" colorScheme="gray" fontWeight="medium">
             Reminders
-          </Button>
+    </Button>
   )
 }
 

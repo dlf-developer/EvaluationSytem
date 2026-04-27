@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middleware/authMiddleware');
 const sessionMiddleware = require('../middleware/sessionMiddleware');
-const { createForm, getObserverDashboard, getSingleuserForm, FormFill, FormInitiation, GetFormOneAdmin,  ReminderFormOne } = require('../controllers/FormOneController');
+const { createForm, getObserverDashboard, getSingleuserForm, FormFill, FormInitiation, GetFormOneAdmin,  ReminderFormOne, deleteFormOne } = require('../controllers/FormOneController');
 const { getUserForm,GetObserverForm01, EditUpdate } = require('../controllers/FortFormController');
 
 // 1. Route to create a new form by Teacher or Coordinator
@@ -27,5 +27,6 @@ router.put('/fortnightly-monitor/:id',authMiddleware, FormFill);
 router.put('/fortnightly-monitor/update/:id',authMiddleware, EditUpdate);
 router.post('/fortnightly-monitor/form-initiation',authMiddleware, FormInitiation);
 router.get('/fortnightly-monitor/get/all',authMiddleware, sessionMiddleware, GetFormOneAdmin);
+router.delete('/fortnightly-monitor/delete/:id', authMiddleware, deleteFormOne);
 
 module.exports = router;

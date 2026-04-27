@@ -1,10 +1,10 @@
-import { Button, Form, message, Select, Spin } from "antd";
+import { Button, Form, message, Select, Spin, Input } from "antd";
 import React, { useEffect, useState } from "react";
 
 import { useDispatch, useSelector } from "react-redux";
 import { getUserId } from "../../Utils/auth";
 import { useNavigate } from "react-router-dom";
-import { GetTeacherList } from "../../redux/userSlice";
+import { GetTeacherList, getCreateClassSection } from "../../redux/userSlice";
 import { UserRole } from "../../config/config";
 import { createInitiate } from "../../redux/Form/noteBookSlice";
 import { CreateActivityApi } from "../../redux/Activity/activitySlice";
@@ -22,9 +22,20 @@ function NoteBookInisiate() {
 
   const TeachersList = useSelector((state) => state.user.GetTeachersLists);
   const ObserverList = useSelector((state) => state.user.GetObserverLists);
+  const [newData, setNewData] = useState([]);
+  const [sectionState, setSectionState] = useState(null);
 
   useEffect(() => {
     dispatch(GetTeacherList());
+    dispatch(getCreateClassSection()).then((res) => {
+      if (res?.payload?.success) {
+        setNewData(
+          res?.payload?.classDetails.sort(
+            (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
+          ),
+        );
+      }
+    });
     if (CurrectUserRole === UserRole[2]) {
       setIsTeacher(false);
       setIsCoordinator(true);
@@ -35,10 +46,24 @@ function NoteBookInisiate() {
     }
   }, [dispatch]);
 
+  const SectionSubject = (value) => {
+    if (value) {
+      const filteredData = newData?.filter((data) => data?._id === value);
+      if (filteredData?.length > 0) {
+        setSectionState(filteredData[0]);
+      }
+    } else {
+      setSectionState(null);
+    }
+  };
+
   const handleSubmit = async (values) => {
     const payload = {
       isTeacher: values?.isTeacher || isTeacher,
       teacherIDs: values?.teacherIDs || "",
+      className: values?.className,
+      Section: values?.Section,
+      Subject: values?.Subject,
     };
 
     setLoading(true);
@@ -135,6 +160,59 @@ function NoteBookInisiate() {
                         option.label.toLowerCase().includes(input.toLowerCase())
                       }
                     />
+                  </Form.Item>
+
+                  <Form.Item
+                    className="w-100"
+                    label={<Text fontWeight="500">Class (Optional)</Text>}
+                    name="className"
+                  >
+                    <Select
+                      showSearch
+                      allowClear
+                      placeholder="Select a class"
+                      onChange={(value) => SectionSubject(value)}
+                      options={
+                        newData && newData?.length > 0
+                          ? newData.map((item) => ({
+                              value: item?._id,
+                              label: item?.className,
+                            }))
+                          : []
+                      }
+                      filterOption={(input, option) =>
+                        option.label.toLowerCase().includes(input.toLowerCase())
+                      }
+                    />
+                  </Form.Item>
+
+                  <Form.Item
+                    className="w-100"
+                    label={<Text fontWeight="500">Section (Optional)</Text>}
+                    name="Section"
+                  >
+                    <Select
+                      showSearch
+                      allowClear
+                      placeholder="Select a section"
+                      options={
+                        sectionState?.sections?.map((item) => ({
+                          value: item.name,
+                          label: item.name,
+                        })) || []
+                      }
+                      filterOption={(input, option) =>
+                        option.label.toLowerCase().includes(input.toLowerCase())
+                      }
+                    />
+                  </Form.Item>
+
+                  <Form.Item
+                    className="w-100"
+                    label={<Text fontWeight="500">Subject (Optional)</Text>}
+                    name="Subject"
+                  >
+                    <Input placeholder="Enter Subject" />
                   </Form.Item>
                   <Form.Item
                     hidden

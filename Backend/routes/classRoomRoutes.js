@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middleware/authMiddleware');
 const sessionMiddleware = require('../middleware/sessionMiddleware');
-const { createForm, getSignleForm, TeacherContinueForm, GetcreatedBy, GetTeacherForm, editWalkthrouForm, getClassRoomForms, ReminderFormTwo } = require('../controllers/classroomWalkthrough');
+const { createForm, getSignleForm, TeacherContinueForm, GetcreatedBy, GetTeacherForm, editWalkthrouForm, getClassRoomForms, ReminderFormTwo, deleteFormTwo } = require('../controllers/classroomWalkthrough');
 
 router.post('/create',authMiddleware, createForm);
 router.get('/get/:id',authMiddleware, getSignleForm);
@@ -12,6 +12,7 @@ router.get('/get',authMiddleware, sessionMiddleware, GetcreatedBy);
 router.get('/teachers/get',authMiddleware, sessionMiddleware, GetTeacherForm);
 router.get('/teachers/get/all',authMiddleware, sessionMiddleware, getClassRoomForms);
 router.post('/reminder/:id', authMiddleware, ReminderFormTwo);
+router.delete('/delete/:id', authMiddleware, deleteFormTwo);
 
 
 module.exports = router;
