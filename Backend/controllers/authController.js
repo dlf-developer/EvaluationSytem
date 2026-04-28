@@ -258,4 +258,80 @@ const getFillterForms = async (req, res) => {
         res.status(500).json({ message: "Server error" });
     }
 };
-module.exports = { register, login,requestPasswordReset, resetPassword, changePassword,FromCount,getFillterForms}; 
+const sendLoginOTP = async (req, res) => {
+    try {
+        const email = req.body.email?.toLowerCase().trim();
+        const { password } = req.body;
+
+        if (!email) return res.status(400).json({ message: 'Email is required' });
+        if (!password) return res.status(400).json({ message: 'Password is required' });
+
+        const user = await User.findOne({ email });
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        // Verify password first
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) return res.status(400).json({ message: 'Invalid credentials' });
+
+        // Generate 6-digit OTP
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+        // Hash OTP before storing
+        const hashedOTP = await bcrypt.hash(otp, 10);
+        user.loginOTP = hashedOTP;
+        user.loginOTPExpires = Date.now() + 5 * 60 * 1000; // 5 minutes
+
+        // Skip password hashing via the pre-save hook (password isn't modified)
+        await user.save();
+
+        // LOCAL mode: return OTP in response for testing
+        if (process.env.LOCAL === 'true') {
+            return res.json({ message: 'OTP sent successfully', otp });
+        }
+
+        // Production: send OTP via email
+        const emailText = `Your login OTP is: ${otp}\n\nThis OTP is valid for 5 minutes. Do not share it with anyone.`;
+        await sendEmail(user.email, 'Login OTP - Teacher Portal', emailText);
+
+        res.json({ message: 'OTP sent to your email' });
+    } catch (error) {
+        console.error('Send OTP Error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+const verifyLoginOTP = async (req, res) => {
+    try {
+        const email = req.body.email?.toLowerCase().trim();
+        const { otp } = req.body;
+
+        if (!email || !otp) return res.status(400).json({ message: 'Email and OTP are required' });
+
+        const user = await User.findOne({
+            email,
+            loginOTPExpires: { $gt: Date.now() },
+        });
+
+        if (!user) return res.status(400).json({ message: 'OTP has expired or user not found' });
+
+        const isMatch = await bcrypt.compare(otp, user.loginOTP);
+        if (!isMatch) return res.status(400).json({ message: 'Invalid OTP' });
+
+        // Clear OTP fields
+        user.loginOTP = undefined;
+        user.loginOTPExpires = undefined;
+        await user.save();
+
+        const token = jwt.sign(
+            { id: user._id, access: user.access, name: user.name },
+            process.env.JWT_SECRET
+        );
+
+        res.json({ token });
+    } catch (error) {
+        console.error('Verify OTP Error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+module.exports = { register, login, requestPasswordReset, resetPassword, changePassword, FromCount, getFillterForms, sendLoginOTP, verifyLoginOTP };

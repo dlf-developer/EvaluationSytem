@@ -6,6 +6,16 @@ export const UserLogin = createAsyncThunk("UserLogin", async (payload) => {
   return response.data;
 });
 
+export const SendLoginOTP = createAsyncThunk("SendLoginOTP", async (payload) => {
+  const response = await axiosInstance.post(`/auth/send-login-otp`, payload);
+  return response.data;
+});
+
+export const VerifyLoginOTP = createAsyncThunk("VerifyLoginOTP", async (payload) => {
+  const response = await axiosInstance.post(`/auth/verify-login-otp`, payload);
+  return response.data;
+});
+
 export const FromDataAuth = createAsyncThunk(
   "FromDataAuth",
   async (payload) => {
