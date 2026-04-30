@@ -174,7 +174,7 @@ export const questions = [
   },
 
   {
-    name: "Is all the furniture clean, okay or is it broken?",
+    name: "Is all the furniture clean and in good condition?",
     key: "furnitureCondition",
     category: "environment",
   },
@@ -373,7 +373,7 @@ export const questions2 = [
   },
 
   {
-    name: "Is all the furniture clean, okay or is it broken?",
+    name: "Is all the furniture clean and in good condition?",
     key: "furnitureCondition",
     category: "environment",
   },

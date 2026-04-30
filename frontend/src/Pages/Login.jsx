@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { useDispatch } from "react-redux";
-import { SendLoginOTP, VerifyLoginOTP } from "../redux/userSlice";
+import { SendLoginOTP, VerifyLoginOTP, UserLogin } from "../redux/userSlice";
 import { message } from "antd";
 import {
   Box,
@@ -30,7 +30,8 @@ function Login() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [otp, setOtp] = useState("");
-  const [step, setStep] = useState(1); // 1 = email+password, 2 = OTP
+  const [step, setStep] = useState(1); // 1 = form, 2 = OTP
+  const [loginMethod, setLoginMethod] = useState("password"); // "password" or "otp"
   const [errors, setErrors] = useState({ email: "", password: "" });
   const [loading, setLoading] = useState(false);
   const [timer, setTimer] = useState(0);
@@ -93,8 +94,8 @@ function Login() {
     return `${m}:${s.toString().padStart(2, "0")}`;
   };
 
-  // Step 1: Validate credentials & Send OTP
-  const handleSendOTP = async () => {
+  // Handle Password Login
+  const handlePasswordLogin = async () => {
     let emailError = "";
     let passwordError = "";
     if (!validateEmail(email)) {
@@ -108,7 +109,33 @@ function Login() {
 
     setLoading(true);
     try {
-      const res = await dispatch(SendLoginOTP({ email, password })).unwrap();
+      const res = await dispatch(UserLogin({ email, password })).unwrap();
+      if (res?.token) {
+        localStorage.setItem("token", res.token);
+        message.success("Logged in successfully!");
+        window.location.replace("/");
+      } else {
+        message.error(res?.message || "Login failed");
+      }
+    } catch (err) {
+      message.error(err?.message || "Invalid credentials");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Step 1: Validate credentials & Send OTP
+  const handleSendOTP = async () => {
+    let emailError = "";
+    if (!validateEmail(email)) {
+      emailError = "Please enter a valid email.";
+    }
+    setErrors({ email: emailError, password: "" });
+    if (emailError) return;
+
+    setLoading(true);
+    try {
+      const res = await dispatch(SendLoginOTP({ email })).unwrap();
       if (res?.otp) {
         setDevOtp(res.otp);
       }
@@ -159,7 +186,7 @@ function Login() {
     setDevOtp("");
     setLoading(true);
     try {
-      const res = await dispatch(SendLoginOTP({ email, password })).unwrap();
+      const res = await dispatch(SendLoginOTP({ email })).unwrap();
       if (res?.otp) {
         setDevOtp(res.otp);
       }
@@ -293,14 +320,45 @@ function Login() {
               </Heading>
               <Text color="brand.textMuted" fontSize="md">
                 {step === 1
-                  ? "Enter your credentials to receive a one-time password."
+                  ? "Select a login method and enter your details below."
                   : `We've sent a 6-digit OTP to ${email}`}
               </Text>
             </Box>
 
-            {/* ============ STEP 1: EMAIL ============ */}
+            {/* ============ STEP 1: FORM ============ */}
             {step === 1 && (
               <>
+                <Flex bg="gray.100" p={1} borderRadius="xl" mb={4}>
+                  <Button
+                    flex={1}
+                    variant={loginMethod === "password" ? "solid" : "ghost"}
+                    colorScheme={loginMethod === "password" ? "brand" : "gray"}
+                    bg={loginMethod === "password" ? "white" : "transparent"}
+                    color={loginMethod === "password" ? "brand.primary" : "gray.600"}
+                    boxShadow={loginMethod === "password" ? "sm" : "none"}
+                    onClick={() => setLoginMethod("password")}
+                    borderRadius="lg"
+                    size="sm"
+                    py={5}
+                  >
+                    Password
+                  </Button>
+                  <Button
+                    flex={1}
+                    variant={loginMethod === "otp" ? "solid" : "ghost"}
+                    colorScheme={loginMethod === "otp" ? "brand" : "gray"}
+                    bg={loginMethod === "otp" ? "white" : "transparent"}
+                    color={loginMethod === "otp" ? "brand.primary" : "gray.600"}
+                    boxShadow={loginMethod === "otp" ? "sm" : "none"}
+                    onClick={() => setLoginMethod("otp")}
+                    borderRadius="lg"
+                    size="sm"
+                    py={5}
+                  >
+                    OTP
+                  </Button>
+                </Flex>
+
                 <Stack spacing={5}>
                   <FormControl isInvalid={!!errors.email}>
                     <InputGroup size="lg">
@@ -321,7 +379,9 @@ function Login() {
                         borderRadius="lg"
                         bg="gray.50"
                         onKeyDown={(e) => {
-                          if (e.key === "Enter") handleSendOTP();
+                          if (e.key === "Enter") {
+                            loginMethod === "password" ? handlePasswordLogin() : handleSendOTP();
+                          }
                         }}
                       />
                     </InputGroup>
@@ -330,79 +390,83 @@ function Login() {
                     )}
                   </FormControl>
 
-                  <FormControl isInvalid={!!errors.password}>
-                    <InputGroup size="lg">
-                      <InputLeftElement pointerEvents="none">
-                        <HiOutlineLockClosed
-                          color="var(--chakra-colors-brand-secondary)"
-                          size={18}
+                  {loginMethod === "password" && (
+                    <FormControl isInvalid={!!errors.password}>
+                      <InputGroup size="lg">
+                        <InputLeftElement pointerEvents="none">
+                          <HiOutlineLockClosed
+                            color="var(--chakra-colors-brand-secondary)"
+                            size={18}
+                          />
+                        </InputLeftElement>
+                        <Input
+                          id="login-password"
+                          type={showPassword ? "text" : "password"}
+                          placeholder="Password"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") handlePasswordLogin();
+                          }}
+                          focusBorderColor="brand.primary"
+                          borderColor="gray.300"
+                          _hover={{ borderColor: "brand.secondary" }}
+                          borderRadius="lg"
+                          bg="gray.50"
                         />
-                      </InputLeftElement>
-                      <Input
-                        id="login-password"
-                        type={showPassword ? "text" : "password"}
-                        placeholder="Password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") handleSendOTP();
-                        }}
-                        focusBorderColor="brand.primary"
-                        borderColor="gray.300"
-                        _hover={{ borderColor: "brand.secondary" }}
-                        borderRadius="lg"
-                        bg="gray.50"
-                      />
-                      <InputRightElement h="full" pr={2}>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setShowPassword(!showPassword)}
-                        >
-                          {showPassword ? (
-                            <HiOutlineEye size={18} />
-                          ) : (
-                            <HiOutlineEyeOff size={18} />
-                          )}
-                        </Button>
-                      </InputRightElement>
-                    </InputGroup>
-                    {errors.password && (
-                      <FormErrorMessage>{errors.password}</FormErrorMessage>
-                    )}
-                  </FormControl>
+                        <InputRightElement h="full" pr={2}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setShowPassword(!showPassword)}
+                          >
+                            {showPassword ? (
+                              <HiOutlineEye size={18} />
+                            ) : (
+                              <HiOutlineEyeOff size={18} />
+                            )}
+                          </Button>
+                        </InputRightElement>
+                      </InputGroup>
+                      {errors.password && (
+                        <FormErrorMessage>{errors.password}</FormErrorMessage>
+                      )}
+                    </FormControl>
+                  )}
                 </Stack>
 
-                <Flex justify="flex-end" align="center">
-                  <Box
-                    as={Link}
-                    to={
-                      email
-                        ? `/forget-password?email=${encodeURIComponent(email)}`
-                        : "/forget-password"
-                    }
-                    color="brand.primary"
-                    fontWeight="semibold"
-                    fontSize="sm"
-                    _hover={{
-                      color: "brand.secondary",
-                      textDecoration: "underline",
-                    }}
-                    transition="color 0.2s"
-                  >
-                    Forgot Password?
-                  </Box>
-                </Flex>
+                {loginMethod === "password" && (
+                  <Flex justify="flex-end" align="center">
+                    <Box
+                      as={Link}
+                      to={
+                        email
+                          ? `/forget-password?email=${encodeURIComponent(email)}`
+                          : "/forget-password"
+                      }
+                      color="brand.primary"
+                      fontWeight="semibold"
+                      fontSize="sm"
+                      _hover={{
+                        color: "brand.secondary",
+                        textDecoration: "underline",
+                      }}
+                      transition="color 0.2s"
+                    >
+                      Forgot Password?
+                    </Box>
+                  </Flex>
+                )}
 
                 <Button
-                  id="send-otp-btn"
+                  id={loginMethod === "password" ? "login-btn" : "send-otp-btn"}
                   colorScheme="brand"
                   size="lg"
                   w="full"
-                  leftIcon={<HiOutlineMail size={18} />}
-                  onClick={handleSendOTP}
+                  leftIcon={loginMethod === "password" ? <HiOutlineShieldCheck size={18} /> : <HiOutlineMail size={18} />}
+                  onClick={loginMethod === "password" ? handlePasswordLogin : handleSendOTP}
                   isLoading={loading}
-                  loadingText="Sending OTP..."
+                  loadingText={loginMethod === "password" ? "Logging in..." : "Sending OTP..."}
                   py={7}
                   mt={2}
                   fontSize="md"
@@ -420,7 +484,7 @@ function Login() {
                   }}
                   transition="all 0.3s"
                 >
-                  Send OTP
+                  {loginMethod === "password" ? "Login" : "Send OTP"}
                 </Button>
               </>
             )}

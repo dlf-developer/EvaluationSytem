@@ -54,13 +54,20 @@ const requestPasswordReset = async (req, res) => {
         return res.status(404).json({ message: 'User not found' });
     }
 
-    const resetToken = crypto.randomBytes(32).toString('hex');
-    user.resetPasswordToken = resetToken;
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const hashedOTP = await bcrypt.hash(otp, 10);
+    
+    user.resetPasswordToken = hashedOTP;
     user.resetPasswordExpires = Date.now() + 600000; // 10 minutes
     await user.save();
 
-    const resetUrl = `${process.env.APP_URL}/reset-password/${resetToken}`;
-    const message = `Please use the following link to reset your password: ${resetUrl}`;
+    // LOCAL mode check
+    if (process.env.LOCAL === 'true') {
+        return res.json({ message: 'OTP sent successfully', otp });
+    }
+
+    const message = `Your password reset OTP is: ${otp}\n\nThis OTP is valid for 10 minutes.`;
     
     try {
      const data =   await sendEmail(user.email, 'Password Reset Request', message);
@@ -73,16 +80,26 @@ const requestPasswordReset = async (req, res) => {
     }
 };
 
-// Reset Password
+// Reset Password with OTP
 const resetPassword = async (req, res) => {
-    const { token, newPassword } = req.body;
+    const { email, otp, newPassword } = req.body;
+    
+    if (!email || !otp || !newPassword) {
+        return res.status(400).json({ message: 'Email, OTP, and new password are required' });
+    }
+
     const user = await User.findOne({
-        resetPasswordToken: token,
+        email,
         resetPasswordExpires: { $gt: Date.now() },
     });
 
     if (!user) {
         return res.status(400).json({ message: 'Invalid or expired token' });
+    }
+
+    const isMatch = await bcrypt.compare(otp, user.resetPasswordToken);
+    if (!isMatch) {
+        return res.status(400).json({ message: 'Invalid OTP' });
     }
 
     user.password = newPassword;
@@ -264,14 +281,16 @@ const sendLoginOTP = async (req, res) => {
         const { password } = req.body;
 
         if (!email) return res.status(400).json({ message: 'Email is required' });
-        if (!password) return res.status(400).json({ message: 'Password is required' });
+        // Password is now optional
 
         const user = await User.findOne({ email });
         if (!user) return res.status(404).json({ message: 'User not found' });
 
-        // Verify password first
-        const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) return res.status(400).json({ message: 'Invalid credentials' });
+        // If password is provided, verify it
+        if (password) {
+            const isMatch = await bcrypt.compare(password, user.password);
+            if (!isMatch) return res.status(400).json({ message: 'Invalid credentials' });
+        }
 
         // Generate 6-digit OTP
         const otp = Math.floor(100000 + Math.random() * 900000).toString();

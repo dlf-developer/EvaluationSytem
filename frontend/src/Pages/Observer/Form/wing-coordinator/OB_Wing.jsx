@@ -102,8 +102,8 @@ const ScorePill = ({ label, value }) => (
 const StepIndicator = ({ current }) => (
   <Flex align="center" gap={3} mb={8}>
     {[
-      { n: 1, label: 'Form Selection' },
-      { n: 2, label: 'Monthly Report' },
+      { n: 1, label: 'Monthly Report' },
+      { n: 2, label: 'Form Selection' },
       { n: 3, label: 'Review & Publish' },
     ].map(({ n, label }, i) => {
       const done   = current > n;
@@ -199,8 +199,13 @@ function OB_Wing() {
   // ── Auto-save to localStorage on blur (focus-out) ──────────────────────────
   const handleInputBlur = () => {
     try {
-      const { monthlyReport } = form.getFieldsValue();
-      if (monthlyReport) {
+      const values = form.getFieldsValue();
+      const rawReport = values.monthlyReport || [];
+      const monthlyReport = rawReport.map((item, i) => ({
+        ...item,
+        question: inputsWing[i]
+      }));
+      if (monthlyReport && monthlyReport.length > 0) {
         localStorage.setItem(DRAFT_KEY, JSON.stringify({ monthlyReport }));
       }
     } catch (_) {}
@@ -219,9 +224,15 @@ function OB_Wing() {
     setSaving(true);
     try {
       const values   = form.getFieldsValue();
+      const rawReport = values.monthlyReport || [];
+      const monthlyReport = rawReport.map((item, i) => ({
+        ...item,
+        question: inputsWing[i]
+      }));
+
       const { className, range } = formData || {};
       const { form1, form2, form3, form4 } = selectedItems;
-      const checkdata = { ...values, className, range, form1, form2, form3, form4 };
+      const checkdata = { ...values, monthlyReport, className, range, form1, form2, form3, form4 };
       const res = await dispatch(updateWingForm({ id, checkdata })).unwrap();
       if (res?.success) message.success('Saved successfully');
       else message.error('Save failed. Please try again.');
@@ -233,10 +244,16 @@ function OB_Wing() {
   const handlePublish = async () => {
     setPublishing(true);
     try {
+      const values = form.getFieldsValue();
+      const rawReport = values.monthlyReport || [];
+      const monthlyReport = rawReport.map((item, i) => ({
+        ...item,
+        question: inputsWing[i]
+      }));
+
       const { className, range } = formData || {};
       const { form1, form2, form3, form4 } = selectedItems;
-      const { monthlyReport } = form.getFieldsValue();
-      const checkdata = { className, range, form1, form2, form3, form4, isDraft: false, isComplete: true, monthlyReport };
+      const checkdata = { ...values, className, range, form1, form2, form3, form4, isDraft: false, isComplete: true, monthlyReport };
       const res = await dispatch(WingPublished({ id, checkdata })).unwrap();
       if (res?.success) {
         // Clear the localStorage draft on successful publish
@@ -631,9 +648,15 @@ function OB_Wing() {
         display={loading ? 'none' : 'block'}
       >
         <Form form={form} layout="vertical">
-          {currStep === 1 && renderFormSelection()}
-          {currStep === 2 && renderMonthlyReport()}
-          {currStep === 3 && renderReview()}
+          <Box display={currStep === 1 ? 'block' : 'none'}>
+            {renderMonthlyReport()}
+          </Box>
+          <Box display={currStep === 2 ? 'block' : 'none'}>
+            {renderFormSelection()}
+          </Box>
+          <Box display={currStep === 3 ? 'block' : 'none'}>
+            {renderReview()}
+          </Box>
         </Form>
       </Box>
 
@@ -681,10 +704,14 @@ function OB_Wing() {
                 color="white"
                 _hover={{ bg: 'brand.secondary', transform: 'translateY(-1px)' }}
                 rightIcon={<ArrowRightOutlined />}
-                onClick={() => setCurrStep(2)}
+                onClick={() => {
+                  form.validateFields([['monthlyReport']])
+                    .then(() => setCurrStep(2))
+                    .catch(() => {});
+                }}
                 transition="all 0.15s"
               >
-                Next: Monthly Report
+                Next: Form Selection
               </Button>
             )}
 
@@ -696,11 +723,7 @@ function OB_Wing() {
                 color="white"
                 _hover={{ bg: 'brand.secondary', transform: 'translateY(-1px)' }}
                 rightIcon={<ArrowRightOutlined />}
-                onClick={() => {
-                  form.validateFields([['monthlyReport']])
-                    .then(() => setCurrStep(3))
-                    .catch(() => {});
-                }}
+                onClick={() => setCurrStep(3)}
                 transition="all 0.15s"
               >
                 Next: Review & Publish
