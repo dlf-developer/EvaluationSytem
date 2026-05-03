@@ -8,6 +8,25 @@ const Form2 = require('../models/Form2');
 const Form3 = require('../models/Form3');
 const Weekly4Form = require('../models/Weekly4Form');
 
+const createOTPTemplate = (otp, duration, title) => `
+<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eaeaea; border-radius: 10px; background-color: #f9f9f9;">
+    <div style="text-align: center; margin-bottom: 20px;">
+        <h2 style="color: #333; margin: 0;">Teacher Evaluation System</h2>
+    </div>
+    <div style="background-color: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+        <h3 style="color: #444; margin-top: 0;">${title}</h3>
+        <p style="color: #555; font-size: 16px; line-height: 1.5;">You recently requested to authenticate with your account. Use the following One-Time Password (OTP) to complete the process:</p>
+        <div style="text-align: center; margin: 30px 0;">
+            <span style="display: inline-block; font-size: 32px; font-weight: bold; color: #1890ff; background-color: #e6f7ff; padding: 15px 30px; border-radius: 6px; letter-spacing: 5px;">${otp}</span>
+        </div>
+        <p style="color: #777; font-size: 14px; text-align: center;">This OTP is valid for <strong>${duration}</strong>. Please do not share it with anyone.</p>
+    </div>
+    <div style="text-align: center; margin-top: 20px;">
+        <p style="color: #999; font-size: 12px;">If you did not request this, please ignore this email.</p>
+    </div>
+</div>
+`;
+
 const register = async (req, res) => {
     try {
         const { employeeId, customerId, name, mobile, access, designation, password } = req.body;
@@ -47,7 +66,7 @@ const login = async (req, res) => {
 
 // Request Password Reset
 const requestPasswordReset = async (req, res) => {
-    const { email } = req.body;
+    const email = req.body.email?.toLowerCase().trim();
     const user = await User.findOne({ email });
 
     if (!user) {
@@ -67,10 +86,10 @@ const requestPasswordReset = async (req, res) => {
         return res.json({ message: 'OTP sent successfully', otp });
     }
 
-    const message = `Your password reset OTP is: ${otp}\n\nThis OTP is valid for 10 minutes.`;
+    const message = createOTPTemplate(otp, "10 minutes", "Password Reset Request");
     
     try {
-     const data =   await sendEmail(user.email, 'Password Reset Request', message);
+        await sendEmail(user.email, 'Password Reset Request', message);
         res.json({ message: 'Password reset email sent' });
     } catch (error) {
         user.resetPasswordToken = undefined;
@@ -82,7 +101,8 @@ const requestPasswordReset = async (req, res) => {
 
 // Reset Password with OTP
 const resetPassword = async (req, res) => {
-    const { email, otp, newPassword } = req.body;
+    const email = req.body.email?.toLowerCase().trim();
+    const { otp, newPassword } = req.body;
     
     if (!email || !otp || !newPassword) {
         return res.status(400).json({ message: 'Email, OTP, and new password are required' });
@@ -309,7 +329,7 @@ const sendLoginOTP = async (req, res) => {
         }
 
         // Production: send OTP via email
-        const emailText = `Your login OTP is: ${otp}\n\nThis OTP is valid for 5 minutes. Do not share it with anyone.`;
+        const emailText = createOTPTemplate(otp, "5 minutes", "Login Verification");
         await sendEmail(user.email, 'Login OTP - Teacher Portal', emailText);
 
         res.json({ message: 'OTP sent to your email' });
