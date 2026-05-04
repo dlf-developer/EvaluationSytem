@@ -1,11 +1,15 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { Form, Checkbox, Spin, message, Input } from 'antd';
-import Fillter_Wing from './Fillter_Wing';
-import { getAllTimes } from '../../../../Utils/auth';
-import { GetSingleWingFrom, updateWingForm, WingPublished } from '../../../../redux/userSlice';
-import { useNavigate, useParams } from 'react-router-dom';
-import { inputsWing } from './wing';
+import React, { useEffect, useMemo, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { Form, Checkbox, Spin, message, Input } from "antd";
+import Fillter_Wing from "./Fillter_Wing";
+import { getAllTimes } from "../../../../Utils/auth";
+import {
+  GetSingleWingFrom,
+  updateWingForm,
+  WingPublished,
+} from "../../../../redux/userSlice";
+import { useNavigate, useParams } from "react-router-dom";
+import { inputsWing } from "./wing";
 import {
   Box,
   Flex,
@@ -22,70 +26,125 @@ import {
   GridItem,
   Icon,
   Progress,
-} from '@chakra-ui/react';
-import { CheckCircleOutlined, FileTextOutlined, SaveOutlined, SendOutlined, ArrowRightOutlined, ArrowLeftOutlined } from '@ant-design/icons';
+} from "@chakra-ui/react";
+import {
+  CheckCircleOutlined,
+  FileTextOutlined,
+  SaveOutlined,
+  SendOutlined,
+  ArrowRightOutlined,
+  ArrowLeftOutlined,
+} from "@ant-design/icons";
 
 const FORM_TITLES = [
-  { key: 'form1', label: 'Fortnightly Monitor',           color: 'green'  },
-  { key: 'form2', label: 'Classroom Walkthrough',         color: 'blue'   },
-  { key: 'form3', label: 'Notebook Checking Proforma',    color: 'purple' },
-  { key: 'form4', label: 'Learning Progress Checklist',   color: 'orange' },
+  { key: "form1", label: "Fortnightly Monitor", color: "green" },
+  { key: "form2", label: "Classroom Walkthrough", color: "blue" },
+  { key: "form3", label: "Notebook Checking Proforma", color: "purple" },
+  { key: "form4", label: "Learning Progress Checklist", color: "orange" },
 ];
 
 // ── Score helpers ─────────────────────────────────────────────────────────────
 const getTotalScore = (items, type, formType) => {
-  if (formType === 'form1') {
+  if (formType === "form1") {
     if (!items) return 0;
-    const valid = ['Yes', 'Sometimes', 'No'];
-    return Object.values(items[type] || {}).reduce((s, v) => s + (valid.includes(v) ? 1 : 0), 0);
+    const valid = ["Yes", "Sometimes", "No"];
+    return Object.values(items[type] || {}).reduce(
+      (s, v) => s + (valid.includes(v) ? 1 : 0),
+      0,
+    );
   }
-  if (formType === 'form2') {
-    const sections = ['essentialAggrements', 'planingAndPreparation', 'classRoomEnvironment', 'instruction'];
+  if (formType === "form2") {
+    const sections = [
+      "essentialAggrements",
+      "planingAndPreparation",
+      "classRoomEnvironment",
+      "instruction",
+    ];
     let out = 0;
-    sections.forEach(sec => (items[sec] || []).forEach(item => { if (['1','2','3','4'].includes(item?.answer)) out += 4; }));
+    sections.forEach((sec) =>
+      (items[sec] || []).forEach((item) => {
+        if (["1", "2", "3", "4"].includes(item?.answer)) out += 4;
+      }),
+    );
     return out;
   }
-  if (formType === 'form3') {
-    const keys = ['maintenanceOfNotebooks','qualityOfOppurtunities','qualityOfTeacherFeedback','qualityOfLearner'];
+  if (formType === "form3") {
+    const keys = [
+      "maintenanceOfNotebooks",
+      "qualityOfOppurtunities",
+      "qualityOfTeacherFeedback",
+      "qualityOfLearner",
+    ];
     const data = items[type];
     let out = 0;
-    keys.forEach(k => (data?.[k] || []).forEach(item => { if (['1','2','3'].includes(item?.answer)) out += 3; }));
+    keys.forEach((k) =>
+      (data?.[k] || []).forEach((item) => {
+        if (["1", "2", "3"].includes(item?.answer)) out += 3;
+      }),
+    );
     return out;
   }
   return 0;
 };
 
 const getSelfScore = (items, type, formType) => {
-  if (formType === 'form1') {
+  if (formType === "form1") {
     if (!items) return 0;
     const vals = { Yes: 1, Sometimes: 0.5 };
-    return Object.values(items[type] || {}).reduce((s, v) => s + (vals[v] || 0), 0);
+    return Object.values(items[type] || {}).reduce(
+      (s, v) => s + (vals[v] || 0),
+      0,
+    );
   }
-  if (formType === 'form2') {
-    const sections = ['essentialAggrements', 'planingAndPreparation', 'classRoomEnvironment', 'instruction'];
+  if (formType === "form2") {
+    const sections = [
+      "essentialAggrements",
+      "planingAndPreparation",
+      "classRoomEnvironment",
+      "instruction",
+    ];
     let total = 0;
-    sections.forEach(sec => (items[sec] || []).forEach(item => { if (['1','2','3','4'].includes(item?.answer)) total += parseInt(item.answer, 10); }));
+    sections.forEach((sec) =>
+      (items[sec] || []).forEach((item) => {
+        if (["1", "2", "3", "4"].includes(item?.answer))
+          total += parseInt(item.answer, 10);
+      }),
+    );
     return total;
   }
-  if (formType === 'form3') {
-    const keys = ['maintenanceOfNotebooks','qualityOfOppurtunities','qualityOfTeacherFeedback','qualityOfLearner'];
+  if (formType === "form3") {
+    const keys = [
+      "maintenanceOfNotebooks",
+      "qualityOfOppurtunities",
+      "qualityOfTeacherFeedback",
+      "qualityOfLearner",
+    ];
     const data = items[type];
     let total = 0;
-    keys.forEach(k => (data?.[k] || []).forEach(item => { if (['1','2','3'].includes(item?.answer)) total += parseInt(item.answer, 10); }));
+    keys.forEach((k) =>
+      (data?.[k] || []).forEach((item) => {
+        if (["1", "2", "3"].includes(item?.answer))
+          total += parseInt(item.answer, 10);
+      }),
+    );
     return total;
   }
   return 0;
 };
 
-const pct = (score, total) => total > 0 ? ((score / total) * 100).toFixed(1) : null;
+const pct = (score, total) =>
+  total > 0 ? ((score / total) * 100).toFixed(1) : null;
 
 // ── Score Badge ───────────────────────────────────────────────────────────────
-const ScorePill = ({ label, value }) => (
+const ScorePill = ({ label, value }) =>
   value ? (
     <HStack spacing={1}>
-      <Text fontSize="xs" color="gray.500">{label}:</Text>
+      <Text fontSize="xs" color="gray.500">
+        {label}:
+      </Text>
       <Badge
-        px={2} py={0.5}
+        px={2}
+        py={0.5}
         borderRadius="full"
         bg="brand.primary"
         color="white"
@@ -95,43 +154,53 @@ const ScorePill = ({ label, value }) => (
         {value}%
       </Badge>
     </HStack>
-  ) : null
-);
+  ) : null;
 
 // ── Step Indicator ─────────────────────────────────────────────────────────────
 const StepIndicator = ({ current }) => (
   <Flex align="center" gap={3} mb={8}>
     {[
-      { n: 1, label: 'Monthly Report' },
-      { n: 2, label: 'Form Selection' },
-      { n: 3, label: 'Review & Publish' },
+      { n: 1, label: "Monthly Report" },
+      { n: 2, label: "Form Selection" },
+      { n: 3, label: "Review & Publish" },
     ].map(({ n, label }, i) => {
-      const done   = current > n;
+      const done = current > n;
       const active = current === n;
       return (
         <React.Fragment key={n}>
           <Flex align="center" gap={2}>
             <Flex
-              w={8} h={8}
+              w={8}
+              h={8}
               borderRadius="full"
-              align="center" justify="center"
-              fontWeight="700" fontSize="sm"
-              bg={done ? 'brand.primary' : active ? 'brand.primary' : 'gray.200'}
-              color={done || active ? 'white' : 'gray.500'}
+              align="center"
+              justify="center"
+              fontWeight="700"
+              fontSize="sm"
+              bg={
+                done ? "brand.primary" : active ? "brand.primary" : "gray.200"
+              }
+              color={done || active ? "white" : "gray.500"}
               transition="all 0.2s"
             >
               {done ? <CheckCircleOutlined /> : n}
             </Flex>
             <Text
               fontSize="sm"
-              fontWeight={active ? '600' : '400'}
-              color={active ? 'brand.text' : 'gray.500'}
+              fontWeight={active ? "600" : "400"}
+              color={active ? "brand.text" : "gray.500"}
             >
               {label}
             </Text>
           </Flex>
           {i < 2 && (
-            <Box flex={1} h="2px" bg={current > n ? 'brand.primary' : 'gray.200'} borderRadius="full" transition="background 0.3s" />
+            <Box
+              flex={1}
+              h="2px"
+              bg={current > n ? "brand.primary" : "gray.200"}
+              borderRadius="full"
+              transition="background 0.3s"
+            />
           )}
         </React.Fragment>
       );
@@ -141,19 +210,24 @@ const StepIndicator = ({ current }) => (
 
 // ─────────────────────────────────────────────────────────────────────────────
 function OB_Wing() {
-  const { getFilteredDataList, loading } = useSelector(s => s?.user);
-  const [formData, setFormData]   = useState();
-  const [currForm, setCurrForm]   = useState();
-  const [currStep, setCurrStep]   = useState(1);
-  const [saving, setSaving]       = useState(false);
+  const { getFilteredDataList, loading } = useSelector((s) => s?.user);
+  const [formData, setFormData] = useState();
+  const [currForm, setCurrForm] = useState();
+  const [currStep, setCurrStep] = useState(1);
+  const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [form] = Form.useForm();
-  const dispatch  = useDispatch();
-  const navigate  = useNavigate();
-  const id        = useParams()?.id;
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const id = useParams()?.id;
   const DRAFT_KEY = `wing-coordinator-draft-${id}`;
 
-  const [selectedItems, setSelectedItems] = useState({ form1:[], form2:[], form3:[], form4:[] });
+  const [selectedItems, setSelectedItems] = useState({
+    form1: [],
+    form2: [],
+    form3: [],
+    form4: [],
+  });
 
   // ── Load existing form ──
   useEffect(() => {
@@ -161,12 +235,12 @@ function OB_Wing() {
       const res = await dispatch(GetSingleWingFrom(id));
       if (res?.payload?.success) {
         if (res.payload.data?.isComplete && !res.payload.data?.isDraft) {
-          navigate('/wing-coordinator');
+          navigate("/wing-coordinator");
         } else {
           setCurrForm(res.payload.data);
         }
       } else {
-        message.error('Could not load form. Please try again.');
+        message.error("Could not load form. Please try again.");
       }
     };
     load();
@@ -189,7 +263,11 @@ function OB_Wing() {
           const draft = JSON.parse(raw);
           if (draft?.monthlyReport?.length) {
             form.setFieldsValue({ monthlyReport: draft.monthlyReport });
-            message.info({ content: '📋 Draft restored from your last session.', key: 'draft-restore', duration: 3 });
+            message.info({
+              content: "📋 Draft restored from your last session.",
+              key: "draft-restore",
+              duration: 3,
+            });
           }
         }
       } catch (_) {}
@@ -203,7 +281,7 @@ function OB_Wing() {
       const rawReport = values.monthlyReport || [];
       const monthlyReport = rawReport.map((item, i) => ({
         ...item,
-        question: inputsWing[i]
+        question: inputsWing[i],
       }));
       if (monthlyReport && monthlyReport.length > 0) {
         localStorage.setItem(DRAFT_KEY, JSON.stringify({ monthlyReport }));
@@ -212,30 +290,40 @@ function OB_Wing() {
   };
 
   const handleSelect = (checked, item, type) => {
-    setSelectedItems(prev => ({
+    setSelectedItems((prev) => ({
       ...prev,
       [type]: checked
         ? [...prev[type], item]
-        : prev[type].filter(i => i._id !== item._id),
+        : prev[type].filter((i) => i._id !== item._id),
     }));
   };
 
   const handleSave = async () => {
     setSaving(true);
     try {
-      const values   = form.getFieldsValue();
+      const values = form.getFieldsValue();
       const rawReport = values.monthlyReport || [];
       const monthlyReport = rawReport.map((item, i) => ({
         ...item,
-        question: inputsWing[i]
+        question: inputsWing[i],
       }));
 
       const { className, range } = formData || {};
       const { form1, form2, form3, form4 } = selectedItems;
-      const checkdata = { ...values, monthlyReport, className, range, form1, form2, form3, form4 };
+      const checkdata = {
+        ...values,
+        monthlyReport,
+        className,
+        range,
+        form1,
+        form2,
+        form3,
+        form4,
+        formName: values.formName,
+      };
       const res = await dispatch(updateWingForm({ id, checkdata })).unwrap();
-      if (res?.success) message.success('Saved successfully');
-      else message.error('Save failed. Please try again.');
+      if (res?.success) message.success("Saved successfully");
+      else message.error("Save failed. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -248,18 +336,32 @@ function OB_Wing() {
       const rawReport = values.monthlyReport || [];
       const monthlyReport = rawReport.map((item, i) => ({
         ...item,
-        question: inputsWing[i]
+        question: inputsWing[i],
       }));
 
       const { className, range } = formData || {};
       const { form1, form2, form3, form4 } = selectedItems;
-      const checkdata = { ...values, className, range, form1, form2, form3, form4, isDraft: false, isComplete: true, monthlyReport };
+      const checkdata = {
+        ...values,
+        className,
+        range,
+        form1,
+        form2,
+        form3,
+        form4,
+        isDraft: false,
+        isComplete: true,
+        monthlyReport,
+        formName: values.formName,
+      };
       const res = await dispatch(WingPublished({ id, checkdata })).unwrap();
       if (res?.success) {
         // Clear the localStorage draft on successful publish
-        try { localStorage.removeItem(DRAFT_KEY); } catch (_) {}
-        message.success('Form published successfully!');
-        navigate('/wing-coordinator');
+        try {
+          localStorage.removeItem(DRAFT_KEY);
+        } catch (_) {}
+        message.success("Form published successfully!");
+        navigate("/wing-coordinator");
       }
     } finally {
       setPublishing(false);
@@ -270,11 +372,42 @@ function OB_Wing() {
   const renderMonthlyReport = () => (
     <Box>
       <Box mb={6}>
-        <Heading size="md" color="brand.text" mb={1}>Monthly Report</Heading>
+        <Heading size="md" color="brand.text" mb={1}>
+          Monthly Report
+        </Heading>
         <Text fontSize="sm" color="gray.500">
           Fill in each activity for this wing's monthly summary.
         </Text>
       </Box>
+
+      {/* Form Name field */}
+      <Box
+        bg="gray.50"
+        borderRadius="xl"
+        borderWidth="1px"
+        borderColor="gray.100"
+        p={5}
+        mb={6}
+        boxShadow="sm"
+      >
+        <Form.Item
+          name="formName"
+          label={
+            <Text fontWeight="600" fontSize="sm" color="brand.text">
+              Form Name
+            </Text>
+          }
+          rules={[{ required: true, message: "Please enter a form name!" }]}
+          style={{ marginBottom: 0 }}
+        >
+          <Input
+            size="large"
+            placeholder="Enter a name for this report…"
+            style={{ borderRadius: 8, borderColor: "#E2E8F0", fontSize: 14 }}
+          />
+        </Form.Item>
+      </Box>
+
       <VStack spacing={4} align="stretch">
         {inputsWing.map((question, index) => (
           <Box
@@ -285,16 +418,18 @@ function OB_Wing() {
             borderColor="gray.100"
             p={5}
             boxShadow="sm"
-            _hover={{ boxShadow: 'md', borderColor: 'brand.mid' }}
+            _hover={{ boxShadow: "md", borderColor: "brand.mid" }}
             transition="all 0.15s"
           >
             <Flex align="flex-start" gap={4}>
               <Flex
-                minW={8} h={8}
+                minW={8}
+                h={8}
                 borderRadius="lg"
                 bg="brand.background"
                 color="brand.primary"
-                align="center" justify="center"
+                align="center"
+                justify="center"
                 fontSize="13px"
                 fontWeight="700"
                 flexShrink={0}
@@ -302,20 +437,28 @@ function OB_Wing() {
                 {index + 1}
               </Flex>
               <Box flex={1}>
-                <Text fontSize="sm" fontWeight="500" color="brand.text" mb={3} textTransform="capitalize">
+                <Text
+                  fontSize="sm"
+                  fontWeight="500"
+                  color="brand.text"
+                  mb={3}
+                  textTransform="capitalize"
+                >
                   {question}
                 </Text>
                 {/* Hidden question field */}
                 <Form.Item
-                  name={['monthlyReport', index, 'question']}
+                  name={["monthlyReport", index, "question"]}
                   initialValue={question}
                   hidden
                 >
                   <Input />
                 </Form.Item>
                 <Form.Item
-                  name={['monthlyReport', index, 'answer']}
-                  rules={[{ required: true, message: 'Please enter a response' }]}
+                  name={["monthlyReport", index, "answer"]}
+                  rules={[
+                    { required: true, message: "Please enter a response" },
+                  ]}
                   style={{ marginBottom: 12 }}
                 >
                   <Input
@@ -323,15 +466,15 @@ function OB_Wing() {
                     onBlur={handleInputBlur}
                     style={{
                       borderRadius: 8,
-                      borderColor: '#E2E8F0',
+                      borderColor: "#E2E8F0",
                       fontSize: 14,
-                      padding: '8px 12px',
+                      padding: "8px 12px",
                     }}
                   />
                 </Form.Item>
                 <Form.Item
-                  name={['monthlyReport', index, 'remarks']}
-                  rules={[{ required: true, message: 'Please enter remarks' }]}
+                  name={["monthlyReport", index, "remarks"]}
+                  rules={[{ required: true, message: "Please enter remarks" }]}
                   style={{ marginBottom: 0 }}
                 >
                   <Input.TextArea
@@ -340,9 +483,9 @@ function OB_Wing() {
                     onBlur={handleInputBlur}
                     style={{
                       borderRadius: 8,
-                      borderColor: '#E2E8F0',
+                      borderColor: "#E2E8F0",
                       fontSize: 14,
-                      padding: '8px 12px',
+                      padding: "8px 12px",
                     }}
                   />
                 </Form.Item>
@@ -356,63 +499,105 @@ function OB_Wing() {
 
   // ── Form Selection Section ──────────────────────────────────────────────────
   const renderFormCard = (item, type) => {
-    const isChecked = selectedItems[type]?.some(i => i._id === item._id);
+    const isChecked = selectedItems[type]?.some((i) => i._id === item._id);
     const teacherName =
-      type === 'form1' ? item?.teacherID?.name || item?.userId?.name :
-      type === 'form2' ? item?.grenralDetails?.NameoftheVisitingTeacher?.name || item?.createdBy?.name :
-      type === 'form3' ? item?.teacherID?.name || item?.createdBy?.name :
-                         item?.teacherId?.name || item?.userId?.name;
+      type === "form1"
+        ? item?.teacherID?.name || item?.userId?.name
+        : type === "form2"
+          ? item?.grenralDetails?.NameoftheVisitingTeacher?.name ||
+            item?.createdBy?.name
+          : type === "form3"
+            ? item?.teacherID?.name || item?.createdBy?.name
+            : item?.teacherId?.name || item?.userId?.name;
 
     const teacherPct =
-      type === 'form1' ? pct(getSelfScore(item, 'teacherForm', 'form1'), getTotalScore(item, 'teacherForm', 'form1')) :
-      type === 'form2' ? pct(getSelfScore(item, 'teacherForm', 'form2'), getTotalScore(item, 'teacherForm', 'form2')) :
-      type === 'form3' ? pct(getSelfScore(item, 'TeacherForm', 'form3'), getTotalScore(item, 'TeacherForm', 'form3')) :
-      null;
+      type === "form1"
+        ? pct(
+            getSelfScore(item, "teacherForm", "form1"),
+            getTotalScore(item, "teacherForm", "form1"),
+          )
+        : type === "form2"
+          ? pct(
+              getSelfScore(item, "teacherForm", "form2"),
+              getTotalScore(item, "teacherForm", "form2"),
+            )
+          : type === "form3"
+            ? pct(
+                getSelfScore(item, "TeacherForm", "form3"),
+                getTotalScore(item, "TeacherForm", "form3"),
+              )
+            : null;
 
     const observerPct =
-      type === 'form1' ? pct(getSelfScore(item, 'observerForm', 'form1'), getTotalScore(item, 'observerForm', 'form1')) :
-      type === 'form3' ? pct(getSelfScore(item, 'ObserverForm', 'form3'), getTotalScore(item, 'ObserverForm', 'form3')) :
-      null;
+      type === "form1"
+        ? pct(
+            getSelfScore(item, "observerForm", "form1"),
+            getTotalScore(item, "observerForm", "form1"),
+          )
+        : type === "form3"
+          ? pct(
+              getSelfScore(item, "ObserverForm", "form3"),
+              getTotalScore(item, "ObserverForm", "form3"),
+            )
+          : null;
 
     return (
       <Box
         key={item?._id}
-        bg={isChecked ? 'brand.background' : 'white'}
+        bg={isChecked ? "brand.background" : "white"}
         borderRadius="xl"
         borderWidth="2px"
-        borderColor={isChecked ? 'brand.primary' : 'gray.100'}
+        borderColor={isChecked ? "brand.primary" : "gray.100"}
         p={4}
         cursor="pointer"
         onClick={() => handleSelect(!isChecked, item, type)}
         transition="all 0.15s"
-        _hover={{ borderColor: 'brand.mid', boxShadow: 'sm' }}
-        boxShadow={isChecked ? 'sm' : 'none'}
+        _hover={{ borderColor: "brand.mid", boxShadow: "sm" }}
+        boxShadow={isChecked ? "sm" : "none"}
       >
         <Flex align="flex-start" gap={3}>
           <Box pt="2px">
             <Checkbox
               checked={isChecked}
-              onChange={e => { e.stopPropagation(); handleSelect(e.target.checked, item, type); }}
-              style={{ accentColor: '#4A6741' }}
+              onChange={(e) => {
+                e.stopPropagation();
+                handleSelect(e.target.checked, item, type);
+              }}
+              style={{ accentColor: "#4A6741" }}
             />
           </Box>
           <Box flex={1}>
-            <Flex justify="space-between" align="flex-start" wrap="wrap" gap={2}>
+            <Flex
+              justify="space-between"
+              align="flex-start"
+              wrap="wrap"
+              gap={2}
+            >
               <Box>
-                <Text fontSize="sm" fontWeight="600" color="brand.text">{teacherName || '—'}</Text>
+                <Text fontSize="sm" fontWeight="600" color="brand.text">
+                  {teacherName || "—"}
+                </Text>
                 <HStack spacing={3} mt={1}>
                   <Text fontSize="xs" color="gray.500">
-                    {item?.className || item?.grenralDetails?.className || '—'}
+                    {item?.className || item?.grenralDetails?.className || "—"}
                   </Text>
-                  <Text fontSize="xs" color="gray.400">·</Text>
-                  <Text fontSize="xs" color="gray.500">{getAllTimes(item?.createdAt)?.formattedDate2}</Text>
+                  <Text fontSize="xs" color="gray.400">
+                    ·
+                  </Text>
+                  <Text fontSize="xs" color="gray.500">
+                    {getAllTimes(item?.createdAt)?.formattedDate2}
+                  </Text>
                 </HStack>
               </Box>
               <HStack spacing={2} flexWrap="wrap">
                 {teacherPct && <ScorePill label="Teacher" value={teacherPct} />}
-                {observerPct && <ScorePill label="Observer" value={observerPct} />}
-                {type === 'form2' && !teacherPct && (
-                  <Text fontSize="xs" color="gray.400" fontStyle="italic">No scores yet</Text>
+                {observerPct && (
+                  <ScorePill label="Observer" value={observerPct} />
+                )}
+                {type === "form2" && !teacherPct && (
+                  <Text fontSize="xs" color="gray.400" fontStyle="italic">
+                    No scores yet
+                  </Text>
                 )}
               </HStack>
             </Flex>
@@ -425,9 +610,12 @@ function OB_Wing() {
   const renderFormSelection = () => (
     <Box>
       <Box mb={6}>
-        <Heading size="md" color="brand.text" mb={1}>Form Selection</Heading>
+        <Heading size="md" color="brand.text" mb={1}>
+          Form Selection
+        </Heading>
         <Text fontSize="sm" color="gray.500">
-          Search for forms by date range and class, then select the ones to include.
+          Search for forms by date range and class, then select the ones to
+          include.
         </Text>
       </Box>
 
@@ -441,7 +629,9 @@ function OB_Wing() {
         mb={6}
         boxShadow="sm"
       >
-        <Text fontSize="sm" fontWeight="600" color="brand.text" mb={4}>Search Filters</Text>
+        <Text fontSize="sm" fontWeight="600" color="brand.text" mb={4}>
+          Search Filters
+        </Text>
         <Fillter_Wing saveData={setFormData} data={currForm} />
       </Box>
 
@@ -449,15 +639,16 @@ function OB_Wing() {
       {getFilteredDataList ? (
         <VStack spacing={6} align="stretch">
           {(formData?.formTypes?.length > 0
-            ? FORM_TITLES.filter(f => formData.formTypes.includes(f.key))
+            ? FORM_TITLES.filter((f) => formData.formTypes.includes(f.key))
             : FORM_TITLES
           ).map(({ key, label, color }) => {
             const items = getFilteredDataList?.[key] || [];
-            const completed = items.filter(item =>
-              (item?.isCoordinatorComplete && item?.isTeacherComplete) ||
-              (item?.isObserverCompleted && item?.isTeacherCompletes) ||
-              (item?.isTeacherComplete && item?.isObserverComplete) ||
-              item?.isCompleted
+            const completed = items.filter(
+              (item) =>
+                (item?.isCoordinatorComplete && item?.isTeacherComplete) ||
+                (item?.isObserverCompleted && item?.isTeacherCompletes) ||
+                (item?.isTeacherComplete && item?.isObserverComplete) ||
+                item?.isCompleted,
             );
             const selected = selectedItems[key]?.length || 0;
 
@@ -466,13 +657,21 @@ function OB_Wing() {
                 <Flex align="center" justify="space-between" mb={3}>
                   <HStack spacing={2}>
                     <Box w={2} h={5} borderRadius="full" bg={`${color}.400`} />
-                    <Heading size="sm" color="brand.text">{label}</Heading>
+                    <Heading size="sm" color="brand.text">
+                      {label}
+                    </Heading>
                     <Badge colorScheme={color} variant="subtle" fontSize="xs">
                       {completed.length} available
                     </Badge>
                   </HStack>
                   {selected > 0 && (
-                    <Badge bg="brand.primary" color="white" borderRadius="full" px={2} fontSize="xs">
+                    <Badge
+                      bg="brand.primary"
+                      color="white"
+                      borderRadius="full"
+                      px={2}
+                      fontSize="xs"
+                    >
                       {selected} selected
                     </Badge>
                   )}
@@ -480,7 +679,7 @@ function OB_Wing() {
 
                 {completed.length > 0 ? (
                   <VStack spacing={2} align="stretch">
-                    {completed.map(item => renderFormCard(item, key))}
+                    {completed.map((item) => renderFormCard(item, key))}
                   </VStack>
                 ) : (
                   <Box
@@ -511,7 +710,9 @@ function OB_Wing() {
           borderColor="gray.100"
           borderStyle="dashed"
         >
-          <FileTextOutlined style={{ fontSize: 32, color: '#CBD5E0', marginBottom: 12 }} />
+          <FileTextOutlined
+            style={{ fontSize: 32, color: "#CBD5E0", marginBottom: 12 }}
+          />
           <Text color="gray.400" fontSize="sm">
             Apply a date range and class filter above to load available forms.
           </Text>
@@ -524,7 +725,9 @@ function OB_Wing() {
   const renderReview = () => (
     <Box>
       <Box mb={6}>
-        <Heading size="md" color="brand.text" mb={1}>Review & Publish</Heading>
+        <Heading size="md" color="brand.text" mb={1}>
+          Review & Publish
+        </Heading>
         <Text fontSize="sm" color="gray.500">
           Review your selections and monthly report before publishing.
         </Text>
@@ -539,17 +742,19 @@ function OB_Wing() {
               bg="white"
               borderRadius="xl"
               borderWidth="1px"
-              borderColor={count > 0 ? 'brand.primary' : 'gray.100'}
+              borderColor={count > 0 ? "brand.primary" : "gray.100"}
               p={4}
               boxShadow="sm"
             >
               <Flex justify="space-between" align="center">
                 <HStack spacing={2}>
                   <Box w={2} h={5} borderRadius="full" bg={`${color}.400`} />
-                  <Text fontWeight="600" fontSize="sm" color="brand.text">{label}</Text>
+                  <Text fontWeight="600" fontSize="sm" color="brand.text">
+                    {label}
+                  </Text>
                 </HStack>
                 <Badge
-                  colorScheme={count > 0 ? 'green' : 'gray'}
+                  colorScheme={count > 0 ? "green" : "gray"}
                   borderRadius="full"
                   px={3}
                   py={1}
@@ -570,21 +775,45 @@ function OB_Wing() {
           p={5}
           boxShadow="sm"
         >
-          <Text fontWeight="600" fontSize="sm" color="brand.text" mb={3}>Monthly Report</Text>
+          <Text fontWeight="600" fontSize="sm" color="brand.text" mb={3}>
+            Monthly Report
+          </Text>
           <VStack spacing={2} align="stretch">
-            {(form.getFieldValue('monthlyReport') || []).map((item, i) => (
+            {(form.getFieldValue("monthlyReport") || []).map((item, i) =>
               item?.question ? (
                 <Box key={i}>
-                  <Text fontSize="xs" color="gray.500" fontWeight="500">{item.question}</Text>
-                  <Text fontSize="sm" color="brand.text" mb={item.remarks ? 1 : 0}>{item.answer || <Text as="span" color="gray.400" fontStyle="italic">No answer</Text>}</Text>
+                  <Text fontSize="xs" color="gray.500" fontWeight="500">
+                    {item.question}
+                  </Text>
+                  <Text
+                    fontSize="sm"
+                    color="brand.text"
+                    mb={item.remarks ? 1 : 0}
+                  >
+                    {item.answer || (
+                      <Text as="span" color="gray.400" fontStyle="italic">
+                        No answer
+                      </Text>
+                    )}
+                  </Text>
                   {item.remarks && (
-                    <Text fontSize="xs" color="gray.600" bg="gray.50" p={2} borderRadius="md" mt={1}>
-                      <Text as="span" fontWeight="600" mr={1}>Remarks:</Text>{item.remarks}
+                    <Text
+                      fontSize="xs"
+                      color="gray.600"
+                      bg="gray.50"
+                      p={2}
+                      borderRadius="md"
+                      mt={1}
+                    >
+                      <Text as="span" fontWeight="600" mr={1}>
+                        Remarks:
+                      </Text>
+                      {item.remarks}
                     </Text>
                   )}
                 </Box>
-              ) : null
-            ))}
+              ) : null,
+            )}
           </VStack>
         </Box>
       </VStack>
@@ -594,9 +823,17 @@ function OB_Wing() {
   return (
     <Box p={{ base: 4, md: 8 }} minH="calc(100vh - 72px)">
       {/* ── Page Header ── */}
-      <Flex justify="space-between" align="center" mb={6} flexWrap="wrap" gap={4}>
+      <Flex
+        justify="space-between"
+        align="center"
+        mb={6}
+        flexWrap="wrap"
+        gap={4}
+      >
         <Box>
-          <Heading size="lg" color="brand.text" mb={1}>Wing Coordinator Analysis</Heading>
+          <Heading size="lg" color="brand.text" mb={1}>
+            Monthly Report - Wing Coordinator
+          </Heading>
           <Text color="gray.500" fontSize="sm">
             Complete the monthly report, then link the relevant forms.
           </Text>
@@ -608,7 +845,7 @@ function OB_Wing() {
             leftIcon={<SaveOutlined />}
             borderColor="brand.primary"
             color="brand.primary"
-            _hover={{ bg: 'brand.background' }}
+            _hover={{ bg: "brand.background" }}
             isLoading={saving}
             onClick={handleSave}
           >
@@ -645,16 +882,16 @@ function OB_Wing() {
         borderColor="gray.100"
         boxShadow="sm"
         p={{ base: 5, md: 8 }}
-        display={loading ? 'none' : 'block'}
+        display={loading ? "none" : "block"}
       >
         <Form form={form} layout="vertical">
-          <Box display={currStep === 1 ? 'block' : 'none'}>
+          <Box display={currStep === 1 ? "block" : "none"}>
             {renderMonthlyReport()}
           </Box>
-          <Box display={currStep === 2 ? 'block' : 'none'}>
+          <Box display={currStep === 2 ? "block" : "none"}>
             {renderFormSelection()}
           </Box>
-          <Box display={currStep === 3 ? 'block' : 'none'}>
+          <Box display={currStep === 3 ? "block" : "none"}>
             {renderReview()}
           </Box>
         </Form>
@@ -668,86 +905,87 @@ function OB_Wing() {
         pt={4}
         borderTopWidth="1px"
         borderColor="gray.100"
-        display={loading ? 'none' : 'flex'}
+        display={loading ? "none" : "flex"}
       >
-          <Button
-            variant="ghost"
-            size="md"
-            color="gray.500"
-            _hover={{ color: 'brand.text', bg: 'gray.50' }}
-            onClick={() => navigate('/wing-coordinator')}
-          >
-            ← Back to List
-          </Button>
+        <Button
+          variant="ghost"
+          size="md"
+          color="gray.500"
+          _hover={{ color: "brand.text", bg: "gray.50" }}
+          onClick={() => navigate("/wing-coordinator")}
+        >
+          ← Back to List
+        </Button>
 
-          <HStack spacing={3}>
-            {/* Previous button */}
-            {currStep > 1 && (
-              <Button
-                variant="outline"
-                size="md"
-                borderColor="gray.200"
-                color="gray.600"
-                _hover={{ bg: 'gray.50' }}
-                leftIcon={<ArrowLeftOutlined />}
-                onClick={() => setCurrStep(s => s - 1)}
-              >
-                Previous
-              </Button>
-            )}
+        <HStack spacing={3}>
+          {/* Previous button */}
+          {currStep > 1 && (
+            <Button
+              variant="outline"
+              size="md"
+              borderColor="gray.200"
+              color="gray.600"
+              _hover={{ bg: "gray.50" }}
+              leftIcon={<ArrowLeftOutlined />}
+              onClick={() => setCurrStep((s) => s - 1)}
+            >
+              Previous
+            </Button>
+          )}
 
-            {/* Step 1 → 2 */}
-            {currStep === 1 && (
-              <Button
-                size="md"
-                bg="brand.primary"
-                color="white"
-                _hover={{ bg: 'brand.secondary', transform: 'translateY(-1px)' }}
-                rightIcon={<ArrowRightOutlined />}
-                onClick={() => {
-                  form.validateFields([['monthlyReport']])
-                    .then(() => setCurrStep(2))
-                    .catch(() => {});
-                }}
-                transition="all 0.15s"
-              >
-                Next: Form Selection
-              </Button>
-            )}
+          {/* Step 1 → 2 */}
+          {currStep === 1 && (
+            <Button
+              size="md"
+              bg="brand.primary"
+              color="white"
+              _hover={{ bg: "brand.secondary", transform: "translateY(-1px)" }}
+              rightIcon={<ArrowRightOutlined />}
+              onClick={() => {
+                form
+                  .validateFields(["formName", ["monthlyReport"]])
+                  .then(() => setCurrStep(2))
+                  .catch(() => {});
+              }}
+              transition="all 0.15s"
+            >
+              Next: Form Selection
+            </Button>
+          )}
 
-            {/* Step 2 → 3 */}
-            {currStep === 2 && (
-              <Button
-                size="md"
-                bg="brand.primary"
-                color="white"
-                _hover={{ bg: 'brand.secondary', transform: 'translateY(-1px)' }}
-                rightIcon={<ArrowRightOutlined />}
-                onClick={() => setCurrStep(3)}
-                transition="all 0.15s"
-              >
-                Next: Review & Publish
-              </Button>
-            )}
+          {/* Step 2 → 3 */}
+          {currStep === 2 && (
+            <Button
+              size="md"
+              bg="brand.primary"
+              color="white"
+              _hover={{ bg: "brand.secondary", transform: "translateY(-1px)" }}
+              rightIcon={<ArrowRightOutlined />}
+              onClick={() => setCurrStep(3)}
+              transition="all 0.15s"
+            >
+              Next: Review & Publish
+            </Button>
+          )}
 
-            {/* Step 3 — Publish */}
-            {currStep === 3 && (
-              <Button
-                size="md"
-                bg="brand.primary"
-                color="white"
-                _hover={{ bg: 'brand.secondary', transform: 'translateY(-1px)' }}
-                rightIcon={<SendOutlined />}
-                isLoading={publishing}
-                loadingText="Publishing…"
-                onClick={handlePublish}
-                transition="all 0.15s"
-              >
-                Publish Form
-              </Button>
-            )}
-          </HStack>
-        </Flex>
+          {/* Step 3 — Publish */}
+          {currStep === 3 && (
+            <Button
+              size="md"
+              bg="brand.primary"
+              color="white"
+              _hover={{ bg: "brand.secondary", transform: "translateY(-1px)" }}
+              rightIcon={<SendOutlined />}
+              isLoading={publishing}
+              loadingText="Publishing…"
+              onClick={handlePublish}
+              transition="all 0.15s"
+            >
+              Publish Form
+            </Button>
+          )}
+        </HStack>
+      </Flex>
     </Box>
   );
 }

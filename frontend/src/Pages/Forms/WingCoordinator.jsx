@@ -19,12 +19,14 @@ import {
 } from "@chakra-ui/react";
 
 function WingCoordinator() {
-  const navigate   = useNavigate();
-  const dispatch   = useDispatch();
-  const id         = getUserId()?.id;
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const id = getUserId()?.id;
   const { getWingFormlist, loading } = useSelector((s) => s?.user);
 
-  useEffect(() => { dispatch(GetWingFrom(id)); }, [dispatch]);
+  useEffect(() => {
+    dispatch(GetWingFrom(id));
+  }, [dispatch]);
 
   const createFrom = async () => {
     const res = await dispatch(createWingForm()).unwrap();
@@ -33,11 +35,24 @@ function WingCoordinator() {
 
   const columns = [
     {
+      title: "Form Name",
+      dataIndex: "formName",
+      key: "formName",
+      width: 180,
+      sorter: (a, b) => (a?.formName || "").localeCompare(b?.formName || ""),
+      render: (val) => (
+        <Text fontSize="sm" fontWeight="600" color="brand.primary">
+          {val || "—"}
+        </Text>
+      ),
+    },
+    {
       title: "Observer",
       dataIndex: "userId",
       key: "userId",
       width: 180,
-      sorter: (a, b) => (a?.userId?.name || "").localeCompare(b?.userId?.name || ""),
+      sorter: (a, b) =>
+        (a?.userId?.name || "").localeCompare(b?.userId?.name || ""),
       render: (user) => (
         <Text fontSize="sm" fontWeight="500" color="brand.text">
           {user?.name || "—"}
@@ -53,13 +68,21 @@ function WingCoordinator() {
         Array.isArray(classes) && classes.length > 0 ? (
           <Flex flexWrap="wrap" gap={1}>
             {classes.map((c, i) => (
-              <Tag key={i} size="sm" colorScheme="green" variant="subtle" borderRadius="full">
+              <Tag
+                key={i}
+                size="sm"
+                colorScheme="green"
+                variant="subtle"
+                borderRadius="full"
+              >
                 {c}
               </Tag>
             ))}
           </Flex>
         ) : (
-          <Text fontSize="sm" color="gray.400">—</Text>
+          <Text fontSize="sm" color="gray.400">
+            —
+          </Text>
         ),
     },
     {
@@ -174,13 +197,19 @@ function WingCoordinator() {
   return (
     <Box p={{ base: 4, md: 8 }} minH="calc(100vh - 72px)">
       {/* Header */}
-      <Flex justify="space-between" align="center" mb={6} flexWrap="wrap" gap={4}>
+      <Flex
+        justify="space-between"
+        align="center"
+        mb={6}
+        flexWrap="wrap"
+        gap={4}
+      >
         <Box>
           <Heading size="lg" color="brand.text" mb={1}>
-            Wing Coordinator Analysis
+            Monthly Report - Wing Coordinator
           </Heading>
           <Text color="gray.500" fontSize="sm">
-            Manage and review all wing coordinator analysis forms.
+            Manage and review all Monthly Report - Wing Coordinator forms.
           </Text>
         </Box>
 
@@ -221,17 +250,31 @@ function WingCoordinator() {
             dataSource={getWingFormlist?.data || []}
             rowKey="_id"
             scroll={{ x: "max-content" }}
-            pagination={{ pageSize: 10, showSizeChanger: false, showTotal: (t) => `${t} records` }}
-            locale={{ emptyText: (
-              <Box py={10} textAlign="center">
-                <Text color="gray.400" fontSize="sm">No wing coordinator forms yet.</Text>
-                {getUserId()?.access === UserRole[1] && (
-                  <Text fontSize="sm" color="brand.primary" mt={1} cursor="pointer" onClick={createFrom}>
-                    Create your first form →
+            pagination={{
+              pageSize: 10,
+              showSizeChanger: false,
+              showTotal: (t) => `${t} records`,
+            }}
+            locale={{
+              emptyText: (
+                <Box py={10} textAlign="center">
+                  <Text color="gray.400" fontSize="sm">
+                    No wing coordinator forms yet.
                   </Text>
-                )}
-              </Box>
-            )}}
+                  {getUserId()?.access === UserRole[1] && (
+                    <Text
+                      fontSize="sm"
+                      color="brand.primary"
+                      mt={1}
+                      cursor="pointer"
+                      onClick={createFrom}
+                    >
+                      Create your first form →
+                    </Text>
+                  )}
+                </Box>
+              ),
+            }}
           />
         )}
       </Box>

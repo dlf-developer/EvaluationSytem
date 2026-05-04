@@ -115,7 +115,7 @@ function WalkthroughDoc({ data }) {
 
           <View style={styles.centered}>
             <Text style={styles.title}>
-              VIRTUAL CLASSROOM WALK-THROUGH PROFORMA 2023-24 (V2.0)
+              VIRTUAL CLASSROOM WALK-THROUGH PROFORMA
             </Text>
           </View>
 

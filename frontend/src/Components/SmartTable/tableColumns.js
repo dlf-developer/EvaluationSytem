@@ -187,12 +187,24 @@ export const getFortnightlyColumns = ({
           return (
             <Flex gap={1} align="center">
               <Link to={`/fortnightly-monitor/report/${record._id}`}>
-                <Button size="md" variant="outline" colorScheme="blue" fontWeight="medium" flexShrink={0}>
+                <Button
+                  size="md"
+                  variant="outline"
+                  colorScheme="blue"
+                  fontWeight="medium"
+                  flexShrink={0}
+                >
                   View Report
                 </Button>
               </Link>
               <Link to={`/fortnightly-monitor/edit/${record._id}`}>
-                <Button size="md" variant="outline" colorScheme="green" fontWeight="medium" flexShrink={0}>
+                <Button
+                  size="md"
+                  variant="outline"
+                  colorScheme="green"
+                  fontWeight="medium"
+                  flexShrink={0}
+                >
                   Edit
                 </Button>
               </Link>
@@ -215,7 +227,13 @@ export const getFortnightlyColumns = ({
         )
           return (
             <Link to={`/fortnightly-monitor/create/${record._id}`}>
-              <Button size="md" variant="outline" colorScheme="blue" fontWeight="medium" flexShrink={0}>
+              <Button
+                size="md"
+                variant="outline"
+                colorScheme="blue"
+                fontWeight="medium"
+                flexShrink={0}
+              >
                 Continue Form
               </Button>
             </Link>
@@ -230,7 +248,13 @@ export const getFortnightlyColumns = ({
             <Flex gap={1} align="center">
               <Reminder id={record?._id} />
               <Link to={`/fortnightly-monitor/edit/${record._id}`}>
-                <Button size="md" variant="outline" colorScheme="green" fontWeight="medium" flexShrink={0}>
+                <Button
+                  size="md"
+                  variant="outline"
+                  colorScheme="green"
+                  fontWeight="medium"
+                  flexShrink={0}
+                >
                   Edit
                 </Button>
               </Link>
@@ -244,7 +268,13 @@ export const getFortnightlyColumns = ({
         )
           return (
             <Link to={`/fortnightly-monitor/create/${record._id}`}>
-              <Button size="md" variant="outline" colorScheme="blue" fontWeight="medium" flexShrink={0}>
+              <Button
+                size="md"
+                variant="outline"
+                colorScheme="blue"
+                fontWeight="medium"
+                flexShrink={0}
+              >
                 Continue Form
               </Button>
             </Link>
@@ -447,13 +477,25 @@ export const getClassroomColumns = ({
           return (
             <>
               <Link to={`/classroom-walkthrough/report/${record._id}`}>
-                <Button size="md" variant="outline" colorScheme="blue" fontWeight="medium" flexShrink={0}>
+                <Button
+                  size="md"
+                  variant="outline"
+                  colorScheme="blue"
+                  fontWeight="medium"
+                  flexShrink={0}
+                >
                   View Report
                 </Button>
               </Link>
               {currentUserRole === UserRole[1] && (
                 <Link to={`/classroom-walkthrough/edit/${record._id}`}>
-                  <Button size="md" variant="outline" colorScheme="green" fontWeight="medium" flexShrink={0}>
+                  <Button
+                    size="md"
+                    variant="outline"
+                    colorScheme="green"
+                    fontWeight="medium"
+                    flexShrink={0}
+                  >
                     Edit
                   </Button>
                 </Link>
@@ -470,7 +512,13 @@ export const getClassroomColumns = ({
         ) {
           return (
             <Link to={`/classroom-walkthrough/create/${record._id}`}>
-              <Button size="md" variant="outline" colorScheme="blue" fontWeight="medium" flexShrink={0}>
+              <Button
+                size="md"
+                variant="outline"
+                colorScheme="blue"
+                fontWeight="medium"
+                flexShrink={0}
+              >
                 Continue Form
               </Button>
             </Link>
@@ -682,7 +730,13 @@ export const getNotebookColumns = ({
           return (
             <Flex gap={1} align="center">
               <Link to={`/notebook-checking-proforma/report/${record._id}`}>
-                <Button size="md" variant="outline" colorScheme="blue" fontWeight="medium" flexShrink={0}>
+                <Button
+                  size="md"
+                  variant="outline"
+                  colorScheme="blue"
+                  fontWeight="medium"
+                  flexShrink={0}
+                >
                   View Report
                 </Button>
               </Link>
@@ -694,7 +748,13 @@ export const getNotebookColumns = ({
           if (currentUserRole === UserRole[1]) {
             return (
               <Link to={`/notebook-checking-proforma/create/${record._id}`}>
-                <Button size="md" variant="outline" colorScheme="blue" fontWeight="medium" flexShrink={0}>
+                <Button
+                  size="md"
+                  variant="outline"
+                  colorScheme="blue"
+                  fontWeight="medium"
+                  flexShrink={0}
+                >
                   Continue Form
                 </Button>
               </Link>
@@ -706,7 +766,13 @@ export const getNotebookColumns = ({
           if (currentUserRole === UserRole[2]) {
             return (
               <Link to={`/notebook-checking-proforma/edit/${record._id}`}>
-                <Button size="md" variant="outline" colorScheme="blue" fontWeight="medium" flexShrink={0}>
+                <Button
+                  size="md"
+                  variant="outline"
+                  colorScheme="blue"
+                  fontWeight="medium"
+                  flexShrink={0}
+                >
                   Continue Form
                 </Button>
               </Link>
@@ -824,13 +890,25 @@ export const getWeeklyColumns = ({ data = [], currentUserRole }) => [
       <Stack direction="row" spacing={2}>
         {record?.isCompleted ? (
           <Link to={`/weekly4form/report/${record._id}`}>
-            <Button size="md" variant="outline" colorScheme="blue" fontWeight="medium" flexShrink={0}>
+            <Button
+              size="md"
+              variant="outline"
+              colorScheme="blue"
+              fontWeight="medium"
+              flexShrink={0}
+            >
               View Report
             </Button>
           </Link>
         ) : currentUserRole === UserRole[2] ? (
           <Link to={`/weekly4form/create/${record?._id}`}>
-            <Button size="md" variant="outline" colorScheme="blue" fontWeight="medium" flexShrink={0}>
+            <Button
+              size="md"
+              variant="outline"
+              colorScheme="blue"
+              fontWeight="medium"
+              flexShrink={0}
+            >
               Continue Form
             </Button>
           </Link>
@@ -1062,13 +1140,25 @@ export const getWingCoordinatorColumns = ({ data = [] }) => [
     render: (_, record) =>
       record?.isCompleted ? (
         <Link to={`/wing-coordinator/report/${record._id}`}>
-          <Button size="md" variant="outline" colorScheme="blue" fontWeight="medium" flexShrink={0}>
+          <Button
+            size="md"
+            variant="outline"
+            colorScheme="blue"
+            fontWeight="medium"
+            flexShrink={0}
+          >
             View Report
           </Button>
         </Link>
       ) : (
         <Link to={`/wing-coordinator/create/${record._id}`}>
-          <Button size="md" variant="outline" colorScheme="blue" fontWeight="medium" flexShrink={0}>
+          <Button
+            size="md"
+            variant="outline"
+            colorScheme="blue"
+            fontWeight="medium"
+            flexShrink={0}
+          >
             Continue
           </Button>
         </Link>
@@ -1236,7 +1326,13 @@ export const getReportForm1Columns = ({
     render: (_, record) => (
       <Flex gap={1} align="center">
         <Link to={`/fortnightly-monitor/report/${record._id}`}>
-          <Button size="md" variant="outline" colorScheme="blue" fontWeight="medium" flexShrink={0}>
+          <Button
+            size="md"
+            variant="outline"
+            colorScheme="blue"
+            fontWeight="medium"
+            flexShrink={0}
+          >
             View Report
           </Button>
         </Link>
@@ -1432,7 +1528,13 @@ export const getReportForm2Columns = ({
     render: (_, record) => (
       <Flex gap={1} align="center">
         <Link to={`/classroom-walkthrough/report/${record._id}`}>
-          <Button size="md" variant="outline" colorScheme="blue" fontWeight="medium" flexShrink={0}>
+          <Button
+            size="md"
+            variant="outline"
+            colorScheme="blue"
+            fontWeight="medium"
+            flexShrink={0}
+          >
             View Report
           </Button>
         </Link>
@@ -1677,7 +1779,13 @@ export const getReportForm3Columns = ({
     render: (_, record) => (
       <Flex gap={1} align="center">
         <Link to={`/notebook-checking-proforma/report/${record._id}`}>
-          <Button size="md" variant="outline" colorScheme="blue" fontWeight="medium" flexShrink={0}>
+          <Button
+            size="md"
+            variant="outline"
+            colorScheme="blue"
+            fontWeight="medium"
+            flexShrink={0}
+          >
             View Report
           </Button>
         </Link>
@@ -1780,7 +1888,13 @@ export const getReportForm4Columns = ({ data = [] }) => [
     width: "150px",
     render: (_, record) => (
       <Link to={`/weekly4form/report/${record._id}`}>
-        <Button size="md" variant="outline" colorScheme="blue" fontWeight="medium" flexShrink={0}>
+        <Button
+          size="md"
+          variant="outline"
+          colorScheme="blue"
+          fontWeight="medium"
+          flexShrink={0}
+        >
           View Report
         </Button>
       </Link>

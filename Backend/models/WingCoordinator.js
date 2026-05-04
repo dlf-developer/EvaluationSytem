@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const { Schema } = mongoose;
 
 const WingCoordinator = new Schema({
+    formName:{ type: String, required: false, trim: true },
     className:{type:Array,require:true},
     range:{type:Array,require:true},
     form1:{type:Array},
