@@ -502,7 +502,12 @@ function OB_Wing() {
                                   rules={[{ required: true, message: "Required" }]}
                                   style={{ marginBottom: 0, flex: 1, minWidth: "150px" }}
                                 >
-                                  <Input placeholder={col} onBlur={handleInputBlur} style={{ fontSize: 13 }} />
+                                  <Input 
+                                    type={col.toLowerCase().includes('date') ? "date" : "text"}
+                                    placeholder={col} 
+                                    onBlur={handleInputBlur} 
+                                    style={{ fontSize: 13 }} 
+                                  />
                                 </Form.Item>
                               ))}
                               <Button type="button" size="sm" colorScheme="red" variant="ghost" onClick={() => { remove(name); handleInputBlur(); }}>
