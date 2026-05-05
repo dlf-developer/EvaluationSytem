@@ -505,17 +505,18 @@ function OB_Wing() {
                                   <Input placeholder={col} onBlur={handleInputBlur} style={{ fontSize: 13 }} />
                                 </Form.Item>
                               ))}
-                              <Button size="sm" colorScheme="red" variant="ghost" onClick={() => { remove(name); handleInputBlur(); }}>
+                              <Button type="button" size="sm" colorScheme="red" variant="ghost" onClick={() => { remove(name); handleInputBlur(); }}>
                                 ✕
                               </Button>
                             </Flex>
                           ))}
                           <Button
-                            type="dashed"
+                            type="button"
+                            variant="outline"
                             onClick={() => add()}
-                            block
+                            width="100%"
                             mt={2}
-                            style={{ borderColor: "#4A6741", color: "#4A6741" }}
+                            style={{ borderColor: "#4A6741", color: "#4A6741", borderStyle: "dashed" }}
                           >
                             + Add Row
                           </Button>
