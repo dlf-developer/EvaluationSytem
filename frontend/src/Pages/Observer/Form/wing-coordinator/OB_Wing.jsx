@@ -479,7 +479,7 @@ function OB_Wing() {
                   </Form.Item>
                 ) : (
                   <Box mb={4} p={4} bg="gray.50" borderRadius="lg" borderWidth="1px" borderColor="gray.200" overflowX="auto">
-                    <Form.List name={["monthlyReport", index, "tableData"]}>
+                    <Form.List name={["monthlyReport", index, "tableData"]} initialValue={[{}]}>
                       {(fields, { add, remove }) => (
                         <Box minW="max-content">
                           {fields.length > 0 && (
@@ -524,24 +524,6 @@ function OB_Wing() {
                     </Form.List>
                   </Box>
                 )}
-
-                <Form.Item
-                  name={["monthlyReport", index, "remarks"]}
-                  rules={[{ required: false }]}
-                  style={{ marginBottom: 0 }}
-                >
-                  <Input.TextArea
-                    placeholder="Enter remarks (optional)…"
-                    autoSize={{ minRows: 2, maxRows: 4 }}
-                    onBlur={handleInputBlur}
-                    style={{
-                      borderRadius: 8,
-                      borderColor: "#E2E8F0",
-                      fontSize: 14,
-                      padding: "8px 12px",
-                    }}
-                  />
-                </Form.Item>
               </Box>
             </Flex>
           </Box>
@@ -843,7 +825,6 @@ function OB_Wing() {
                     <Text
                       fontSize="sm"
                       color="brand.text"
-                      mb={item.remarks ? 1 : 0}
                     >
                       {item.answer || (
                         <Text as="span" color="gray.400" fontStyle="italic">
@@ -852,7 +833,7 @@ function OB_Wing() {
                       )}
                     </Text>
                   ) : (
-                    <Box mt={2} mb={item.remarks ? 2 : 0} overflowX="auto">
+                    <Box mt={2} overflowX="auto">
                       {item.tableData?.length > 0 ? (
                         <Table
                           size="small"
@@ -871,22 +852,6 @@ function OB_Wing() {
                         </Text>
                       )}
                     </Box>
-                  )}
-
-                  {item.remarks && (
-                    <Text
-                      fontSize="xs"
-                      color="gray.600"
-                      bg="gray.50"
-                      p={2}
-                      borderRadius="md"
-                      mt={1}
-                    >
-                      <Text as="span" fontWeight="600" mr={1}>
-                        Remarks:
-                      </Text>
-                      {item.remarks}
-                    </Text>
                   )}
                 </Box>
               ) : null,

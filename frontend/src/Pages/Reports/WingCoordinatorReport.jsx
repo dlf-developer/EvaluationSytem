@@ -339,9 +339,9 @@ function WingCoordinatorReport() {
                     <Box key={i} bg="brand.background" p={4} borderRadius="lg" borderWidth="1px" borderColor="gray.100">
                       <Text fontSize="xs" color="gray.500" mb={1}>{item.question}</Text>
                       {item.type === "text" ? (
-                        <Text fontSize="sm" color="brand.text" mb={item.remarks ? 2 : 0}>{item.answer || <Text as="span" color="gray.400" fontStyle="italic">No answer provided</Text>}</Text>
+                        <Text fontSize="sm" color="brand.text">{item.answer || <Text as="span" color="gray.400" fontStyle="italic">No answer provided</Text>}</Text>
                       ) : (
-                        <Box mt={2} mb={item.remarks ? 2 : 0} overflowX="auto" bg="white" p={2} borderRadius="md" borderWidth="1px" borderColor="gray.200">
+                        <Box mt={2} overflowX="auto" bg="white" p={2} borderRadius="md" borderWidth="1px" borderColor="gray.200">
                           {item.tableData?.length > 0 ? (
                             <Table
                               size="small"
@@ -358,11 +358,6 @@ function WingCoordinatorReport() {
                             <Text fontSize="sm" color="gray.400" fontStyle="italic">No table data provided</Text>
                           )}
                         </Box>
-                      )}
-                      {item.remarks && (
-                        <Text fontSize="xs" color="gray.600" bg="white" p={3} borderRadius="md" borderWidth="1px" borderColor="gray.200">
-                          <Text as="span" fontWeight="700" color="brand.primary" mr={2}>Remarks:</Text>{item.remarks}
-                        </Text>
                       )}
                     </Box>
                   ))}

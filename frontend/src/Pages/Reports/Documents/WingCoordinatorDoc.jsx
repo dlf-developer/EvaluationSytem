@@ -357,12 +357,6 @@ const WingCoordinatorDoc = ({ data }) => {
                       )}
                     </View>
                   )}
-                  {item.remarks && (
-                    <Text style={s.qRemarks}>
-                      <Text style={{ fontWeight: 600 }}>Remarks: </Text>
-                      {item.remarks}
-                    </Text>
-                  )}
                 </View>
               ))}
             </>
