@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Form, Checkbox, Spin, message, Input } from "antd";
+import { Form, Checkbox, Spin, message, Input, Table } from "antd";
 import Fillter_Wing from "./Fillter_Wing";
 import { getAllTimes } from "../../../../Utils/auth";
 import {
@@ -281,7 +281,8 @@ function OB_Wing() {
       const rawReport = values.monthlyReport || [];
       const monthlyReport = rawReport.map((item, i) => ({
         ...item,
-        question: inputsWing[i],
+        question: inputsWing[i].question,
+        type: inputsWing[i].type,
       }));
       if (monthlyReport && monthlyReport.length > 0) {
         localStorage.setItem(DRAFT_KEY, JSON.stringify({ monthlyReport }));
@@ -305,7 +306,9 @@ function OB_Wing() {
       const rawReport = values.monthlyReport || [];
       const monthlyReport = rawReport.map((item, i) => ({
         ...item,
-        question: inputsWing[i],
+        question: inputsWing[i].question,
+        type: inputsWing[i].type,
+        columns: inputsWing[i].columns,
       }));
 
       const { className, range } = formData || {};
@@ -336,7 +339,9 @@ function OB_Wing() {
       const rawReport = values.monthlyReport || [];
       const monthlyReport = rawReport.map((item, i) => ({
         ...item,
-        question: inputsWing[i],
+        question: inputsWing[i].question,
+        type: inputsWing[i].type,
+        columns: inputsWing[i].columns,
       }));
 
       const { className, range } = formData || {};
@@ -409,7 +414,7 @@ function OB_Wing() {
       </Box>
 
       <VStack spacing={4} align="stretch">
-        {inputsWing.map((question, index) => (
+        {inputsWing.map((item, index) => (
           <Box
             key={index}
             bg="white"
@@ -436,7 +441,7 @@ function OB_Wing() {
               >
                 {index + 1}
               </Flex>
-              <Box flex={1}>
+              <Box flex={1} overflowX="hidden">
                 <Text
                   fontSize="sm"
                   fontWeight="500"
@@ -444,41 +449,89 @@ function OB_Wing() {
                   mb={3}
                   textTransform="capitalize"
                 >
-                  {question}
+                  {item.question}
                 </Text>
                 {/* Hidden question field */}
                 <Form.Item
                   name={["monthlyReport", index, "question"]}
-                  initialValue={question}
+                  initialValue={item.question}
                   hidden
                 >
                   <Input />
                 </Form.Item>
-                <Form.Item
-                  name={["monthlyReport", index, "answer"]}
-                  rules={[
-                    { required: true, message: "Please enter a response" },
-                  ]}
-                  style={{ marginBottom: 12 }}
-                >
-                  <Input
-                    placeholder="Enter your response…"
-                    onBlur={handleInputBlur}
-                    style={{
-                      borderRadius: 8,
-                      borderColor: "#E2E8F0",
-                      fontSize: 14,
-                      padding: "8px 12px",
-                    }}
-                  />
-                </Form.Item>
+
+                {item.type === "text" ? (
+                  <Form.Item
+                    name={["monthlyReport", index, "answer"]}
+                    rules={[{ required: true, message: "Please enter a response" }]}
+                    style={{ marginBottom: 12 }}
+                  >
+                    <Input
+                      placeholder="Enter your response…"
+                      onBlur={handleInputBlur}
+                      style={{
+                        borderRadius: 8,
+                        borderColor: "#E2E8F0",
+                        fontSize: 14,
+                        padding: "8px 12px",
+                      }}
+                    />
+                  </Form.Item>
+                ) : (
+                  <Box mb={4} p={4} bg="gray.50" borderRadius="lg" borderWidth="1px" borderColor="gray.200" overflowX="auto">
+                    <Form.List name={["monthlyReport", index, "tableData"]}>
+                      {(fields, { add, remove }) => (
+                        <Box minW="max-content">
+                          {fields.length > 0 && (
+                            <Flex mb={2} gap={2} px={1}>
+                              {item.columns.map((col, i) => (
+                                <Text key={i} flex={1} minW="150px" fontSize="xs" fontWeight="600" color="gray.500">
+                                  {col}
+                                </Text>
+                              ))}
+                              <Box w="32px" />
+                            </Flex>
+                          )}
+                          {fields.map(({ key, name, ...restField }) => (
+                            <Flex key={key} gap={2} mb={2} align="center">
+                              {item.columns.map((col, i) => (
+                                <Form.Item
+                                  {...restField}
+                                  key={i}
+                                  name={[name, `col_${i}`]}
+                                  rules={[{ required: true, message: "Required" }]}
+                                  style={{ marginBottom: 0, flex: 1, minWidth: "150px" }}
+                                >
+                                  <Input placeholder={col} onBlur={handleInputBlur} style={{ fontSize: 13 }} />
+                                </Form.Item>
+                              ))}
+                              <Button size="sm" colorScheme="red" variant="ghost" onClick={() => { remove(name); handleInputBlur(); }}>
+                                ✕
+                              </Button>
+                            </Flex>
+                          ))}
+                          <Button
+                            type="dashed"
+                            onClick={() => add()}
+                            block
+                            mt={2}
+                            style={{ borderColor: "#4A6741", color: "#4A6741" }}
+                          >
+                            + Add Row
+                          </Button>
+                        </Box>
+                      )}
+                    </Form.List>
+                  </Box>
+                )}
+
                 <Form.Item
                   name={["monthlyReport", index, "remarks"]}
-                  rules={[{ required: true, message: "Please enter remarks" }]}
+                  rules={[{ required: false }]}
                   style={{ marginBottom: 0 }}
                 >
                   <Input.TextArea
-                    placeholder="Enter remarks…"
+                    placeholder="Enter remarks (optional)…"
                     autoSize={{ minRows: 2, maxRows: 4 }}
                     onBlur={handleInputBlur}
                     style={{
@@ -785,17 +838,41 @@ function OB_Wing() {
                   <Text fontSize="xs" color="gray.500" fontWeight="500">
                     {item.question}
                   </Text>
-                  <Text
-                    fontSize="sm"
-                    color="brand.text"
-                    mb={item.remarks ? 1 : 0}
-                  >
-                    {item.answer || (
-                      <Text as="span" color="gray.400" fontStyle="italic">
-                        No answer
-                      </Text>
-                    )}
-                  </Text>
+
+                  {inputsWing[i]?.type === "text" ? (
+                    <Text
+                      fontSize="sm"
+                      color="brand.text"
+                      mb={item.remarks ? 1 : 0}
+                    >
+                      {item.answer || (
+                        <Text as="span" color="gray.400" fontStyle="italic">
+                          No answer
+                        </Text>
+                      )}
+                    </Text>
+                  ) : (
+                    <Box mt={2} mb={item.remarks ? 2 : 0} overflowX="auto">
+                      {item.tableData?.length > 0 ? (
+                        <Table
+                          size="small"
+                          pagination={false}
+                          dataSource={item.tableData}
+                          rowKey={(_, idx) => idx}
+                          columns={(inputsWing[i]?.columns || []).map((col, cIdx) => ({
+                            title: col,
+                            dataIndex: `col_${cIdx}`,
+                            key: `col_${cIdx}`,
+                          }))}
+                        />
+                      ) : (
+                        <Text as="span" color="gray.400" fontStyle="italic" fontSize="sm">
+                          No table data
+                        </Text>
+                      )}
+                    </Box>
+                  )}
+
                   {item.remarks && (
                     <Text
                       fontSize="xs"

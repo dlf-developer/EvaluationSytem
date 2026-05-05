@@ -329,7 +329,34 @@ const WingCoordinatorDoc = ({ data }) => {
               {monthlyReport.map((item, i) => (
                 <View key={i} style={s.qBox}>
                   <Text style={s.qLabel}>{item.question}</Text>
-                  <Text style={s.qAnswer}>{item.answer || "—"}</Text>
+                  {item.type === "text" ? (
+                    <Text style={s.qAnswer}>{item.answer || "—"}</Text>
+                  ) : (
+                    <View style={[s.table, { marginTop: 6, marginBottom: 6 }]}>
+                      {item.tableData?.length > 0 ? (
+                        <>
+                          <View style={s.tableRow}>
+                            {(item.columns || []).map((col, cIdx, arr) => (
+                              <View key={cIdx} style={[s.th, cIdx === arr.length - 1 ? { flex: 1 } : { flex: 1, borderRightWidth: 1, borderRightColor: C.border }]}>
+                                <Text>{col}</Text>
+                              </View>
+                            ))}
+                          </View>
+                          {item.tableData.map((row, rIdx, rArr) => (
+                            <View key={rIdx} style={rIdx === rArr.length - 1 ? s.tableRowLast : s.tableRow}>
+                              {(item.columns || []).map((col, cIdx, cArr) => (
+                                <View key={cIdx} style={[s.td, cIdx === cArr.length - 1 ? { flex: 1 } : { flex: 1, borderRightWidth: 1, borderRightColor: C.border }]}>
+                                  <Text>{row[`col_${cIdx}`] || "—"}</Text>
+                                </View>
+                              ))}
+                            </View>
+                          ))}
+                        </>
+                      ) : (
+                        <Text style={[s.td, { fontStyle: "italic", color: C.gray }]}>No table data provided</Text>
+                      )}
+                    </View>
+                  )}
                   {item.remarks && (
                     <Text style={s.qRemarks}>
                       <Text style={{ fontWeight: 600 }}>Remarks: </Text>

@@ -35,7 +35,7 @@ function WingCoordinator() {
 
   const columns = [
     {
-      title: "Form Name",
+      title: "Report Name",
       dataIndex: "formName",
       key: "formName",
       width: 180,
@@ -224,7 +224,7 @@ function WingCoordinator() {
             px={6}
             isLoading={loading}
           >
-            New Analysis
+            New Report
           </Button>
         )}
       </Flex>
