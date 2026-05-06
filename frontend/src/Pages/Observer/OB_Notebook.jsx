@@ -182,7 +182,7 @@ function OB_Notebook() {
             borderColor="gray.100"
           >
             <RenderRadioFormItem
-              question
+              question={question}
               name={[namePrefix, index]}
               label={question}
               isTextArea={true}
@@ -205,7 +205,7 @@ function OB_Notebook() {
 
   const handleSubmit = async (data) => {
     const payload = {
-      data,
+      data: { ...data, isObserverComplete: true },
       id: FormId,
     };
 

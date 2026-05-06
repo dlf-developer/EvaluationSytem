@@ -520,7 +520,7 @@ const updatePayload = (existingForm, userId, changes) => {
     [`${rolePrefix}.Absentees`]: changes.Absentees,
     [`${rolePrefix}.Defaulters`]: changes.Defaulters,
     [`observerFeedback`]: changes.observerFeedback,
-    [`${rolePrefix2}`]: changes.isObserverComplete,
+    [`isObserverComplete`]: changes.isObserverComplete,
     [`${rolePrefix2}.maintenanceOfNotebooks`]: changes.maintenanceOfNotebooks,
     [`${rolePrefix2}.qualityOfOppurtunities`]: changes.qualityOfOppurtunities,
     [`${rolePrefix2}.qualityOfTeacherFeedback`]:
