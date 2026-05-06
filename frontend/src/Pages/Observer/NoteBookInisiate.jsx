@@ -212,7 +212,20 @@ function NoteBookInisiate() {
                     label={<Text fontWeight="500">Subject (Optional)</Text>}
                     name="Subject"
                   >
-                    <Input placeholder="Enter Subject" />
+                    <Select
+                      showSearch
+                      allowClear
+                      placeholder="Select a subject"
+                      options={
+                        sectionState?.subjects?.map((item) => ({
+                          value: item.name,
+                          label: item.name,
+                        })) || []
+                      }
+                      filterOption={(input, option) =>
+                        option.label.toLowerCase().includes(input.toLowerCase())
+                      }
+                    />
                   </Form.Item>
                   <Form.Item
                     hidden

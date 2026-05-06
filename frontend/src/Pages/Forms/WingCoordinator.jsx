@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo } from "react";
 import { getUserId, getAllTimes } from "../../Utils/auth";
 import { Table } from "antd";
 import { UserRole } from "../../config/config";
@@ -33,6 +33,17 @@ function WingCoordinator() {
     if (res?.success) navigate(`/wing-coordinator/${res?.data?._id}`);
   };
 
+  const observerFilters = useMemo(() => {
+    if (!getWingFormlist?.data) return [];
+    const observers = new Map();
+    getWingFormlist.data.forEach((item) => {
+      if (item?.userId?._id && item?.userId?.name) {
+        observers.set(item.userId._id, item.userId.name);
+      }
+    });
+    return Array.from(observers, ([value, text]) => ({ text, value }));
+  }, [getWingFormlist?.data]);
+
   const columns = [
     {
       title: "Report Name",
@@ -51,6 +62,8 @@ function WingCoordinator() {
       dataIndex: "userId",
       key: "userId",
       width: 180,
+      filters: observerFilters,
+      onFilter: (value, record) => record?.userId?._id === value,
       sorter: (a, b) =>
         (a?.userId?.name || "").localeCompare(b?.userId?.name || ""),
       render: (user) => (

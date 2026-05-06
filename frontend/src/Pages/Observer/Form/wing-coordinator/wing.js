@@ -18,7 +18,7 @@ export const inputsWing = [
     type: "text",
   },
   {
-    question: "Special Event Done / Share Pending Events Scheduled",
+    question: "Experiential Think Rooms / Micro Teaching Sessions Attended ",
     type: "text",
   },
   {
@@ -46,9 +46,9 @@ export const inputsWing = [
     columns: ["Date", "Name of the Teacher", "Name of the Student", "Class & Section", "Reason of Meeting"],
   },
   {
-    question: "Remedial Classes?",
+    question: "Detentions Arranged",
     type: "table",
-    columns: ["Date", "Name of the Teacher", "No. of Students", "Concept", "Outcomes"],
+    columns: ["Date", "Name of the MT/ST/WC", "Name of the Students", "Class & Section", "Name of the subject"],
   },
   {
     question: "Care Calls Made",

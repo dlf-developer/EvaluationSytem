@@ -684,13 +684,32 @@ function OB_Wing() {
             : FORM_TITLES
           ).map(({ key, label, color }) => {
             const items = getFilteredDataList?.[key] || [];
-            const completed = items.filter(
-              (item) =>
+            const completed = items.filter((item) => {
+              const isComp =
                 (item?.isCoordinatorComplete && item?.isTeacherComplete) ||
                 (item?.isObserverCompleted && item?.isTeacherCompletes) ||
                 (item?.isTeacherComplete && item?.isObserverComplete) ||
-                item?.isCompleted,
-            );
+                item?.isCompleted;
+
+              if (!isComp) return false;
+
+              if (formData?.observers && formData.observers.length > 0) {
+                let observerId;
+                if (key === "form1") {
+                  observerId = item?.userId?._id || item?.userId;
+                } else if (key === "form2") {
+                  observerId = item?.createdBy?._id || item?.createdBy;
+                } else if (key === "form3") {
+                  observerId = item?.grenralDetails?.NameofObserver?._id || item?.grenralDetails?.NameofObserver || item?.createdBy?._id || item?.createdBy;
+                } else if (key === "form4") {
+                  observerId = item?.userId?._id || item?.userId;
+                }
+
+                const obsIdStr = observerId?.toString();
+                return formData.observers.includes(obsIdStr);
+              }
+              return true;
+            });
             const selected = selectedItems[key]?.length || 0;
 
             return (

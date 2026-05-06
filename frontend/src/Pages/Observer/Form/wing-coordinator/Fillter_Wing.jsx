@@ -17,6 +17,7 @@ function Fillter_Wing({ saveData, data }) {
     const [form] = Form.useForm();
     const dispatch = useDispatch();
     const [newData, setNewData] = useState([]);
+    const { GetObserverLists } = useSelector((state) => state.user);
     // Guard: only auto-fetch once when saved form data first loads
     const didAutoFetch = useRef(false);
 
@@ -52,12 +53,14 @@ function Fillter_Wing({ saveData, data }) {
                 range: data?.range ? [dayjs(data.range[0]), dayjs(data.range[1])] : [],
                 className: data?.className || '',
                 formTypes: data?.formTypes || ['form1', 'form2', 'form3', 'form4'],
+                observers: data?.observers || [],
             });
 
             setSelectedItems({
                 range: data?.range ? [dayjs(data.range[0]), dayjs(data.range[1])] : [],
                 className: data?.className || '',
                 formTypes: data?.formTypes || ['form1', 'form2', 'form3', 'form4'],
+                observers: data?.observers || [],
             });
 
             // Auto-trigger search only once if saved data has className + range
@@ -66,6 +69,7 @@ function Fillter_Wing({ saveData, data }) {
                     range: data?.range,
                     className: data?.className,
                     formTypes: data?.formTypes || ['form1', 'form2', 'form3', 'form4'],
+                    observers: data?.observers || [],
                 };
                 didAutoFetch.current = true;
                 onFinish(payload);
@@ -88,12 +92,13 @@ function Fillter_Wing({ saveData, data }) {
                 range: data?.range || [],
                 className: data?.className || '',
                 formTypes: data?.formTypes || ['form1', 'form2', 'form3', 'form4'],
+                observers: data?.observers || [],
             }}
         >
             <div className="container">
                 <Row gutter={24} justify={"start"} align={"middle"}>
                     {/* Date Range */}
-                    <Col xl={6} lg={6} md={12} sm={24} xs={24}>
+                    <Col xl={5} lg={5} md={12} sm={24} xs={24}>
                         <Form.Item
                             className="w-full"
                             label="Date Range"
@@ -110,7 +115,7 @@ function Fillter_Wing({ saveData, data }) {
                     </Col>
 
                     {/* Form Type */}
-                    <Col xl={6} lg={6} md={12} sm={24} xs={24}>
+                    <Col xl={5} lg={5} md={12} sm={24} xs={24}>
                         <Form.Item
                             label="Form Type"
                             name="formTypes"
@@ -134,7 +139,7 @@ function Fillter_Wing({ saveData, data }) {
                     </Col>
 
                     {/* Class */}
-                    <Col xl={6} lg={6} md={12} sm={24} xs={24}>
+                    <Col xl={5} lg={5} md={12} sm={24} xs={24}>
                         <Form.Item
                             label="Class"
                             name="className"
@@ -161,8 +166,31 @@ function Fillter_Wing({ saveData, data }) {
                         </Form.Item>
                     </Col>
 
+                    {/* Observers */}
+                    <Col xl={5} lg={5} md={12} sm={24} xs={24}>
+                        <Form.Item
+                            label="Observer"
+                            name="observers"
+                        >
+                            <Select
+                                mode='multiple'
+                                placeholder="Choose Observer"
+                                allowClear
+                                options={GetObserverLists && GetObserverLists?.length > 0 ? GetObserverLists?.map((item) => ({
+                                    key: item?._id || "",
+                                    id: item?._id || "",
+                                    value: item?._id || "",
+                                    label: item?.name || "",
+                                })) : []}
+                                filterOption={(input, option) =>
+                                    option.label.toLowerCase().includes(input.toLowerCase())
+                                }
+                            />
+                        </Form.Item>
+                    </Col>
+
                     {/* Search Button */}
-                    <Col xl={6} lg={6} md={12} sm={24} xs={24}>
+                    <Col xl={4} lg={4} md={24} sm={24} xs={24}>
                         <Form.Item className="m-0" label=" ">
                             <Button
                                 type="primary"
