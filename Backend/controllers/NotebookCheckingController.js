@@ -619,11 +619,19 @@ exports.EditUpdateNotebook = async (req, res) => {
     }
 
     try {
-        let classNameFind = null;
+        const mongoose = require("mongoose");
+        let finalClassName = undefined;
+        
         if (req.body.className) {
-            classNameFind = await ClassDetails.findById(req.body.className);
-            if (!classNameFind) {
-                return res.status(400).json({ message: "Class not found" });
+            if (mongoose.Types.ObjectId.isValid(req.body.className)) {
+                const classNameFind = await ClassDetails.findById(req.body.className);
+                if (classNameFind) {
+                    finalClassName = classNameFind.className;
+                } else {
+                    return res.status(400).json({ message: "Class not found" });
+                }
+            } else {
+                finalClassName = req.body.className;
             }
         }
 
@@ -639,7 +647,7 @@ exports.EditUpdateNotebook = async (req, res) => {
             qualityOfTeacherFeedback: req.body.qualityOfTeacherFeedback,
             qualityOfLearner: req.body.qualityOfLearner,
             isTeacherComplete: req.body.isTeacherComplete,
-            className: classNameFind ? classNameFind.className : undefined,
+            className: finalClassName,
             Subject: req.body.Subject,
             Section: req.body.Section,
         };

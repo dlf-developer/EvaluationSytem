@@ -77,6 +77,18 @@ function TC_Notebook() {
     }
   }, [dispatch, FormId]);
 
+  useEffect(() => {
+    if (formDataList?.grenralDetails?.className && newData?.length > 0) {
+      const currentClassName = formDataList?.grenralDetails?.className;
+      const filteredData = newData?.filter(
+        (data) => data?._id === currentClassName || data?.className === currentClassName
+      );
+      if (filteredData?.length > 0) {
+        setSectionState(filteredData[0]);
+      }
+    }
+  }, [formDataList, newData]);
+
   const yesNoNAOptions = [
     { value: "1", label: "1" },
     { value: "2", label: "2" },
@@ -108,6 +120,7 @@ function TC_Notebook() {
         name: "className",
         label: "Class Name / Section",
         type: "select",
+        disabled: formDataList?.isObserverInitiation && !!formDataList?.grenralDetails?.className,
         options: newData?.map((item) => ({
           id: item._id,
           name: item.className,
@@ -117,6 +130,7 @@ function TC_Notebook() {
         name: "Section",
         label: "Section",
         type: "select",
+        disabled: formDataList?.isObserverInitiation && !!formDataList?.grenralDetails?.Section,
         options: sectionState?.sections?.map((item) => ({
           id: item._id,
           value: item?.name,
@@ -127,6 +141,7 @@ function TC_Notebook() {
         name: "Subject",
         label: "Subject",
         type: "select",
+        disabled: formDataList?.isObserverInitiation && !!formDataList?.grenralDetails?.Subject,
         options: sectionState?.subjects?.map((item) => ({
           id: item._id,
           value: item?.name,
@@ -143,18 +158,19 @@ function TC_Notebook() {
       { name: "Absentees", label: "Absentees", type: "input" },
       { name: "Defaulters", label: "Defaulters", type: "input" },
     ],
-    [newData, sectionState],
+    [newData, sectionState, formDataList],
   );
   //   const generalDetailsConfig2 = [
   //     { name: "observerFeedback", label: "Observer Feedback", type: "textarea" },
   //   ];
 
-  const renderFormItem = ({ name, label, type, options }) => {
+  const renderFormItem = ({ name, label, type, options, disabled }) => {
     const inputProps = {
       select: (
         <Select
           size="large"
           showSearch
+          disabled={disabled}
           optionFilterProp="children"
           filterOption={(input, option) =>
             (option?.children ?? "").toString().toLowerCase().includes(input.toLowerCase())
@@ -176,10 +192,10 @@ function TC_Notebook() {
         </Select>
       ),
       input: (
-        <Input size="large" placeholder={`Enter ${label.toLowerCase()}`} />
+        <Input size="large" disabled={disabled} placeholder={`Enter ${label.toLowerCase()}`} />
       ),
       textarea: (
-        <TextArea size="large" placeholder={`Enter ${label.toLowerCase()}`} />
+        <TextArea size="large" disabled={disabled} placeholder={`Enter ${label.toLowerCase()}`} />
       ),
     };
 
@@ -409,7 +425,7 @@ function TC_Notebook() {
           // Only consider valid answers for both totalScore and outOfScore
           if (validValues?.includes(answer)) {
             totalScore += parseInt(answer, 10); // Accumulate score
-            outOfScore += 4; // Increment max score (4 points per question)
+            outOfScore += 3; // Increment max score (3 points per question)
           }
 
           // Count "N/A" answers

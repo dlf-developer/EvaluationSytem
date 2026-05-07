@@ -1,8 +1,9 @@
-import { Button, Col, DatePicker, Form, message, Row, Select } from 'antd'
+import { Button, Col, DatePicker, Form, message, Row, Select, Space } from 'antd'
 import React, { useEffect, useRef, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux';
 import { getCreateClassSection, getFilteredData, GetObserverList } from '../../../../redux/userSlice';
 import dayjs from 'dayjs';  // Import Day.js
+import { SearchOutlined, ClearOutlined } from '@ant-design/icons';
 const { RangePicker } = DatePicker;
 
 const FORM_TYPE_OPTIONS = [
@@ -13,12 +14,10 @@ const FORM_TYPE_OPTIONS = [
 ];
 
 function Fillter_Wing({ saveData, data }) {
-
     const [form] = Form.useForm();
     const dispatch = useDispatch();
     const [newData, setNewData] = useState([]);
     const { GetObserverLists } = useSelector((state) => state.user);
-    // Guard: only auto-fetch once when saved form data first loads
     const didAutoFetch = useRef(false);
 
     useEffect(() => {
@@ -40,30 +39,15 @@ function Fillter_Wing({ saveData, data }) {
         dispatch(GetObserverList());
     }, [dispatch]);
 
-    const [selectedItems, setSelectedItems] = useState({
-        range: [],
-        className: '',
-        formTypes: ['form1', 'form2', 'form3', 'form4'],
-    });
-
     useEffect(() => {
         if (data && !didAutoFetch.current) {
-            // Populate form fields with saved values
             form.setFieldsValue({
                 range: data?.range ? [dayjs(data.range[0]), dayjs(data.range[1])] : [],
-                className: data?.className || '',
+                className: data?.className || [],
                 formTypes: data?.formTypes || ['form1', 'form2', 'form3', 'form4'],
                 observers: data?.observers || [],
             });
 
-            setSelectedItems({
-                range: data?.range ? [dayjs(data.range[0]), dayjs(data.range[1])] : [],
-                className: data?.className || '',
-                formTypes: data?.formTypes || ['form1', 'form2', 'form3', 'form4'],
-                observers: data?.observers || [],
-            });
-
-            // Auto-trigger search only once if saved data has className + range
             if (data?.className) {
                 const payload = {
                     range: data?.range,
@@ -75,12 +59,45 @@ function Fillter_Wing({ saveData, data }) {
                 onFinish(payload);
             }
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [data]);
+    }, [data, form]);
 
     const onFinish = async (values) => {
         saveData(values);
         await dispatch(getFilteredData(values));
+    };
+
+    const handleClear = () => {
+        form.resetFields();
+        saveData(null);
+    };
+
+    // Prepare options with "Select All"
+    const formTypeOpts = [
+        { value: 'ALL', label: 'Select All Forms' },
+        ...FORM_TYPE_OPTIONS
+    ];
+
+    const classOpts = [
+        { value: 'ALL', label: 'Select All Classes' },
+        ...(newData?.map((item) => ({
+            value: item?.className || "",
+            label: item?.className || "",
+        })) || [])
+    ];
+
+    const observerOpts = [
+        { value: 'ALL', label: 'Select All Observers' },
+        ...(GetObserverLists?.map((item) => ({
+            value: item?._id || "",
+            label: item?.name || "",
+        })) || [])
+    ];
+
+    const handleSelectAll = (selectedValues, fieldName, allValuesOptions) => {
+        if (selectedValues.includes('ALL')) {
+            const allVals = allValuesOptions.filter(opt => opt.value !== 'ALL').map(opt => opt.value);
+            form.setFieldsValue({ [fieldName]: allVals });
+        }
     };
 
     return (
@@ -90,117 +107,111 @@ function Fillter_Wing({ saveData, data }) {
             onFinish={onFinish}
             initialValues={{
                 range: data?.range || [],
-                className: data?.className || '',
+                className: data?.className || [],
                 formTypes: data?.formTypes || ['form1', 'form2', 'form3', 'form4'],
                 observers: data?.observers || [],
             }}
         >
-            <div className="container">
-                <Row gutter={24} justify={"start"} align={"middle"}>
+            <div className="filter-container">
+                <Row gutter={[16, 16]} align="bottom">
                     {/* Date Range */}
-                    <Col xl={5} lg={5} md={12} sm={24} xs={24}>
+                    <Col xl={5} lg={6} md={12} sm={24} xs={24}>
                         <Form.Item
-                            className="w-full"
-                            label="Date Range"
+                            className="m-0"
+                            label={<span style={{ fontWeight: 500, color: '#4A5568' }}>Date Range</span>}
                             name="range"
-                            rules={[
-                                {
-                                    required: true,
-                                    message: "Please select a date range",
-                                },
-                            ]}
+                            rules={[{ required: true, message: "Please select a date range" }]}
                         >
-                            <RangePicker className="w-full" />
+                            <RangePicker size="large" className="w-full" style={{ borderRadius: '8px' }} />
                         </Form.Item>
                     </Col>
 
                     {/* Form Type */}
-                    <Col xl={5} lg={5} md={12} sm={24} xs={24}>
+                    <Col xl={5} lg={6} md={12} sm={24} xs={24}>
                         <Form.Item
-                            label="Form Type"
+                            className="m-0"
+                            label={<span style={{ fontWeight: 500, color: '#4A5568' }}>Form Type</span>}
                             name="formTypes"
-                            rules={[
-                                {
-                                    required: true,
-                                    message: "Please select at least one form type",
-                                },
-                            ]}
+                            rules={[{ required: true, message: "Please select form types" }]}
                         >
                             <Select
+                                size="large"
                                 mode="multiple"
-                                placeholder="Select form types"
-                                options={FORM_TYPE_OPTIONS}
-                                maxTagCount={2}
-                                filterOption={(input, option) =>
-                                    option.label.toLowerCase().includes(input.toLowerCase())
-                                }
+                                allowClear
+                                placeholder="Select Form Types"
+                                maxTagCount="responsive"
+                                options={formTypeOpts}
+                                onChange={(val) => handleSelectAll(val, 'formTypes', formTypeOpts)}
+                                style={{ borderRadius: '8px' }}
                             />
                         </Form.Item>
                     </Col>
 
                     {/* Class */}
-                    <Col xl={5} lg={5} md={12} sm={24} xs={24}>
+                    <Col xl={5} lg={6} md={12} sm={24} xs={24}>
                         <Form.Item
-                            label="Class"
+                            className="m-0"
+                            label={<span style={{ fontWeight: 500, color: '#4A5568' }}>Class</span>}
                             name="className"
-                            rules={[
-                                {
-                                    required: true,
-                                    message: "Please select a class",
-                                },
-                            ]}
+                            rules={[{ required: true, message: "Please select a class" }]}
                         >
                             <Select
-                                mode='multiple'
+                                size="large"
+                                mode="multiple"
+                                allowClear
                                 placeholder="Choose Class"
-                                options={newData && newData?.length > 0 && newData?.map((item) => ({
-                                    key: item?._id || "",
-                                    id: item?._id || "",
-                                    value: item?.className || "",
-                                    label: item?.className || "",
-                                }))}
-                                filterOption={(input, option) =>
-                                    option.label.toLowerCase().includes(input.toLowerCase())
-                                }
+                                maxTagCount="responsive"
+                                options={classOpts}
+                                onChange={(val) => handleSelectAll(val, 'className', classOpts)}
+                                filterOption={(input, option) => option.label.toLowerCase().includes(input.toLowerCase())}
+                                style={{ borderRadius: '8px' }}
                             />
                         </Form.Item>
                     </Col>
 
                     {/* Observers */}
-                    <Col xl={5} lg={5} md={12} sm={24} xs={24}>
+                    <Col xl={5} lg={6} md={12} sm={24} xs={24}>
                         <Form.Item
-                            label="Observer"
+                            className="m-0"
+                            label={<span style={{ fontWeight: 500, color: '#4A5568' }}>Observer</span>}
                             name="observers"
                         >
                             <Select
-                                mode='multiple'
-                                placeholder="Choose Observer"
+                                size="large"
+                                mode="multiple"
+                                placeholder="All Observers (Optional)"
                                 allowClear
-                                options={GetObserverLists && GetObserverLists?.length > 0 ? GetObserverLists?.map((item) => ({
-                                    key: item?._id || "",
-                                    id: item?._id || "",
-                                    value: item?._id || "",
-                                    label: item?.name || "",
-                                })) : []}
-                                filterOption={(input, option) =>
-                                    option.label.toLowerCase().includes(input.toLowerCase())
-                                }
+                                maxTagCount="responsive"
+                                options={observerOpts}
+                                onChange={(val) => handleSelectAll(val, 'observers', observerOpts)}
+                                filterOption={(input, option) => option.label.toLowerCase().includes(input.toLowerCase())}
+                                style={{ borderRadius: '8px' }}
                             />
                         </Form.Item>
                     </Col>
 
-                    {/* Search Button */}
-                    <Col xl={4} lg={4} md={24} sm={24} xs={24}>
-                        <Form.Item className="m-0" label=" ">
+                    {/* Action Buttons */}
+                    <Col xl={4} lg={24} md={24} sm={24} xs={24}>
+                        <Space className="w-full" style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
+                            <Button
+                                size="large"
+                                onClick={handleClear}
+                                icon={<ClearOutlined />}
+                                style={{ borderRadius: '8px' }}
+                            >
+                                Clear
+                            </Button>
                             <Button
                                 type="primary"
+                                size="large"
                                 htmlType="button"
                                 onClick={() => form.submit()}
-                                className="px-6 py-2 w-full"
+                                icon={<SearchOutlined />}
+                                style={{ borderRadius: '8px', backgroundColor: '#4A6741', borderColor: '#4A6741' }}
                             >
                                 Search
                             </Button>
-                        </Form.Item>
+                        </Space>
                     </Col>
                 </Row>
             </div>
