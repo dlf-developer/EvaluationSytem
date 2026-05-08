@@ -619,11 +619,13 @@ exports.EditUpdateNotebook = async (req, res) => {
     }
 
     try {
-        const mongoose = require("mongoose");
         let finalClassName = undefined;
         
+        // Use strict 24-char hex check
+        const isObjectId = (val) => /^[a-f\d]{24}$/i.test(val);
+
         if (req.body.className) {
-            if (mongoose.Types.ObjectId.isValid(req.body.className)) {
+            if (isObjectId(req.body.className)) {
                 const classNameFind = await ClassDetails.findById(req.body.className);
                 if (classNameFind) {
                     finalClassName = classNameFind.className;
@@ -652,7 +654,11 @@ exports.EditUpdateNotebook = async (req, res) => {
             Section: req.body.Section,
         };
 
-        const existingForm = await Form3.findById(formId).populate('grenralDetails.NameofObserver')
+        const existingForm = await Form3.findById(formId).populate({
+            path: 'grenralDetails.NameofObserver',
+            select: 'name email',
+            options: { strictPopulate: false },
+        })
         if (!existingForm) {
             return res.status(404).json({ message: "Form not found", success: false });
         }
@@ -695,7 +701,7 @@ The Admin Team
             }
         }
     } catch (error) {
-        console.error("Error updating form:", error);
+        console.error("Error updating form at:", error.stack || error);
         res.status(500).json({
             message: "Error updating the form.",
             error: error.message,

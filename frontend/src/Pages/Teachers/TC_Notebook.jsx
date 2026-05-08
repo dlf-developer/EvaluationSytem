@@ -105,7 +105,7 @@ function TC_Notebook() {
 
   const SectionSubject = (value) => {
     if (value) {
-      const filteredData = newData?.filter((data) => data?._id === value);
+      const filteredData = newData?.filter((data) => data?._id === value || data?.className === value);
       if (filteredData?.length > 0) {
         setSectionState(filteredData[0]); // Set the filtered data to sectionState
       }
@@ -184,7 +184,7 @@ function TC_Notebook() {
           {options?.map((option) => (
             <Option
               key={option?.id || option}
-              value={name === "className" ? option?.id : option?.name}
+              value={name === "className" ? option?.name : option?.name}
             >
               {option?.name || option}
             </Option>
@@ -384,8 +384,18 @@ function TC_Notebook() {
   };
 
   const handleSubmit = async (data) => {
+    let finalClassName = data.className;
+    
+    // Convert string class name back to _id if needed
+    if (finalClassName && newData?.length > 0) {
+      const classObj = newData.find((c) => c.className === finalClassName);
+      if (classObj) {
+        finalClassName = classObj._id;
+      }
+    }
+
     const payload = {
-      data,
+      data: { ...data, className: finalClassName },
       id: FormId,
     };
 
