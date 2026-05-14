@@ -718,17 +718,31 @@ export const getNotebookColumns = ({
     },
   },
   {
+    title: "Reflection Status",
+    key: "isReflation",
+    dataIndex: "isReflation",
+    width: "155px",
+    render: (val) => <StatusBadge value={val} trueLabel="Submitted" falseLabel="Pending" />,
+    filterConfig: {
+      type: "boolean",
+      trueLabel: "Submitted",
+      falseLabel: "Pending",
+    },
+  },
+  {
     title: "Action",
     key: "action",
     dataIndex: "action",
     width: "180px",
     render: (_, record) => {
-      const { isObserverComplete, isTeacherComplete } = record;
+      const { isObserverComplete, isTeacherComplete, isReflation } = record;
 
       const renderAction = () => {
+        // ── Step 3 zone: Observer has completed their form ──────────────────
         if (isObserverComplete) {
-          return (
-            <Flex gap={1} align="center">
+          // Fully done (Teacher reflection submitted) → everyone sees View Report
+          if (isReflation) {
+            return (
               <Link to={`/notebook-checking-proforma/report/${record._id}`}>
                 <Button
                   size="md"
@@ -740,10 +754,43 @@ export const getNotebookColumns = ({
                   View Report
                 </Button>
               </Link>
-            </Flex>
+            );
+          }
+
+          // Teacher still needs to submit reflection (Step 3)
+          if (currentUserRole === UserRole[2]) {
+            return (
+              <Link to={`/notebook-checking-proforma/complete/${record._id}`}>
+                <Button
+                  size="md"
+                  variant="solid"
+                  colorScheme="orange"
+                  fontWeight="medium"
+                  flexShrink={0}
+                >
+                  Give Reflection
+                </Button>
+              </Link>
+            );
+          }
+
+          // Observer already done — show View Report
+          return (
+            <Link to={`/notebook-checking-proforma/report/${record._id}`}>
+              <Button
+                size="md"
+                variant="outline"
+                colorScheme="blue"
+                fontWeight="medium"
+                flexShrink={0}
+              >
+                View Report
+              </Button>
+            </Link>
           );
         }
 
+        // ── Step 2 zone: Teacher done, waiting for Observer ─────────────────
         if (isTeacherComplete) {
           if (currentUserRole === UserRole[1]) {
             return (
@@ -762,25 +809,26 @@ export const getNotebookColumns = ({
           } else {
             return <Reminder id={record?._id} type="form3" />;
           }
-        } else {
-          if (currentUserRole === UserRole[2]) {
-            return (
-              <Link to={`/notebook-checking-proforma/edit/${record._id}`}>
-                <Button
-                  size="md"
-                  variant="outline"
-                  colorScheme="blue"
-                  fontWeight="medium"
-                  flexShrink={0}
-                >
-                  Continue Form
-                </Button>
-              </Link>
-            );
-          } else {
-            return <Reminder id={record?._id} type="form3" />;
-          }
         }
+
+        // ── Step 1 zone: Teacher hasn't filled yet ──────────────────────────
+        if (currentUserRole === UserRole[2]) {
+          return (
+            <Link to={`/notebook-checking-proforma/edit/${record._id}`}>
+              <Button
+                size="md"
+                variant="outline"
+                colorScheme="blue"
+                fontWeight="medium"
+                flexShrink={0}
+              >
+                Continue Form
+              </Button>
+            </Link>
+          );
+        }
+
+        return <Reminder id={record?._id} type="form3" />;
       };
 
       return (

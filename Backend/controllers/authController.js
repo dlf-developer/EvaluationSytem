@@ -76,7 +76,7 @@ const requestPasswordReset = async (req, res) => {
     // Generate 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const hashedOTP = await bcrypt.hash(otp, 10);
-    
+
     user.resetPasswordToken = hashedOTP;
     user.resetPasswordExpires = Date.now() + 600000; // 10 minutes
     await user.save();
@@ -87,7 +87,7 @@ const requestPasswordReset = async (req, res) => {
     }
 
     const message = createOTPTemplate(otp, "10 minutes", "Password Reset Request");
-    
+
     try {
         await sendEmail(user.email, 'Password Reset Request', message);
         res.json({ message: 'Password reset email sent' });
@@ -103,7 +103,7 @@ const requestPasswordReset = async (req, res) => {
 const resetPassword = async (req, res) => {
     const email = req.body.email?.toLowerCase().trim();
     const { otp, newPassword } = req.body;
-    
+
     if (!email || !otp || !newPassword) {
         return res.status(400).json({ message: 'Email, OTP, and new password are required' });
     }
@@ -161,10 +161,10 @@ const FromCount = async (req, res) => {
         const queryFilter = req.sessionDateFilter ? { createdAt: req.sessionDateFilter } : {};
 
         // Use await to ensure proper execution of asynchronous queries
-        const formTotalOneCount = await Form1.countDocuments({ $or:[{coordinatorID:user},{teacherID:user},{userId:user}], ...queryFilter });
-        const formTotalTwoCount = await Form2.countDocuments({ $or:[{teacherID:user},{'grenralDetails.NameoftheVisitingTeacher':user},{createdBy:user}], ...queryFilter });
-        const formTotalThreeCount = await Form3.countDocuments({ $or:[{teacherID:user},{'grenralDetails.NameofObserver':user},{createdBy:user}], ...queryFilter });
-        const formTotalFourCount = await Weekly4Form.countDocuments({ $or:[{teacherId:user},{userId:user},{coordinatorID:user}], ...queryFilter });
+        const formTotalOneCount = await Form1.countDocuments({ $or: [{ coordinatorID: user }, { teacherID: user }, { userId: user }], ...queryFilter });
+        const formTotalTwoCount = await Form2.countDocuments({ $or: [{ teacherID: user }, { 'grenralDetails.NameoftheVisitingTeacher': user }, { createdBy: user }], ...queryFilter });
+        const formTotalThreeCount = await Form3.countDocuments({ $or: [{ teacherID: user }, { 'grenralDetails.NameofObserver': user }, { createdBy: user }], ...queryFilter });
+        const formTotalFourCount = await Weekly4Form.countDocuments({ $or: [{ teacherId: user }, { userId: user }, { coordinatorID: user }], ...queryFilter });
         const formOneCount = await Form1.countDocuments({
             $and: [
                 { $or: [{ coordinatorID: user }, { teacherID: user }, { userId: user }] },
@@ -182,14 +182,14 @@ const FromCount = async (req, res) => {
         });
 
         const formThreeCount = await Form3.countDocuments({
-            $and:[
-                {$or:[{teacherID:user},{'grenralDetails.NameofObserver':user},{createdBy:user}]},
-                {$or: [{ isTeacherComplete: false }, { isObserverComplete: false }]}
+            $and: [
+                { $or: [{ teacherID: user }, { 'grenralDetails.NameofObserver': user }, { createdBy: user }] },
+                { $or: [{ isTeacherComplete: false }, { isObserverComplete: false }] }
             ],
             ...queryFilter
         });
         const formFourCount = await Weekly4Form.countDocuments({
-            $or:[{teacherId:user},{userId:user},{coordinatorID:user}],
+            $or: [{ teacherId: user }, { userId: user }, { coordinatorID: user }],
             isCompleted: false,
             ...queryFilter
         });
@@ -255,7 +255,7 @@ const getFillterForms = async (req, res) => {
         const observerFilter1 = observers && observers.length > 0 ? { $or: [{ coordinatorID: { $in: observers } }, { userId: { $in: observers } }] } : {};
         const observerFilter2 = observers && observers.length > 0 ? { createdBy: { $in: observers } } : {};
         const observerFilter3 = observers && observers.length > 0 ? { $or: [{ 'grenralDetails.NameofObserver': { $in: observers } }, { createdBy: { $in: observers } }] } : {};
-        const observerFilter4 = observers && observers.length > 0 ? { $or: [{ coordinatorID: { $in: observers } }, { userId: { $in: observers } }] } : {};
+        const observerFilter4 = observers && observers.length > 0 ? { $or: [{ "isInitiated.Observer": { $in: observers } }] } : {};
 
         // Fetch filtered forms
         const form1 = await Form1.find({
@@ -279,7 +279,7 @@ const getFillterForms = async (req, res) => {
             createdAt: { $gte: from, $lte: to },
             isTeacherComplete: true,
             isObserverComplete: true,
-            isReflation: true,
+            // isReflation: true,
             ...observerFilter3
         }).populate("teacherID createdBy", "-password -mobile -employeeId");
 

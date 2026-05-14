@@ -353,6 +353,12 @@ exports.updateObserverFields = async (req, res) => {
             isReflation: false,
         };
 
+        // If teacherID is not set (teacher-created flow), copy it from createdBy
+        // so GetcreatedByID can reliably find this form for the teacher.
+        if (!existingForm.teacherID && existingForm.createdBy) {
+            payload.teacherID = existingForm.createdBy._id || existingForm.createdBy;
+        }
+
         // Remove undefined or null values from the payload
         Object.keys(payload).forEach(
             (key) => (payload[key] === undefined || payload[key] === null) && delete payload[key]
@@ -416,31 +422,24 @@ exports.GetcreatedByID = async (req, res) => {
   try {
     const queryFilter = req.sessionDateFilter ? { createdAt: req.sessionDateFilter } : {};
 
-    // Fetch forms where the user is the creator
-    const Form = await Form3.find({ createdBy: userId, ...queryFilter })
-      .sort({ createdAt: -1 })
-      .populate({
-        path: "createdBy",
-        select: "-password -mobile -employeeId -customId",
-      })
-      .populate({
-        path: "grenralDetails.NameofObserver",
-        select: "-password -mobile -employeeId -customId",
-      });
+    const populateOpts = [
+      { path: "createdBy teacherID", select: "-password -mobile -employeeId -customId" },
+      { path: "grenralDetails.NameofObserver", select: "-password -mobile -employeeId -customId" },
+    ];
 
-    // Fetch forms where the user is a teacher
-    const Form2 = await Form3.find({ teacherID: userId, ...queryFilter })
-      .sort({ createdAt: -1 })
-      .populate({
-        path: "createdBy teacherID",
-        select: "-password -mobile -employeeId -customId",
-      })
-      .populate({
-        path: "grenralDetails.NameofObserver",
-        select: "-password -mobile -employeeId -customId",
-      });
+    // Query 1: forms the teacher created themselves
+    const [Form, Form2] = await Promise.all([
+      Form3.find({ createdBy: userId, ...queryFilter })
+        .sort({ createdAt: -1 })
+        .populate(populateOpts),
 
-    // Merge arrays, remove duplicates, then re-sort by createdAt desc
+      // Query 2: observer-initiated forms assigned to this teacher
+      Form3.find({ teacherID: userId, ...queryFilter })
+        .sort({ createdAt: -1 })
+        .populate(populateOpts),
+    ]);
+
+    // Merge all, deduplicate, sort by createdAt desc
     const uniqueForms = Array.from(
       new Map([...Form, ...Form2].map((item) => [item._id.toString(), item])).values()
     ).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
@@ -451,6 +450,7 @@ exports.GetcreatedByID = async (req, res) => {
     res.status(500).json({ message: "Error Getting NoteBook.", error });
   }
 };
+
 
 exports.GetObseverForm = async (req, res) => {
   const userId = req?.user?.id;
@@ -744,16 +744,17 @@ exports.updateTeacherReflationFeedback = async (req, res) => {
   const { id } = req.params;
   const { reflation } = req.body;
 
-
   try {
-    // Find the existing form details
-    const form = await Form3.findById(id).populate("createdBy"); // Fetch creator details
+    // Populate both createdBy and teacherID — either may identify the teacher
+    const form = await Form3.findById(id)
+      .populate("createdBy", "name email")
+      .populate("teacherID", "name email");
 
     if (!form) {
       return res.status(404).json({ message: "Form not found" });
     }
 
-    // Update the form with the teacher's reflection
+    // Save the reflection first so it's never lost even if email fails
     const updatedForm = await Form3.findByIdAndUpdate(
       id,
       {
@@ -763,35 +764,41 @@ exports.updateTeacherReflationFeedback = async (req, res) => {
       { new: true }
     );
 
-    // Fetch Observer's Details
-    const observer = await User.findById(form.grenralDetails.NameofObserver);
-    const teacher = form.createdBy; // Teacher who submitted the form
+    // Resolve teacher — observer-initiated forms use teacherID, teacher-created use createdBy
+    const teacher = form.teacherID || form.createdBy;
 
-    if (!observer) {
-      return res.status(404).json({ message: "Observer not found" });
-    }
+    // Send email to observer (non-blocking — reflection is already saved above)
+    try {
+      const observer = await User.findById(form.grenralDetails.NameofObserver);
 
-    // Email Subject & Body
-    const subject = "Notebook Checking Proforma Teacher Reflection Submitted";
-    const body = ` 
-Dear ${observer.name},
+      if (observer?.email && teacher?.name) {
+        const subject = "Notebook Checking Proforma Teacher Reflection Submitted";
+        const body = `Dear ${observer.name},
 
 ${teacher.name} has submitted their reflections of Notebook Checking Proforma on ${new Date().toLocaleDateString()}. Please review and proceed accordingly.
 
-Regards,  
-The Admin Team
-    `;
+Regards,
+The Admin Team`;
 
-    // Send Email to Observer
-    await sendEmail(observer.email, subject, body);
+        await sendEmail(observer.email, subject, body);
+      }
+    } catch (emailError) {
+      console.error("Failed to send reflection email:", emailError);
+      // Email failure should not fail the request
+    }
 
-    res.status(200).json({ success: true, message: "Reflection updated & email sent to observer", form: updatedForm});
+    res.status(200).json({
+      success: true,
+      message: "Reflection updated & email sent to observer",
+      form: updatedForm,
+    });
 
   } catch (error) {
     console.error("Error updating teacher reflection feedback:", error);
     res.status(500).json({ message: "Server error, please try again later" });
   }
 };
+
 
 
 exports.ReminderFormThree = async (req, res) => {

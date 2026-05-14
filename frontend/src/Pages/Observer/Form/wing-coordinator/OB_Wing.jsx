@@ -702,7 +702,7 @@ function OB_Wing() {
                 } else if (key === "form3") {
                   observerId = item?.grenralDetails?.NameofObserver?._id || item?.grenralDetails?.NameofObserver || item?.createdBy?._id || item?.createdBy;
                 } else if (key === "form4") {
-                  observerId = item?.userId?._id || item?.userId;
+                  observerId = item?.isInitiated?.Observer?._id || item?.isInitiated?.Observer || item?.userId?._id || item?.userId;
                 }
 
                 const obsIdStr = observerId?.toString();
