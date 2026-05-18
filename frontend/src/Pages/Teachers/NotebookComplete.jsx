@@ -23,60 +23,70 @@ import {
 import { getAllTimes, getUserId } from "../../Utils/auth";
 import { useNavigate } from "react-router-dom";
 import { CreateActivityApi } from "../../redux/Activity/activitySlice";
+import DynamicScroreThree from "../../Components/DynamicScroreThree";
 
+/* ── Shared table card — identical to NotebookPDF ── */
 const TableCard = React.memo(({ title, dataSource }) => (
   <Box
     bg="white"
-    borderRadius="2xl"
+    mt={6}
+    borderRadius="xl"
     boxShadow="sm"
     borderWidth="1px"
     borderColor="gray.100"
-    p={5}
-    mt={6}
-    w="100%"
-    overflowX="auto"
+    overflow="hidden"
   >
-    <Heading size="md" mb={4} color="gray.700">
-      {title}
-    </Heading>
-    <Table
-      pagination={false}
-      dataSource={dataSource}
-      columns={[
-        {
-          title: "Questions",
-          dataIndex: "question",
-          key: "question",
-          render: (text) => <p className="mb-0">{text}</p>,
-        },
-        {
-          title: "Answer",
-          dataIndex: "answer",
-          key: "answer",
-          render: (text) => (
-            <Tag
-              color={
-                text === "1"
-                  ? "yellow"
-                  : text === "2"
-                    ? "blue"
-                    : text === "3"
-                      ? "green"
-                      : "red"
-              }
-            >
-              {text}
-            </Tag>
-          ),
-        },
-        {
-          title: "Remarks",
-          dataIndex: "remark",
-          key: "remark",
-          render: (text) => <span>{text}</span>,
-        },
-      ]}
-    />
+    <Box
+      bg="gray.50"
+      px={4}
+      py={3}
+      borderBottomWidth="1px"
+      borderColor="gray.200"
+    >
+      <Heading size="sm" color="gray.800">
+        {title}
+      </Heading>
+    </Box>
+    <Box>
+      <Table
+        pagination={false}
+        dataSource={dataSource}
+        columns={[
+          {
+            title: "Questions",
+            dataIndex: "question",
+            key: "question",
+            render: (text) => <p className="mb-0">{text}</p>,
+          },
+          {
+            title: "Answer",
+            dataIndex: "answer",
+            key: "answer",
+            render: (text) => (
+              <Tag
+                color={
+                  text === "1"
+                    ? "yellow"
+                    : text === "2"
+                      ? "blue"
+                      : text === "3"
+                        ? "green"
+                        : "red"
+                }
+              >
+                {text}
+              </Tag>
+            ),
+          },
+          {
+            title: "Remarks",
+            dataIndex: "remark",
+            key: "remark",
+            render: (text) => <span>{text}</span>,
+          },
+        ]}
+      />
+    </Box>
   </Box>
 ));
 
@@ -149,245 +159,358 @@ function NotebookComplete() {
     formDataList?.[type]?.[field];
 
   return (
-    <Box
-      p={{ base: 4, md: 8 }}
-      minH="calc(100vh - 72px)"
-      bg="gray.50"
-      position="relative"
-    >
+    <Box p={{ base: 4, md: 8 }} minH="100vh" bg="gray.50" position="relative">
       {isLoading && (
         <Flex
           justify="center"
           align="center"
           position="absolute"
-          top="0"
-          left="0"
-          right="0"
-          bottom="0"
-          bg="rgba(255,255,255,0.7)"
-          zIndex={10}
+          inset={0}
+          bg="whiteAlpha.800"
+          zIndex={20}
+          borderRadius="2xl"
         >
           <Spin size="large" />
         </Flex>
       )}
-      <Box maxW="1200px" mx="auto">
-        <Flex justify="center" gap={4} mb={8} align="center">
-          <Image src={Logo} alt="Logo" h="80px" objectFit="contain" />
-          <Image src={LogoBanner} alt="Banner" h="80px" objectFit="contain" />
-        </Flex>
 
+      <Box maxW="1200px" mx="auto">
+        {/* ── Main report card ── */}
         <Box
           bg="white"
-          p={8}
+          p={{ base: 4, md: 8 }}
           borderRadius="2xl"
           boxShadow="sm"
           borderWidth="1px"
           borderColor="gray.100"
-          mb={8}
         >
-          <Heading size="md" color="brand.primary" mb={6}>
-            General Details
-          </Heading>
-          <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4} mb={8}>
-            <Box>
-              <Text color="gray.500" fontSize="sm">
-                Name Of Observer
-              </Text>
-              <Text fontWeight="600" color="gray.800">
-                {formDataList?.grenralDetails?.NameofObserver?.name || "N/A"}
-              </Text>
-            </Box>
-            <Box>
-              <Text color="gray.500" fontSize="sm">
-                Grade
-              </Text>
-              <Text fontWeight="600" color="gray.800">
-                {formDataList?.grenralDetails?.className || "N/A"}
-              </Text>
-            </Box>
-            <Box>
-              <Text color="gray.500" fontSize="sm">
-                Section
-              </Text>
-              <Text fontWeight="600" color="gray.800">
-                {formDataList?.grenralDetails?.Section || "N/A"}
-              </Text>
-            </Box>
-            <Box>
-              <Text color="gray.500" fontSize="sm">
-                Subject
-              </Text>
-              <Text fontWeight="600" color="gray.800">
-                {formDataList?.grenralDetails?.Subject || "N/A"}
-              </Text>
-            </Box>
-            <Box>
-              <Text color="gray.500" fontSize="sm">
-                Date Of Observation
-              </Text>
-              <Text fontWeight="600" color="gray.800">
-                {formDataList?.grenralDetails?.DateOfObservation
-                  ? getAllTimes(formDataList?.grenralDetails?.DateOfObservation)
-                      .formattedDate2
-                  : "N/A"}
-              </Text>
-            </Box>
-          </SimpleGrid>
+          {/* Logo header — identical to NotebookPDF */}
+          <Flex
+            justify="center"
+            gap={8}
+            mb={8}
+            align="center"
+            p={6}
+            borderRadius="xl"
+            bg="gray.50"
+            borderWidth="1px"
+            borderColor="gray.200"
+          >
+            <Image
+              src={Logo}
+              w={{ base: "100px", md: "100px" }}
+              h="auto"
+              alt="Logo"
+            />
+            <Image
+              src={LogoBanner}
+              w={{ base: "200px", md: "400px" }}
+              h="auto"
+              alt="Banner"
+            />
+          </Flex>
 
-          <Divider mb={8} />
+          {/* ── General Details ── */}
+          <Box mb={8}>
+            <Heading size="md" color="gray.800" mb={4}>
+              General Details
+            </Heading>
+            <SimpleGrid
+              columns={{ base: 1, md: 3 }}
+              spacing={4}
+              p={6}
+              bg="blue.50"
+              borderRadius="xl"
+              borderWidth="1px"
+              borderColor="blue.100"
+            >
+              <Box>
+                <Text fontWeight="600" color="blue.900" display="inline">
+                  Name Of Observer:{" "}
+                </Text>
+                <Text display="inline" color="blue.800">
+                  {formDataList?.grenralDetails?.NameofObserver?.name ||
+                    formDataList?.createdBy?.name}
+                </Text>
+              </Box>
+              <Box>
+                <Text fontWeight="600" color="blue.900" display="inline">
+                  Name Of Teacher:{" "}
+                </Text>
+                <Text display="inline" color="blue.800">
+                  {formDataList?.teacherID?.name ||
+                    formDataList?.createdBy?.name}
+                </Text>
+              </Box>
+              <Box>
+                <Text fontWeight="600" color="blue.900" display="inline">
+                  Grade:{" "}
+                </Text>
+                <Text display="inline" color="blue.800">
+                  {formDataList?.grenralDetails?.className}
+                </Text>
+              </Box>
+              <Box>
+                <Text fontWeight="600" color="blue.900" display="inline">
+                  Section:{" "}
+                </Text>
+                <Text display="inline" color="blue.800">
+                  {formDataList?.grenralDetails?.Section}
+                </Text>
+              </Box>
+              <Box>
+                <Text fontWeight="600" color="blue.900" display="inline">
+                  Subject:{" "}
+                </Text>
+                <Text display="inline" color="blue.800">
+                  {formDataList?.grenralDetails?.Subject}
+                </Text>
+              </Box>
+              <Box>
+                <Text fontWeight="600" color="blue.900" display="inline">
+                  Date:{" "}
+                </Text>
+                <Text display="inline" color="blue.800">
+                  {getAllTimes(formDataList?.grenralDetails?.DateOfObservation)
+                    .formattedDate2}
+                </Text>
+              </Box>
+            </SimpleGrid>
+          </Box>
 
-          <SimpleGrid columns={{ base: 1, md: 2 }} spacing={8}>
+          {/* ── Notebook stat boxes (purple = Observer, teal = Teacher) ── */}
+          <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={8} mb={8}>
             <Box>
-              <Heading size="sm" color="gray.700" mb={4}>
+              <Heading size="sm" color="gray.700" mb={3}>
                 Observer Notebook
               </Heading>
-              <VStack align="stretch" spacing={2}>
-                <Flex justify="space-between">
-                  <Text color="gray.500">Absentees:</Text>{" "}
-                  <Text fontWeight="600">
-                    {formDataList?.NotebooksObserver?.Absentees || "0"}
+              <SimpleGrid
+                columns={2}
+                spacing={4}
+                p={5}
+                bg="purple.50"
+                borderRadius="xl"
+                borderWidth="1px"
+                borderColor="purple.100"
+              >
+                <Box>
+                  <Text fontWeight="600" color="purple.900" display="inline">
+                    Absentees:{" "}
                   </Text>
-                </Flex>
-                <Flex justify="space-between">
-                  <Text color="gray.500">Class Strength:</Text>{" "}
-                  <Text fontWeight="600">
-                    {formDataList?.NotebooksObserver?.ClassStrength || "0"}
+                  <Text display="inline" color="purple.800">
+                    {formDataList?.NotebooksObserver?.Absentees}
                   </Text>
-                </Flex>
-                <Flex justify="space-between">
-                  <Text color="gray.500">Defaulters:</Text>{" "}
-                  <Text fontWeight="600">
-                    {formDataList?.NotebooksObserver?.Defaulters || "0"}
+                </Box>
+                <Box>
+                  <Text fontWeight="600" color="purple.900" display="inline">
+                    Class Strength:{" "}
                   </Text>
-                </Flex>
-                <Flex justify="space-between">
-                  <Text color="gray.500">Notebooks Submitted:</Text>{" "}
-                  <Text fontWeight="600">
-                    {formDataList?.NotebooksObserver?.NotebooksSubmitted || "0"}
+                  <Text display="inline" color="purple.800">
+                    {formDataList?.NotebooksObserver?.ClassStrength}
                   </Text>
-                </Flex>
+                </Box>
+                <Box>
+                  <Text fontWeight="600" color="purple.900" display="inline">
+                    Defaulters:{" "}
+                  </Text>
+                  <Text display="inline" color="purple.800">
+                    {formDataList?.NotebooksObserver?.Defaulters}
+                  </Text>
+                </Box>
+                <Box>
+                  <Text fontWeight="600" color="purple.900" display="inline">
+                    Submitted:{" "}
+                  </Text>
+                  <Text display="inline" color="purple.800">
+                    {formDataList?.NotebooksObserver?.NotebooksSubmitted}
+                  </Text>
+                </Box>
+              </SimpleGrid>
+            </Box>
+
+            <Box>
+              <Heading size="sm" color="gray.700" mb={3}>
+                Teacher Notebook
+              </Heading>
+              <SimpleGrid
+                columns={2}
+                spacing={4}
+                p={5}
+                bg="teal.50"
+                borderRadius="xl"
+                borderWidth="1px"
+                borderColor="teal.100"
+              >
+                <Box>
+                  <Text fontWeight="600" color="teal.900" display="inline">
+                    Absentees:{" "}
+                  </Text>
+                  <Text display="inline" color="teal.800">
+                    {formDataList?.NotebooksTeacher?.Absentees}
+                  </Text>
+                </Box>
+                <Box>
+                  <Text fontWeight="600" color="teal.900" display="inline">
+                    Class Strength:{" "}
+                  </Text>
+                  <Text display="inline" color="teal.800">
+                    {formDataList?.NotebooksTeacher?.ClassStrength}
+                  </Text>
+                </Box>
+                <Box>
+                  <Text fontWeight="600" color="teal.900" display="inline">
+                    Defaulters:{" "}
+                  </Text>
+                  <Text display="inline" color="teal.800">
+                    {formDataList?.NotebooksTeacher?.Defaulters}
+                  </Text>
+                </Box>
+                <Box>
+                  <Text fontWeight="600" color="teal.900" display="inline">
+                    Submitted:{" "}
+                  </Text>
+                  <Text display="inline" color="teal.800">
+                    {formDataList?.NotebooksTeacher?.NotebooksSubmitted}
+                  </Text>
+                </Box>
+              </SimpleGrid>
+            </Box>
+          </SimpleGrid>
+
+          {/* ── Two-column response tables (Teacher | Observer) ── */}
+          <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={8} mb={8}>
+            <Box>
+              <Heading
+                size="md"
+                color="brand.primary"
+                mb={4}
+                pb={2}
+                borderBottom="2px solid"
+                borderColor="brand.primary"
+              >
+                Teacher Response
+              </Heading>
+              <VStack align="stretch" spacing={0}>
+                {keyObject.map((title, index) => (
+                  <TableCard
+                    key={`t-${index}`}
+                    title={title}
+                    dataSource={getField(
+                      Object.keys(formDataList?.TeacherForm || {})[index],
+                      "TeacherForm",
+                    )}
+                  />
+                ))}
               </VStack>
             </Box>
 
             <Box>
-              <Heading size="sm" color="gray.700" mb={4}>
-                Teacher Notebook
+              <Heading
+                size="md"
+                color="brand.secondary"
+                mb={4}
+                pb={2}
+                borderBottom="2px solid"
+                borderColor="brand.secondary"
+              >
+                Observer Response
               </Heading>
-              <VStack align="stretch" spacing={2}>
-                <Flex justify="space-between">
-                  <Text color="gray.500">Absentees:</Text>{" "}
-                  <Text fontWeight="600">
-                    {formDataList?.NotebooksTeacher?.Absentees || "0"}
-                  </Text>
-                </Flex>
-                <Flex justify="space-between">
-                  <Text color="gray.500">Class Strength:</Text>{" "}
-                  <Text fontWeight="600">
-                    {formDataList?.NotebooksTeacher?.ClassStrength || "0"}
-                  </Text>
-                </Flex>
-                <Flex justify="space-between">
-                  <Text color="gray.500">Defaulters:</Text>{" "}
-                  <Text fontWeight="600">
-                    {formDataList?.NotebooksTeacher?.Defaulters || "0"}
-                  </Text>
-                </Flex>
-                <Flex justify="space-between">
-                  <Text color="gray.500">Notebooks Submitted:</Text>{" "}
-                  <Text fontWeight="600">
-                    {formDataList?.NotebooksTeacher?.NotebooksSubmitted || "0"}
-                  </Text>
-                </Flex>
+              <VStack align="stretch" spacing={0}>
+                {keyObject.map((title, index) => (
+                  <TableCard
+                    key={`o-${index}`}
+                    title={title}
+                    dataSource={getField(
+                      Object.keys(formDataList?.ObserverForm || {})[index],
+                    )}
+                  />
+                ))}
               </VStack>
             </Box>
           </SimpleGrid>
-        </Box>
 
-        <SimpleGrid columns={{ base: 1, xl: 2 }} spacing={8} mb={8}>
-          <Box>
-            <Heading size="lg" mb={4} color="gray.800">
-              Observer Response
-            </Heading>
-            {keyObject.map((title, index) => (
-              <TableCard
-                key={index}
-                title={title}
-                dataSource={getField(
-                  Object.keys(formDataList?.ObserverForm || {})[index],
-                )}
-              />
-            ))}
-
+          {/* ── Observer feedback display ── */}
+          <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={8} mb={8}>
             <Box
-              mt={6}
-              bg="white"
+              bg="blue.50"
               p={6}
-              borderRadius="2xl"
-              boxShadow="sm"
+              borderRadius="xl"
               borderWidth="1px"
-              borderColor="brand.primary"
+              borderColor="blue.200"
             >
-              <Heading size="md" color="brand.primary" mb={4}>
+              <Heading size="sm" color="gray.800" mb={3}>
                 Observer Feedback
               </Heading>
-              <Text color="gray.700" whiteSpace="pre-wrap">
+              <Text
+                color="gray.700"
+                bg="white"
+                p={4}
+                borderRadius="md"
+                borderWidth="1px"
+                borderColor="gray.200"
+                whiteSpace="pre-wrap"
+              >
                 {formDataList?.observerFeedback || "No feedback provided."}
               </Text>
             </Box>
-          </Box>
 
-          <Box>
-            <Heading size="lg" mb={4} color="gray.800">
-              Teacher Response
-            </Heading>
-            {keyObject.map((title, index) => (
-              <TableCard
-                key={index + 4}
-                title={title}
-                dataSource={getField(
-                  Object.keys(formDataList?.TeacherForm || {})[index],
-                  "TeacherForm",
-                )}
+            {/* Score cards */}
+            <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+              <DynamicScroreThree
+                col={12}
+                formName={formDataList?.TeacherForm}
+                className="w-full"
               />
-            ))}
-          </Box>
-        </SimpleGrid>
+              <DynamicScroreThree
+                col={12}
+                formName={formDataList?.ObserverForm}
+                className="w-full"
+              />
+            </SimpleGrid>
+          </SimpleGrid>
 
-        <Box
-          bg="white"
-          p={8}
-          borderRadius="2xl"
-          boxShadow="md"
-          borderWidth="1px"
-          borderColor="gray.100"
-        >
-          <Heading size="md" color="gray.800" mb={4}>
-            Teacher Reflection
-          </Heading>
-          <Text color="gray.500" mb={4}>
-            Enter your thoughts or reflection on this observation.
-          </Text>
-          <Textarea
-            name="reflation"
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            placeholder="Your Reflection..."
-            size="lg"
-            rows={5}
-            resize="none"
-            focusBorderColor="brand.primary"
-            mb={6}
-          />
-          <Flex justify="flex-end">
-            <Button
-              type="primary"
-              size="large"
-              onClick={handleSubmit}
-              style={{ borderRadius: "8px", minWidth: "150px" }}
-            >
-              Submit Reflection
-            </Button>
-          </Flex>
+          {/* ── Teacher Reflection input ── */}
+          <Box
+            bg="white"
+            p={8}
+            borderRadius="2xl"
+            boxShadow="md"
+            borderWidth="1px"
+            borderColor="gray.100"
+            mt={4}
+          >
+            <Heading size="md" color="gray.800" mb={4}>
+              Teacher Reflection
+            </Heading>
+            <Text color="gray.500" mb={4}>
+              Enter your thoughts or reflection on this observation.
+            </Text>
+            <Textarea
+              name="reflation"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              placeholder="Your Reflection..."
+              size="lg"
+              rows={5}
+              resize="none"
+              focusBorderColor="brand.primary"
+              mb={6}
+            />
+            <Flex justify="flex-end">
+              <Button
+                type="primary"
+                size="large"
+                onClick={handleSubmit}
+                style={{
+                  borderRadius: "8px",
+                  minWidth: "150px",
+                  background: "#1a4d2e",
+                }}
+              >
+                Submit Reflection
+              </Button>
+            </Flex>
+          </Box>
         </Box>
       </Box>
     </Box>
