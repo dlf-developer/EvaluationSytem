@@ -682,6 +682,18 @@ export const getNotebookColumns = ({
       falseLabel: "Pending",
     },
   },
+  {
+    title: "Reflection Status",
+    key: "isReflation",
+    dataIndex: "isReflation",
+    width: "155px",
+    render: (val) => <StatusBadge value={val} trueLabel="Submitted" falseLabel="Pending" />,
+    filterConfig: {
+      type: "boolean",
+      trueLabel: "Submitted",
+      falseLabel: "Pending",
+    },
+  },
 
   {
     title: "Teacher Score",
@@ -717,18 +729,7 @@ export const getNotebookColumns = ({
       );
     },
   },
-  {
-    title: "Reflection Status",
-    key: "isReflation",
-    dataIndex: "isReflation",
-    width: "155px",
-    render: (val) => <StatusBadge value={val} trueLabel="Submitted" falseLabel="Pending" />,
-    filterConfig: {
-      type: "boolean",
-      trueLabel: "Submitted",
-      falseLabel: "Pending",
-    },
-  },
+
   {
     title: "Action",
     key: "action",
@@ -743,17 +744,19 @@ export const getNotebookColumns = ({
           // Fully done (Teacher reflection submitted) → everyone sees View Report
           if (isReflation) {
             return (
-              <Link to={`/notebook-checking-proforma/report/${record._id}`}>
-                <Button
-                  size="md"
-                  variant="outline"
-                  colorScheme="blue"
-                  fontWeight="medium"
-                  flexShrink={0}
-                >
-                  View Report
-                </Button>
-              </Link>
+              <Flex gap={1}>
+                <Link to={`/notebook-checking-proforma/report/${record._id}`}>
+                  <Button
+                    size="md"
+                    variant="outline"
+                    colorScheme="blue"
+                    fontWeight="medium"
+                    flexShrink={0}
+                  >
+                    View Report
+                  </Button>
+                </Link>
+              </Flex>
             );
           }
 
@@ -776,17 +779,32 @@ export const getNotebookColumns = ({
 
           // Observer already done — show View Report
           return (
-            <Link to={`/notebook-checking-proforma/report/${record._id}`}>
-              <Button
-                size="md"
-                variant="outline"
-                colorScheme="blue"
-                fontWeight="medium"
-                flexShrink={0}
-              >
-                View Report
-              </Button>
-            </Link>
+            <Flex gap={1}>
+              <Link to={`/notebook-checking-proforma/report/${record._id}`}>
+                <Button
+                  size="md"
+                  variant="outline"
+                  colorScheme="blue"
+                  fontWeight="medium"
+                  flexShrink={0}
+                >
+                  View Report
+                </Button>
+              </Link>
+              {currentUserRole === UserRole[1] && isTeacherComplete && (
+                <Link to={`/notebook-checking-proforma/complete/${record._id}`}>
+                  <Button
+                    size="md"
+                    variant="outline"
+                    colorScheme="orange"
+                    fontWeight="medium"
+                    flexShrink={0}
+                  >
+                    Reflection
+                  </Button>
+                </Link>
+              )}
+            </Flex>
           );
         }
 
@@ -1784,6 +1802,18 @@ export const getReportForm3Columns = ({
       falseLabel: "Pending",
     },
   },
+  {
+    title: "Reflection Status",
+    key: "isReflation",
+    dataIndex: "isReflation",
+    width: "155px",
+    render: (val) => <StatusBadge value={val} trueLabel="Submitted" falseLabel="Pending" />,
+    filterConfig: {
+      type: "boolean",
+      trueLabel: "Submitted",
+      falseLabel: "Pending",
+    },
+  },
 
   {
     title: "Teacher Score",
@@ -1823,7 +1853,7 @@ export const getReportForm3Columns = ({
     title: "Action",
     key: "action",
     dataIndex: "action",
-    width: "150px",
+    width: "250px",
     render: (_, record) => (
       <Flex gap={1} align="center">
         <Link to={`/notebook-checking-proforma/report/${record._id}`}>
@@ -1837,6 +1867,19 @@ export const getReportForm3Columns = ({
             View Report
           </Button>
         </Link>
+        {record.isTeacherComplete && record.isObserverComplete && !record.isReflation && (
+          <Link to={`/notebook-checking-proforma/complete/${record._id}`}>
+            <Button
+              size="md"
+              variant="outline"
+              colorScheme="orange"
+              fontWeight="medium"
+              flexShrink={0}
+            >
+              Reflection
+            </Button>
+          </Link>
+        )}
         {currentUserRole === UserRole[1] && onDelete && (
           <Button
             size="md"

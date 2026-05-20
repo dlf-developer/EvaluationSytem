@@ -254,6 +254,53 @@ function NotebookPDF() {
           </Box>
 
           <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={8} mb={8}>
+              <Box>
+              <Heading size="sm" color="gray.700" mb={3}>
+                Teacher Notebook
+              </Heading>
+              <SimpleGrid
+                columns={2}
+                spacing={4}
+                p={5}
+                bg="teal.50"
+                borderRadius="xl"
+                borderWidth="1px"
+                borderColor="teal.100"
+              >
+                <Box>
+                  <Text fontWeight="600" color="teal.900" display="inline">
+                    Absentees:{" "}
+                  </Text>
+                  <Text display="inline" color="teal.800">
+                    {formDataList?.NotebooksTeacher?.Absentees}
+                  </Text>
+                </Box>
+                <Box>
+                  <Text fontWeight="600" color="teal.900" display="inline">
+                    Class Strength:{" "}
+                  </Text>
+                  <Text display="inline" color="teal.800">
+                    {formDataList?.NotebooksTeacher?.ClassStrength}
+                  </Text>
+                </Box>
+                <Box>
+                  <Text fontWeight="600" color="teal.900" display="inline">
+                    Defaulters:{" "}
+                  </Text>
+                  <Text display="inline" color="teal.800">
+                    {formDataList?.NotebooksTeacher?.Defaulters}
+                  </Text>
+                </Box>
+                <Box>
+                  <Text fontWeight="600" color="teal.900" display="inline">
+                    Submitted:{" "}
+                  </Text>
+                  <Text display="inline" color="teal.800">
+                    {formDataList?.NotebooksTeacher?.NotebooksSubmitted}
+                  </Text>
+                </Box>
+              </SimpleGrid>
+            </Box>
             <Box>
               <Heading size="sm" color="gray.700" mb={3}>
                 Observer Notebook
@@ -302,53 +349,7 @@ function NotebookPDF() {
               </SimpleGrid>
             </Box>
 
-            <Box>
-              <Heading size="sm" color="gray.700" mb={3}>
-                Teacher Notebook
-              </Heading>
-              <SimpleGrid
-                columns={2}
-                spacing={4}
-                p={5}
-                bg="teal.50"
-                borderRadius="xl"
-                borderWidth="1px"
-                borderColor="teal.100"
-              >
-                <Box>
-                  <Text fontWeight="600" color="teal.900" display="inline">
-                    Absentees:{" "}
-                  </Text>
-                  <Text display="inline" color="teal.800">
-                    {formDataList?.NotebooksTeacher?.Absentees}
-                  </Text>
-                </Box>
-                <Box>
-                  <Text fontWeight="600" color="teal.900" display="inline">
-                    Class Strength:{" "}
-                  </Text>
-                  <Text display="inline" color="teal.800">
-                    {formDataList?.NotebooksTeacher?.ClassStrength}
-                  </Text>
-                </Box>
-                <Box>
-                  <Text fontWeight="600" color="teal.900" display="inline">
-                    Defaulters:{" "}
-                  </Text>
-                  <Text display="inline" color="teal.800">
-                    {formDataList?.NotebooksTeacher?.Defaulters}
-                  </Text>
-                </Box>
-                <Box>
-                  <Text fontWeight="600" color="teal.900" display="inline">
-                    Submitted:{" "}
-                  </Text>
-                  <Text display="inline" color="teal.800">
-                    {formDataList?.NotebooksTeacher?.NotebooksSubmitted}
-                  </Text>
-                </Box>
-              </SimpleGrid>
-            </Box>
+          
           </SimpleGrid>
 
           <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={8} mb={8}>

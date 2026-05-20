@@ -220,6 +220,10 @@ const protects = {
           path: "/notebook-checking-proforma/report/:id",
           element: <NotebookPDF />,
         },
+        {
+          path: "/notebook-checking-proforma/complete/:id",
+          element: <NotebookComplete />,
+        },
         { path: "/weekly4form", element: <Weely4Page /> },
         { path: "/weekly4form/create", element: <Weely4Form /> },
         { path: "/weekly4form/edit/:id", element: <Weely4Form /> },

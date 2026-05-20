@@ -60,69 +60,35 @@ const SectionHeading = ({ children, count, colorScheme = "green" }) => (
 const Form1Card = ({ item, index }) => {
   const tScore = form1Score(item.teacherForm);
   const oScore = form1Score(item.observerForm);
-  const keys = item.teacherForm
-    ? Object.keys(item.teacherForm).filter(k => !["totalScore","OutOf","ObservationDates"].includes(k))
-    : [];
-
-  const columns = [
-    {
-      title: "Question",
-      dataIndex: "key",
-      key: "q",
-      width: "55%",
-      render: (k) => <Text fontSize="sm">{k.replace(/([A-Z])/g, " $1").replace(/^./, c => c.toUpperCase())}</Text>,
-    },
-    {
-      title: "Teacher",
-      key: "teacher",
-      width: "22.5%",
-      render: (_, r) => <Tag color={answerColor(item.teacherForm?.[r.key])}>{item.teacherForm?.[r.key] ?? "—"}</Tag>,
-    },
-    {
-      title: "Observer",
-      key: "observer",
-      width: "22.5%",
-      render: (_, r) => <Tag color={answerColor(item.observerForm?.[r.key])}>{item.observerForm?.[r.key] ?? "—"}</Tag>,
-    },
-  ];
-
   return (
-    <Box bg="white" borderRadius="xl" borderWidth="1px" borderColor="gray.100" boxShadow="sm" overflow="hidden" mb={4}>
-      <Box bg="brand.background" px={5} py={3} borderBottomWidth="1px" borderBottomColor="gray.100">
-        <Flex justify="space-between" align="center" flexWrap="wrap" gap={2}>
-          <Box>
-            <Text fontWeight="700" color="brand.text" fontSize="sm">Record {index + 1}</Text>
-            <Text fontSize="xs" color="gray.500">
-              {item.className} / {item.section} · {getAllTimes(item.date)?.formattedDate2}
-            </Text>
-          </Box>
-          <HStack spacing={4}>
-            <Box textAlign="center">
-              <Text fontSize="xs" color="gray.500">Teacher</Text>
-              <Text fontWeight="700" color="brand.primary" fontSize="sm">{tScore.score} / {tScore.total}</Text>
-            </Box>
-            <Box textAlign="center">
-              <Text fontSize="xs" color="gray.500">Observer</Text>
-              <Text fontWeight="700" color="brand.primary" fontSize="sm">{oScore.score} / {oScore.total}</Text>
-            </Box>
-          </HStack>
-        </Flex>
-        <SimpleGrid columns={{ base: 2, md: 3 }} spacing={4} mt={3}>
-          <MetaCard label="Teacher" value={item.teacherID?.name} />
-          <MetaCard label="Observer" value={item.userId?.name} />
-          <MetaCard label="Submitted" value={getAllTimes(item.ObserverSubmissionDate)?.formattedDate2} />
-        </SimpleGrid>
-      </Box>
-      <Box overflowX="auto">
-        <Table
-          size="small"
-          pagination={false}
-          dataSource={keys.map(k => ({ key: k }))}
-          columns={columns}
-          rowKey="key"
-        />
-      </Box>
-    </Box>
+    <Flex
+      bg="green.50" borderRadius="lg" borderWidth="1px" borderColor="green.100"
+      borderLeftWidth="4px" borderLeftColor="green.400"
+      boxShadow="xs" px={4} py={3} mb={2} align="center" justify="space-between"
+      flexWrap="wrap" gap={2}
+    >
+      <HStack spacing={3} flex={1} minW={0}>
+        <Badge colorScheme="green" fontSize="10px" flexShrink={0}>#{index + 1}</Badge>
+        <Box minW={0}>
+          <Text fontWeight="600" fontSize="sm" color="green.900" isTruncated>
+            {item.teacherID?.name ?? "—"}
+          </Text>
+          <Text fontSize="xs" color="green.700">
+            {item.className}/{item.section} · {getAllTimes(item.date)?.formattedDate2} · Obs: {item.userId?.name ?? "—"}
+          </Text>
+        </Box>
+      </HStack>
+      <HStack spacing={4} flexShrink={0}>
+        <Box textAlign="right">
+          <Text fontSize="10px" color="green.600">Teacher Score</Text>
+          <Text fontWeight="700" fontSize="sm" color="green.700">{tScore.score}/{tScore.total}</Text>
+        </Box>
+        <Box textAlign="right">
+          <Text fontSize="10px" color="green.600">Observer Score</Text>
+          <Text fontWeight="700" fontSize="sm" color="green.700">{oScore.score}/{oScore.total}</Text>
+        </Box>
+      </HStack>
+    </Flex>
   );
 };
 
@@ -135,83 +101,107 @@ const F2_SECTIONS = [
 ];
 
 const Form2Card = ({ item, index }) => (
-  <Box bg="white" borderRadius="xl" borderWidth="1px" borderColor="gray.100" boxShadow="sm" overflow="hidden" mb={4}>
-    <Box bg="brand.background" px={5} py={3} borderBottomWidth="1px" borderBottomColor="gray.100">
-      <Flex justify="space-between" align="center" flexWrap="wrap" gap={2}>
-        <Box>
-          <Text fontWeight="700" color="brand.text" fontSize="sm">Record {index + 1}</Text>
-          <Text fontSize="xs" color="gray.500">
-            {item.grenralDetails?.className} / {item.grenralDetails?.Section} · {getAllTimes(item.grenralDetails?.DateOfObservation)?.formattedDate2}
+  <Box bg="blue.50" borderRadius="lg" borderWidth="1px" borderColor="blue.100"
+    borderLeftWidth="4px" borderLeftColor="blue.400"
+    boxShadow="xs" mb={2} overflow="hidden">
+    <Flex px={4} py={3} align="center" justify="space-between" flexWrap="wrap" gap={2}>
+      <HStack spacing={3} flex={1} minW={0}>
+        <Badge colorScheme="blue" fontSize="10px" flexShrink={0}>#{index + 1}</Badge>
+        <Box minW={0}>
+          <Text fontWeight="600" fontSize="sm" color="blue.900" isTruncated>
+            {item.grenralDetails?.NameoftheVisitingTeacher?.name ?? "—"}
+          </Text>
+          <Text fontSize="xs" color="blue.700">
+            {item.grenralDetails?.className}/{item.grenralDetails?.Section} · {getAllTimes(item.grenralDetails?.DateOfObservation)?.formattedDate2} · {item.grenralDetails?.Subject ?? ""} · Obs: {item.createdBy?.name ?? "—"}
           </Text>
         </Box>
-        <HStack spacing={3}>
-          <Badge colorScheme="purple" fontSize="sm" px={3} py={1} borderRadius="full">Grade {item.Grade}</Badge>
-          <Badge colorScheme="blue" fontSize="sm" px={3} py={1} borderRadius="full">{item.percentageScore}%</Badge>
-          <Badge colorScheme="green" fontSize="sm" px={3} py={1} borderRadius="full">{item.totalScores}/{item.scoreOutof}</Badge>
-        </HStack>
-      </Flex>
-      <SimpleGrid columns={{ base: 2, md: 3 }} spacing={4} mt={3}>
-        <MetaCard label="Teacher" value={item.grenralDetails?.NameoftheVisitingTeacher?.name} />
-        <MetaCard label="Observer" value={item.createdBy?.name} />
-        <MetaCard label="Subject" value={item.grenralDetails?.Subject} />
-        <MetaCard label="Topic" value={item.grenralDetails?.Topic} />
-      </SimpleGrid>
-    </Box>
-
-    <Box p={5}>
-      {F2_SECTIONS.map(({ key, label }) => {
-        const items = item[key] || [];
-        const { score, total } = f2SectionScore(items);
-        return (
-          <Box key={key} mb={5}>
-            <Flex align="center" justify="space-between" mb={2}>
-              <Text fontWeight="600" fontSize="sm" color="brand.primary">{label}</Text>
-              <Badge colorScheme="green" borderRadius="full" px={2}>{score}/{total}</Badge>
-            </Flex>
-            <Table
-              size="small"
-              pagination={false}
-              dataSource={items}
-              rowKey={(r, i) => i}
-              columns={[
-                { title: "Question", dataIndex: "question", key: "q", render: t => <Text fontSize="xs">{t}</Text> },
-                { title: "Score", dataIndex: "answer", key: "a", width: 80, render: v => <Tag color={v === "N/A" ? "default" : "blue"}>{v}</Tag> },
-              ]}
-            />
-          </Box>
-        );
-      })}
-
-      {/* Feedback */}
-      {item.ObserverFeedback?.length > 0 && (
-        <Box mt={4}>
-          <Text fontWeight="600" fontSize="sm" color="brand.text" mb={2}>Observer Feedback</Text>
-          <VStack spacing={2} align="stretch">
-            {item.ObserverFeedback.map((f, i) => (
-              <Box key={i} bg="gray.50" p={3} borderRadius="lg">
-                <Text fontSize="xs" color="gray.500" mb={1}>{f.question}</Text>
-                <Text fontSize="sm">{f.answer}</Text>
-              </Box>
-            ))}
-          </VStack>
-        </Box>
-      )}
-      {item.TeacherFeedback?.length > 0 && (
-        <Box mt={4}>
-          <Text fontWeight="600" fontSize="sm" color="brand.text" mb={2}>Teacher Feedback</Text>
-          <VStack spacing={2} align="stretch">
-            {item.TeacherFeedback.map((f, i) => (
-              <Box key={i} bg="blue.50" p={3} borderRadius="lg">
-                <Text fontSize="xs" color="gray.500" mb={1}>{f.question}</Text>
-                <Text fontSize="sm">{f.answer}</Text>
-              </Box>
-            ))}
-          </VStack>
-        </Box>
-      )}
-    </Box>
+      </HStack>
+      <Badge colorScheme="blue" fontSize="xs" px={2} py={1} borderRadius="full" flexShrink={0}>
+        {item.totalScores}/{item.scoreOutof}
+      </Badge>
+    </Flex>
+    {(item.ObserverFeedback?.length > 0 || item.TeacherFeedback?.length > 0) && (
+      <Box px={4} pb={3} borderTopWidth="1px" borderTopColor="blue.100" pt={2}>
+        {item.ObserverFeedback?.length > 0 && item.ObserverFeedback.map((f, i) => (
+          <Flex key={i} gap={2} mb={1}>
+            <Text fontSize="xs" color="blue.500" flexShrink={0} fontWeight="600">Obs:</Text>
+            <Text fontSize="xs" color="blue.900">{f.answer}</Text>
+          </Flex>
+        ))}
+        {item.TeacherFeedback?.length > 0 && item.TeacherFeedback.map((f, i) => (
+          <Flex key={i} gap={2} mb={1}>
+            <Text fontSize="xs" color="blue.500" flexShrink={0} fontWeight="600">Teacher:</Text>
+            <Text fontSize="xs" color="blue.900">{f.answer}</Text>
+          </Flex>
+        ))}
+      </Box>
+    )}
   </Box>
 );
+
+// ── Form 3 card ──────────────────────────────────────────────────────────────
+const f3Score = (formName) => {
+  let score = 0, total = 0;
+  const keys = ["maintenanceOfNotebooks", "qualityOfOppurtunities", "qualityOfTeacherFeedback", "qualityOfLearner"];
+  keys.forEach((k) => {
+    if (formName?.[k]) {
+      formName[k].forEach((i) => {
+        if (["1", "2", "3"].includes(i?.answer)) { score += parseInt(i.answer, 10); total += 3; }
+      });
+    }
+  });
+  return { score, total };
+};
+
+const Form3Card = ({ item, index }) => {
+  const tScore = f3Score(item.TeacherForm);
+  const oScore = f3Score(item.ObserverForm);
+  return (
+    <Box bg="purple.50" borderRadius="lg" borderWidth="1px" borderColor="purple.100"
+      borderLeftWidth="4px" borderLeftColor="purple.400"
+      boxShadow="xs" mb={2} overflow="hidden">
+      <Flex px={4} py={3} align="center" justify="space-between" flexWrap="wrap" gap={2}>
+        <HStack spacing={3} flex={1} minW={0}>
+          <Badge colorScheme="purple" fontSize="10px" flexShrink={0}>#{index + 1}</Badge>
+          <Box minW={0}>
+            <Text fontWeight="600" fontSize="sm" color="purple.900" isTruncated>
+              {item.teacherID?.name || item.createdBy?.name || "—"}
+            </Text>
+            <Text fontSize="xs" color="purple.700">
+              {item.grenralDetails?.className}/{item.grenralDetails?.Section} · {getAllTimes(item.grenralDetails?.DateOfObservation)?.formattedDate2} · {item.grenralDetails?.Subject ?? ""} · Obs: {item.grenralDetails?.NameofObserver?.name || "—"}
+            </Text>
+          </Box>
+        </HStack>
+        <HStack spacing={4} flexShrink={0}>
+          <Box textAlign="right">
+            <Text fontSize="10px" color="purple.500">Teacher Score</Text>
+            <Text fontWeight="700" fontSize="sm" color="purple.700">{tScore.score}/{tScore.total}</Text>
+          </Box>
+          <Box textAlign="right">
+            <Text fontSize="10px" color="purple.500">Observer Score</Text>
+            <Text fontWeight="700" fontSize="sm" color="purple.700">{oScore.score}/{oScore.total}</Text>
+          </Box>
+        </HStack>
+      </Flex>
+      {(item.observerFeedback || item.teacherReflationFeedback) && (
+        <Box px={4} pb={3} borderTopWidth="1px" borderTopColor="purple.100" pt={2}>
+          {item.observerFeedback && (
+            <Flex gap={2} mb={1}>
+              <Text fontSize="xs" color="purple.500" flexShrink={0} fontWeight="600">Obs Feedback:</Text>
+              <Text fontSize="xs" color="purple.900">{item.observerFeedback}</Text>
+            </Flex>
+          )}
+          {item.teacherReflationFeedback && (
+            <Flex gap={2}>
+              <Text fontSize="xs" color="purple.500" flexShrink={0} fontWeight="600">Reflection:</Text>
+              <Text fontSize="xs" color="purple.900">{item.teacherReflationFeedback}</Text>
+            </Flex>
+          )}
+        </Box>
+      )}
+    </Box>
+  );
+};
 
 // ── Main Report Page ──────────────────────────────────────────────────────────
 function WingCoordinatorReport() {
@@ -400,18 +390,7 @@ function WingCoordinatorReport() {
                     {data.form3?.length === 0 ? (
                       <Box textAlign="center" py={10}><Text color="gray.400" fontSize="sm">No Notebook Checking Proforma forms linked.</Text></Box>
                     ) : (
-                      <Table
-                        dataSource={data.form3}
-                        rowKey="_id"
-                        size="small"
-                        pagination={false}
-                        columns={[
-                          { title: "Teacher", dataIndex: ["teacherID","name"], key: "t", render: v => v || "—" },
-                          { title: "Class", dataIndex: ["grenralDetails","className"], key: "c" },
-                          { title: "Section", dataIndex: ["grenralDetails","Section"], key: "s" },
-                          { title: "Date", dataIndex: "createdAt", key: "d", render: d => fmt(d) },
-                        ]}
-                      />
+                      data.form3.map((item, i) => <Form3Card key={item._id} item={item} index={i} />)
                     )}
                   </TabPanel>
 
@@ -443,9 +422,11 @@ function WingCoordinatorReport() {
                 <Text fontSize="xs" color="gray.400">Scroll to see all pages</Text>
               </Flex>
               <Box borderRadius="xl" overflow="hidden" borderWidth="1px" borderColor="gray.200">
-                <PDFViewer style={{ width: "100%", height: "800px", border: "none" }}>
-                  <WingCoordinatorDoc data={data} />
-                </PDFViewer>
+                {data && (
+                  <PDFViewer key={id} style={{ width: "100%", height: "800px", border: "none" }}>
+                    <WingCoordinatorDoc data={data} />
+                  </PDFViewer>
+                )}
               </Box>
             </Box>
           </>
