@@ -1,26 +1,35 @@
 import React, { memo, useEffect, useState } from "react";
 import { Navigate, Outlet } from "react-router-dom";
-import { getUserId } from "./auth";
+import { getToken, getUserId } from "./auth";
 import Sidebar from "../Components/Sidebar";
 import Navbar from "../Components/Navbar";
 import { useDispatch } from "react-redux";
 import { getUserNotification } from "../redux/userSlice";
-import { Box, Flex, useBreakpointValue } from "@chakra-ui/react";
+import { Box, Flex } from "@chakra-ui/react";
+import Unauthorized from "../Components/Unauthorized";
 
 const DashboardLayout = () => {
+  const token = getToken();
   const role = getUserId()?.access;
   const dispatch = useDispatch();
   const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
-    dispatch(getUserNotification());
-  }, [dispatch]);
+    if (token && role === "Superadmin") {
+      dispatch(getUserNotification());
+    }
+  }, [dispatch, token, role]);
 
   const handleCollapse = (isCollapsed) => {
     setCollapsed(isCollapsed);
   };
 
-  return role === "Superadmin" ? (
+  // Not logged in → redirect to login
+  if (!token) return <Navigate to="/login" replace />;
+  // Logged in but wrong role → show Unauthorized
+  if (role !== "Superadmin") return <Unauthorized />;
+
+  return (
     <Flex minH="100vh" bg="brand.background" overflow="hidden">
       {/* Sidebar */}
       <Box
@@ -65,8 +74,6 @@ const DashboardLayout = () => {
         </Box>
       </Flex>
     </Flex>
-  ) : (
-    <Navigate to="/login" />
   );
 };
 

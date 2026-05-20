@@ -1,27 +1,35 @@
 import React, { memo, useEffect, useState } from "react";
 import { Navigate, Outlet } from "react-router-dom";
-import { getUserId } from "./auth";
-import MainFooter from "../Components/MainFooter";
+import { getToken, getUserId } from "./auth";
 import Navbar from "../Components/Navbar";
 import Sidebar from "../Components/Sidebar";
 import { useDispatch } from "react-redux";
 import { getUserNotification } from "../redux/userSlice";
 import { Box, Flex } from "@chakra-ui/react";
+import Unauthorized from "../Components/Unauthorized";
 
 const TeacherLayout = () => {
+  const token = getToken();
   const role = getUserId()?.access;
   const dispatch = useDispatch();
   const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
-    dispatch(getUserNotification());
-  }, [dispatch]);
+    if (token && role === "Teacher") {
+      dispatch(getUserNotification());
+    }
+  }, [dispatch, token, role]);
 
   const handleCollapse = (isCollapsed) => {
     setCollapsed(isCollapsed);
   };
 
-  return role === "Teacher" ? (
+  // Not logged in → redirect to login
+  if (!token) return <Navigate to="/login" replace />;
+  // Logged in but wrong role → show Unauthorized
+  if (role !== "Teacher") return <Unauthorized />;
+
+  return (
     <Flex minH="100vh" bg="brand.background" overflow="hidden">
       {/* Sidebar */}
       <Box
@@ -64,13 +72,8 @@ const TeacherLayout = () => {
         <Box as="main" flex="1" overflowY="auto">
           <Outlet />
         </Box>
-        {/* <Box as="footer" bg="white" color="gray.500" p={4} textAlign="center" borderTop="1px solid" borderColor="gray.200">
-          <MainFooter />
-        </Box> */}
       </Flex>
     </Flex>
-  ) : (
-    <Navigate to="/login" />
   );
 };
 

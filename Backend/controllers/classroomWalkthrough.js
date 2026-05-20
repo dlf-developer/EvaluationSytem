@@ -4,6 +4,7 @@ const Form2 = require('../models/Form2');
 const notification = require('../models/notification');
 const User = require('../models/User');
 const sendEmail = require('../utils/emailService');
+const { formInitiatedEmail, formCompletedEmail, reminderEmail } = require('../utils/emailTemplates');
 
 
 exports.createForm = async (req, res) => {
@@ -82,16 +83,18 @@ exports.createForm = async (req, res) => {
 
 
 
-        const recipientEmail = await User.findById(NameoftheVisitingTeacher);
-        const subject = 'Classroom Walkthrough Submission Completed';
-        const body = ` 
-Dear ${recipientEmail.name},
-${user.name} has completed and submitted the Classroom Walkthrough Proforma on ${new Date()}. Please review the feedback and submit your reflections within the next 3 days.
-Regards,
-The Admin Team
-                            `;
-
-        await sendEmail(recipientEmail.email, subject, body);
+        const recipientUser = await User.findById(NameoftheVisitingTeacher);
+        const route = `classroom-walkthrough/create/${savedForm._id}`;
+        const emailData = formInitiatedEmail({
+          recipientName: recipientUser?.name,
+          initiatorName: user.name,
+          formTitle: "Classroom Walkthrough",
+          formRoute: route,
+          className: classData?.className,
+          section: Section,
+          subject: Subject,
+        });
+        await sendEmail(recipientUser.email, emailData.subject, emailData.html);
 
         // Send success response
         res.status(201).json({ message: "Form created successfully", form: savedForm, status: true });
@@ -323,16 +326,15 @@ exports.TeacherContinueForm = async (req, res) => {
         form.TeacherFeedback = TeacherFeedback || form.TeacherFeedback;
         form.isTeacherCompletes = isTeacherCompletes ?? form.isTeacherCompletes;
 
-        const recipientEmail = form.createdBy.email;
-        const subject = 'Teacher Submission Received for Classroom Walkthrough';
-        const body = ` 
-Dear ${form.createdBy.name},
-${form?.grenralDetails?.NameoftheVisitingTeacher?.name} has submitted their section of the Classroom Walkthrough Proforma on ${new Date()}. Please review and provide your feedback.
-Regards,
-The Admin Team
-                    `;
-
-        await sendEmail(recipientEmail, subject, body);
+        const route = `classroom-walkthrough/create/${FormID}`;
+        const emailData = formCompletedEmail({
+          recipientName: form.createdBy.name,
+          completorName: form?.grenralDetails?.NameoftheVisitingTeacher?.name,
+          formTitle: "Classroom Walkthrough",
+          formRoute: route,
+          role: "Teacher",
+        });
+        await sendEmail(form.createdBy.email, emailData.subject, emailData.html);
         // Save the updated form
         await form.save();
 
@@ -480,14 +482,14 @@ exports.ReminderFormTwo = async (req, res) => {
             return res.status(400).json({ message: "Recipient email not found" });
         }
 
-        const subject = "Reminder: Classroom Walkthrough Proforma Submission Pending";
-        const body = `
-Dear ${receiverName},
-This is a reminder from ${sender} to review and fill out your section of the Classroom Walkthrough Proforma as soon as possible.
-Regards,  
-The Admin Team`;
-
-        await sendEmail(receiverEmail, subject, body);
+        const route = `classroom-walkthrough/create/${FormDetails?._id}`;
+        const emailData = reminderEmail({
+          recipientName: receiverName,
+          senderName: sender,
+          formTitle: "Classroom Walkthrough",
+          formRoute: route,
+        });
+        await sendEmail(receiverEmail, emailData.subject, emailData.html);
         return res.status(200).json({ success: true, message: "Reminder sent successfully." });
 
     } catch (error) {

@@ -4,6 +4,7 @@ const Form3 = require("../models/Form3");
 const notification = require("../models/notification");
 const User = require("../models/User");
 const sendEmail = require("../utils/emailService");
+const { formInitiatedEmail, formCompletedEmail, reflectionSubmittedEmail } = require("../utils/emailTemplates");
 
 exports.createForm = async (req, res) => {
   const {
@@ -83,17 +84,16 @@ exports.createForm = async (req, res) => {
     });
 
     const recipientEmail = await User.findById(NameofObserver);
-    const subject = "Notebook Checking Proforma Created";
-    const body = ` 
-Dear ${recipientEmail.name},
-${
-  user.name
-} has submitted their Notebook Checking Proforma on ${new Date()}. Please review and proceed accordingly.
-Regards,
-The Admin Team
-                            `;
-
-    await sendEmail(recipientEmail.email, subject, body);
+    const route = `notebook-checking-proforma/create/${savedForm._id}`;
+    const emailData = formInitiatedEmail({
+      recipientName: recipientEmail?.name,
+      initiatorName: user.name,
+      formTitle: "Notebook Checking Proforma",
+      formRoute: route,
+    });
+    if (recipientEmail?.email) {
+      await sendEmail(recipientEmail.email, emailData.subject, emailData.html);
+    }
 
     // Send success response
     res
@@ -142,19 +142,19 @@ exports.createInitiate = async (req, res) => {
             ObserverForm: {},
           }).save();
 
-          const recipientEmail = await User.findById(userId);
-          const subject = "Notebook Checking Proforma Initiated";
-          const body = ` 
-Dear ${teacher.name},
-The Notebook Checking Proforma has been initiated by ${
-            recipientEmail?.name
-          } on ${new Date()}. Kindly review and complete your section at your earliest.
-Regards,
-The Admin Team
-
-                            `;
-
-          await sendEmail(teacher.email, subject, body);
+          // The frontend route for BOTH teacher-created and observer-initiated
+          // notebook forms is the same: notebook-checking-proforma/create/:id
+          const route = `notebook-checking-proforma/create/${formData._id}`;
+          const emailData = formInitiatedEmail({
+            recipientName: teacher.name,
+            initiatorName: recipientEmail?.name,
+            formTitle: "Notebook Checking Proforma",
+            formRoute: route,
+            className: finalClassName,
+            section: Section,
+            subject: Subject,
+          });
+          await sendEmail(teacher.email, emailData.subject, emailData.html);
 
           // Create and save the notification
           await new notification({
@@ -378,23 +378,21 @@ exports.updateObserverFields = async (req, res) => {
 
         // Send email to teacher if they exist
         if (teacher?.email) {
-            const subject = "Observer Submission for Notebook Checking Proforma";
-            const body = `
-Dear ${teacher.name},
-   
-${observer.name} has completed their section of the Notebook Checking Proforma on ${new Date().toLocaleString()}. Please review the updates.
-
-Regards,
-The Admin Team
-            `;
-
-            try {
-                await sendEmail(teacher?.email, subject, body);
-            } catch (emailError) {
-                console.error("Failed to send email:", emailError);
-            }
+          const route = `notebook-checking-proforma/create/${formId}`;
+          const emailData = formCompletedEmail({
+            recipientName: teacher.name,
+            completorName: observer.name,
+            formTitle: "Notebook Checking Proforma",
+            formRoute: route,
+            role: "Observer",
+          });
+          try {
+            await sendEmail(teacher.email, emailData.subject, emailData.html);
+          } catch (emailError) {
+            console.error("Failed to send email:", emailError);
+          }
         } else {
-            console.warn("Teacher email not found. Skipping email sending.");
+          console.warn("Teacher email not found. Skipping email sending.");
         }
 
         res.status(200).json({
@@ -683,21 +681,20 @@ exports.EditUpdateNotebook = async (req, res) => {
         // Send email if the teacher completes the form
         if (req.body.isTeacherComplete) {
             const observerEmail = existingForm?.grenralDetails?.NameofObserver?.email;
-            const teacherName = req?.user?.name;       
+            const teacherName = req?.user?.name;
+            const observerName = existingForm?.grenralDetails?.NameofObserver?.name;
             if (observerEmail && teacherName) {
-                const subject = "Notebook Checking Proforma Updated";
-                const text = `
-Dear Observer,
-
-${teacherName} has completed their section of the Notebook Checking Proforma on ${new Date().toLocaleString()}. Please review and provide your feedback.
-
-Regards,
-The Admin Team
-                `;
-
-                sendEmail(observerEmail, subject, text).catch(err => {
-                    console.error("Error sending email:", err);
-                });
+              const route = `notebook-checking-proforma/create/${formId}`;
+              const emailData = formCompletedEmail({
+                recipientName: observerName || "Observer",
+                completorName: teacherName,
+                formTitle: "Notebook Checking Proforma",
+                formRoute: route,
+                role: "Teacher",
+              });
+              sendEmail(observerEmail, emailData.subject, emailData.html).catch(err => {
+                console.error("Error sending email:", err);
+              });
             }
         }
     } catch (error) {
@@ -772,15 +769,14 @@ exports.updateTeacherReflationFeedback = async (req, res) => {
       const observer = await User.findById(form.grenralDetails.NameofObserver);
 
       if (observer?.email && teacher?.name) {
-        const subject = "Notebook Checking Proforma Teacher Reflection Submitted";
-        const body = `Dear ${observer.name},
-
-${teacher.name} has submitted their reflections of Notebook Checking Proforma on ${new Date().toLocaleDateString()}. Please review and proceed accordingly.
-
-Regards,
-The Admin Team`;
-
-        await sendEmail(observer.email, subject, body);
+        const route = `notebook-checking-proforma/complete/${id}`;
+        const emailData = reflectionSubmittedEmail({
+          recipientName: observer.name,
+          teacherName: teacher.name,
+          formTitle: "Notebook Checking Proforma",
+          formRoute: route,
+        });
+        await sendEmail(observer.email, emailData.subject, emailData.html);
       }
     } catch (emailError) {
       console.error("Failed to send reflection email:", emailError);

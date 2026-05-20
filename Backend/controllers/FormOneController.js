@@ -1,5 +1,6 @@
-const User = require("../models/User"); // Import the User model (for Coordinators, Teachers, and Observers)
+const User = require("../models/User");
 const sendEmail = require("../utils/emailService");
+const { formInitiatedEmail, formCompletedEmail, reminderEmail } = require("../utils/emailTemplates");
 const Form1 = require("../models/Form1");
 const Notification = require("../models/notification");
 const ClassDetails = require("../models/ClassDetails");
@@ -94,18 +95,20 @@ exports.createForm = async (req, res) => {
 
     // Send email and notification if recipient exists
     if (recipientEmail) {
-      //       const subject = 'New Fortnightly Monitor Form Created';
-      //       const body = `
-      // Dear {Teacher Name},
-      // The Fortnightly Monitor form has been initiated by {Observer Name} on {Date}. Kindly review and complete your section at your earliest convenience.
-      // Regards,
-      // The Admin Team
-      //   `;
-      //       await sendEmail(recipientEmail, subject, body);
+      const route = `fortnightly-monitor/create/${formData._id}`;
+      const emailData = formInitiatedEmail({
+        recipientName: isCoordinator ? (await User.findById(coordinatorID))?.name : (await User.findById(teacherID))?.name,
+        initiatorName: req.user.name,
+        formTitle: "Fortnightly Monitor",
+        formRoute: route,
+        className: formData.className,
+        section,
+      });
+      sendEmail(recipientEmail, emailData.subject, emailData.html).catch(e => console.error("Email error:", e));
 
       const notifications = new Notification({
         title: "You are invited to fill the Fortnightly Monitor Form",
-        route: `fortnightly-monitor/create/${formData._id}`,
+        route,
         reciverId,
         date: new Date(),
         status: "unSeen",
@@ -188,18 +191,19 @@ exports.FormInitiation = async (req, res) => {
       );
       const validForms = teacherForms.filter((form) => form !== null);
       const recipientEmail = checkForm?.teacherID?.email;
-      const recipientName = checkForm?.teacherID?.name;
-      const subject = "Fortnightly Monitor Form Initiated";
-      const body = `
-Dear ${recipientName},
-The Fortnightly Monitor form has been initiated by ${
-        checkForm?.coordinatorID?.name || checkForm?.userId?.name
-      } on ${new Date()}. Kindly review and complete your section at your earliest convenience.
-Regards,
-The Admin Team
-  `;
-
-      await sendEmail(recipientEmail, subject, body);
+      const recipientName  = checkForm?.teacherID?.name;
+      const route = `fortnightly-monitor/create/${FormData._id}`;
+      const emailData = formInitiatedEmail({
+        recipientName,
+        initiatorName: checkForm?.coordinatorID?.name || checkForm?.userId?.name,
+        formTitle: "Fortnightly Monitor",
+        formRoute: route,
+        className: checkForm?.className,
+        section: checkForm?.section,
+      });
+      if (recipientEmail) {
+        await sendEmail(recipientEmail, emailData.subject, emailData.html);
+      }
 
       if (validForms.length > 0) {
         return res.status(201).json({
@@ -380,48 +384,34 @@ exports.FormFill = async (req, res) => {
       updatedForm?.userId?.name || updatedForm?.userId?.name;
 
     if (updatedForm?.isCoordinatorComplete) {
-      const subject = "Observer Submission Completed for Fortnightly Monitor";
-      const body = ` 
-      Dear ${updatedForm?.teacherID?.name || updatedForm?.userId?.name},
-      ${
-        updatedForm?.coordinatorID?.name || updatedForm?.userId?.name
-      } has submitted their section of the Fortnightly Monitor form on ${new Date()}. You may review the Report now.
-      Regards,
-      The Admin Team
-                    `;
-
-      await sendEmail(
-        updatedForm?.teacherID?.email || updatedForm?.userId?.email,
-        subject,
-        body,
-      );
+      const route = `fortnightly-monitor/create/${updatedForm?._id}`;
+      const emailData = formCompletedEmail({
+        recipientName: updatedForm?.teacherID?.name || updatedForm?.userId?.name,
+        completorName: updatedForm?.coordinatorID?.name || updatedForm?.userId?.name,
+        formTitle: "Fortnightly Monitor",
+        formRoute: route,
+        role: "Observer",
+      });
+      await sendEmail(updatedForm?.teacherID?.email || updatedForm?.userId?.email, emailData.subject, emailData.html);
     }
 
     if (updatedForm?.isTeacherComplete) {
+      const route = `fortnightly-monitor/create/${updatedForm?._id}`;
       const notifications = new Notification({
-        title: `${updatedForm?.teacherID?.name} Have Complete the form now its your turn!`,
-        route: `fortnightly-monitor/create/${updatedForm?._id}`,
+        title: `${updatedForm?.teacherID?.name} has completed the form — now it's your turn!`,
+        route,
         reciverId: updatedForm?.userId?._id,
         date: new Date(),
         status: "unSeen",
       });
-
-      const subject =
-        "Self-Assessment Submission Received for Fortnightly Monitor";
-      const body = ` 
-Dear ${updatedForm?.coordinatorID?.name || updatedForm?.userId?.name},
-${
-  updatedForm?.teacherID?.name || updatedForm?.userId?.name
-} has submitted their Self-Assessment of the Fortnightly Monitor form on ${new Date()}. Please review and fill your section.
-Regards,
-The Admin Team
-                          `;
-
-      await sendEmail(
-        updatedForm?.coordinatorID?.email || updatedForm?.userId?.email,
-        subject,
-        body,
-      );
+      const emailData = formCompletedEmail({
+        recipientName: updatedForm?.coordinatorID?.name || updatedForm?.userId?.name,
+        completorName: updatedForm?.teacherID?.name || updatedForm?.userId?.name,
+        formTitle: "Fortnightly Monitor",
+        formRoute: route,
+        role: "Teacher",
+      });
+      await sendEmail(updatedForm?.coordinatorID?.email || updatedForm?.userId?.email, emailData.subject, emailData.html);
       await notifications.save();
     }
 
@@ -640,15 +630,14 @@ exports.ReminderFormOne = async (req, res) => {
       ? FormDetails?.teacherID?.email || FormDetails?.userId?.email
       : FormDetails?.coordinatorID?.email || FormDetails?.userId?.email;
 
-    const subject = "Reminder: Fortnightly Monitor Form Submission Pending";
-    const body = `
-Dear ${receiverName},
-This is a gentle reminder from ${sender} to complete your section of the Fortnightly Monitor form at the earliest.
-
-Regards,  
-The Admin Team`;
-
-    await sendEmail(receiverEmail, subject, body);
+    const route = `fortnightly-monitor/create/${FormDetails?._id}`;
+    const emailData = reminderEmail({
+      recipientName: receiverName,
+      senderName: sender,
+      formTitle: "Fortnightly Monitor",
+      formRoute: route,
+    });
+    await sendEmail(receiverEmail, emailData.subject, emailData.html);
     return res.status(200).json({ success: true });
   } catch (error) {
     console.error("Error sending reminder:", error);

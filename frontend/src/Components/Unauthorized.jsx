@@ -1,9 +1,9 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { Box, Flex, Heading, Text, Button, VStack } from "@chakra-ui/react";
-import { ArrowLeftOutlined } from "@ant-design/icons";
+import { Box, Flex, Heading, Text, Button, VStack, Icon } from "@chakra-ui/react";
+import { LockOutlined, ArrowLeftOutlined } from "@ant-design/icons";
 
-const NotFound404 = () => {
+const Unauthorized = () => {
   const navigate = useNavigate();
 
   return (
@@ -15,24 +15,36 @@ const NotFound404 = () => {
       px={4}
     >
       <VStack spacing={6} textAlign="center" maxW="420px">
-        {/* Big 404 */}
-        <Text
-          fontSize="9xl"
-          fontWeight="900"
-          color="brand.primary"
-          lineHeight="1"
-          opacity={0.15}
-          userSelect="none"
+        {/* Icon circle */}
+        <Flex
+          w="96px"
+          h="96px"
+          borderRadius="full"
+          bg="red.50"
+          align="center"
+          justify="center"
+          borderWidth="2px"
+          borderColor="red.200"
         >
-          404
-        </Text>
+          <LockOutlined style={{ fontSize: 40, color: "#E53E3E" }} />
+        </Flex>
 
-        <Box mt="-60px">
+        <Box>
+          <Text
+            fontSize="6xl"
+            fontWeight="900"
+            color="red.400"
+            lineHeight="1"
+            mb={2}
+          >
+            403
+          </Text>
           <Heading size="lg" color="brand.text" mb={2}>
-            Page Not Found
+            Access Denied
           </Heading>
           <Text color="gray.500" fontSize="sm">
-            The page you're looking for doesn't exist or may have been moved.
+            You don't have permission to view this page. This area is restricted
+            to a different role. Please log in with the correct account.
           </Text>
         </Box>
 
@@ -52,7 +64,7 @@ const NotFound404 = () => {
             _hover={{ bg: "brand.secondary" }}
             onClick={() => navigate("/dashboard")}
           >
-            Dashboard
+            My Dashboard
           </Button>
         </Flex>
       </VStack>
@@ -60,4 +72,4 @@ const NotFound404 = () => {
   );
 };
 
-export default NotFound404;
+export default Unauthorized;
