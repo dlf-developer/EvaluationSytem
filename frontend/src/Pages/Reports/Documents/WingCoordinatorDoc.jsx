@@ -31,49 +31,49 @@ const C = {
 };
 
 const s = StyleSheet.create({
-  page: { backgroundColor: C.white, fontFamily: "Open Sans", fontSize: 10, padding: 30 },
+  page: { backgroundColor: C.white, fontFamily: "Open Sans", fontSize: 9, padding: 18 },
 
   // Header
-  header: { flexDirection: "row", alignItems: "center", justifyContent: "center", marginBottom: 12, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: C.border },
-  logo: { width: 60, height: 72 },
-  logoBanner: { width: 200, height: 52, marginLeft: 16 },
-  reportTitle: { fontSize: 14, fontWeight: 600, color: C.primary, textAlign: "center", marginBottom: 4 },
-  pageNum: { fontSize: 8, color: C.gray, textAlign: "right", marginBottom: 8 },
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "center", marginBottom: 6, paddingBottom: 6, borderBottomWidth: 1, borderBottomColor: C.border },
+  logo: { width: 40, height: 48 },
+  logoBanner: { width: 150, height: 38, marginLeft: 10 },
+  reportTitle: { fontSize: 11, fontWeight: 600, color: C.primary, textAlign: "center", marginBottom: 2 },
+  pageNum: { fontSize: 7, color: C.gray, textAlign: "right", marginBottom: 4 },
 
   // Meta
-  metaGrid: { flexDirection: "row", flexWrap: "wrap", marginBottom: 12, marginTop: 8 },
-  metaItem: { width: "33%", paddingVertical: 3, paddingHorizontal: 4 },
-  metaLabel: { fontSize: 7, color: C.gray, marginBottom: 1, textTransform: "uppercase" },
-  metaValue: { fontSize: 9, fontWeight: 600, color: C.text },
+  metaGrid: { flexDirection: "row", flexWrap: "wrap", marginBottom: 4, marginTop: 3 },
+  metaItem: { width: "33%", paddingVertical: 2, paddingHorizontal: 3 },
+  metaLabel: { fontSize: 6, color: C.gray, marginBottom: 1, textTransform: "uppercase" },
+  metaValue: { fontSize: 8, fontWeight: 600, color: C.text },
 
   // Section heading
-  sectionHead: { backgroundColor: C.primary, color: C.white, padding: 6, fontSize: 10, fontWeight: 600, marginTop: 12, marginBottom: 4 },
-  sectionSubHead: { backgroundColor: C.primaryLight, color: C.primary, padding: 5, fontSize: 9, fontWeight: 600, marginTop: 8, marginBottom: 4 },
+  sectionHead: { backgroundColor: C.primary, color: C.white, padding: 4, fontSize: 9, fontWeight: 600, marginTop: 6, marginBottom: 3 },
+  sectionSubHead: { backgroundColor: C.primaryLight, color: C.primary, padding: 3, fontSize: 8, fontWeight: 600, marginTop: 4, marginBottom: 2 },
 
   // Table
   table: { borderWidth: 1, borderColor: C.border },
   tableRow: { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: C.border },
   tableRowLast: { flexDirection: "row" },
-  th: { backgroundColor: C.lightGray, padding: 5, fontWeight: 600, fontSize: 8, color: C.text },
-  td: { padding: 5, fontSize: 8, color: C.text },
+  th: { backgroundColor: C.lightGray, padding: 3, fontWeight: 600, fontSize: 7, color: C.text },
+  td: { padding: 3, fontSize: 7, color: C.text },
   col50: { width: "50%", borderRightWidth: 1, borderRightColor: C.border },
   col50Last: { width: "50%" },
   col40: { width: "40%", borderRightWidth: 1, borderRightColor: C.border },
   col30: { width: "30%", borderRightWidth: 1, borderRightColor: C.border },
 
   // Score row
-  scoreRow: { flexDirection: "row", justifyContent: "flex-end", marginTop: 6, marginBottom: 6 },
-  scoreBox: { backgroundColor: C.primaryLight, borderWidth: 1, borderColor: C.primary, borderRadius: 4, padding: 6, marginLeft: 6, alignItems: "center", minWidth: 70 },
-  scoreLabel: { fontSize: 7, color: C.gray, marginBottom: 2 },
-  scoreValue: { fontSize: 11, fontWeight: 600, color: C.primary },
+  scoreRow: { flexDirection: "row", justifyContent: "flex-end", marginTop: 3, marginBottom: 3 },
+  scoreBox: { backgroundColor: C.primaryLight, borderWidth: 1, borderColor: C.primary, borderRadius: 3, padding: 3, marginLeft: 4, alignItems: "center", minWidth: 55 },
+  scoreLabel: { fontSize: 6, color: C.gray, marginBottom: 1 },
+  scoreValue: { fontSize: 9, fontWeight: 600, color: C.primary },
 
   // Feedback
-  qBox: { marginBottom: 8, paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: C.border },
-  qLabel: { fontSize: 8, color: C.gray, marginBottom: 3 },
-  qAnswer: { fontSize: 9, color: C.text },
+  qBox: { marginBottom: 4, paddingBottom: 4, borderBottomWidth: 1, borderBottomColor: C.border },
+  qLabel: { fontSize: 7, color: C.gray, marginBottom: 2 },
+  qAnswer: { fontSize: 8, color: C.text },
 
   // Record separator
-  recordBox: { marginBottom: 16, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: C.border },
+  recordBox: { marginBottom: 8, paddingBottom: 6, borderBottomWidth: 1, borderBottomColor: C.border },
 });
 
 // ── helpers ───────────────────────────────────────────────────────────────────

@@ -791,19 +791,6 @@ export const getNotebookColumns = ({
                   View Report
                 </Button>
               </Link>
-              {currentUserRole === UserRole[1] && isTeacherComplete && (
-                <Link to={`/notebook-checking-proforma/complete/${record._id}`}>
-                  <Button
-                    size="md"
-                    variant="outline"
-                    colorScheme="orange"
-                    fontWeight="medium"
-                    flexShrink={0}
-                  >
-                    Reflection
-                  </Button>
-                </Link>
-              )}
             </Flex>
           );
         }
@@ -1867,7 +1854,7 @@ export const getReportForm3Columns = ({
             View Report
           </Button>
         </Link>
-        {record.isTeacherComplete && record.isObserverComplete && !record.isReflation && (
+        {currentUserRole === UserRole[2] && record.isTeacherComplete && record.isObserverComplete && !record.isReflation && (
           <Link to={`/notebook-checking-proforma/complete/${record._id}`}>
             <Button
               size="md"
