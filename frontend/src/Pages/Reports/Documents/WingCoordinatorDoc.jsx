@@ -230,7 +230,7 @@ const WingCoordinatorDoc = ({ data }) => {
             const tScore = form1Score(item.teacherForm);
             const oScore = form1Score(item.observerForm);
             return (
-              <View key={`f1-${idx}`} style={s.recordBox} wrap={false}>
+              <View key={`f1-${idx}`} style={s.recordBox}>
                 <Text style={s.sectionHead}>Record {idx + 1}</Text>
                 <View style={s.metaGrid}>
                   <MetaRow label="Teacher" value={item.teacherID?.name} />
@@ -253,7 +253,7 @@ const WingCoordinatorDoc = ({ data }) => {
         <Page size="A4" style={s.page}>
           <PageHeader title="Classroom Walkthrough" />
           {form2.map((item, idx) => (
-            <View key={`f2-${idx}`} style={s.recordBox} wrap={false}>
+            <View key={`f2-${idx}`} style={s.recordBox}>
               <Text style={s.sectionHead}>Record {idx + 1}</Text>
               <View style={s.metaGrid}>
                 <MetaRow label="Teacher" value={item.grenralDetails?.NameoftheVisitingTeacher?.name} />
@@ -300,7 +300,7 @@ const WingCoordinatorDoc = ({ data }) => {
             const tScore = form3Score(item.TeacherForm);
             const oScore = form3Score(item.ObserverForm);
             return (
-              <View key={`f3-${idx}`} style={s.recordBox} wrap={false}>
+              <View key={`f3-${idx}`} style={s.recordBox}>
                 <Text style={s.sectionHead}>Record {idx + 1}</Text>
                 <View style={s.metaGrid}>
                   <MetaRow label="Teacher" value={item.teacherID?.name ?? item.createdBy?.name} />
