@@ -75,6 +75,7 @@ function Weekly4Form() {
     selectBox,
     inputBox,
     classSelection,
+    lowStudentsBox,
   }) => {
     return (
       <>
@@ -214,6 +215,93 @@ function Weekly4Form() {
             </Form.List>
           </>
         )}
+        {lowStudentsBox && (
+          <>
+            <Form.List
+              name={[...name, "lowStudents"]}
+            >
+              {(fields, { add, remove }) => (
+                <>
+                  {fields.map(({ key, name: fieldName, fieldKey, ...restField }) => (
+                    <SimpleGrid
+                      columns={{ base: 1, md: 4 }}
+                      spacing={4}
+                      key={key}
+                      mb={4}
+                      p={5}
+                      borderRadius="xl"
+                      borderWidth="1px"
+                      borderColor="gray.100"
+                      bg="gray.50"
+                      position="relative"
+                    >
+                      <Box>
+                        <Form.Item
+                          {...restField}
+                          name={[fieldName, "name"]}
+                          fieldKey={[fieldKey, "name"]}
+                          label="Name"
+                          rules={[{ required: true, message: "Required" }]}
+                        >
+                          <Input placeholder="Student Name" />
+                        </Form.Item>
+                      </Box>
+                      <Box>
+                        <Form.Item
+                          {...restField}
+                          name={[fieldName, "classSection"]}
+                          fieldKey={[fieldKey, "classSection"]}
+                          label="Class Section"
+                          rules={[{ required: true, message: "Required" }]}
+                        >
+                          <Input placeholder="Class Section" />
+                        </Form.Item>
+                      </Box>
+                      <Box>
+                        <Form.Item
+                          {...restField}
+                          name={[fieldName, "subject"]}
+                          fieldKey={[fieldKey, "subject"]}
+                          label="Subject"
+                          rules={[{ required: true, message: "Required" }]}
+                        >
+                          <Input placeholder="Subject" />
+                        </Form.Item>
+                      </Box>
+                      <Box>
+                        <Form.Item
+                          {...restField}
+                          name={[fieldName, "remarks"]}
+                          fieldKey={[fieldKey, "remarks"]}
+                          label="Remarks"
+                          rules={[{ required: true, message: "Required" }]}
+                        >
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                            <Input placeholder="Remarks" />
+                            <MinusCircleOutlined
+                              style={{ cursor: "pointer", color: "red" }}
+                              onClick={() => remove(fieldName)}
+                            />
+                          </div>
+                        </Form.Item>
+                      </Box>
+                    </SimpleGrid>
+                  ))}
+                  <Form.Item>
+                    <Button
+                      type="dashed"
+                      onClick={() => add()}
+                      block
+                      icon={<PlusOutlined />}
+                    >
+                      Add L.O.W. Student Row
+                    </Button>
+                  </Form.Item>
+                </>
+              )}
+            </Form.List>
+          </>
+        )}
         {inputBox ? (
           <>
             <Form.Item
@@ -293,8 +381,9 @@ function Weekly4Form() {
           >
             <RenderRadioFormItem
               classSelection={index < 2 ? true : false}
-              inputBox={index >= 3 ? true : false}
+              inputBox={index === 4 ? true : false}
               selectBox={index === 2 ? true : false}
+              lowStudentsBox={index === 3 ? true : false}
               name={[namePrefix, index]}
               label={question}
               question={question}

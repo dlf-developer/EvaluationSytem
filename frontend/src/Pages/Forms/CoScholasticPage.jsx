@@ -1,31 +1,37 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Box, Flex, Heading, Text, Stack, Button } from "@chakra-ui/react";
+import { Box, Flex, Heading, Text, Stack, Button, useDisclosure, Modal, ModalOverlay, ModalContent, ModalHeader, ModalFooter, ModalBody, ModalCloseButton, useToast } from "@chakra-ui/react";
 import { PlusCircleOutlined } from "@ant-design/icons";
-import { Link, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { getAllWeeklyFromAll } from "../../redux/userSlice";
+import { useNavigate } from "react-router-dom";
+import {
+  GetcreatedByCoScholastic,
+  TeacherCoScholasticForms,
+  DeleteCoScholasticForm,
+} from "../../redux/Form/coScholasticSlice";
 import { UserRole } from "../../config/config";
 import { getUserId } from "../../Utils/auth";
 import SmartTable from "../../Components/SmartTable";
-import { getWeeklyColumns } from "../../Components/SmartTable/tableColumns";
-import { Modal, ModalOverlay, ModalContent, ModalHeader, ModalFooter, ModalBody, ModalCloseButton, useDisclosure, useToast } from "@chakra-ui/react";
-import { axiosInstanceToken } from "../../redux/instence";
+import { getCoScholasticColumns } from "../../Components/SmartTable/tableColumns";
 
-function Weekly() {
+function CoScholasticPage() {
+  const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { getAllWeeklyFroms, loading } = useSelector((state) => state.user);
-  const location = useLocation();
-  const currentPath = location.pathname;
-  const currentUserRole = getUserId()?.access;
+  const Role = getUserId()?.access;
+  const currentUserRole = Role;
+
+  const { isLoading, GetForms } = useSelector((state) => state?.coScholastic);
 
   useEffect(() => {
-    dispatch(getAllWeeklyFromAll());
-  }, [dispatch]);
+    if (Role === UserRole[2]) dispatch(TeacherCoScholasticForms());
+    else if (Role === UserRole[1]) dispatch(GetcreatedByCoScholastic());
+  }, [dispatch, Role]);
 
-  const tableData = useMemo(() => {
-    if (!Array.isArray(getAllWeeklyFroms)) return [];
-    return [...getAllWeeklyFroms].reverse().map((item) => ({ ...item, key: item._id }));
-  }, [getAllWeeklyFroms]);
+  const sortedData = useMemo(() => {
+    if (!Array.isArray(GetForms)) return [];
+    return [...GetForms].sort((a, b) =>
+      a.isTeacherCompletes === b.isTeacherCompletes ? 0 : a.isTeacherCompletes ? 1 : -1
+    );
+  }, [GetForms]);
 
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [deleteId, setDeleteId] = useState(null);
@@ -41,7 +47,7 @@ function Weekly() {
     if (!deleteId) return;
     setIsDeleting(true);
     try {
-      await axiosInstanceToken.delete(`/weekly4Form/${deleteId}`);
+      await dispatch(DeleteCoScholasticForm(deleteId)).unwrap();
       toast({
         title: "Form Deleted",
         description: "The form has been successfully deleted.",
@@ -49,11 +55,12 @@ function Weekly() {
         duration: 3000,
         isClosable: true,
       });
-      dispatch(getAllWeeklyFromAll());
+      if (Role === UserRole[2]) dispatch(TeacherCoScholasticForms());
+      else if (Role === UserRole[1]) dispatch(GetcreatedByCoScholastic());
     } catch (error) {
       toast({
         title: "Error",
-        description: error?.response?.data?.message || "Failed to delete the form.",
+        description: error?.message || "Failed to delete the form.",
         status: "error",
         duration: 3000,
         isClosable: true,
@@ -66,9 +73,9 @@ function Weekly() {
   };
 
   const columns = useMemo(
-    () => getWeeklyColumns({ data: tableData, currentUserRole, onDelete: handleDeleteClick }),
+    () => getCoScholasticColumns({ data: GetForms || [], currentUserRole, onDelete: handleDeleteClick }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [tableData, currentUserRole]
+    [GetForms, currentUserRole]
   );
 
   return (
@@ -76,53 +83,39 @@ function Weekly() {
       <Flex justify="space-between" align="center" mb={6} flexWrap="wrap" gap={4}>
         <Box>
           <Heading size="lg" color="gray.800" mb={1}>
-            Weekly Monitoring Forms
+            Co-Scholastic Classroom Observation
           </Heading>
           <Text color="gray.500" fontSize="sm">
-            Track and manage weekly evaluations.
+            Manage and view Co-Scholastic Classroom Observation evaluation forms.
           </Text>
         </Box>
 
         <Stack direction="row" spacing={3}>
-          {UserRole[1] === currentUserRole && currentPath !== "/reports" && (
-            <Link to="/weekly4form/create?Initiate=true">
-              <Button
-                leftIcon={<PlusCircleOutlined />}
-                bg="brand.primary"
-                color="white"
-                _hover={{ bg: "brand.secondary", transform: "translateY(-1px)" }}
-                transition="all 0.2s"
-                px={6}
-              >
-                Form Initiation
-              </Button>
-            </Link>
-          )}
-          {UserRole[2] === currentUserRole && (
-            <Link to="/weekly4form/create">
-              <Button
-                leftIcon={<PlusCircleOutlined />}
-                bg="brand.primary"
-                color="white"
-                _hover={{ bg: "brand.secondary", transform: "translateY(-1px)" }}
-                transition="all 0.2s"
-                px={6}
-              >
-                New Form
-              </Button>
-            </Link>
+          {Role === UserRole[1] && (
+            <Button
+              leftIcon={<PlusCircleOutlined />}
+              bg="brand.primary"
+              color="white"
+              _hover={{ bg: "brand.secondary", transform: "translateY(-1px)" }}
+              transition="all 0.2s"
+              onClick={() => navigate("/co-scholastic/create")}
+              px={6}
+            >
+              Fill New Form
+            </Button>
           )}
         </Stack>
       </Flex>
 
       <SmartTable
-        title="All Weekly Forms"
+        title="All Co-Scholastic Forms"
         columns={columns}
-        data={tableData}
-        loading={loading}
+        data={sortedData}
+        loading={isLoading}
         rowKey="_id"
         pageSize={10}
       />
+
       <Modal isOpen={isOpen} onClose={onClose} isCentered>
         <ModalOverlay />
         <ModalContent>
@@ -145,4 +138,4 @@ function Weekly() {
   );
 }
 
-export default Weekly;
+export default CoScholasticPage;

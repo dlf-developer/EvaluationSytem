@@ -13,6 +13,11 @@ import ObserverDashboard from "../Pages/Observer/ObserverDashboard";
 import TeacherDashboard from "../Pages/Teachers/TeacherDashboard";
 import Users from "../Pages/Admin/Users";
 import NotFound404 from "../Components/NotFound404";
+import CoScholasticPage from "../Pages/Forms/CoScholasticPage";
+import CoScholasticDetails from "../Pages/Forms/FormInside/CoScholasticDetails";
+import TeacherCoScholastic from "../Pages/Forms/FormInside/TeacherCoScholastic";
+import CoScholasticReport from "../Pages/Reports/CoScholasticReport";
+
 import UnderConstraction from "../Components/UnderConstraction";
 import UserDetails from "../Pages/Admin/UserDetails";
 import UserProfile from "../Pages/UserProfile";
@@ -86,6 +91,9 @@ const protects = {
           path: "/classroom-walkthrough/report/:id",
           element: <ClassroomWalkthroughReader />,
         },
+        { path: "/co-scholastic", element: <CoScholasticPage /> },
+        { path: "/co-scholastic/create/:id", element: <TeacherCoScholastic /> },
+        { path: "/co-scholastic/report/:id", element: <CoScholasticReport /> },
         { path: "/notebook-checking-proforma", element: <Notebook /> },
         {
           path: "/notebook-checking-proforma/create",
@@ -134,7 +142,15 @@ const protects = {
         { path: "/dashboard", element: <AdminDashboard /> },
         { path: "/users", element: <Users /> },
         { path: "/users/:id", element: <UserDetails /> },
-        { path: "/reports", element: <AdminReport /> },
+        { path: "/reports/fortnightly-monitor", element: <AdminReport /> },
+        { path: "/reports/classroom-walkthrough", element: <AdminReport /> },
+        { path: "/reports/notebook-checking-proforma", element: <AdminReport /> },
+        { path: "/reports/weekly4form", element: <AdminReport /> },
+        { path: "/reports/wing-coordinator", element: <AdminReport /> },
+        { path: "/reports/co-scholastic", element: <AdminReport /> },
+        { path: "/co-scholastic", element: <CoScholasticPage /> },
+        { path: "/co-scholastic/report/:id", element: <CoScholasticReport /> },
+
         { path: "/profile", element: <UserProfile /> },
         { path: "/fortnightly-monitor", element: <Fortnightly /> },
         { path: "/fortnightly-monitor/report/:id", element: <Reader /> },
@@ -167,7 +183,17 @@ const protects = {
       children: [
         { path: "/", element: <Navigate to="/dashboard" /> },
         { path: "/dashboard", element: <ObserverDashboard /> },
-        { path: "/reports", element: <ObserverReports /> },
+        { path: "/reports/fortnightly-monitor", element: <ObserverReports /> },
+        { path: "/reports/classroom-walkthrough", element: <ObserverReports /> },
+        { path: "/reports/notebook-checking-proforma", element: <ObserverReports /> },
+        { path: "/reports/weekly4form", element: <ObserverReports /> },
+        { path: "/reports/wing-coordinator", element: <ObserverReports /> },
+        { path: "/reports/co-scholastic", element: <ObserverReports /> },
+        { path: "/co-scholastic", element: <CoScholasticPage /> },
+        { path: "/co-scholastic/create", element: <CoScholasticDetails /> },
+        { path: "/co-scholastic/create/:id", element: <CoScholasticDetails /> },
+        { path: "/co-scholastic/report/:id", element: <CoScholasticReport /> },
+
         { path: "/fortnightly-monitor", element: <FortnightlyMonitor /> },
         { path: "/profile", element: <UserProfile /> },
         { path: "/fortnightly-monitor", element: <FortnightlyMonitor /> },

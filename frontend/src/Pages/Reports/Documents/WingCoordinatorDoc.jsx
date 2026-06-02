@@ -143,6 +143,7 @@ const WingCoordinatorDoc = ({ data }) => {
     form2 = [],
     form3 = [],
     form4 = [],
+    form5 = [],
     monthlyReport = [],
     range,
     className,
@@ -173,6 +174,7 @@ const WingCoordinatorDoc = ({ data }) => {
             ["Classroom Walkthrough (Form 2)", form2.length],
             ["Notebook Checking Proforma (Form 3)", form3.length],
             ["Learning Progress Checklist (Form 4)", form4.length],
+            ["Co-Scholastic Classroom Observation (Form 5)", form5.length],
           ].map(([label, count], i, arr) => (
             <View key={label} style={i === arr.length - 1 ? s.tableRowLast : s.tableRow}>
               <View style={[s.td, s.col50]}><Text>{label}</Text></View>
@@ -352,6 +354,28 @@ const WingCoordinatorDoc = ({ data }) => {
               </View>
             ))}
           </View>
+        </Page>
+      )}
+
+      {/* ══ FORM 5 — CO-SCHOLASTIC CLASSROOM OBSERVATION ════════════════════════ */}
+      {form5.length > 0 && (
+        <Page size="A4" style={s.page}>
+          <PageHeader title="Co-Scholastic Classroom Observation" />
+          {form5.map((item, idx) => (
+            <View key={`f5-${idx}`} style={s.recordBox}>
+              <Text style={s.sectionHead}>Record {idx + 1}</Text>
+              <View style={s.metaGrid}>
+                <MetaRow label="Teacher" value={item.grenralDetails?.NameoftheVisitingTeacher?.name ?? item.createdBy?.name} />
+                <MetaRow label="Observer" value={item.createdBy?.name} />
+                <MetaRow label="Class / Section" value={`${item.grenralDetails?.className} / ${item.grenralDetails?.Section}`} />
+                <MetaRow label="Subject" value={item.grenralDetails?.Subject} />
+                <MetaRow label="Date" value={fmt(item.grenralDetails?.DateOfObservation)} />
+              </View>
+              <ScoreRow boxes={[
+                { label: "Observer Score", value: item.percentageScore ? `${item.percentageScore}%` : "—" },
+              ]} />
+            </View>
+          ))}
         </Page>
       )}
 

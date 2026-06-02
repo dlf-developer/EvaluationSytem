@@ -9,6 +9,7 @@ const WingCoordinator = new Schema({
     form2:{type:Array},
     form3:{type:Array},
     form4:{type:Array},
+    form5:{type:Array},
     monthlyReport:{type:Array},
     userId:{ type: Schema.Types.ObjectId, ref: 'User',require:true },
     isComplete:{type:Boolean},

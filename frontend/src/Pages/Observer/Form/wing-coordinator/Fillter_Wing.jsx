@@ -11,6 +11,7 @@ const FORM_TYPE_OPTIONS = [
     { value: 'form2', label: 'Classroom Walkthrough' },
     { value: 'form3', label: 'Notebook Checking Proforma' },
     { value: 'form4', label: 'Learning Progress Checklist' },
+    { value: 'form5', label: 'Co-Scholastic Classroom Observation' },
 ];
 
 function Fillter_Wing({ saveData, data }) {
@@ -44,7 +45,7 @@ function Fillter_Wing({ saveData, data }) {
             form.setFieldsValue({
                 range: data?.range ? [dayjs(data.range[0]), dayjs(data.range[1])] : [],
                 className: data?.className || [],
-                formTypes: data?.formTypes || ['form1', 'form2', 'form3', 'form4'],
+                formTypes: data?.formTypes || ['form1', 'form2', 'form3', 'form4', 'form5'],
                 observers: data?.observers || [],
             });
 
@@ -52,7 +53,7 @@ function Fillter_Wing({ saveData, data }) {
                 const payload = {
                     range: data?.range,
                     className: data?.className,
-                    formTypes: data?.formTypes || ['form1', 'form2', 'form3', 'form4'],
+                    formTypes: data?.formTypes || ['form1', 'form2', 'form3', 'form4', 'form5'],
                     observers: data?.observers || [],
                 };
                 didAutoFetch.current = true;
@@ -108,7 +109,7 @@ function Fillter_Wing({ saveData, data }) {
             initialValues={{
                 range: data?.range || [],
                 className: data?.className || [],
-                formTypes: data?.formTypes || ['form1', 'form2', 'form3', 'form4'],
+                formTypes: data?.formTypes || ['form1', 'form2', 'form3', 'form4', 'form5'],
                 observers: data?.observers || [],
             }}
         >

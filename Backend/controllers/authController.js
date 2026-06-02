@@ -7,6 +7,7 @@ const Form1 = require('../models/Form1');
 const Form2 = require('../models/Form2');
 const Form3 = require('../models/Form3');
 const Weekly4Form = require('../models/Weekly4Form');
+const CoScholastic = require('../models/CoScholastic');
 
 const createOTPTemplate = (otp, duration, title) => `
 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eaeaea; border-radius: 10px; background-color: #f9f9f9;">
@@ -256,6 +257,7 @@ const getFillterForms = async (req, res) => {
         const observerFilter2 = observers && observers.length > 0 ? { createdBy: { $in: observers } } : {};
         const observerFilter3 = observers && observers.length > 0 ? { $or: [{ 'grenralDetails.NameofObserver': { $in: observers } }, { createdBy: { $in: observers } }] } : {};
         const observerFilter4 = observers && observers.length > 0 ? { $or: [{ "isInitiated.Observer": { $in: observers } }] } : {};
+        const observerFilter5 = observers && observers.length > 0 ? { createdBy: { $in: observers } } : {};
 
         // Fetch filtered forms
         const form1 = await Form1.find({
@@ -289,11 +291,20 @@ const getFillterForms = async (req, res) => {
             ...observerFilter4
         }).populate("teacherId userId", "-password -mobile -employeeId");
 
+        const form5 = await CoScholastic.find({
+            "grenralDetails.className": { $in: className },
+            createdAt: { $gte: from, $lte: to },
+            isTeacherCompletes: true,
+            isObserverCompleted: true,
+            ...observerFilter5
+        }).populate("grenralDetails.NameoftheVisitingTeacher createdBy", "-password -mobile -employeeId");
+
         res.json({
             form1,
             form2,
             form3,
-            form4
+            form4,
+            form5
         });
 
     } catch (error) {

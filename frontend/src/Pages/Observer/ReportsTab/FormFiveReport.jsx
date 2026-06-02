@@ -1,21 +1,21 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { getAllWeeklyFromAll } from "../../../redux/userSlice";
-import SmartTable from "../../../Components/SmartTable";
-import { getReportForm4Columns } from "../../../Components/SmartTable/tableColumns";
 import { Box, Button, useDisclosure, Modal, ModalOverlay, ModalContent, ModalHeader, ModalFooter, ModalBody, ModalCloseButton, useToast } from "@chakra-ui/react";
 import { axiosInstanceToken } from "../../../redux/instence";
 import { getUserId } from "../../../Utils/auth";
+import { GetAllCoScholasticForms } from "../../../redux/Form/coScholasticSlice";
+import SmartTable from "../../../Components/SmartTable";
+import { getCoScholasticColumns } from "../../../Components/SmartTable/tableColumns";
 
-function FormFourReport() {
+function FormFiveReport() {
   const dispatch = useDispatch();
+  const currentUserRole = getUserId()?.access;
 
   useEffect(() => {
-    dispatch(getAllWeeklyFromAll());
+    dispatch(GetAllCoScholasticForms());
   }, [dispatch]);
 
-  const data = useSelector((state) => state?.user?.getAllWeeklyFroms || []);
-  const currentUserRole = getUserId()?.access;
+  const data = useSelector((state) => state?.coScholastic?.GetForms || []);
 
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [deleteId, setDeleteId] = useState(null);
@@ -31,7 +31,7 @@ function FormFourReport() {
     if (!deleteId) return;
     setIsDeleting(true);
     try {
-      await axiosInstanceToken.delete(`/weekly4Form/${deleteId}`);
+      await axiosInstanceToken.delete(`/co-scholastic/delete/${deleteId}`);
       toast({
         title: "Form Deleted",
         description: "The form has been successfully deleted.",
@@ -39,7 +39,7 @@ function FormFourReport() {
         duration: 3000,
         isClosable: true,
       });
-      dispatch(getAllWeeklyFromAll());
+      dispatch(GetAllCoScholasticForms());
     } catch (error) {
       toast({
         title: "Error",
@@ -56,7 +56,7 @@ function FormFourReport() {
   };
 
   const columns = useMemo(
-    () => getReportForm4Columns({ data, currentUserRole, onDelete: handleDeleteClick }),
+    () => getCoScholasticColumns({ data, currentUserRole, onDelete: handleDeleteClick }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [data, currentUserRole]
   );
@@ -64,13 +64,13 @@ function FormFourReport() {
   return (
     <Box>
       <SmartTable
-        title="Weekly 4 Form — All Records"
+        title="Co-Scholastic Classroom Observation — All Records"
         columns={columns}
         data={data}
-        rowKey={(r) => r._id || Math.random()}
+        rowKey="_id"
         pageSize={10}
         downloadable
-        downloadFileName="weekly4_forms"
+        downloadFileName="coscholastic_walkthrough"
       />
       <Modal isOpen={isOpen} onClose={onClose} isCentered>
         <ModalOverlay />
@@ -94,4 +94,4 @@ function FormFourReport() {
   );
 }
 
-export default FormFourReport;
+export default FormFiveReport;

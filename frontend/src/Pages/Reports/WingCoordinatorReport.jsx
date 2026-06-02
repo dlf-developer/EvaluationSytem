@@ -139,6 +139,30 @@ const Form2Card = ({ item, index }) => (
   </Box>
 );
 
+// ── Form 5 card ──────────────────────────────────────────────────────────────
+const Form5Card = ({ item, index }) => (
+  <Box bg="teal.50" borderRadius="lg" borderWidth="1px" borderColor="teal.100"
+    borderLeftWidth="4px" borderLeftColor="teal.400"
+    boxShadow="xs" mb={2} overflow="hidden">
+    <Flex px={4} py={3} align="center" justify="space-between" flexWrap="wrap" gap={2}>
+      <HStack spacing={3} flex={1} minW={0}>
+        <Badge colorScheme="teal" fontSize="10px" flexShrink={0}>#{index + 1}</Badge>
+        <Box minW={0}>
+          <Text fontWeight="600" fontSize="sm" color="teal.900" isTruncated>
+            {item.grenralDetails?.NameoftheVisitingTeacher?.name ?? item.createdBy?.name ?? "—"}
+          </Text>
+          <Text fontSize="xs" color="teal.700">
+            {item.grenralDetails?.className}/{item.grenralDetails?.Section} · {getAllTimes(item.grenralDetails?.DateOfObservation)?.formattedDate2} · {item.grenralDetails?.Subject ?? ""} · Obs: {item.createdBy?.name ?? "—"}
+          </Text>
+        </Box>
+      </HStack>
+      <Badge colorScheme="teal" fontSize="xs" px={2} py={1} borderRadius="full" flexShrink={0}>
+        {item.percentageScore ? `${item.percentageScore}%` : "—"}
+      </Badge>
+    </Flex>
+  </Box>
+);
+
 // ── Form 3 card ──────────────────────────────────────────────────────────────
 const f3Score = (formName) => {
   let score = 0, total = 0;
@@ -245,6 +269,7 @@ function WingCoordinatorReport() {
     { key: "form2", label: "Classroom Walkthrough",     color: "blue"   },
     { key: "form3", label: "Notebook Checking",         color: "purple" },
     { key: "form4", label: "Learning Progress",         color: "orange" },
+    { key: "form5", label: "Co-Scholastic Obs",         color: "teal"   },
   ];
 
   return (
@@ -409,6 +434,15 @@ function WingCoordinatorReport() {
                           { title: "Date", dataIndex: "createdAt", key: "d", render: d => fmt(d) },
                         ]}
                       />
+                    )}
+                  </TabPanel>
+
+                  {/* Form 5 */}
+                  <TabPanel p={4}>
+                    {data.form5?.length === 0 ? (
+                      <Box textAlign="center" py={10}><Text color="gray.400" fontSize="sm">No Co-Scholastic Classroom Observation forms linked.</Text></Box>
+                    ) : (
+                      data.form5?.map((item, i) => <Form5Card key={item._id} item={item} index={i} />)
                     )}
                   </TabPanel>
                 </TabPanels>

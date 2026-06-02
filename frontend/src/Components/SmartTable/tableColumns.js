@@ -178,7 +178,7 @@ export const getFortnightlyColumns = ({
     title: "Action",
     key: "action",
     dataIndex: "action",
-    width: "190px",
+    width: "280px",
     render: (_, record) => {
       const { isTeacherComplete, isCoordinatorComplete, isObserverInitiation } =
         record;
@@ -469,7 +469,7 @@ export const getClassroomColumns = ({
     title: "Action",
     key: "action",
     dataIndex: "action",
-    width: "190px",
+    width: "280px",
     render: (_, record) => {
       const { isTeacherCompletes, isObserverCompleted } = record;
       const renderAction = () => {
@@ -734,7 +734,7 @@ export const getNotebookColumns = ({
     title: "Action",
     key: "action",
     dataIndex: "action",
-    width: "180px",
+    width: "280px",
     render: (_, record) => {
       const { isObserverComplete, isTeacherComplete, isReflation } = record;
 
@@ -938,7 +938,7 @@ export const getWeeklyColumns = ({ data = [], currentUserRole, onDelete }) => [
     title: "Action",
     key: "action",
     dataIndex: "action",
-    width: "190px",
+    width: "240px",
     render: (_, record) => (
       <Stack direction="row" spacing={2}>
         {record?.isCompleted ? (
@@ -1055,7 +1055,7 @@ export const getUserColumns = ({ onDelete }) => [
     title: "Action",
     key: "action",
     dataIndex: "action",
-    width: "180px",
+    width: "200px",
     render: (_, record) => (
       <Stack direction="row" spacing={2}>
         <Link to={`${record?._id}`}>
@@ -1133,7 +1133,7 @@ export const getClassSectionColumns = ({ onDelete }) => [
     title: "Action",
     key: "action",
     dataIndex: "action",
-    width: "120px",
+    width: "140px",
     render: (_, record) => (
       <Button
         size="sm"
@@ -1388,7 +1388,7 @@ export const getReportForm1Columns = ({
     title: "Action",
     key: "action",
     dataIndex: "action",
-    width: "150px",
+    width: "200px",
     render: (_, record) => (
       <Flex gap={1} align="center">
         <Link to={`/fortnightly-monitor/report/${record._id}`}>
@@ -1590,7 +1590,7 @@ export const getReportForm2Columns = ({
     title: "Action",
     key: "action",
     dataIndex: "action",
-    width: "150px",
+    width: "200px",
     render: (_, record) => (
       <Flex gap={1} align="center">
         <Link to={`/classroom-walkthrough/report/${record._id}`}>
@@ -1853,7 +1853,7 @@ export const getReportForm3Columns = ({
     title: "Action",
     key: "action",
     dataIndex: "action",
-    width: "250px",
+    width: "280px",
     render: (_, record) => (
       <Flex gap={1} align="center">
         <Link to={`/notebook-checking-proforma/report/${record._id}`}>
@@ -1901,7 +1901,7 @@ export const getReportForm3Columns = ({
 // ─────────────────────────────────────────────────────────────────────────────
 // 11. REPORTS — Form 4 (Weekly 4 Form Report)
 // ─────────────────────────────────────────────────────────────────────────────
-export const getReportForm4Columns = ({ data = [] }) => [
+export const getReportForm4Columns = ({ data = [], currentUserRole, onDelete }) => [
   {
     title: "Observer Name",
     key: "observerName",
@@ -1976,19 +1976,289 @@ export const getReportForm4Columns = ({ data = [] }) => [
     title: "Action",
     key: "action",
     dataIndex: "action",
-    width: "150px",
+    width: "200px",
     render: (_, record) => (
-      <Link to={`/weekly4form/report/${record._id}`}>
-        <Button
-          size="md"
-          variant="outline"
-          colorScheme="blue"
-          fontWeight="medium"
-          flexShrink={0}
-        >
-          View Report
-        </Button>
-      </Link>
+      <Flex gap={2} align="center">
+        <Link to={`/weekly4form/report/${record._id}`}>
+          <Button
+            size="md"
+            variant="outline"
+            colorScheme="blue"
+            fontWeight="medium"
+            flexShrink={0}
+          >
+            View Report
+          </Button>
+        </Link>
+        {(currentUserRole === "Superadmin" || currentUserRole === "Observer") && onDelete && (
+          <Button
+            size="md"
+            variant="outline"
+            colorScheme="red"
+            px={2}
+            flexShrink={0}
+            onClick={() => onDelete(record._id)}
+            title="Delete"
+          >
+            <DeleteFilled />
+          </Button>
+        )}
+      </Flex>
     ),
   },
 ];
+
+
+export const getCoScholasticColumns = ({
+  data = [],
+  currentUserRole,
+  onDelete,
+}) => [
+  {
+    title: currentUserRole === "Observer" ? "Observer Name" : "Teacher Name",
+    key: "personName",
+    dataIndex: "grenralDetails",
+    width: "160px",
+    sortable: true,
+    sorter: (a, b) => {
+      const aName =
+        currentUserRole === "Observer"
+          ? a?.createdBy?.name || ""
+          : a?.grenralDetails?.NameoftheVisitingTeacher?.name || "";
+      const bName =
+        currentUserRole === "Observer"
+          ? b?.createdBy?.name || ""
+          : b?.grenralDetails?.NameoftheVisitingTeacher?.name || "";
+      return aName.localeCompare(bName);
+    },
+    render: (val, record) => (
+      <Text fontWeight="500" fontSize="sm">
+        {currentUserRole === "Observer"
+          ? record?.createdBy?.name
+          : val?.NameoftheVisitingTeacher?.name || "—"}
+      </Text>
+    ),
+    filterConfig: {
+      type: "select",
+      options: [...new Set(
+        data.map((r) =>
+          currentUserRole === "Observer"
+            ? r?.createdBy?.name
+            : r?.grenralDetails?.NameoftheVisitingTeacher?.name,
+        ).filter(Boolean)
+      )],
+      matchFn: (record, vals) => {
+        const name =
+          currentUserRole === "Observer"
+            ? record?.createdBy?.name
+            : record?.grenralDetails?.NameoftheVisitingTeacher?.name;
+        return vals.includes(name || "");
+      },
+    },
+  },
+  {
+    title: "Class",
+    key: "className",
+    dataIndex: "grenralDetails",
+    width: "110px",
+    sortable: true,
+    sorter: (a, b) =>
+      (a?.grenralDetails?.className || "").localeCompare(
+        b?.grenralDetails?.className || "",
+      ),
+    render: (val) => <Text fontSize="sm">{val?.className || "—"}</Text>,
+    filterConfig: {
+      type: "select",
+      options: [...new Set(data.map((r) => r?.grenralDetails?.className).filter(Boolean))],
+      matchFn: (record, vals) =>
+        vals.includes(record?.grenralDetails?.className || ""),
+    },
+  },
+  {
+    title: "Section",
+    key: "section",
+    dataIndex: "grenralDetails",
+    width: "90px",
+    sortable: true,
+    sorter: (a, b) =>
+      (a?.grenralDetails?.Section || "").localeCompare(
+        b?.grenralDetails?.Section || "",
+      ),
+    render: (val) => <Text fontSize="sm">{val?.Section || "—"}</Text>,
+    filterConfig: {
+      type: "select",
+      options: [...new Set(data.map((r) => r?.grenralDetails?.Section).filter(Boolean))],
+      matchFn: (record, vals) =>
+        vals.includes(record?.grenralDetails?.Section || ""),
+    },
+  },
+  {
+    title: "Subject",
+    key: "subject",
+    dataIndex: "grenralDetails",
+    width: "110px",
+    sortable: true,
+    sorter: (a, b) =>
+      (a?.grenralDetails?.Subject || "").localeCompare(
+        b?.grenralDetails?.Subject || "",
+      ),
+    render: (val) => <Text fontSize="sm">{val?.Subject || "—"}</Text>,
+    filterConfig: {
+      type: "select",
+      options: [...new Set(data.map((r) => r?.grenralDetails?.Subject).filter(Boolean))],
+      matchFn: (record, vals) =>
+        vals.includes(record?.grenralDetails?.Subject || ""),
+    },
+  },
+  {
+    title: "Observation Date",
+    key: "observationDate",
+    dataIndex: "grenralDetails",
+    width: "140px",
+    sortable: true,
+    sorter: (a, b) =>
+      new Date(a?.grenralDetails?.DateOfObservation) -
+      new Date(b?.grenralDetails?.DateOfObservation),
+    render: (val) => (
+      <Text fontSize="sm" color="gray.600">
+        {val?.DateOfObservation ? new Date(val.DateOfObservation).toLocaleDateString() : "—"}
+      </Text>
+    ),
+    filterConfig: {
+      type: "date",
+      matchFn: (record, val) =>
+        !val ||
+        new Date(record?.grenralDetails?.DateOfObservation).toDateString() ===
+          new Date(val).toDateString(),
+    },
+  },
+  {
+    title: "Teacher Status",
+    key: "isTeacherCompletes",
+    dataIndex: "isTeacherCompletes",
+    width: "140px",
+    render: (val) => <StatusBadge value={val} />,
+    filterConfig: {
+      type: "boolean",
+      trueLabel: "Completed",
+      falseLabel: "Pending",
+    },
+  },
+  {
+    title: "Observer Status",
+    key: "isObserverCompleted",
+    dataIndex: "isObserverCompleted",
+    width: "145px",
+    render: (val) => <StatusBadge value={val} />,
+    filterConfig: {
+      type: "boolean",
+      trueLabel: "Completed",
+      falseLabel: "Pending",
+    },
+  },
+  {
+    title: "Action",
+    key: "action",
+    dataIndex: "action",
+    width: "280px",
+    render: (_, record) => {
+      const { isTeacherCompletes, isObserverCompleted } = record;
+      const renderAction = () => {
+        if (isTeacherCompletes && isObserverCompleted) {
+          return (
+            <>
+              <Link to={`/co-scholastic/report/${record._id}`}>
+                <Button
+                  size="md"
+                  variant="outline"
+                  colorScheme="blue"
+                  fontWeight="medium"
+                  flexShrink={0}
+                >
+                  View Report
+                </Button>
+              </Link>
+              {(currentUserRole === "Superadmin" || currentUserRole === "Observer") && (
+                <Link to={`/co-scholastic/edit/${record._id}`}>
+                  <Button
+                    size="md"
+                    variant="outline"
+                    colorScheme="green"
+                    fontWeight="medium"
+                    flexShrink={0}
+                  >
+                    Edit
+                  </Button>
+                </Link>
+              )}
+            </>
+          );
+        }
+
+        if (currentUserRole === "Superadmin") {
+          return <Reminder id={record?._id} type="coscholastic" />;
+        }
+
+        if (currentUserRole === "Observer") {
+          if (!isObserverCompleted) {
+            return (
+              <Link to={`/co-scholastic/create/${record._id}`}>
+                <Button
+                  size="md"
+                  variant="outline"
+                  colorScheme="blue"
+                  fontWeight="medium"
+                  flexShrink={0}
+                >
+                  Continue Form
+                </Button>
+              </Link>
+            );
+          } else {
+            return <Reminder id={record?._id} type="coscholastic" />;
+          }
+        }
+
+        if (currentUserRole === "Teacher") {
+          if (!isTeacherCompletes) {
+            return (
+              <Link to={`/co-scholastic/create/${record._id}`}>
+                <Button
+                  size="md"
+                  variant="outline"
+                  colorScheme="blue"
+                  fontWeight="medium"
+                  flexShrink={0}
+                >
+                  Continue Form
+                </Button>
+              </Link>
+            );
+          }
+        }
+
+        return null;
+      };
+
+      return (
+        <Flex gap={1} align="center">
+          {renderAction()}
+          {(currentUserRole === "Superadmin" || currentUserRole === "Observer") && onDelete && (
+            <Button
+              size="md"
+              variant="outline"
+              colorScheme="red"
+              px={2}
+              flexShrink={0}
+              onClick={() => onDelete(record._id)}
+              title="Delete"
+            >
+              <DeleteFilled />
+            </Button>
+          )}
+        </Flex>
+      );
+    },
+  },
+];
+

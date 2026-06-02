@@ -27,7 +27,6 @@ const Role = getUserId()?.access;
 export const Menu = {
   Superadmin: [
     { name: "Dashboard", route: "/dashboard", icon: <AppstoreAddOutlined /> },
-    { name: "Reports", route: "/reports", icon: <PieChartOutlined /> },
     { name: "User", route: "/users", icon: <UserAddOutlined /> },
     { name: "Profile", route: "/profile", icon: <UserOutlined /> },
     {
@@ -50,49 +49,31 @@ export const Menu = {
       name: "Notebook Checking",
       route: "/notebook-checking-proforma",
       icon: <BookFilled />,
-    }
-    ,
+    },
     {
       name: "Learning Progress Checklist",
-      route: "weekly4form",
+      route: "/weekly4form",
       icon: <DatabaseFilled />,
     },
-  ],
-  Observer: [
-    { name: "Dashboard", route: "/dashboard", icon: <AppstoreAddOutlined /> },
-    { name: "Reports", route: "/reports", icon: <PieChartOutlined /> },
-    { name: "Profile", route: "/profile", icon: <UserOutlined /> },
-    { label: "Forms" },
     {
-      name: "Fortnightly Monitor",
-      route: "/fortnightly-monitor",
-      icon: <FormOutlined />,
-    },
-    {
-      name: "Classroom Walkthrough",
-      route: "/classroom-walkthrough",
-      icon: <SignatureOutlined />,
-    },
-    {
-      name: "Notebook Checking",
-      route: "/notebook-checking-proforma",
+      name: "Co-Scholastic Classroom Observation",
+      route: "/co-scholastic",
       icon: <BookFilled />,
-    },
-
-    {
-      name: " Learning Progress Checklist",
-      route: "weekly4form",
-      icon: <DatabaseFilled />,
     },
     {
       name: "Wing Coordinator",
       route: "/wing-coordinator",
-      icon: <BookFilled />,
+      icon: <FormOutlined />,
+    },
+    { label: "Reports" },
+    {
+      name: "Wing Coordinator",
+      route: "/reports/wing-coordinator",
+      icon: <PieChartOutlined />,
     },
   ],
-  Teacher: [
+  Observer: [
     { name: "Dashboard", route: "/dashboard", icon: <AppstoreAddOutlined /> },
-    // { name: "Reports", route: "/reports", icon: <PieChartOutlined /> },
     { name: "Profile", route: "/profile", icon: <UserOutlined /> },
     { label: "Forms" },
     {
@@ -112,9 +93,66 @@ export const Menu = {
     },
     {
       name: "Learning Progress Checklist",
-      route: "weekly4form",
+      route: "/weekly4form",
       icon: <DatabaseFilled />,
     },
+    {
+      name: "Co-Scholastic Classroom Observation",
+      route: "/co-scholastic",
+      icon: <BookFilled />,
+    },
+    {
+      name: "Wing Coordinator",
+      route: "/wing-coordinator",
+      icon: <FormOutlined />,
+    },
+    { label: "Reports" },
+    {
+      name: "Wing Coordinator",
+      route: "/reports/wing-coordinator",
+      icon: <PieChartOutlined />,
+    },
+  ],
+  Teacher: [
+    { name: "Dashboard", route: "/dashboard", icon: <AppstoreAddOutlined /> },
+    { name: "Profile", route: "/profile", icon: <UserOutlined /> },
+    { label: "Forms" },
+    {
+      name: "Fortnightly Monitor",
+      route: "/fortnightly-monitor",
+      icon: <FormOutlined />,
+    },
+    {
+      name: "Classroom Walkthrough",
+      route: "/classroom-walkthrough",
+      icon: <SignatureOutlined />,
+    },
+    {
+      name: "Notebook Checking",
+      route: "/notebook-checking-proforma",
+      icon: <BookFilled />,
+    },
+    {
+      name: "Learning Progress Checklist",
+      route: "/weekly4form",
+      icon: <DatabaseFilled />,
+    },
+    {
+      name: "Co-Scholastic Classroom Observation",
+      route: "/co-scholastic",
+      icon: <BookFilled />,
+    },
+    {
+      name: "Wing Coordinator",
+      route: "/wing-coordinator",
+      icon: <FormOutlined />,
+    },
+    // { label: "Reports" },
+    // {
+    //   name: "Wing Coordinator",
+    //   route: "/reports/wing-coordinator",
+    //   icon: <PieChartOutlined />,
+    // },
   ],
 };
 

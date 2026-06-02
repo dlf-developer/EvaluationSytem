@@ -36,6 +36,7 @@ const FORM_TITLES = [
   { key: "form2", label: "Classroom Walkthrough", color: "blue" },
   { key: "form3", label: "Notebook Checking Proforma", color: "purple" },
   { key: "form4", label: "Learning Progress Checklist", color: "orange" },
+  { key: "form5", label: "Co-Scholastic Classroom Observation", color: "teal" },
 ];
 
 // ── Score helpers ─────────────────────────────────────────────────────────────
@@ -222,6 +223,7 @@ function OB_Wing() {
     form2: [],
     form3: [],
     form4: [],
+    form5: [],
   });
 
   // ── Load existing form ──
@@ -250,6 +252,7 @@ function OB_Wing() {
         form2: currForm?.form2 || [],
         form3: currForm?.form3 || [],
         form4: currForm?.form4 || [],
+        form5: currForm?.form5 || [],
       });
       // 2. If localStorage has a more-recent draft, overlay the monthlyReport
       try {
@@ -308,8 +311,10 @@ function OB_Wing() {
     }));
   };
 
-  const handleSave = async () => {
-    setSaving(true);
+  const handleSave = async (silent = false) => {
+    // If it's a DOM event (e.g. click), silent won't be a boolean. Ensure it's strictly a boolean.
+    const isSilent = silent === true;
+    if (!isSilent) setSaving(true);
     try {
       const values = form.getFieldsValue();
       const rawReport = values.monthlyReport || [];
@@ -321,7 +326,7 @@ function OB_Wing() {
       }));
 
       const { className, range } = formData || {};
-      const { form1, form2, form3, form4 } = selectedItems;
+      const { form1, form2, form3, form4, form5 } = selectedItems;
       const checkdata = {
         ...values,
         monthlyReport,
@@ -331,13 +336,17 @@ function OB_Wing() {
         form2,
         form3,
         form4,
+        form5,
         formName: values.formName,
       };
       const res = await dispatch(updateWingForm({ id, checkdata })).unwrap();
-      if (res?.success) message.success("Saved successfully");
-      else message.error("Save failed. Please try again.");
+      if (res?.success) {
+        if (!isSilent) message.success("Saved successfully");
+      } else {
+        if (!isSilent) message.error("Save failed. Please try again.");
+      }
     } finally {
-      setSaving(false);
+      if (!isSilent) setSaving(false);
     }
   };
 
@@ -354,7 +363,7 @@ function OB_Wing() {
       }));
 
       const { className, range } = formData || {};
-      const { form1, form2, form3, form4 } = selectedItems;
+      const { form1, form2, form3, form4, form5 } = selectedItems;
       const checkdata = {
         ...values,
         className,
@@ -363,6 +372,7 @@ function OB_Wing() {
         form2,
         form3,
         form4,
+        form5,
         isDraft: false,
         isComplete: true,
         monthlyReport,
@@ -559,7 +569,9 @@ function OB_Wing() {
             item?.createdBy?.name
           : type === "form3"
             ? item?.teacherID?.name || item?.createdBy?.name
-            : item?.teacherId?.name || item?.userId?.name;
+            : type === "form5"
+              ? item?.grenralDetails?.NameoftheVisitingTeacher?.name || item?.createdBy?.name
+              : item?.teacherId?.name || item?.userId?.name;
 
     const teacherPct =
       type === "form1"
@@ -590,7 +602,9 @@ function OB_Wing() {
               getSelfScore(item, "ObserverForm", "form3"),
               getTotalScore(item, "ObserverForm", "form3"),
             )
-          : null;
+          : type === "form5"
+            ? item?.percentageScore
+            : null;
 
     return (
       <Box
@@ -713,6 +727,8 @@ function OB_Wing() {
                   observerId = item?.grenralDetails?.NameofObserver?._id || item?.grenralDetails?.NameofObserver || item?.createdBy?._id || item?.createdBy;
                 } else if (key === "form4") {
                   observerId = item?.isInitiated?.Observer?._id || item?.isInitiated?.Observer || item?.userId?._id || item?.userId;
+                } else if (key === "form5") {
+                  observerId = item?.createdBy?._id || item?.createdBy;
                 }
 
                 const obsIdStr = observerId?.toString();
@@ -989,7 +1005,10 @@ function OB_Wing() {
           size="md"
           color="gray.500"
           _hover={{ color: "brand.text", bg: "gray.50" }}
-          onClick={() => navigate("/wing-coordinator")}
+          onClick={() => {
+            handleSave(true); // Auto-save draft silently
+            navigate("/wing-coordinator");
+          }}
         >
           ← Back to List
         </Button>
@@ -1021,7 +1040,10 @@ function OB_Wing() {
               onClick={() => {
                 form
                   .validateFields(["formName", ["monthlyReport"]])
-                  .then(() => setCurrStep(2))
+                  .then(() => {
+                    handleSave(true); // Auto-save when moving to next step
+                    setCurrStep(2);
+                  })
                   .catch(() => {});
               }}
               transition="all 0.15s"
@@ -1038,7 +1060,10 @@ function OB_Wing() {
               color="white"
               _hover={{ bg: "brand.secondary", transform: "translateY(-1px)" }}
               rightIcon={<ArrowRightOutlined />}
-              onClick={() => setCurrStep(3)}
+              onClick={() => {
+                handleSave(true);
+                setCurrStep(3);
+              }}
               transition="all 0.15s"
             >
               Next: Review & Publish
