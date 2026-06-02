@@ -60,15 +60,10 @@ export const Menu = {
       route: "/co-scholastic",
       icon: <BookFilled />,
     },
-    {
-      name: "Wing Coordinator",
-      route: "/wing-coordinator",
-      icon: <FormOutlined />,
-    },
     { label: "Reports" },
     {
       name: "Wing Coordinator",
-      route: "/reports/wing-coordinator",
+      route: "/wing-coordinator",
       icon: <PieChartOutlined />,
     },
   ],
@@ -101,15 +96,10 @@ export const Menu = {
       route: "/co-scholastic",
       icon: <BookFilled />,
     },
-    {
-      name: "Wing Coordinator",
-      route: "/wing-coordinator",
-      icon: <FormOutlined />,
-    },
     { label: "Reports" },
     {
       name: "Wing Coordinator",
-      route: "/reports/wing-coordinator",
+      route: "/wing-coordinator",
       icon: <PieChartOutlined />,
     },
   ],
@@ -142,17 +132,6 @@ export const Menu = {
       route: "/co-scholastic",
       icon: <BookFilled />,
     },
-    {
-      name: "Wing Coordinator",
-      route: "/wing-coordinator",
-      icon: <FormOutlined />,
-    },
-    // { label: "Reports" },
-    // {
-    //   name: "Wing Coordinator",
-    //   route: "/reports/wing-coordinator",
-    //   icon: <PieChartOutlined />,
-    // },
   ],
 };
 
