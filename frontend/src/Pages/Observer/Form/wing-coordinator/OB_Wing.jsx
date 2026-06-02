@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Form, Checkbox, Spin, message, Input, Table } from "antd";
+import { Form, Checkbox, message, Input, Table } from "antd";
 import Fillter_Wing from "./Fillter_Wing";
 import { getAllTimes } from "../../../../Utils/auth";
 import {
@@ -17,14 +17,9 @@ import {
   Text,
   Button,
   Badge,
-  Tag,
-  Divider,
   Spinner,
   VStack,
   HStack,
-  Grid,
-  GridItem,
-  Icon,
   Progress,
 } from "@chakra-ui/react";
 import {
@@ -261,8 +256,15 @@ function OB_Wing() {
         const raw = localStorage.getItem(DRAFT_KEY);
         if (raw) {
           const draft = JSON.parse(raw);
+          const fieldsToSet = {};
           if (draft?.monthlyReport?.length) {
-            form.setFieldsValue({ monthlyReport: draft.monthlyReport });
+            fieldsToSet.monthlyReport = draft.monthlyReport;
+          }
+          if (draft?.formName) {
+            fieldsToSet.formName = draft.formName;
+          }
+          if (Object.keys(fieldsToSet).length > 0) {
+            form.setFieldsValue(fieldsToSet);
             message.info({
               content: "📋 Draft restored from your last session.",
               key: "draft-restore",
@@ -284,8 +286,15 @@ function OB_Wing() {
         question: inputsWing[i].question,
         type: inputsWing[i].type,
       }));
+      const draftData = {};
       if (monthlyReport && monthlyReport.length > 0) {
-        localStorage.setItem(DRAFT_KEY, JSON.stringify({ monthlyReport }));
+        draftData.monthlyReport = monthlyReport;
+      }
+      if (values.formName) {
+        draftData.formName = values.formName;
+      }
+      if (Object.keys(draftData).length > 0) {
+        localStorage.setItem(DRAFT_KEY, JSON.stringify(draftData));
       }
     } catch (_) {}
   };
@@ -408,6 +417,7 @@ function OB_Wing() {
           <Input
             size="large"
             placeholder="Enter a name for this report…"
+            onBlur={handleInputBlur}
             style={{ borderRadius: 8, borderColor: "#E2E8F0", fontSize: 14 }}
           />
         </Form.Item>

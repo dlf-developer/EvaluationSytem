@@ -164,6 +164,14 @@ export const getAllWeeklyFrom = createAsyncThunk(
   },
 );
 
+export const deleteWeekly4Form = createAsyncThunk(
+  "deleteWeekly4Form",
+  async (payload) => {
+    const response = await axiosInstanceToken.delete(`/weekly4Form/${payload}`);
+    return response.data;
+  },
+);
+
 export const getAllWeeklyFromById = createAsyncThunk(
   "getAllWeeklyFromById",
   async (payload) => {
@@ -244,6 +252,14 @@ export const GetWingFrom = createAsyncThunk("GetWingFrom", async (payload) => {
   const response = await axiosInstanceToken.get(`/wing-coordinator/${payload}`);
   return response.data;
 });
+
+export const deleteWingForm = createAsyncThunk(
+  "deleteWingForm",
+  async (payload) => {
+    const response = await axiosInstanceToken.delete(`/wing-coordinator/${payload}`);
+    return response.data;
+  }
+);
 
 export const GetSingleWingFrom = createAsyncThunk(
   "GetSingleWingFrom",

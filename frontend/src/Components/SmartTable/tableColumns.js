@@ -861,7 +861,7 @@ export const getNotebookColumns = ({
 // ─────────────────────────────────────────────────────────────────────────────
 // 4. WEEKLY 4 FORM columns
 // ─────────────────────────────────────────────────────────────────────────────
-export const getWeeklyColumns = ({ data = [], currentUserRole }) => [
+export const getWeeklyColumns = ({ data = [], currentUserRole, onDelete }) => [
   {
     title: "Teacher Name",
     key: "teacherName",
@@ -968,6 +968,19 @@ export const getWeeklyColumns = ({ data = [], currentUserRole }) => [
         ) : null}
         {currentUserRole === UserRole[1] && !record?.isCompleted && (
           <Reminder id={record?._id} type="form4" />
+        )}
+        {(currentUserRole === UserRole[0] || currentUserRole === UserRole[1]) && onDelete && (
+          <Button
+            size="md"
+            variant="outline"
+            colorScheme="red"
+            px={2}
+            flexShrink={0}
+            onClick={() => onDelete(record._id)}
+            title="Delete"
+          >
+            <DeleteFilled />
+          </Button>
         )}
       </Stack>
     ),

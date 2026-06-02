@@ -3,10 +3,11 @@ import { Box, Flex, Heading, Text, Stack, Button } from "@chakra-ui/react";
 import { PlusCircleOutlined } from "@ant-design/icons";
 import { Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { getAllWeeklyFrom } from "../../redux/userSlice";
+import { getAllWeeklyFrom, deleteWeekly4Form } from "../../redux/userSlice";
 import { UserRole } from "../../config/config";
 import { getUserId } from "../../Utils/auth";
 import SmartTable from "../../Components/SmartTable";
+import { message, Modal } from "antd";
 import { getWeeklyColumns } from "../../Components/SmartTable/tableColumns";
 
 function Weely4Page() {
@@ -20,8 +21,31 @@ function Weely4Page() {
     dispatch(getAllWeeklyFrom());
   }, [dispatch]);
 
+  const handleDelete = (id) => {
+    Modal.confirm({
+      title: "Are you sure you want to delete this form?",
+      content: "This action cannot be undone.",
+      okText: "Yes, Delete",
+      okType: "danger",
+      cancelText: "Cancel",
+      onOk: async () => {
+        try {
+          const res = await dispatch(deleteWeekly4Form(id)).unwrap();
+          if (res?.success) {
+            message.success("Form deleted successfully");
+            dispatch(getAllWeeklyFrom());
+          } else {
+            message.error("Failed to delete form");
+          }
+        } catch (error) {
+          message.error("An error occurred while deleting");
+        }
+      },
+    });
+  };
+
   const columns = useMemo(
-    () => getWeeklyColumns({ data: CombinedData, currentUserRole }),
+    () => getWeeklyColumns({ data: CombinedData, currentUserRole, onDelete: handleDelete }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [CombinedData, currentUserRole]
   );

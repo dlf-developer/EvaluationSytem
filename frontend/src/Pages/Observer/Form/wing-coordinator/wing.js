@@ -27,7 +27,8 @@ export const inputsWing = [
   },
   {
     question: "Identified Learners on the Way (L.O.W.)",
-    type: "text",
+    type: "table",
+    columns: ["Name", "Class Section", "Subject", "Remarks"],
   },
   {
     question: "C.W.S.N Names & Progress",

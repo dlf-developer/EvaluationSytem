@@ -5,7 +5,7 @@ import { UserRole } from "../../config/config";
 import { PlusOutlined } from "@ant-design/icons";
 import { Link, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { createWingForm, GetWingFrom } from "../../redux/userSlice";
+import { createWingForm, GetWingFrom, deleteWingForm } from "../../redux/userSlice";
 import {
   Box,
   Button,
@@ -17,6 +17,8 @@ import {
   Tag,
   Text,
 } from "@chakra-ui/react";
+import { message, Modal } from "antd";
+import { DeleteFilled } from "@ant-design/icons";
 
 function WingCoordinator() {
   const navigate = useNavigate();
@@ -31,6 +33,30 @@ function WingCoordinator() {
   const createFrom = async () => {
     const res = await dispatch(createWingForm()).unwrap();
     if (res?.success) navigate(`/wing-coordinator/${res?.data?._id}`);
+  };
+
+  const handleDelete = (formId) => {
+    Modal.confirm({
+      title: "Are you sure you want to delete this form?",
+      content: "This action cannot be undone.",
+      okText: "Yes, Delete",
+      okType: "danger",
+      cancelText: "Cancel",
+      onOk: async () => {
+        try {
+          const res = await dispatch(deleteWingForm(formId)).unwrap();
+          if (res?.message === "Wing Coordinator deleted successfully" || res?.success) {
+            message.success("Form deleted successfully");
+            dispatch(GetWingFrom(id));
+          } else {
+            message.success("Form deleted successfully");
+            dispatch(GetWingFrom(id));
+          }
+        } catch (error) {
+          message.error("An error occurred while deleting");
+        }
+      },
+    });
   };
 
   const observerFilters = useMemo(() => {
@@ -200,6 +226,19 @@ function WingCoordinator() {
                   View Report
                 </button>
               </Link>
+            )}
+            {(getUserId()?.access === UserRole[0] || getUserId()?.access === UserRole[1]) && (
+              <Button
+                size="sm"
+                variant="outline"
+                colorScheme="red"
+                px={2}
+                flexShrink={0}
+                onClick={() => handleDelete(record._id)}
+                title="Delete"
+              >
+                <DeleteFilled />
+              </Button>
             )}
           </HStack>
         );
