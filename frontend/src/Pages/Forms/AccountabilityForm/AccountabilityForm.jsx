@@ -94,8 +94,45 @@ function AccountabilityForm() {
     }
   };
 
-  const next = () => setCurrentStep(currentStep + 1);
-  const prev = () => setCurrentStep(currentStep - 1);
+  const next = async () => {
+    try {
+      if (currentStep === 0) {
+        await form.validateFields(["formName", "fromDate", "toDate", "teachers"]);
+      } else if (currentStep === 1) {
+        const teacherScores = form.getFieldValue("teacherScores") || [];
+        const scoreFields = [];
+        teacherScores.forEach((_, index) => {
+          scoreFields.push(["teacherScores", index, "lessonPlanScore"]);
+          scoreFields.push(["teacherScores", index, "qualityOfQPScore"]);
+        });
+        if (scoreFields.length > 0) {
+          await form.validateFields(scoreFields);
+        }
+      } else if (currentStep === 2) {
+        const classResults = form.getFieldValue("classResults") || [];
+        const resultFields = [];
+        classResults.forEach((_, index) => {
+          resultFields.push(["classResults", index, "T1DALow"]);
+          resultFields.push(["classResults", index, "T1DAHigh"]);
+          resultFields.push(["classResults", index, "sparkiesHighest"]);
+          resultFields.push(["classResults", index, "Sec"]);
+        });
+        if (resultFields.length > 0) {
+          await form.validateFields(resultFields);
+        }
+      }
+      
+      setCurrentStep(currentStep + 1);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch (error) {
+      message.error("Please fill all required fields before proceeding.");
+    }
+  };
+
+  const prev = () => {
+    setCurrentStep(currentStep - 1);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   const steps = [
     {
