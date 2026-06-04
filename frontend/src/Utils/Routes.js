@@ -57,6 +57,9 @@ import AdminReport from "../Pages/Admin/AdminReport";
 import ObserverReports from "../Pages/Observer/ObserverReports";
 import OB_Wing from "../Pages/Observer/Form/wing-coordinator/OB_Wing";
 import WingCoordinatorReport from "../Pages/Reports/WingCoordinatorReport";
+import AccountabilityMechanism from "../Pages/Forms/AccountabilityMechanism";
+import AccountabilityForm from "../Pages/Forms/AccountabilityForm/AccountabilityForm";
+import AccountabilityReport from "../Pages/Reports/AccountabilityReport";
 
 const role = getUserId()?.access;
 const isLoggedIn = getToken() !== null ? getToken() : null;
@@ -147,6 +150,7 @@ const protects = {
         { path: "/reports/notebook-checking-proforma", element: <AdminReport /> },
         { path: "/reports/weekly4form", element: <AdminReport /> },
         { path: "/reports/wing-coordinator", element: <AdminReport /> },
+        { path: "/reports/accountability", element: <AdminReport /> },
         { path: "/reports/co-scholastic", element: <AdminReport /> },
         { path: "/co-scholastic", element: <CoScholasticPage /> },
         { path: "/co-scholastic/report/:id", element: <CoScholasticReport /> },
@@ -166,6 +170,10 @@ const protects = {
         },
         { path: "/weekly4form", element: <Weekly /> },
         { path: "/weekly4form/report/:id", element: <Weekly4FormReport /> },
+        { path: "/wing-coordinator", element: <WingCoordinator /> },
+        { path: "/accountability", element: <AccountabilityMechanism /> },
+        { path: "/accountability/:id", element: <AccountabilityForm /> },
+        { path: "/accountability/report/:id", element: <AccountabilityReport /> },
         { path: "/class-section", element: <ClassSectionPage /> },
         { path: "*", element: <NotFound404 /> },
       ],
@@ -188,6 +196,7 @@ const protects = {
         { path: "/reports/notebook-checking-proforma", element: <ObserverReports /> },
         { path: "/reports/weekly4form", element: <ObserverReports /> },
         { path: "/reports/wing-coordinator", element: <ObserverReports /> },
+        { path: "/reports/accountability", element: <ObserverReports /> },
         { path: "/reports/co-scholastic", element: <ObserverReports /> },
         { path: "/co-scholastic", element: <CoScholasticPage /> },
         { path: "/co-scholastic/create", element: <CoScholasticDetails /> },
@@ -257,6 +266,9 @@ const protects = {
         { path: "/wing-coordinator", element: <WingCoordinator /> },
         { path: "/wing-coordinator/:id", element: <OB_Wing /> },
         { path: "/wing-coordinator/report/:id", element: <WingCoordinatorReport /> },
+        { path: "/accountability", element: <AccountabilityMechanism /> },
+        { path: "/accountability/:id", element: <AccountabilityForm /> },
+        { path: "/accountability/report/:id", element: <AccountabilityReport /> },
         { path: "*", element: <NotFound404 /> },
       ],
     },

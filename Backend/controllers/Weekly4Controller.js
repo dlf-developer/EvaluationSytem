@@ -3,6 +3,7 @@ const ClassDetails = require("../models/ClassDetails");
 const User = require("../models/User");
 const Weekly4Form = require("../models/Weekly4Form");
 const sendEmail = require("../utils/emailService");
+const { formInitiatedEmail, formCompletedEmail, reminderEmail } = require("../utils/emailTemplates");
 
 // Create a new Weekly4Form
 exports.createWeekly4Form = async (req, res) => {
@@ -132,15 +133,17 @@ const handleInitiatedForms = async (teacherIds, Payload, res) => {
         const newForm = new Weekly4Form(Payload);
         const savedForm = await newForm.save();
 
-        // Send email and create notification
-        const subject = "Learning Progress Checklist Initiated";
-        const body = `
-Dear ${teachName?.name},
-The Learning Progress Checklist has been initiated by ${ObserverName?.name} on ${new Date()}. Please fill out your section at your earliest convenience.
-Regards,
-The Admin Team
-     `;
-        await sendEmail(teachName.email, subject, body);
+        // Send email using the standard HTML template with a direct form link
+        if (teachName?.email) {
+          const route = `weekly4form/create/${savedForm._id}`;
+          const emailData = formInitiatedEmail({
+            recipientName: teachName.name,
+            initiatorName: ObserverName?.name || "Observer",
+            formTitle: "Learning Progress Checklist",
+            formRoute: route,
+          });
+          await sendEmail(teachName.email, emailData.subject, emailData.html);
+        }
 
         if (!savedForm) throw new Error("Form not saved");
         return savedForm;
@@ -163,15 +166,18 @@ const createNonInitiatedForm = async (Payload, res) => {
     const newForm = new Weekly4Form(Payload);
     const savedForm = await newForm.save();
 
-    // Send email and create notification
-    const subject = "Teacher Submission for Learning Progress Checklist";
-    const body = `
-     Dear ${UserName?.name},
-    ${teacher?.name} has submitted their section of the Learning Progress Checklist on ${new Date()}. Please review and take necessary action.
-    Regards,
-    The Admin Team
-     `;
-    await sendEmail(UserName.email, subject, body);
+    // Send HTML email to observer: teacher has submitted their section
+    if (UserName?.email) {
+      const route = `weekly4form/create/${savedForm._id}`;
+      const emailData = formCompletedEmail({
+        recipientName: UserName.name,
+        completorName: teacher?.name || "Teacher",
+        formTitle: "Learning Progress Checklist",
+        formRoute: route,
+        role: "Teacher",
+      });
+      await sendEmail(UserName.email, emailData.subject, emailData.html);
+    }
 
     if (!savedForm)
       return res.status(400).json({ success: false, error: "Form not saved" });
@@ -346,20 +352,17 @@ exports.updateWeekly4Form = async (req, res) => {
       return res.status(404).json({ message: "Form not found" });
     }
 
-    // Send email to the observer about the teacher's submission
+    // Send HTML email to the observer about the teacher's submission
     if (updatedForm.isInitiated?.Observer?.email) {
-      const observerName = updatedForm.isInitiated?.Observer?.name;
-      const teacherName = req.user?.name; // Assuming the teacher's name is from req.user
-      const subject = "Teacher Submission for Learning Progress Checklist";
-      const body = `
-Dear ${observerName},
-
-${teacherName} has submitted their section of the Learning Progress Checklist on ${date}. Please review and take necessary action.
-
-Regards,
-The Admin Team
-      `;
-      await sendEmail(updatedForm.isInitiated.Observer.email, subject, body);
+      const route = `weekly4form/create/${req.params.id}`;
+      const emailData = formCompletedEmail({
+        recipientName: updatedForm.isInitiated?.Observer?.name || "Observer",
+        completorName: req.user?.name || "Teacher",
+        formTitle: "Learning Progress Checklist",
+        formRoute: route,
+        role: "Teacher",
+      });
+      await sendEmail(updatedForm.isInitiated.Observer.email, emailData.subject, emailData.html);
     }
 
     res.status(200).json(updatedForm);
@@ -519,14 +522,14 @@ exports.ReminderFormFour = async (req, res) => {
       return res.status(400).json({ message: "Receiver email is missing" });
     }
 
-    const subject = "Learning Progress Checklist Initiated";
-    const body = `
-Dear ${receiverName},
-The Learning Progress Checklist has been initiated by ${sender} on ${new Date()}. Please fill out your section at your earliest convenience.
-Regards,  
-The Admin Team`;
-
-    await sendEmail(receiverEmail, subject, body);
+    const route = `weekly4form/create/${FormDetails?._id}`;
+    const emailData = reminderEmail({
+      recipientName: receiverName,
+      senderName: sender,
+      formTitle: "Learning Progress Checklist",
+      formRoute: route,
+    });
+    await sendEmail(receiverEmail, emailData.subject, emailData.html);
 
     return res.status(200).json({ success: true });
   } catch (error) {

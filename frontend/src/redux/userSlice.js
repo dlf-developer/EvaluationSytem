@@ -282,6 +282,88 @@ export const WingPublished = createAsyncThunk(
   },
 );
 
+export const syncWingForm = createAsyncThunk(
+  "syncWingForm",
+  async (payload) => {
+    const response = await axiosInstanceToken.post(
+      `/wing-coordinator/sync/${payload}`,
+    );
+    return response.data;
+  },
+);
+
+// Accountability Mechanism Form
+
+export const createAccountability = createAsyncThunk(
+  "createAccountability",
+  async () => {
+    const response = await axiosInstanceToken.post(`/accountability`);
+    return response.data;
+  }
+);
+
+export const getAccountabilities = createAsyncThunk(
+  "getAccountabilities",
+  async (userId) => {
+    const url = userId ? `/accountability?userId=${userId}` : `/accountability`;
+    const response = await axiosInstanceToken.get(url);
+    return response.data;
+  }
+);
+
+export const getSingleAccountability = createAsyncThunk(
+  "getSingleAccountability",
+  async (payload) => {
+    const response = await axiosInstanceToken.get(
+      `/accountability/single/${payload}`
+    );
+    return response.data;
+  }
+);
+
+export const updateAccountabilityForm = createAsyncThunk(
+  "updateAccountabilityForm",
+  async (payload) => {
+    const response = await axiosInstanceToken.put(
+      `/accountability/${payload?.id}`,
+      payload?.data
+    );
+    return response.data;
+  }
+);
+
+export const publishAccountabilityForm = createAsyncThunk(
+  "publishAccountabilityForm",
+  async (payload) => {
+    const response = await axiosInstanceToken.put(
+      `/accountability/status/${payload?.id}`,
+      payload?.data
+    );
+    return response.data;
+  }
+);
+
+export const deleteAccountabilityForm = createAsyncThunk(
+  "deleteAccountabilityForm",
+  async (payload) => {
+    const response = await axiosInstanceToken.delete(
+      `/accountability/${payload}`
+    );
+    return response.data;
+  }
+);
+
+export const calculateTeacherScores = createAsyncThunk(
+  "calculateTeacherScores",
+  async (payload) => {
+    const response = await axiosInstanceToken.post(
+      `/accountability/calculate`,
+      payload
+    );
+    return response.data;
+  }
+);
+
 const userSlice = createSlice({
   name: "Users",
   initialState: {
@@ -295,6 +377,7 @@ const userSlice = createSlice({
     signupSuccess: false,
     getFilteredDataList: null,
     getWingFormlist: null,
+    accountabilityList: null,
     message: "",
   },
   reducers: {
@@ -346,6 +429,19 @@ const userSlice = createSlice({
         state.getWingFormlist = action.payload;
       })
       .addCase(GetWingFrom.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+
+      .addCase(getAccountabilities.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(getAccountabilities.fulfilled, (state, action) => {
+        state.loading = false;
+        state.accountabilityList = action.payload;
+      })
+      .addCase(getAccountabilities.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })

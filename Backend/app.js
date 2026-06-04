@@ -13,6 +13,7 @@ const activityRoutes = require('./routes/activityRoutes');
 const wingCoordinatorRoutes = require('./routes/wingCoordinatorRoutes');
 const sessionRoutes = require('./routes/sessionRoutes');
 const coScholasticRoutes = require('./routes/coScholasticRoutes');
+const accountabilityRoutes = require('./routes/accountabilityRoutes');
 const fs = require('fs');
 const path = require('path');
 const dotenv = require('dotenv');
@@ -57,6 +58,7 @@ app.use('/api/activity', activityRoutes);
 app.use('/api/wing-coordinator', wingCoordinatorRoutes)
 app.use('/api/session', sessionRoutes);
 app.use('/api/co-scholastic', coScholasticRoutes);
+app.use('/api/accountability', accountabilityRoutes);
 app.get('/', (req, res) => {
     return res.json({ message: "hello" })
 })

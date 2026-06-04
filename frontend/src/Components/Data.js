@@ -66,6 +66,11 @@ export const Menu = {
       route: "/wing-coordinator",
       icon: <PieChartOutlined />,
     },
+    {
+      name: "Accountability Mechanism",
+      route: "/accountability",
+      icon: <PieChartOutlined />,
+    },
   ],
   Observer: [
     { name: "Dashboard", route: "/dashboard", icon: <AppstoreAddOutlined /> },
@@ -100,6 +105,11 @@ export const Menu = {
     {
       name: "Wing Coordinator",
       route: "/wing-coordinator",
+      icon: <PieChartOutlined />,
+    },
+    {
+      name: "Accountability Mechanism",
+      route: "/accountability",
       icon: <PieChartOutlined />,
     },
   ],

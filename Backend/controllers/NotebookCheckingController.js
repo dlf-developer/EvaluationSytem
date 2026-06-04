@@ -147,7 +147,7 @@ exports.createInitiate = async (req, res) => {
           const route = `notebook-checking-proforma/create/${formData._id}`;
           const emailData = formInitiatedEmail({
             recipientName: teacher.name,
-            initiatorName: recipientEmail?.name,
+            initiatorName: req.user?.name,
             formTitle: "Notebook Checking Proforma",
             formRoute: route,
             className: finalClassName,

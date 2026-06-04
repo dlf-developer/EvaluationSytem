@@ -7,6 +7,7 @@ import {
   GetSingleWingFrom,
   updateWingForm,
   WingPublished,
+  syncWingForm,
 } from "../../../../redux/userSlice";
 import { useNavigate, useParams } from "react-router-dom";
 import { inputsWing } from "./wing";
@@ -29,6 +30,8 @@ import {
   SendOutlined,
   ArrowRightOutlined,
   ArrowLeftOutlined,
+  ReloadOutlined,
+  SyncOutlined,
 } from "@ant-design/icons";
 
 const FORM_TITLES = [
@@ -210,9 +213,71 @@ function OB_Wing() {
   const [formData, setFormData] = useState();
   const [currForm, setCurrForm] = useState();
   const [currStep, setCurrStep] = useState(1);
+  const [syncing, setSyncing] = useState({});
+  const [syncingAll, setSyncingAll] = useState(false);
+
+  // ── Sync a single form type ──────────────────────────────────────────────
+  const handleSync = async (formKey) => {
+    setSyncing((prev) => ({ ...prev, [formKey]: true }));
+    try {
+      const res = await dispatch(syncWingForm(id)).unwrap();
+      if (res?.success) {
+        const fresh = res.data;
+        // Update selectedItems: replace any stored item with the freshest version
+        setSelectedItems((prev) => {
+          const freshArr = fresh[formKey] || [];
+          const updatedSelected = (prev[formKey] || []).map((sel) => {
+            const match = freshArr.find((f) => f._id === (sel._id || sel));
+            return match || sel;
+          });
+          return { ...prev, [formKey]: updatedSelected };
+        });
+        // Also refresh currForm so the filter list updates
+        setCurrForm(fresh);
+        message.success({ content: `✅ ${FORM_TITLES.find(f => f.key === formKey)?.label} synced!`, duration: 2 });
+      } else {
+        message.error("Sync failed. Please try again.");
+      }
+    } catch {
+      message.error("Sync failed. Please try again.");
+    } finally {
+      setSyncing((prev) => ({ ...prev, [formKey]: false }));
+    }
+  };
+
+  // ── Sync all form types at once ──────────────────────────────────────────
+  const handleSyncAll = async () => {
+    setSyncingAll(true);
+    try {
+      const res = await dispatch(syncWingForm(id)).unwrap();
+      if (res?.success) {
+        const fresh = res.data;
+        setSelectedItems((prev) => {
+          const updated = {};
+          ["form1","form2","form3","form4","form5"].forEach((key) => {
+            const freshArr = fresh[key] || [];
+            updated[key] = (prev[key] || []).map((sel) => {
+              const match = freshArr.find((f) => f._id === (sel._id || sel));
+              return match || sel;
+            });
+          });
+          return updated;
+        });
+        setCurrForm(fresh);
+        message.success({ content: "✅ All reports synced with latest data!", duration: 3 });
+      } else {
+        message.error("Sync failed. Please try again.");
+      }
+    } catch {
+      message.error("Sync failed. Please try again.");
+    } finally {
+      setSyncingAll(false);
+    }
+  };
+
+  const [form] = Form.useForm();
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
-  const [form] = Form.useForm();
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const id = useParams()?.id;
@@ -750,17 +815,33 @@ function OB_Wing() {
                       {completed.length} available
                     </Badge>
                   </HStack>
-                  {selected > 0 && (
-                    <Badge
-                      bg="brand.primary"
-                      color="white"
-                      borderRadius="full"
-                      px={2}
-                      fontSize="xs"
+                  <HStack spacing={2}>
+                    {selected > 0 && (
+                      <Badge
+                        bg="brand.primary"
+                        color="white"
+                        borderRadius="full"
+                        px={2}
+                        fontSize="xs"
+                      >
+                        {selected} selected
+                      </Badge>
+                    )}
+                    <Button
+                      size="xs"
+                      variant="outline"
+                      borderColor="gray.200"
+                      color="gray.500"
+                      _hover={{ borderColor: "brand.primary", color: "brand.primary", bg: "brand.background" }}
+                      leftIcon={<ReloadOutlined spin={syncing[key]} />}
+                      isLoading={syncing[key]}
+                      loadingText="Syncing…"
+                      onClick={(e) => { e.stopPropagation(); handleSync(key); }}
+                      title="Re-fetch latest data for these reports"
                     >
-                      {selected} selected
-                    </Badge>
-                  )}
+                      Refresh
+                    </Button>
+                  </HStack>
                 </Flex>
 
                 {completed.length > 0 ? (
@@ -932,6 +1013,20 @@ function OB_Wing() {
           </Text>
         </Box>
         <HStack spacing={3}>
+          <Button
+            variant="outline"
+            size="sm"
+            leftIcon={<SyncOutlined spin={syncingAll} />}
+            borderColor="gray.200"
+            color="gray.500"
+            _hover={{ borderColor: "brand.primary", color: "brand.primary", bg: "brand.background" }}
+            isLoading={syncingAll}
+            loadingText="Syncing…"
+            onClick={handleSyncAll}
+            title="Sync all stored report data with the latest changes"
+          >
+            Sync All
+          </Button>
           <Button
             variant="outline"
             size="sm"

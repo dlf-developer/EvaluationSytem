@@ -172,7 +172,23 @@ exports.editWalkthrouForm = async (req, res) => {
         // Update the form
         const updatedForm = await Form2.findByIdAndUpdate(formId, UpdateValue, {
             new: true,
-        });
+        }).populate('grenralDetails.NameoftheVisitingTeacher', 'name email');
+
+        // Notify the teacher that the observer has filled/updated their section
+        const teacher = updatedForm?.grenralDetails?.NameoftheVisitingTeacher;
+        if (teacher?.email) {
+            const route = `classroom-walkthrough/create/${formId}`;
+            const emailData = formCompletedEmail({
+                recipientName: teacher.name,
+                completorName: user.name,
+                formTitle: "Classroom Walkthrough",
+                formRoute: route,
+                role: "Observer",
+            });
+            sendEmail(teacher.email, emailData.subject, emailData.html).catch(e =>
+                console.error("Email error (editWalkthrouForm):", e)
+            );
+        }
 
         // Send a success response
         res.status(200).json({
