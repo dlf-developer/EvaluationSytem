@@ -101,7 +101,7 @@ const AccountabilityDoc = ({ data }) => {
   if (!data)
     return (
       <Document>
-        <Page size="A4" style={s.page}>
+        <Page size="A3" orientation="landscape" style={s.page}>
           <Text>Loading…</Text>
         </Page>
       </Document>
@@ -126,7 +126,7 @@ const AccountabilityDoc = ({ data }) => {
 
   return (
     <Document>
-      <Page size="A4" style={s.page}>
+      <Page size="A3" orientation="landscape" style={s.page}>
         <PageHeader title="Accountability Mechanism Report" />
         
         <View style={s.metaGrid}>

@@ -173,8 +173,8 @@ const WingCoordinatorDoc = ({ data }) => {
             ["Fortnightly Monitor (Form 1)", form1.length],
             ["Classroom Walkthrough (Form 2)", form2.length],
             ["Notebook Checking Proforma (Form 3)", form3.length],
-            ["Learning Progress Checklist (Form 4)", form4.length],
             ["Co-Scholastic Classroom Observation (Form 5)", form5.length],
+            ["Learning Progress Checklist (Form 4)", form4.length],
           ].map(([label, count], i, arr) => (
             <View key={label} style={i === arr.length - 1 ? s.tableRowLast : s.tableRow}>
               <View style={[s.td, s.col50]}><Text>{label}</Text></View>
@@ -337,26 +337,6 @@ const WingCoordinatorDoc = ({ data }) => {
         </Page>
       )}
 
-      {/* ══ FORM 4 — LEARNING PROGRESS CHECKLIST ════════════════════════════════ */}
-      {form4.length > 0 && (
-        <Page size="A4" style={s.page}>
-          <PageHeader title="Learning Progress Checklist" />
-          <Text style={s.sectionHead}>Learning Progress Checklist ({form4.length} records)</Text>
-          <View style={s.table}>
-            <View style={s.tableRow}>
-              <View style={[s.th, s.col50]}><Text>Teacher</Text></View>
-              <View style={[s.th, s.col50Last]}><Text>Date</Text></View>
-            </View>
-            {form4.map((f, i) => (
-              <View key={i} style={i === form4.length - 1 ? s.tableRowLast : s.tableRow}>
-                <View style={[s.td, s.col50]}><Text>{f.teacherId?.name ?? f.userId?.name ?? "—"}</Text></View>
-                <View style={[s.td, s.col50Last]}><Text>{fmt(f.createdAt)}</Text></View>
-              </View>
-            ))}
-          </View>
-        </Page>
-      )}
-
       {/* ══ FORM 5 — CO-SCHOLASTIC CLASSROOM OBSERVATION ════════════════════════ */}
       {form5.length > 0 && (
         <Page size="A4" style={s.page}>
@@ -376,6 +356,26 @@ const WingCoordinatorDoc = ({ data }) => {
               ]} />
             </View>
           ))}
+        </Page>
+      )}
+
+      {/* ══ FORM 4 — LEARNING PROGRESS CHECKLIST ════════════════════════════════ */}
+      {form4.length > 0 && (
+        <Page size="A4" style={s.page}>
+          <PageHeader title="Learning Progress Checklist" />
+          <Text style={s.sectionHead}>Learning Progress Checklist ({form4.length} records)</Text>
+          <View style={s.table}>
+            <View style={s.tableRow}>
+              <View style={[s.th, s.col50]}><Text>Teacher</Text></View>
+              <View style={[s.th, s.col50Last]}><Text>Date</Text></View>
+            </View>
+            {form4.map((f, i) => (
+              <View key={i} style={i === form4.length - 1 ? s.tableRowLast : s.tableRow}>
+                <View style={[s.td, s.col50]}><Text>{f.teacherId?.name ?? f.userId?.name ?? "—"}</Text></View>
+                <View style={[s.td, s.col50Last]}><Text>{fmt(f.createdAt)}</Text></View>
+              </View>
+            ))}
+          </View>
         </Page>
       )}
 

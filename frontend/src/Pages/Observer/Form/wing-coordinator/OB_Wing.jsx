@@ -38,8 +38,8 @@ const FORM_TITLES = [
   { key: "form1", label: "Fortnightly Monitor", color: "green" },
   { key: "form2", label: "Classroom Walkthrough", color: "blue" },
   { key: "form3", label: "Notebook Checking Proforma", color: "purple" },
-  { key: "form4", label: "Learning Progress Checklist", color: "orange" },
   { key: "form5", label: "Co-Scholastic Classroom Observation", color: "teal" },
+  { key: "form4", label: "Learning Progress Checklist", color: "orange" },
 ];
 
 // ── Score helpers ─────────────────────────────────────────────────────────────

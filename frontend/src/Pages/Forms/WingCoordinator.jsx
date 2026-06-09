@@ -72,12 +72,28 @@ function WingCoordinator() {
     return Array.from(observers.values());
   }, [getWingFormlist?.data]);
 
+  const classFilters = useMemo(() => {
+    if (!getWingFormlist?.data) return [];
+    const classes = new Set();
+    getWingFormlist.data.forEach((item) => {
+      if (Array.isArray(item?.className)) {
+        item.className.forEach((c) => classes.add(c));
+      } else if (item?.className) {
+        classes.add(item.className);
+      }
+    });
+    return Array.from(classes).sort();
+  }, [getWingFormlist?.data]);
+
   const columns = [
     {
       title: "REPORT NAME",
       dataIndex: "formName",
       key: "formName",
       width: 180,
+      filterConfig: {
+        type: "text"
+      },
       render: (val) => (
         <Text fontSize="sm" fontWeight="600" color="brand.text">
           {val || "—"}
@@ -105,6 +121,17 @@ function WingCoordinator() {
       dataIndex: "className",
       key: "className",
       width: 200,
+      filterConfig: {
+        type: "select",
+        options: classFilters,
+        matchFn: (record, vals) => {
+          if (!record?.className) return false;
+          if (Array.isArray(record.className)) {
+            return record.className.some(c => vals.includes(c));
+          }
+          return vals.includes(record.className);
+        }
+      },
       render: (classes) =>
         Array.isArray(classes) && classes.length > 0 ? (
           <Flex flexWrap="wrap" gap={1}>
@@ -131,6 +158,9 @@ function WingCoordinator() {
       dataIndex: "createdAt",
       key: "createdAt",
       width: 130,
+      filterConfig: {
+        type: "date"
+      },
       render: (date) => (
         <Text fontSize="sm" color="gray.500">
           {getAllTimes(date)?.formattedDate2 || "—"}

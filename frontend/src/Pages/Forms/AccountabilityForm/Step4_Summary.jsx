@@ -1,97 +1,143 @@
 import React from "react";
-import { Form, Input, InputNumber, Row, Col, Table, Divider, Typography } from "antd";
+import { Form, Input, Row, Col, Table, Divider, Typography, Tag, Alert } from "antd";
 import { Box } from "@chakra-ui/react";
 
 const { TextArea } = Input;
 const { Title, Text } = Typography;
 
+const MANUAL_FIELDS = [
+  { key: "lessonPlanScore",   max: 10 },
+  { key: "qualityOfQPScore",  max: 10 },
+  { key: "daAverage",         max: 10 },
+  { key: "mindspark",         max: 10 },
+  { key: "annualReducedTo10", max: 10 },
+  { key: "microTeaching",     max: 20 },
+];
+
+/** Compute a teacher's total skipping N/A fields. */
+function computeTeacherTotal(s) {
+  let total = (s.classroomWalkthroughAvg || 0) + (s.notebookCheckingAvg || 0);
+  let maxMarks = 10 + 10; 
+
+  if (!s.lessonPlanScore_na) { total += s.lessonPlanScore || 0; maxMarks += 10; }
+  if (!s.qualityOfQPScore_na) { total += s.qualityOfQPScore || 0; maxMarks += 10; }
+  
+  const daNA = s.daT1_na && s.daT2_na && s.daT1Low_na && s.daT1High_na;
+  if (!daNA) { total += s.daAverage || 0; maxMarks += 10; }
+
+  if (!s.mindspark_na) { total += s.mindspark || 0; maxMarks += 10; }
+
+  const annualNA = s.sec1_na && s.sec2_na && s.sec3_na && s.sec4_na;
+  if (!annualNA) { total += s.annualReducedTo10 || 0; maxMarks += 10; }
+
+  if (!s.microTeaching_na) { total += s.microTeaching || 0; maxMarks += 20; }
+
+  const pct = maxMarks > 0 ? ((total / maxMarks) * 100).toFixed(2) : "0.00";
+  return { total: parseFloat(total.toFixed(2)), maxMarks, pct, daNA, annualNA };
+}
+
 function Step4_Summary({ form, formValues }) {
-  // We use shouldUpdate to re-render the table when scores change
   return (
     <Box>
       <Title level={4} style={{ marginBottom: 24 }}>Summary & Text Details</Title>
 
       <Form.Item
-        shouldUpdate={(prevValues, currentValues) => prevValues.teacherScores !== currentValues.teacherScores}
+        shouldUpdate={(prev, cur) => prev.teacherScores !== cur.teacherScores}
       >
         {({ getFieldValue, setFieldsValue }) => {
           const scores = getFieldValue("teacherScores") || [];
 
-          // Compute totals dynamically for display
-          const dataSource = scores.map((s, index) => {
-            const total = 
-              (s.classroomWalkthroughAvg || 0) +
-              (s.notebookCheckingAvg || 0) +
-              (s.lessonPlanScore || 0) +
-              (s.qualityOfQPScore || 0) +
-              (s.daAverage || 0) +
-              (s.mindspark || 0) +
-              (s.annualReducedTo10 || 0) +
-              (s.microTeaching || 0);
-            
-            const pct = ((total / 100) * 100).toFixed(2);
+          const hasAnyNA = scores.some((s) => {
+            const daNA = s.daT1_na && s.daT2_na && s.daT1Low_na && s.daT1High_na;
+            const annualNA = s.sec1_na && s.sec2_na && s.sec3_na && s.sec4_na;
+            return s.lessonPlanScore_na || s.qualityOfQPScore_na || daNA || s.mindspark_na || annualNA || s.microTeaching_na;
+          });
 
-            // Update hidden fields in form for saving
+          const dataSource = scores.map((s, index) => {
+            const { total, maxMarks, pct, daNA, annualNA } = computeTeacherTotal(s);
+
+            // Persist computed values for saving
             setTimeout(() => {
               setFieldsValue({
-                [`teacherScores[${index}].totalScore`]: parseFloat(total.toFixed(2)),
+                [`teacherScores[${index}].totalScore`]: total,
                 [`teacherScores[${index}].percentage`]: parseFloat(pct),
-                [`teacherScores[${index}].maxMarks`]: 100,
+                [`teacherScores[${index}].maxMarks`]: maxMarks,
               });
             }, 0);
+
+            const naCell = (val, isNA) =>
+              isNA ? (
+                <Tag color="default" style={{ color: "#999" }}>N/A</Tag>
+              ) : (
+                val ?? 0
+              );
 
             return {
               key: index,
               name: s.teacherName,
-              walk: s.classroomWalkthroughAvg || 0,
-              note: s.notebookCheckingAvg || 0,
-              lesson: s.lessonPlanScore || 0,
-              qp: s.qualityOfQPScore || 0,
-              da: s.daAverage || 0,
-              spark: s.mindspark || 0,
-              annual: s.annualReducedTo10 || 0,
-              micro: s.microTeaching || 0,
-              total: total.toFixed(2),
+              walk: (s.classroomWalkthroughAvg || 0).toFixed(2),
+              note: (s.notebookCheckingAvg || 0).toFixed(2),
+              lesson: naCell(s.lessonPlanScore, s.lessonPlanScore_na),
+              qp: naCell(s.qualityOfQPScore, s.qualityOfQPScore_na),
+              da: naCell(s.daAverage, daNA),
+              spark: naCell(s.mindspark, s.mindspark_na),
+              annual: naCell(s.annualReducedTo10, annualNA),
+              micro: naCell(s.microTeaching, s.microTeaching_na),
+              total,
+              maxMarks,
               pct: pct + "%",
             };
           });
 
           const columns = [
-            { title: "Teacher", dataIndex: "name", key: "name", fixed: "left", width: 150 },
-            { title: "Walkthrough (/10)", dataIndex: "walk", key: "walk" },
-            { title: "Notebook (/10)", dataIndex: "note", key: "note" },
-            { title: "Lesson Plan (/10)", dataIndex: "lesson", key: "lesson" },
-            { title: "QP (/10)", dataIndex: "qp", key: "qp" },
-            { title: "DA (/10)", dataIndex: "da", key: "da" },
-            { title: "Mindspark (/10)", dataIndex: "spark", key: "spark" },
-            { title: "Annual (/10)", dataIndex: "annual", key: "annual" },
-            { title: "Micro (/20)", dataIndex: "micro", key: "micro" },
-            { 
-              title: "Total (/100)", 
-              dataIndex: "total", 
+            { title: "Teacher", dataIndex: "name", key: "name", width: 120 },
+            { title: <div style={{textAlign: "center", lineHeight: "1.2"}}>Walk-<br/>through<br/><span style={{fontSize: "10px", color: "gray"}}>(/10)</span></div>, dataIndex: "walk", key: "walk", align: "center" },
+            { title: <div style={{textAlign: "center", lineHeight: "1.2"}}>Note-<br/>book<br/><span style={{fontSize: "10px", color: "gray"}}>(/10)</span></div>, dataIndex: "note", key: "note", align: "center" },
+            { title: <div style={{textAlign: "center", lineHeight: "1.2"}}>Lesson<br/>Plan<br/><span style={{fontSize: "10px", color: "gray"}}>(/10)</span></div>, dataIndex: "lesson", key: "lesson", align: "center" },
+            { title: <div style={{textAlign: "center", lineHeight: "1.2"}}>QP<br/><span style={{fontSize: "10px", color: "gray"}}>(/10)</span></div>, dataIndex: "qp", key: "qp", align: "center" },
+            { title: <div style={{textAlign: "center", lineHeight: "1.2"}}>DA<br/><span style={{fontSize: "10px", color: "gray"}}>(/10)</span></div>, dataIndex: "da", key: "da", align: "center" },
+            { title: <div style={{textAlign: "center", lineHeight: "1.2"}}>Mind-<br/>spark<br/><span style={{fontSize: "10px", color: "gray"}}>(/10)</span></div>, dataIndex: "spark", key: "spark", align: "center" },
+            { title: <div style={{textAlign: "center", lineHeight: "1.2"}}>Annual<br/><span style={{fontSize: "10px", color: "gray"}}>(/10)</span></div>, dataIndex: "annual", key: "annual", align: "center" },
+            { title: <div style={{textAlign: "center", lineHeight: "1.2"}}>Micro<br/><span style={{fontSize: "10px", color: "gray"}}>(/20)</span></div>, dataIndex: "micro", key: "micro", align: "center" },
+            {
+              title: "Total",
               key: "total",
-              fixed: "right",
-              render: (t) => <Text strong color={t < 50 ? "red" : "green"}>{t}</Text> 
+              align: "center",
+              render: (_, row) => (
+                <Text strong style={{ color: row.total / row.maxMarks < 0.5 ? "red" : "green" }}>
+                  {row.total} / {row.maxMarks}
+                </Text>
+              ),
             },
-            { 
-              title: "Percentage", 
-              dataIndex: "pct", 
+            {
+              title: "Percentage",
+              dataIndex: "pct",
               key: "pct",
-              fixed: "right",
-              render: (p) => <Text strong>{p}</Text>
+              align: "center",
+              render: (p) => <Text strong>{p}</Text>,
             },
           ];
 
           return (
-            <Box mb={8} overflowX="auto">
-              <Table 
-                dataSource={dataSource} 
-                columns={columns} 
-                pagination={false} 
-                bordered 
-                size="small"
-                scroll={{ x: 1200 }}
-              />
+            <Box mb={8}>
+              {hasAnyNA && (
+                <Alert
+                  type="warning"
+                  showIcon
+                  message="Some fields are marked N/A and are excluded from the total and max marks calculation."
+                  style={{ marginBottom: 16 }}
+                />
+              )}
+              <Box overflowX="auto" className="hide-scrollbar">
+                <Table
+                  dataSource={dataSource}
+                  columns={columns}
+                  pagination={false}
+                  bordered
+                  size="small"
+                  scroll={{ x: 'max-content' }}
+                />
+              </Box>
             </Box>
           );
         }}
@@ -102,27 +148,27 @@ function Step4_Summary({ form, formValues }) {
       <Row gutter={24}>
         <Col span={8}>
           <Form.Item name="cpdHours" label="CPD (No. of Hours)">
-            <InputNumber min={0} style={{ width: "100%" }} size="large" />
+            <Input size="large" placeholder="e.g. 12" />
           </Form.Item>
         </Col>
         <Col span={8}>
           <Form.Item name="fieldTrips" label="No. of Field Trips">
-            <InputNumber min={0} style={{ width: "100%" }} size="large" />
+            <Input size="large" placeholder="e.g. 3" />
           </Form.Item>
         </Col>
         <Col span={8}>
           <Form.Item name="excursions" label="Excursions (Number)">
-            <InputNumber min={0} style={{ width: "100%" }} size="large" />
+            <Input size="large" placeholder="e.g. 2" />
           </Form.Item>
         </Col>
         <Col span={8}>
           <Form.Item name="outdoorAct" label="Outdoor Act (Number)">
-            <InputNumber min={0} style={{ width: "100%" }} size="large" />
+            <Input size="large" placeholder="e.g. 5" />
           </Form.Item>
         </Col>
         <Col span={8}>
           <Form.Item name="smilies" label="Smilies (Number)">
-            <InputNumber min={0} style={{ width: "100%" }} size="large" />
+            <Input size="large" placeholder="e.g. 10" />
           </Form.Item>
         </Col>
       </Row>

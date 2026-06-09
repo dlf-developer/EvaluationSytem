@@ -10,8 +10,8 @@ const FORM_TYPE_OPTIONS = [
     { value: 'form1', label: 'Fortnightly Monitor' },
     { value: 'form2', label: 'Classroom Walkthrough' },
     { value: 'form3', label: 'Notebook Checking Proforma' },
-    { value: 'form4', label: 'Learning Progress Checklist' },
     { value: 'form5', label: 'Co-Scholastic Classroom Observation' },
+    { value: 'form4', label: 'Learning Progress Checklist' },
 ];
 
 function Fillter_Wing({ saveData, data }) {

@@ -51,14 +51,14 @@ export const Menu = {
       icon: <BookFilled />,
     },
     {
-      name: "Learning Progress Checklist",
-      route: "/weekly4form",
-      icon: <DatabaseFilled />,
-    },
-    {
       name: "Co-Scholastic Classroom Observation",
       route: "/co-scholastic",
       icon: <BookFilled />,
+    },
+    {
+      name: "Learning Progress Checklist",
+      route: "/weekly4form",
+      icon: <DatabaseFilled />,
     },
     { label: "Reports" },
     {
@@ -92,14 +92,14 @@ export const Menu = {
       icon: <BookFilled />,
     },
     {
-      name: "Learning Progress Checklist",
-      route: "/weekly4form",
-      icon: <DatabaseFilled />,
-    },
-    {
       name: "Co-Scholastic Classroom Observation",
       route: "/co-scholastic",
       icon: <BookFilled />,
+    },
+    {
+      name: "Learning Progress Checklist",
+      route: "/weekly4form",
+      icon: <DatabaseFilled />,
     },
     { label: "Reports" },
     {
@@ -133,14 +133,14 @@ export const Menu = {
       icon: <BookFilled />,
     },
     {
-      name: "Learning Progress Checklist",
-      route: "/weekly4form",
-      icon: <DatabaseFilled />,
-    },
-    {
       name: "Co-Scholastic Classroom Observation",
       route: "/co-scholastic",
       icon: <BookFilled />,
+    },
+    {
+      name: "Learning Progress Checklist",
+      route: "/weekly4form",
+      icon: <DatabaseFilled />,
     },
   ],
 };

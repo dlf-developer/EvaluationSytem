@@ -53,21 +53,22 @@ function AccountabilityForm() {
     setFormValues(allValues);
   };
 
-  const onSaveDraft = async () => {
-    setSaving(true);
+  const onSaveDraft = async (silent = false) => {
+    const isSilent = silent === true;
+    if (!isSilent) setSaving(true);
     try {
       const currentData = form.getFieldsValue(true);
       const res = await dispatch(
         updateAccountabilityForm({ id, data: currentData })
       ).unwrap();
       if (res?.success) {
-        message.success("Draft saved successfully");
+        if (!isSilent) message.success("Draft saved successfully");
         setFormValues(res.data);
       }
     } catch (error) {
-      message.error("Failed to save draft");
+      if (!isSilent) message.error("Failed to save draft");
     } finally {
-      setSaving(false);
+      if (!isSilent) setSaving(false);
     }
   };
 
@@ -122,6 +123,9 @@ function AccountabilityForm() {
         }
       }
       
+      // Auto-save silently to database before moving to next step
+      await onSaveDraft(true);
+
       setCurrentStep(currentStep + 1);
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (error) {
@@ -129,7 +133,9 @@ function AccountabilityForm() {
     }
   };
 
-  const prev = () => {
+  const prev = async () => {
+    // Auto-save silently to database before moving to prev step
+    await onSaveDraft(true);
     setCurrentStep(currentStep - 1);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -228,15 +234,28 @@ function AccountabilityForm() {
             >
               Previous
             </Button>
-            <Button
-              onClick={next}
-              isDisabled={currentStep === steps.length - 1}
-              bg="#4a6741"
-              color="white"
-              _hover={{ bg: "#3f5937" }}
-            >
-              Next Step
-            </Button>
+            {currentStep < steps.length - 1 ? (
+              <Button
+                onClick={next}
+                bg="#4a6741"
+                color="white"
+                _hover={{ bg: "#3f5937" }}
+              >
+                Next Step
+              </Button>
+            ) : (
+              <Button
+                leftIcon={<SendOutlined />}
+                isLoading={publishing}
+                onClick={onPublish}
+                bg="#4a6741"
+                color="white"
+                _hover={{ bg: "#3f5937" }}
+                borderRadius="md"
+              >
+                Publish
+              </Button>
+            )}
           </Flex>
         </Box>
 

@@ -268,8 +268,8 @@ function WingCoordinatorReport() {
     { key: "form1", label: "Fortnightly Monitor",       color: "green"  },
     { key: "form2", label: "Classroom Walkthrough",     color: "blue"   },
     { key: "form3", label: "Notebook Checking",         color: "purple" },
-    { key: "form4", label: "Learning Progress",         color: "orange" },
     { key: "form5", label: "Co-Scholastic Obs",         color: "teal"   },
+    { key: "form4", label: "Learning Progress",         color: "orange" },
   ];
 
   return (
@@ -419,6 +419,15 @@ function WingCoordinatorReport() {
                     )}
                   </TabPanel>
 
+                  {/* Form 5 */}
+                  <TabPanel p={4}>
+                    {data.form5?.length === 0 ? (
+                      <Box textAlign="center" py={10}><Text color="gray.400" fontSize="sm">No Co-Scholastic Classroom Observation forms linked.</Text></Box>
+                    ) : (
+                      data.form5?.map((item, i) => <Form5Card key={item._id} item={item} index={i} />)
+                    )}
+                  </TabPanel>
+
                   {/* Form 4 */}
                   <TabPanel p={4}>
                     {data.form4?.length === 0 ? (
@@ -434,15 +443,6 @@ function WingCoordinatorReport() {
                           { title: "Date", dataIndex: "createdAt", key: "d", render: d => fmt(d) },
                         ]}
                       />
-                    )}
-                  </TabPanel>
-
-                  {/* Form 5 */}
-                  <TabPanel p={4}>
-                    {data.form5?.length === 0 ? (
-                      <Box textAlign="center" py={10}><Text color="gray.400" fontSize="sm">No Co-Scholastic Classroom Observation forms linked.</Text></Box>
-                    ) : (
-                      data.form5?.map((item, i) => <Form5Card key={item._id} item={item} index={i} />)
                     )}
                   </TabPanel>
                 </TabPanels>
