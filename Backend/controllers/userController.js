@@ -1,5 +1,6 @@
 const User = require("../models/User");
 const sendEmail = require("../utils/emailService");
+const { accountCreatedEmail } = require("../utils/emailTemplates");
 
 const generateCustomerId = () => {
   const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -66,11 +67,8 @@ const createUser = async (req, res) => {
     });
     await newUser.save();
 
-    await sendEmail(
-      email,
-      "Your Account Details",
-      `Dear ${name},\n\nYour account has been successfully created.\nUsername: ${email}\nYour password is: ${password}\n\nThank you.`,
-    );
+    const emailData = accountCreatedEmail({ recipientName: name, email, password });
+    await sendEmail(email, emailData.subject, emailData.html);
     res.status(201).json({ message: "User created successfully" });
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
@@ -213,11 +211,8 @@ const BulkUserCreate = async (req, res) => {
 
     // Send emails asynchronously for each user
     for (const user of usersWithCustomIds) {
-      await sendEmail(
-        user.email,
-        "Your Account Details",
-        `Dear ${user.name},\n\nYour account has been successfully created.\nUsername: ${user.email}\nYour password is: ${user.password}\n\nThank you.`,
-      );
+      const emailData = accountCreatedEmail({ recipientName: user.name, email: user.email, password: user.password });
+      await sendEmail(user.email, emailData.subject, emailData.html);
     }
 
     // Insert all users into the database

@@ -41,7 +41,7 @@ const buildEmail = ({ recipientName, subject, bodyHtml, ctaLabel, ctaUrl, footer
           <tr>
             <td style="background:linear-gradient(135deg,#3a5c34 0%,#4A6741 60%,#5d7a55 100%);padding:36px 40px 28px;text-align:center;">
               <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;letter-spacing:0.5px;">
-                📋 DLF Evaluation System
+                DLF Evaluation System
               </h1>
               <p style="margin:8px 0 0;color:#c8dfc4;font-size:13px;">School Performance & Evaluation Portal</p>
             </td>
@@ -211,4 +211,37 @@ const reminderEmail = ({ recipientName, senderName, formTitle, formRoute }) => {
   };
 };
 
-module.exports = { formLink, buildEmail, formInitiatedEmail, formCompletedEmail, reflectionSubmittedEmail, reminderEmail };
+/**
+ * Account Created — sent to a new user with their portal login credentials.
+ */
+const accountCreatedEmail = ({ recipientName, email, password }) => {
+  return {
+    subject: "Your Account Details — DLF Evaluation System",
+    html: buildEmail({
+      recipientName,
+      subject: "Welcome to DLF Evaluation System",
+      bodyHtml: `
+        <p>Your account has been successfully created on the DLF Evaluation System portal.</p>
+        <p>Please use the following credentials to sign in:</p>
+        <table style="background:#f6f9f5;border-radius:8px;padding:16px 20px;border-left:4px solid #4A6741;margin:20px 0;border-collapse:collapse;width:100%;">
+          <tr><td style="padding:4px 0;font-size:14px;color:#4a4742;"><strong>Username:</strong> ${email}</td></tr>
+          <tr><td style="padding:4px 0;font-size:14px;color:#4a4742;"><strong>Password:</strong> ${password}</td></tr>
+        </table>
+        <p>Click the button below to sign in directly:</p>
+      `,
+      ctaLabel: "Sign In to Portal",
+      ctaUrl: APP_URL,
+      footerNote: "For security, we recommend that you change your password after logging in for the first time.",
+    }),
+  };
+};
+
+module.exports = {
+  formLink,
+  buildEmail,
+  formInitiatedEmail,
+  formCompletedEmail,
+  reflectionSubmittedEmail,
+  reminderEmail,
+  accountCreatedEmail,
+};
