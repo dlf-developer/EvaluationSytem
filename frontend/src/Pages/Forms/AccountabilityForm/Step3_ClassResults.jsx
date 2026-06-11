@@ -121,9 +121,28 @@ function SectionCard({ title, children, calculationBox }) {
   );
 }
 
-function Step3_ClassResults({ form, formValues }) {
+function Step3_ClassResults({ form, formValues, id }) {
   const teacherScores = formValues?.teacherScores || [];
-  const [naState, setNaState] = useState({});
+  const [naState, setNaState] = useState(() => {
+    const initialNa = {};
+    const scores = form.getFieldValue("teacherScores") || [];
+    scores.forEach((score, index) => {
+      initialNa[index] = {
+        daT1: !!score.daT1_na,
+        daT2: !!score.daT2_na,
+        daT1Low: !!score.daT1Low_na,
+        daT1High: !!score.daT1High_na,
+        mindspark: !!score.mindspark_na,
+        sec1: !!score.sec1_na,
+        sec2: !!score.sec2_na,
+        sec3: !!score.sec3_na,
+        sec4: !!score.sec4_na,
+        annualTotal: !!score.annualTotal_na,
+        microTeaching: !!score.microTeaching_na,
+      };
+    });
+    return initialNa;
+  });
 
   const toggleNA = (teacherIndex, fieldKey) => {
     setNaState((prev) => {
@@ -138,6 +157,13 @@ function Step3_ClassResults({ form, formValues }) {
       if (newVal) {
         form.setFieldValue(["teacherScores", teacherIndex, fieldKey], undefined);
       }
+
+      // Save current form values to local storage
+      if (id) {
+        const currentFormValues = form.getFieldsValue(true);
+        localStorage.setItem(`accountability_form_${id}`, JSON.stringify(currentFormValues));
+      }
+
       return updated;
     });
   };

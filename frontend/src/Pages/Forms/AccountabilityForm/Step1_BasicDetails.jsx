@@ -62,6 +62,13 @@ function Step1_BasicDetails({ form, formValues, setFormValues, id }) {
         const newFormValues = { ...formValues, teacherScores: newScores };
         setFormValues(newFormValues);
         form.setFieldsValue({ teacherScores: newScores });
+        
+        // Save to local storage
+        if (id) {
+          const currentFormValues = { ...form.getFieldsValue(true), teacherScores: newScores };
+          localStorage.setItem(`accountability_form_${id}`, JSON.stringify(currentFormValues));
+        }
+
         message.success("Successfully synced data from existing forms.");
       }
     } catch (error) {

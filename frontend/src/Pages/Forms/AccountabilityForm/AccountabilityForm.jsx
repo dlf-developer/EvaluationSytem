@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
-import { Form, message, Steps } from "antd";
+import { Form, message, Steps, Alert } from "antd";
 import {
   getSingleAccountability,
   updateAccountabilityForm,
@@ -26,6 +26,8 @@ function AccountabilityForm() {
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [formValues, setFormValues] = useState({});
+  const [hasRestoredLocal, setHasRestoredLocal] = useState(false);
+  const [dbDataSnapshot, setDbDataSnapshot] = useState(null);
 
   useEffect(() => {
     loadData();
@@ -36,11 +38,43 @@ function AccountabilityForm() {
     try {
       const res = await dispatch(getSingleAccountability(id)).unwrap();
       if (res?.success) {
-        setFormValues(res.data);
-        form.setFieldsValue({
+        const dbData = {
           ...res.data,
           teachers: res.data.teachers?.map((t) => t._id || t),
-        });
+        };
+        
+        setDbDataSnapshot(dbData);
+
+        const localDraftStr = localStorage.getItem(`accountability_form_${id}`);
+        let dataToUse = dbData;
+        let restoredFromLocal = false;
+
+        if (localDraftStr) {
+          try {
+            const localDraft = JSON.parse(localDraftStr);
+            const localTeachersNormalized = localDraft.teachers?.map((t) => t?._id || t) || [];
+            const localDraftNormalized = { ...localDraft, teachers: localTeachersNormalized };
+            
+            const cleanDbData = { ...dbData, teachers: dbData.teachers || [] };
+            const cleanLocalData = { ...localDraftNormalized, teachers: localTeachersNormalized };
+            
+            delete cleanDbData.updatedAt;
+            delete cleanDbData.createdAt;
+            delete cleanLocalData.updatedAt;
+            delete cleanLocalData.createdAt;
+
+            if (JSON.stringify(cleanLocalData) !== JSON.stringify(cleanDbData)) {
+              dataToUse = { ...dbData, ...localDraftNormalized };
+              restoredFromLocal = true;
+            }
+          } catch (e) {
+            console.error("Error parsing local draft", e);
+          }
+        }
+
+        setFormValues(dataToUse);
+        form.setFieldsValue(dataToUse);
+        setHasRestoredLocal(restoredFromLocal);
       }
     } catch (err) {
       message.error("Failed to load form data");
@@ -49,8 +83,22 @@ function AccountabilityForm() {
     }
   };
 
+  const handleResetToDatabase = () => {
+    if (dbDataSnapshot) {
+      setFormValues(dbDataSnapshot);
+      form.setFieldsValue({
+        ...dbDataSnapshot,
+        teachers: dbDataSnapshot.teachers?.map((t) => t._id || t),
+      });
+      localStorage.removeItem(`accountability_form_${id}`);
+      setHasRestoredLocal(false);
+      message.success("Discarded local changes and reverted to database draft.");
+    }
+  };
+
   const handleValuesChange = (changedValues, allValues) => {
     setFormValues(allValues);
+    localStorage.setItem(`accountability_form_${id}`, JSON.stringify(allValues));
   };
 
   const onSaveDraft = async (silent = false) => {
@@ -63,7 +111,15 @@ function AccountabilityForm() {
       ).unwrap();
       if (res?.success) {
         if (!isSilent) message.success("Draft saved successfully");
-        setFormValues(res.data);
+        const formattedData = {
+          ...res.data,
+          teachers: res.data.teachers?.map((t) => t._id || t),
+        };
+        setFormValues(formattedData);
+        setDbDataSnapshot(formattedData);
+        form.setFieldsValue(formattedData);
+        localStorage.setItem(`accountability_form_${id}`, JSON.stringify(formattedData));
+        setHasRestoredLocal(false);
       }
     } catch (error) {
       if (!isSilent) message.error("Failed to save draft");
@@ -82,6 +138,7 @@ function AccountabilityForm() {
       ).unwrap();
       if (res?.success) {
         message.success("Report published successfully");
+        localStorage.removeItem(`accountability_form_${id}`);
         navigate("/accountability");
       }
     } catch (error) {
@@ -147,11 +204,11 @@ function AccountabilityForm() {
     },
     {
       title: "Teacher Scores",
-      content: <Step2TeacherScores form={form} formValues={formValues} />,
+      content: <Step2TeacherScores form={form} formValues={formValues} id={id} />,
     },
     {
       title: "Class Results",
-      content: <Step3ClassResults form={form} formValues={formValues} />,
+      content: <Step3ClassResults form={form} formValues={formValues} id={id} />,
     },
     {
       title: "Summary & Text",
@@ -213,6 +270,32 @@ function AccountabilityForm() {
         <Box mb={8}>
           <Steps current={currentStep} items={steps} />
         </Box>
+
+        {hasRestoredLocal && (
+          <Box mb={6}>
+            <Alert
+              message="Unsaved changes restored"
+              description={
+                <span>
+                  We found unsaved changes in your local browser storage and loaded them.{" "}
+                  <Button
+                    size="xs"
+                    colorScheme="red"
+                    variant="link"
+                    onClick={handleResetToDatabase}
+                    style={{ textDecoration: "underline", marginLeft: 4 }}
+                  >
+                    Reset to Database Version
+                  </Button>
+                </span>
+              }
+              type="warning"
+              showIcon
+              closable
+              onClose={() => setHasRestoredLocal(false)}
+            />
+          </Box>
+        )}
 
         {/* Form content inside the card */}
         <Box bg="white" borderRadius="2xl" boxShadow="sm" borderWidth="1px" borderColor="gray.100" p={8}>

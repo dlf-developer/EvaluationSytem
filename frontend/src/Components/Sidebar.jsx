@@ -218,7 +218,11 @@ function Sidebar({ collapsed, onCloseDrawer }) {
               );
             }
 
-            const isActive = PATHROUTE === item.route;
+            const isActive =
+              PATHROUTE === item.route ||
+              (item.route !== "/" &&
+                item.route !== "/dashboard" &&
+                PATHROUTE.startsWith(item.route));
             const LucideIcon = iconMap[item.name] || FileText;
 
             return (

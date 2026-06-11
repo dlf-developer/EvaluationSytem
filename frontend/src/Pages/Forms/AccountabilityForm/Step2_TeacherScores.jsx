@@ -156,9 +156,19 @@ function ScoreFieldCard({ field, teacherIndex, form, isNA, onToggleNA }) {
 }
 
 /* ── Main component ─────────────────────────────────────────────────── */
-function Step2_TeacherScores({ form, formValues }) {
+function Step2_TeacherScores({ form, formValues, id }) {
   const teacherScores = formValues?.teacherScores || [];
-  const [naState, setNaState] = useState({});
+  const [naState, setNaState] = useState(() => {
+    const initialNa = {};
+    const scores = form.getFieldValue("teacherScores") || [];
+    scores.forEach((score, index) => {
+      initialNa[index] = {
+        lessonPlanScore: !!score.lessonPlanScore_na,
+        qualityOfQPScore: !!score.qualityOfQPScore_na,
+      };
+    });
+    return initialNa;
+  });
 
   const toggleNA = (teacherIndex, fieldKey) => {
     setNaState((prev) => {
@@ -172,6 +182,13 @@ function Step2_TeacherScores({ form, formValues }) {
       if (newVal) {
         form.setFieldValue(["teacherScores", teacherIndex, fieldKey], undefined);
       }
+      
+      // Save current form values to local storage
+      if (id) {
+        const currentFormValues = form.getFieldsValue(true);
+        localStorage.setItem(`accountability_form_${id}`, JSON.stringify(currentFormValues));
+      }
+
       return updated;
     });
   };

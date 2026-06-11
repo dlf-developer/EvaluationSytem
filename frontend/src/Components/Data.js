@@ -27,6 +27,7 @@ const Role = getUserId()?.access;
 export const Menu = {
   Superadmin: [
     { name: "Dashboard", route: "/dashboard", icon: <AppstoreAddOutlined /> },
+    { name: "Overviews", route: "/reports", icon: <PieChartOutlined /> },
     { name: "User", route: "/users", icon: <UserAddOutlined /> },
     { name: "Profile", route: "/profile", icon: <UserOutlined /> },
     {
@@ -74,6 +75,7 @@ export const Menu = {
   ],
   Observer: [
     { name: "Dashboard", route: "/dashboard", icon: <AppstoreAddOutlined /> },
+    { name: "Overview", route: "/reports", icon: <PieChartOutlined /> },
     { name: "Profile", route: "/profile", icon: <UserOutlined /> },
     { label: "Forms" },
     {

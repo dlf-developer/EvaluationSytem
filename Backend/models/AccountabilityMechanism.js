@@ -13,28 +13,43 @@ const teacherScoreSchema = new Schema({
 
     // Page 2 — Manual entries
     lessonPlanScore: { type: Number, default: 0 },       // out of 10
+    lessonPlanScore_na: { type: Boolean, default: false },
     qualityOfQPScore: { type: Number, default: 0 },      // out of 10
+    qualityOfQPScore_na: { type: Boolean, default: false },
 
     // Page 3 — DA Average
     daT1: { type: Number, default: 0 },
+    daT1_na: { type: Boolean, default: false },
     daT2: { type: Number, default: 0 },
+    daT2_na: { type: Boolean, default: false },
     daT1Low: { type: Number, default: 0 },
+    daT1Low_na: { type: Boolean, default: false },
     daT1High: { type: Number, default: 0 },
+    daT1High_na: { type: Boolean, default: false },
     daAverage: { type: Number, default: 0 },             // auto = avg of above 4
+    daAverage_na: { type: Boolean, default: false },
 
     // Page 3 — Mindspark
     mindspark: { type: Number, default: 0 },             // out of 10
+    mindspark_na: { type: Boolean, default: false },
 
     // Page 3 — Annual / Half-Yearly Result Mean
     sec1: { type: Number, default: 0 },
+    sec1_na: { type: Boolean, default: false },
     sec2: { type: Number, default: 0 },
+    sec2_na: { type: Boolean, default: false },
     sec3: { type: Number, default: 0 },
+    sec3_na: { type: Boolean, default: false },
     sec4: { type: Number, default: 0 },
+    sec4_na: { type: Boolean, default: false },
     annualTotal: { type: Number, default: 0 },           // number field (manual)
+    annualTotal_na: { type: Boolean, default: false },
     annualReducedTo10: { type: Number, default: 0 },     // auto = (sec1+sec2+sec3+sec4)/annualTotal * 10
+    annualReducedTo10_na: { type: Boolean, default: false },
 
     // Page 3 — MicroTeaching
     microTeaching: { type: Number, default: 0 },         // out of 20
+    microTeaching_na: { type: Boolean, default: false },
 
     // Page 4 — Summary (calculated)
     totalScore: { type: Number, default: 0 },            // auto = sum of all out of 100

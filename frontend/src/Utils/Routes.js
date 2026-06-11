@@ -145,6 +145,7 @@ const protects = {
         { path: "/dashboard", element: <AdminDashboard /> },
         { path: "/users", element: <Users /> },
         { path: "/users/:id", element: <UserDetails /> },
+        { path: "/reports", element: <Navigate to="/reports/fortnightly-monitor" replace /> },
         { path: "/reports/fortnightly-monitor", element: <AdminReport /> },
         { path: "/reports/classroom-walkthrough", element: <AdminReport /> },
         { path: "/reports/notebook-checking-proforma", element: <AdminReport /> },
@@ -191,6 +192,7 @@ const protects = {
       children: [
         { path: "/", element: <Navigate to="/dashboard" /> },
         { path: "/dashboard", element: <ObserverDashboard /> },
+        { path: "/reports", element: <Navigate to="/reports/fortnightly-monitor" replace /> },
         { path: "/reports/fortnightly-monitor", element: <ObserverReports /> },
         { path: "/reports/classroom-walkthrough", element: <ObserverReports /> },
         { path: "/reports/notebook-checking-proforma", element: <ObserverReports /> },
