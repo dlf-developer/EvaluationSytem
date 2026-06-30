@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Form, InputNumber, Collapse, Row, Col, Empty, Badge, Switch } from "antd";
+import { Form, InputNumber, Collapse, Row, Col, Empty, Badge, Switch, Select } from "antd";
 import { Box, Text, Flex, HStack } from "@chakra-ui/react";
 
 const { Panel } = Collapse;
@@ -128,11 +128,10 @@ function Step3_ClassResults({ form, formValues, id }) {
     const scores = form.getFieldValue("teacherScores") || [];
     scores.forEach((score, index) => {
       initialNa[index] = {
-        daT1: !!score.daT1_na,
-        daT2: !!score.daT2_na,
-        daT1Low: !!score.daT1Low_na,
-        daT1High: !!score.daT1High_na,
-        mindspark: !!score.mindspark_na,
+        daSec1: !!score.daSec1_na,
+        daSec2: !!score.daSec2_na,
+        msSec1: !!score.msSec1_na,
+        msSec2: !!score.msSec2_na,
         sec1: !!score.sec1_na,
         sec2: !!score.sec2_na,
         sec3: !!score.sec3_na,
@@ -154,8 +153,37 @@ function Step3_ClassResults({ form, formValues, id }) {
       };
       form.setFieldValue(["teacherScores", teacherIndex, `${fieldKey}_na`], newVal);
       
+      // Update overarching N/A flags for calculations
+      const isDaSec1NA = fieldKey === "daSec1" ? newVal : !!prevTeacher.daSec1;
+      const isDaSec2NA = fieldKey === "daSec2" ? newVal : !!prevTeacher.daSec2;
+      const isDaNA = isDaSec1NA && isDaSec2NA;
+      form.setFieldValue(["teacherScores", teacherIndex, "daAverage_na"], isDaNA);
+
+      const isMsSec1NA = fieldKey === "msSec1" ? newVal : !!prevTeacher.msSec1;
+      const isMsSec2NA = fieldKey === "msSec2" ? newVal : !!prevTeacher.msSec2;
+      const isMsNA = isMsSec1NA && isMsSec2NA;
+      form.setFieldValue(["teacherScores", teacherIndex, "mindspark_na"], isMsNA);
+
       if (newVal) {
-        form.setFieldValue(["teacherScores", teacherIndex, fieldKey], undefined);
+        if (fieldKey === "daSec1") {
+          form.setFieldValue(["teacherScores", teacherIndex, "daSec1"], undefined);
+          form.setFieldValue(["teacherScores", teacherIndex, "daSec1High"], undefined);
+          form.setFieldValue(["teacherScores", teacherIndex, "daSec1Low"], undefined);
+        } else if (fieldKey === "daSec2") {
+          form.setFieldValue(["teacherScores", teacherIndex, "daSec2"], undefined);
+          form.setFieldValue(["teacherScores", teacherIndex, "daSec2High"], undefined);
+          form.setFieldValue(["teacherScores", teacherIndex, "daSec2Low"], undefined);
+        } else if (fieldKey === "msSec1") {
+          form.setFieldValue(["teacherScores", teacherIndex, "msSec1Active"], undefined);
+          form.setFieldValue(["teacherScores", teacherIndex, "msSec1Total"], undefined);
+          form.setFieldValue(["teacherScores", teacherIndex, "msSec1Accuracy"], undefined);
+        } else if (fieldKey === "msSec2") {
+          form.setFieldValue(["teacherScores", teacherIndex, "msSec2Active"], undefined);
+          form.setFieldValue(["teacherScores", teacherIndex, "msSec2Total"], undefined);
+          form.setFieldValue(["teacherScores", teacherIndex, "msSec2Accuracy"], undefined);
+        } else {
+          form.setFieldValue(["teacherScores", teacherIndex, fieldKey], undefined);
+        }
       }
 
       // Save current form values to local storage
@@ -220,8 +248,8 @@ function Step3_ClassResults({ form, formValues, id }) {
                     shouldUpdate={(prev, curr) => {
                       const p = prev.teacherScores?.[index] || {};
                       const c = curr.teacherScores?.[index] || {};
-                      return p.daT1 !== c.daT1 || p.daT2 !== c.daT2 || p.daT1Low !== c.daT1Low || p.daT1High !== c.daT1High 
-                          || p.daT1_na !== c.daT1_na || p.daT2_na !== c.daT2_na || p.daT1Low_na !== c.daT1Low_na || p.daT1High_na !== c.daT1High_na;
+                      return p.daSec1 !== c.daSec1 || p.daSec2 !== c.daSec2
+                          || p.daSec1_na !== c.daSec1_na || p.daSec2_na !== c.daSec2_na;
                     }}
                     noStyle
                   >
@@ -229,12 +257,10 @@ function Step3_ClassResults({ form, formValues, id }) {
                       const s = getFieldValue(["teacherScores", index]) || {};
                       let sum = 0;
                       let count = 0;
-                      if (!s.daT1_na) { sum += (s.daT1 || 0); count++; }
-                      if (!s.daT2_na) { sum += (s.daT2 || 0); count++; }
-                      if (!s.daT1Low_na) { sum += (s.daT1Low || 0); count++; }
-                      if (!s.daT1High_na) { sum += (s.daT1High || 0); count++; }
+                      if (!s.daSec1_na && s.daSec1 !== undefined) { sum += s.daSec1; count++; }
+                      if (!s.daSec2_na && s.daSec2 !== undefined) { sum += s.daSec2; count++; }
                       
-                      const daAvg = count > 0 ? (sum / count).toFixed(2) : "0.00";
+                      const daAvg = count > 0 ? ((sum / count) * 2).toFixed(2) : "0.00";
                       setTimeout(() => form.setFieldValue(["teacherScores", index, "daAverage"], parseFloat(daAvg)), 0);
                       return (
                         <Box p={3} bg="blue.50" borderRadius="md" borderLeft="4px solid" borderColor="blue.400">
@@ -246,46 +272,260 @@ function Step3_ClassResults({ form, formValues, id }) {
                   </Form.Item>
                 }
               >
-                <Row gutter={[16, 16]}>
-                  <Col span={6}>
-                    <FieldBox label="T1 DA" teacherIndex={index} fieldKey="daT1" isNA={isNA(index, "daT1")} onToggleNA={toggleNA}>
-                      <Form.Item name={["teacherScores", index, "daT1"]} rules={isNA(index, "daT1") ? [] : [{ required: true, message: "Required" }]} style={{ marginBottom: 0 }}>
-                        <InputNumber min={0} max={10} step={0.5} style={{ width: "100%", background: isNA(index, "daT1") ? "#f5f5f5" : undefined }} disabled={isNA(index, "daT1")} placeholder={isNA(index, "daT1") ? "—" : "0 - 10"} />
-                      </Form.Item>
-                    </FieldBox>
+                <Row gutter={[32, 16]}>
+                  {/* Section 1 */}
+                  <Col xs={24} md={12} style={{ borderRight: "1px solid #e8e8e8" }}>
+                    <Box position="relative" pr={{ md: 4 }}>
+                      <Flex justify="space-between" align="center" mb={4}>
+                        <Text fontWeight="700" fontSize="14px" color="#1a202c">Section 1</Text>
+                        <NAPill active={isNA(index, "daSec1")} onClick={() => toggleNA(index, "daSec1")} />
+                      </Flex>
+                      <Box opacity={isNA(index, "daSec1") ? 0.45 : 1} pointerEvents={isNA(index, "daSec1") ? "none" : "auto"}>
+                        <Form.Item
+                          label={<Text fontWeight="600" fontSize="13px">DA</Text>}
+                          name={["teacherScores", index, "daSec1"]}
+                          rules={isNA(index, "daSec1") ? [] : [{ required: true, message: "Required" }]}
+                        >
+                          <Select placeholder="Select DA" style={{ width: "100%" }}>
+                            {[1, 2, 3, 4, 5].map(v => (
+                              <Select.Option key={v} value={v}>{v}</Select.Option>
+                            ))}
+                          </Select>
+                        </Form.Item>
+                        <Form.Item
+                          label={<Text fontWeight="600" fontSize="13px">High (across all sections)</Text>}
+                          name={["teacherScores", index, "daSec1High"]}
+                          rules={isNA(index, "daSec1") ? [] : [{ required: true, message: "Required" }]}
+                        >
+                          <InputNumber min={0} max={10} step={0.1} placeholder="High score" style={{ width: "100%" }} />
+                        </Form.Item>
+                        <Form.Item
+                          label={<Text fontWeight="600" fontSize="13px">Low (across all sections)</Text>}
+                          name={["teacherScores", index, "daSec1Low"]}
+                          rules={isNA(index, "daSec1") ? [] : [{ required: true, message: "Required" }]}
+                        >
+                          <InputNumber min={0} max={10} step={0.1} placeholder="Low score" style={{ width: "100%" }} />
+                        </Form.Item>
+                      </Box>
+                    </Box>
                   </Col>
-                  <Col span={6}>
-                    <FieldBox label="T2 DA" teacherIndex={index} fieldKey="daT2" isNA={isNA(index, "daT2")} onToggleNA={toggleNA}>
-                      <Form.Item name={["teacherScores", index, "daT2"]} rules={isNA(index, "daT2") ? [] : [{ required: true, message: "Required" }]} style={{ marginBottom: 0 }}>
-                        <InputNumber min={0} max={10} step={0.5} style={{ width: "100%", background: isNA(index, "daT2") ? "#f5f5f5" : undefined }} disabled={isNA(index, "daT2")} placeholder={isNA(index, "daT2") ? "—" : "0 - 10"} />
-                      </Form.Item>
-                    </FieldBox>
-                  </Col>
-                  <Col span={6}>
-                    <FieldBox label="T1 DA Low" teacherIndex={index} fieldKey="daT1Low" isNA={isNA(index, "daT1Low")} onToggleNA={toggleNA}>
-                      <Form.Item name={["teacherScores", index, "daT1Low"]} rules={isNA(index, "daT1Low") ? [] : [{ required: true, message: "Required" }]} style={{ marginBottom: 0 }}>
-                        <InputNumber min={0} max={10} step={0.5} style={{ width: "100%", background: isNA(index, "daT1Low") ? "#f5f5f5" : undefined }} disabled={isNA(index, "daT1Low")} placeholder={isNA(index, "daT1Low") ? "—" : "0 - 10"} />
-                      </Form.Item>
-                    </FieldBox>
-                  </Col>
-                  <Col span={6}>
-                    <FieldBox label="T1 DA High" teacherIndex={index} fieldKey="daT1High" isNA={isNA(index, "daT1High")} onToggleNA={toggleNA}>
-                      <Form.Item name={["teacherScores", index, "daT1High"]} rules={isNA(index, "daT1High") ? [] : [{ required: true, message: "Required" }]} style={{ marginBottom: 0 }}>
-                        <InputNumber min={0} max={10} step={0.5} style={{ width: "100%", background: isNA(index, "daT1High") ? "#f5f5f5" : undefined }} disabled={isNA(index, "daT1High")} placeholder={isNA(index, "daT1High") ? "—" : "0 - 10"} />
-                      </Form.Item>
-                    </FieldBox>
+
+                  {/* Section 2 */}
+                  <Col xs={24} md={12}>
+                    <Box position="relative" pl={{ md: 4 }}>
+                      <Flex justify="space-between" align="center" mb={4}>
+                        <Text fontWeight="700" fontSize="14px" color="#1a202c">Section 2</Text>
+                        <NAPill active={isNA(index, "daSec2")} onClick={() => toggleNA(index, "daSec2")} />
+                      </Flex>
+                      <Box opacity={isNA(index, "daSec2") ? 0.45 : 1} pointerEvents={isNA(index, "daSec2") ? "none" : "auto"}>
+                        <Form.Item
+                          label={<Text fontWeight="600" fontSize="13px">DA</Text>}
+                          name={["teacherScores", index, "daSec2"]}
+                          rules={isNA(index, "daSec2") ? [] : [{ required: true, message: "Required" }]}
+                        >
+                          <Select placeholder="Select DA" style={{ width: "100%" }}>
+                            {[1, 2, 3, 4, 5].map(v => (
+                              <Select.Option key={v} value={v}>{v}</Select.Option>
+                            ))}
+                          </Select>
+                        </Form.Item>
+                        <Form.Item
+                          label={<Text fontWeight="600" fontSize="13px">High (across all sections)</Text>}
+                          name={["teacherScores", index, "daSec2High"]}
+                          rules={isNA(index, "daSec2") ? [] : [{ required: true, message: "Required" }]}
+                        >
+                          <InputNumber min={0} max={10} step={0.1} placeholder="High score" style={{ width: "100%" }} />
+                        </Form.Item>
+                        <Form.Item
+                          label={<Text fontWeight="600" fontSize="13px">Low (across all sections)</Text>}
+                          name={["teacherScores", index, "daSec2Low"]}
+                          rules={isNA(index, "daSec2") ? [] : [{ required: true, message: "Required" }]}
+                        >
+                          <InputNumber min={0} max={10} step={0.1} placeholder="Low score" style={{ width: "100%" }} />
+                        </Form.Item>
+                      </Box>
+                    </Box>
                   </Col>
                 </Row>
               </SectionCard>
 
-              <SectionCard title="2. Mindspark / Digital Tools">
-                <Row gutter={[16, 16]}>
-                  <Col span={12}>
-                    <FieldBox label="Sparkies, Highest No. of Participants (Out of 10)" teacherIndex={index} fieldKey="mindspark" isNA={isNA(index, "mindspark")} onToggleNA={toggleNA}>
-                      <Form.Item name={["teacherScores", index, "mindspark"]} rules={isNA(index, "mindspark") ? [] : [{ required: true, message: "Required" }]} style={{ marginBottom: 0 }}>
-                        <InputNumber min={0} max={10} step={0.5} size="large" style={{ width: "100%", background: isNA(index, "mindspark") ? "#f5f5f5" : undefined }} disabled={isNA(index, "mindspark")} placeholder={isNA(index, "mindspark") ? "—" : "0 - 10"} />
-                      </Form.Item>
-                    </FieldBox>
+              <SectionCard 
+                title="2. Mindspark / Digital Tools"
+                calculationBox={
+                  <Form.Item
+                    shouldUpdate={(prev, curr) => {
+                      const p = prev.teacherScores?.[index] || {};
+                      const c = curr.teacherScores?.[index] || {};
+                      return p.msSec1Active !== c.msSec1Active || p.msSec1Total !== c.msSec1Total || p.msSec1Accuracy !== c.msSec1Accuracy
+                          || p.msSec2Active !== c.msSec2Active || p.msSec2Total !== c.msSec2Total || p.msSec2Accuracy !== c.msSec2Accuracy
+                          || p.msSec1_na !== c.msSec1_na || p.msSec2_na !== c.msSec2_na;
+                    }}
+                    noStyle
+                  >
+                    {({ getFieldValue }) => {
+                      const s = getFieldValue(["teacherScores", index]) || {};
+                      let sumScores = 0;
+                      let activeCount = 0;
+                      
+                      if (!s.msSec1_na) {
+                        const total1 = s.msSec1Total || 0;
+                        const active1 = s.msSec1Active || 0;
+                        const part1 = total1 > 0 ? (active1 / total1) * 100 : 0;
+                        const acc1 = s.msSec1Accuracy || 0;
+                        const score1 = (part1 + acc1) / 20; // out of 10
+                        sumScores += score1;
+                        activeCount++;
+                      }
+                      
+                      if (!s.msSec2_na) {
+                        const total2 = s.msSec2Total || 0;
+                        const active2 = s.msSec2Active || 0;
+                        const part2 = total2 > 0 ? (active2 / total2) * 100 : 0;
+                        const acc2 = s.msSec2Accuracy || 0;
+                        const score2 = (part2 + acc2) / 20; // out of 10
+                        sumScores += score2;
+                        activeCount++;
+                      }
+                      
+                      const msAvg = activeCount > 0 ? (sumScores / activeCount).toFixed(2) : "0.00";
+                      setTimeout(() => form.setFieldValue(["teacherScores", index, "mindspark"], parseFloat(msAvg)), 0);
+                      return (
+                        <Box p={3} bg="orange.50" borderRadius="md" borderLeft="4px solid" borderColor="orange.400">
+                          <Text fontWeight="600" color="orange.900" fontSize="sm">Calculated Mindspark Average</Text>
+                          <Text fontWeight="800" color="orange.700" fontSize="lg">{msAvg} <Text as="span" fontSize="xs" color="orange.500">/ 10</Text></Text>
+                        </Box>
+                      );
+                    }}
+                  </Form.Item>
+                }
+              >
+                <Row gutter={[32, 16]}>
+                  {/* Section 1 */}
+                  <Col xs={24} md={12} style={{ borderRight: "1px solid #e8e8e8" }}>
+                    <Box position="relative" pr={{ md: 4 }}>
+                      <Flex justify="space-between" align="center" mb={4}>
+                        <Text fontWeight="700" fontSize="14px" color="#1a202c">Section 1</Text>
+                        <NAPill active={isNA(index, "msSec1")} onClick={() => toggleNA(index, "msSec1")} />
+                      </Flex>
+                      <Box opacity={isNA(index, "msSec1") ? 0.45 : 1} pointerEvents={isNA(index, "msSec1") ? "none" : "auto"}>
+                        <Flex align="center" gap={2} mb={4}>
+                          <Box flex={1}>
+                            <Form.Item
+                              label={<Text fontWeight="600" fontSize="13px">No. of Active Students</Text>}
+                              name={["teacherScores", index, "msSec1Active"]}
+                              rules={isNA(index, "msSec1") ? [] : [{ required: true, message: "Required" }]}
+                              style={{ marginBottom: 0 }}
+                            >
+                              <InputNumber min={0} placeholder="Active" style={{ width: "100%" }} />
+                            </Form.Item>
+                          </Box>
+                          <Text mt={5} fontWeight="bold" color="gray.400" fontSize="16px">/</Text>
+                          <Box flex={1}>
+                            <Form.Item
+                              label={<Text fontWeight="600" fontSize="13px">Total No. of Students</Text>}
+                              name={["teacherScores", index, "msSec1Total"]}
+                              rules={isNA(index, "msSec1") ? [] : [{ required: true, message: "Required" }]}
+                              style={{ marginBottom: 0 }}
+                            >
+                              <InputNumber min={1} placeholder="Total" style={{ width: "100%" }} />
+                            </Form.Item>
+                          </Box>
+                          <Text mt={5} fontWeight="bold" color="gray.400" fontSize="16px">=</Text>
+                          <Box w="80px" mt={5}>
+                            <Form.Item
+                              shouldUpdate={(prev, curr) => {
+                                const p = prev.teacherScores?.[index] || {};
+                                const c = curr.teacherScores?.[index] || {};
+                                return p.msSec1Active !== c.msSec1Active || p.msSec1Total !== c.msSec1Total;
+                              }}
+                              noStyle
+                            >
+                              {({ getFieldValue }) => {
+                                const active = getFieldValue(["teacherScores", index, "msSec1Active"]) || 0;
+                                const total = getFieldValue(["teacherScores", index, "msSec1Total"]) || 0;
+                                const percent = total > 0 ? ((active / total) * 100).toFixed(0) : "0";
+                                return (
+                                  <Box px={2} py={2} bg="gray.50" border="1px solid #d9d9d9" borderRadius="6px" textAlign="center" fontWeight="600" fontSize="13px">
+                                    {percent}%
+                                  </Box>
+                                );
+                              }}
+                            </Form.Item>
+                          </Box>
+                        </Flex>
+                        <Form.Item
+                          label={<Text fontWeight="600" fontSize="13px">Accuracy %</Text>}
+                          name={["teacherScores", index, "msSec1Accuracy"]}
+                          rules={isNA(index, "msSec1") ? [] : [{ required: true, message: "Required" }]}
+                        >
+                          <InputNumber min={0} max={100} placeholder="Accuracy %" style={{ width: "100%" }} />
+                        </Form.Item>
+                      </Box>
+                    </Box>
+                  </Col>
+
+                  {/* Section 2 */}
+                  <Col xs={24} md={12}>
+                    <Box position="relative" pl={{ md: 4 }}>
+                      <Flex justify="space-between" align="center" mb={4}>
+                        <Text fontWeight="700" fontSize="14px" color="#1a202c">Section 2</Text>
+                        <NAPill active={isNA(index, "msSec2")} onClick={() => toggleNA(index, "msSec2")} />
+                      </Flex>
+                      <Box opacity={isNA(index, "msSec2") ? 0.45 : 1} pointerEvents={isNA(index, "msSec2") ? "none" : "auto"}>
+                        <Flex align="center" gap={2} mb={4}>
+                          <Box flex={1}>
+                            <Form.Item
+                              label={<Text fontWeight="600" fontSize="13px">No. of Active Students</Text>}
+                              name={["teacherScores", index, "msSec2Active"]}
+                              rules={isNA(index, "msSec2") ? [] : [{ required: true, message: "Required" }]}
+                              style={{ marginBottom: 0 }}
+                            >
+                              <InputNumber min={0} placeholder="Active" style={{ width: "100%" }} />
+                            </Form.Item>
+                          </Box>
+                          <Text mt={5} fontWeight="bold" color="gray.400" fontSize="16px">/</Text>
+                          <Box flex={1}>
+                            <Form.Item
+                              label={<Text fontWeight="600" fontSize="13px">Total No. of Students</Text>}
+                              name={["teacherScores", index, "msSec2Total"]}
+                              rules={isNA(index, "msSec2") ? [] : [{ required: true, message: "Required" }]}
+                              style={{ marginBottom: 0 }}
+                            >
+                              <InputNumber min={1} placeholder="Total" style={{ width: "100%" }} />
+                            </Form.Item>
+                          </Box>
+                          <Text mt={5} fontWeight="bold" color="gray.400" fontSize="16px">=</Text>
+                          <Box w="80px" mt={5}>
+                            <Form.Item
+                              shouldUpdate={(prev, curr) => {
+                                const p = prev.teacherScores?.[index] || {};
+                                const c = curr.teacherScores?.[index] || {};
+                                return p.msSec2Active !== c.msSec2Active || p.msSec2Total !== c.msSec2Total;
+                              }}
+                              noStyle
+                            >
+                              {({ getFieldValue }) => {
+                                const active = getFieldValue(["teacherScores", index, "msSec2Active"]) || 0;
+                                const total = getFieldValue(["teacherScores", index, "msSec2Total"]) || 0;
+                                const percent = total > 0 ? ((active / total) * 100).toFixed(0) : "0";
+                                return (
+                                  <Box px={2} py={2} bg="gray.50" border="1px solid #d9d9d9" borderRadius="6px" textAlign="center" fontWeight="600" fontSize="13px">
+                                    {percent}%
+                                  </Box>
+                                );
+                              }}
+                            </Form.Item>
+                          </Box>
+                        </Flex>
+                        <Form.Item
+                          label={<Text fontWeight="600" fontSize="13px">Accuracy %</Text>}
+                          name={["teacherScores", index, "msSec2Accuracy"]}
+                          rules={isNA(index, "msSec2") ? [] : [{ required: true, message: "Required" }]}
+                        >
+                          <InputNumber min={0} max={100} placeholder="Accuracy %" style={{ width: "100%" }} />
+                        </Form.Item>
+                      </Box>
+                    </Box>
                   </Col>
                 </Row>
               </SectionCard>

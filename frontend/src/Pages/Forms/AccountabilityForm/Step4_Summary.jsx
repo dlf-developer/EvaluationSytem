@@ -22,7 +22,7 @@ function computeTeacherTotal(s) {
   if (!s.lessonPlanScore_na) { total += s.lessonPlanScore || 0; maxMarks += 10; }
   if (!s.qualityOfQPScore_na) { total += s.qualityOfQPScore || 0; maxMarks += 10; }
   
-  const daNA = s.daT1_na && s.daT2_na && s.daT1Low_na && s.daT1High_na;
+  const daNA = s.daAverage_na;
   if (!daNA) { total += s.daAverage || 0; maxMarks += 10; }
 
   if (!s.mindspark_na) { total += s.mindspark || 0; maxMarks += 10; }
@@ -48,7 +48,7 @@ function Step4_Summary({ form, formValues }) {
           const scores = getFieldValue("teacherScores") || [];
 
           const hasAnyNA = scores.some((s) => {
-            const daNA = s.daT1_na && s.daT2_na && s.daT1Low_na && s.daT1High_na;
+            const daNA = s.daAverage_na;
             const annualNA = s.sec1_na && s.sec2_na && s.sec3_na && s.sec4_na;
             return s.lessonPlanScore_na || s.qualityOfQPScore_na || daNA || s.mindspark_na || annualNA || s.microTeaching_na;
           });

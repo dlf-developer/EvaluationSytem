@@ -569,32 +569,60 @@ function OB_Wing() {
                         <Box minW="max-content">
                           {fields.length > 0 && (
                             <Flex mb={2} gap={2} px={1}>
-                              {item.columns.map((col, i) => (
-                                <Text key={i} flex={1} minW="150px" fontSize="xs" fontWeight="600" color="gray.500">
-                                  {col}
-                                </Text>
-                              ))}
+                              {item.columns.map((col, i) => {
+                                const isCheckbox = col === "Ticket Raised" || col === "Resolved?";
+                                return (
+                                  <Text
+                                    key={i}
+                                    flex={isCheckbox ? "0 0 100px" : 1}
+                                    minW={isCheckbox ? "100px" : "150px"}
+                                    textAlign={isCheckbox ? "center" : "left"}
+                                    fontSize="xs"
+                                    fontWeight="600"
+                                    color="gray.500"
+                                  >
+                                    {col}
+                                  </Text>
+                                );
+                              })}
                               <Box w="32px" />
                             </Flex>
                           )}
                           {fields.map(({ key, name, ...restField }) => (
                             <Flex key={key} gap={2} mb={2} align="center">
-                              {item.columns.map((col, i) => (
-                                <Form.Item
-                                  {...restField}
-                                  key={i}
-                                  name={[name, `col_${i}`]}
-                                  rules={[{ required: true, message: "Required" }]}
-                                  style={{ marginBottom: 0, flex: 1, minWidth: "150px" }}
-                                >
-                                  <Input 
-                                    type={col.toLowerCase().includes('date') ? "date" : "text"}
-                                    placeholder={col} 
-                                    onBlur={handleInputBlur} 
-                                    style={{ fontSize: 13 }} 
-                                  />
-                                </Form.Item>
-                              ))}
+                              {item.columns.map((col, i) => {
+                                const isCheckbox = col === "Ticket Raised" || col === "Resolved?";
+                                return (
+                                  <Form.Item
+                                    {...restField}
+                                    key={i}
+                                    name={[name, `col_${i}`]}
+                                    valuePropName={isCheckbox ? "checked" : "value"}
+                                    rules={isCheckbox ? [] : [{ required: true, message: "Required" }]}
+                                    style={{
+                                      marginBottom: 0,
+                                      flex: isCheckbox ? "0 0 100px" : 1,
+                                      minWidth: isCheckbox ? "100px" : "150px",
+                                      display: "flex",
+                                      justifyContent: isCheckbox ? "center" : "flex-start",
+                                    }}
+                                  >
+                                    {isCheckbox ? (
+                                      <Checkbox
+                                        onChange={handleInputBlur}
+                                        style={{ accentColor: "#4A6741" }}
+                                      />
+                                    ) : (
+                                      <Input
+                                        type={col.toLowerCase().includes('date') ? "date" : "text"}
+                                        placeholder={col}
+                                        onBlur={handleInputBlur}
+                                        style={{ fontSize: 13 }}
+                                      />
+                                    )}
+                                  </Form.Item>
+                                );
+                              })}
                               <Button type="button" size="sm" colorScheme="red" variant="ghost" onClick={() => { remove(name); handleInputBlur(); }}>
                                 ✕
                               </Button>
@@ -976,6 +1004,12 @@ function OB_Wing() {
                             title: col,
                             dataIndex: `col_${cIdx}`,
                             key: `col_${cIdx}`,
+                            render: (val) => {
+                              if (typeof val === "boolean") {
+                                return val ? "✔️" : "—";
+                              }
+                              return val || "—";
+                            }
                           }))}
                         />
                       ) : (

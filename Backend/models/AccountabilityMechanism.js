@@ -29,9 +29,29 @@ const teacherScoreSchema = new Schema({
     daAverage: { type: Number, default: 0 },             // auto = avg of above 4
     daAverage_na: { type: Boolean, default: false },
 
+    // New DA fields
+    daSec1: { type: Number, default: 0 },
+    daSec1High: { type: Number, default: 0 },
+    daSec1Low: { type: Number, default: 0 },
+    daSec1_na: { type: Boolean, default: false },
+    daSec2: { type: Number, default: 0 },
+    daSec2High: { type: Number, default: 0 },
+    daSec2Low: { type: Number, default: 0 },
+    daSec2_na: { type: Boolean, default: false },
+
     // Page 3 — Mindspark
     mindspark: { type: Number, default: 0 },             // out of 10
     mindspark_na: { type: Boolean, default: false },
+
+    // New Mindspark fields
+    msSec1Active: { type: Number, default: 0 },
+    msSec1Total: { type: Number, default: 0 },
+    msSec1Accuracy: { type: Number, default: 0 },
+    msSec1_na: { type: Boolean, default: false },
+    msSec2Active: { type: Number, default: 0 },
+    msSec2Total: { type: Number, default: 0 },
+    msSec2Accuracy: { type: Number, default: 0 },
+    msSec2_na: { type: Boolean, default: false },
 
     // Page 3 — Annual / Half-Yearly Result Mean
     sec1: { type: Number, default: 0 },

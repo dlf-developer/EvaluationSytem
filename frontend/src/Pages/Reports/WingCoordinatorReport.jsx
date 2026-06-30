@@ -367,6 +367,16 @@ function WingCoordinatorReport() {
                                 title: col,
                                 dataIndex: `col_${cIdx}`,
                                 key: `col_${cIdx}`,
+                                render: (val) => {
+                                  if (typeof val === "boolean") {
+                                    return val ? (
+                                      <span style={{ color: "#4A6741", fontWeight: "bold", fontSize: "15px" }}>✔️</span>
+                                    ) : (
+                                      <span style={{ color: "#CBD5E0", fontSize: "15px" }}>—</span>
+                                    );
+                                  }
+                                  return val || "—";
+                                }
                               }))}
                             />
                           ) : (

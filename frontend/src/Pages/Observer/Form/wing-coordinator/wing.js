@@ -7,7 +7,8 @@ export const inputsWing = [
   },
   {
     question: "Anecdotal Records Updated? Any Concerns?",
-    type: "text",
+    type: "table",
+    columns: ["Date", "Content"],
   },
   {
     question: "PD Sessions Attended by WC and Team? Teachers Updated it on Edunext?",
@@ -15,11 +16,13 @@ export const inputsWing = [
   },
   {
     question: "I C.A.R.E Certificates for the Month?",
-    type: "text",
+    type: "table",
+    columns: ["Date", "Content"],
   },
   {
     question: "Experiential Think Rooms / Micro Teaching Sessions Attended ",
-    type: "text",
+    type: "table",
+    columns: ["Date", "Content"],
   },
   {
     question: "Key Outcomes of Result Discussion?",
@@ -58,7 +61,8 @@ export const inputsWing = [
   },
   {
     question: "Reflection Forms Filled",
-    type: "text",
+    type: "table",
+    columns: ["Date", "Content"],
   },
   {
     question: "Last Syllabus Completion Check Date",
@@ -66,15 +70,18 @@ export const inputsWing = [
   },
   {
     question: "Hygiene Concerns (Washrooms)",
-    type: "text",
+    type: "table",
+    columns: ["Date", "Content", "Ticket Raised", "Resolved?"],
   },
   {
     question: "Concerns Flagged During Dispersal",
-    type: "text",
+    type: "table",
+    columns: ["Date", "Content", "Ticket Raised", "Resolved?"],
   },
   {
     question: "Safety Concerns Observed",
-    type: "text",
+    type: "table",
+    columns: ["Date", "Content", "Ticket Raised", "Resolved?"],
   },
   {
     question: "Additional Comments? (+ve / -ve)",

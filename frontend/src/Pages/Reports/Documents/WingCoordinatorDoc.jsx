@@ -207,7 +207,11 @@ const WingCoordinatorDoc = ({ data }) => {
                           <View key={rIdx} style={rIdx === rArr.length - 1 ? s.tableRowLast : s.tableRow}>
                             {(item.columns || []).map((col, cIdx, cArr) => (
                               <View key={cIdx} style={[s.td, cIdx === cArr.length - 1 ? { flex: 1 } : { flex: 1, borderRightWidth: 1, borderRightColor: C.border }]}>
-                                <Text>{row[`col_${cIdx}`] || "—"}</Text>
+                                <Text>
+                                  {typeof row[`col_${cIdx}`] === "boolean"
+                                    ? (row[`col_${cIdx}`] ? "✔️" : "—")
+                                    : (row[`col_${cIdx}`] || "—")}
+                                </Text>
                               </View>
                             ))}
                           </View>
