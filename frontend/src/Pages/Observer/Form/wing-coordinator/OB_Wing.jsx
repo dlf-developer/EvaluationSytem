@@ -489,11 +489,18 @@ function OB_Wing() {
           rules={[{ required: true, message: "Please enter a form name!" }]}
           style={{ marginBottom: 0 }}
         >
-          <Input
-            size="large"
+          <Input.TextArea
             placeholder="Enter a name for this report…"
             onBlur={handleInputBlur}
-            style={{ borderRadius: 8, borderColor: "#E2E8F0", fontSize: 14 }}
+            autoSize={{ minRows: 1 }}
+            style={{
+              borderRadius: 8,
+              borderColor: "#E2E8F0",
+              fontSize: 14,
+              resize: "none",
+              overflow: "hidden",
+              transition: "height 0.15s ease",
+            }}
           />
         </Form.Item>
       </Box>
@@ -551,14 +558,18 @@ function OB_Wing() {
                     rules={[{ required: true, message: "Please enter a response" }]}
                     style={{ marginBottom: 12 }}
                   >
-                    <Input
+                    <Input.TextArea
                       placeholder="Enter your response…"
                       onBlur={handleInputBlur}
+                      autoSize={{ minRows: 1 }}
                       style={{
                         borderRadius: 8,
                         borderColor: "#E2E8F0",
                         fontSize: 14,
                         padding: "8px 12px",
+                        resize: "none",
+                        overflow: "hidden",
+                        transition: "height 0.15s ease",
                       }}
                     />
                   </Form.Item>
@@ -612,12 +623,24 @@ function OB_Wing() {
                                         onChange={handleInputBlur}
                                         style={{ accentColor: "#4A6741" }}
                                       />
-                                    ) : (
+                                    ) : col.toLowerCase().includes('date') ? (
                                       <Input
-                                        type={col.toLowerCase().includes('date') ? "date" : "text"}
+                                        type="date"
                                         placeholder={col}
                                         onBlur={handleInputBlur}
                                         style={{ fontSize: 13 }}
+                                      />
+                                    ) : (
+                                      <Input.TextArea
+                                        placeholder={col}
+                                        onBlur={handleInputBlur}
+                                        autoSize={{ minRows: 1 }}
+                                        style={{
+                                          fontSize: 13,
+                                          resize: "none",
+                                          overflow: "hidden",
+                                          transition: "height 0.15s ease",
+                                        }}
                                       />
                                     )}
                                   </Form.Item>
