@@ -355,12 +355,18 @@ export const deleteAccountabilityForm = createAsyncThunk(
 
 export const calculateTeacherScores = createAsyncThunk(
   "calculateTeacherScores",
-  async (payload) => {
-    const response = await axiosInstanceToken.post(
-      `/accountability/calculate`,
-      payload
-    );
-    return response.data;
+  async (payload, { rejectWithValue }) => {
+    try {
+      const response = await axiosInstanceToken.post(
+        `/accountability/calculate`,
+        payload
+      );
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error?.response?.data?.message || error.message || "Failed to calculate scores"
+      );
+    }
   }
 );
 

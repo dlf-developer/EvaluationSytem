@@ -96,7 +96,10 @@ function AccountabilityForm() {
     }
   };
 
-  const handleValuesChange = (changedValues, allValues) => {
+  const handleValuesChange = () => {
+    // allValues from onValuesChange is sparse for nested arrays — always read
+    // the full form state to avoid null slots wiping untouched array entries.
+    const allValues = form.getFieldsValue(true);
     setFormValues(allValues);
     localStorage.setItem(`accountability_form_${id}`, JSON.stringify(allValues));
   };

@@ -48,19 +48,23 @@ const ColumnHeader = ({
           flexShrink={0}
           /* fix size so it never shifts siblings */
           style={{ width: 10, lineHeight: 0 }}
+          onClick={(e) => {
+            e.stopPropagation(); // prevent FilterPopover from opening
+            onSort(key);
+          }}
         >
           <Icon
             as={ArrowUp}
             boxSize="9px"
             display="block"
-            color={isSortedAsc ? "brand.primary" : "gray.300"}
+            color={isSortedAsc ? "brand.primary" : "gray.500"}
             strokeWidth={isSortedAsc ? 3 : 2}
           />
           <Icon
             as={ArrowDown}
             boxSize="9px"
             display="block"
-            color={isSortedDesc ? "brand.primary" : "gray.300"}
+            color={isSortedDesc ? "brand.primary" : "gray.500"}
             strokeWidth={isSortedDesc ? 3 : 2}
           />
         </Flex>

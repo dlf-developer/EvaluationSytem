@@ -41,28 +41,30 @@ function Step1_BasicDetails({ form, formValues, setFormValues, id }) {
       const res = await dispatch(
         calculateTeacherScores({
           teacherIds: teachers,
-          fromDate: fromDate,
-          toDate: toDate,
+          fromDate: fromDate?.toISOString ? fromDate.toISOString() : fromDate,
+          toDate: toDate?.toISOString ? toDate.toISOString() : toDate,
         })
       ).unwrap();
 
       if (res?.success) {
         // Merge the newly fetched scores with any existing manually entered scores
-        const existingScores = formValues.teacherScores || [];
+        const existingScores = (formValues.teacherScores || []).filter(Boolean);
         const newScores = res.data.map((calculated) => {
-          // Find if we already have manual data for this teacher
-          const existing = existingScores.find((s) => s.teacherId === calculated.teacherId) || {};
+          // Find if we already have manual data for this teacher (guard against null slots)
+          const existing = existingScores.find((s) => s && s.teacherId === calculated.teacherId) || {};
           return {
             ...existing,
             ...calculated, // Overwrite auto-calculated fields
-            teacherName: teacherOptions.find(t => t.value === calculated.teacherId)?.label || "Unknown",
+            teacherName:
+              (teacherOptions || []).find((t) => t.value === calculated.teacherId)?.label ||
+              "Unknown",
           };
         });
 
         const newFormValues = { ...formValues, teacherScores: newScores };
         setFormValues(newFormValues);
         form.setFieldsValue({ teacherScores: newScores });
-        
+
         // Save to local storage
         if (id) {
           const currentFormValues = { ...form.getFieldsValue(true), teacherScores: newScores };
@@ -72,7 +74,8 @@ function Step1_BasicDetails({ form, formValues, setFormValues, id }) {
         message.success("Successfully synced data from existing forms.");
       }
     } catch (error) {
-      message.error("Failed to calculate teacher scores.");
+      console.error("Sync error:", error);
+      message.error(typeof error === "string" ? error : "Failed to calculate teacher scores.");
     } finally {
       setCalculating(false);
     }

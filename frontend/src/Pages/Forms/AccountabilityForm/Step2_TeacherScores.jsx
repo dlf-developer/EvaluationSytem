@@ -162,6 +162,7 @@ function Step2_TeacherScores({ form, formValues, id }) {
     const initialNa = {};
     const scores = form.getFieldValue("teacherScores") || [];
     scores.forEach((score, index) => {
+      if (!score) return;
       initialNa[index] = {
         lessonPlanScore: !!score.lessonPlanScore_na,
         qualityOfQPScore: !!score.qualityOfQPScore_na,
@@ -224,7 +225,7 @@ function Step2_TeacherScores({ form, formValues, id }) {
       />
 
       <Collapse defaultActiveKey={["0"]} accordion>
-        {teacherScores.map((score, index) => {
+        {teacherScores.filter(Boolean).map((score, index) => {
           const count = naCount(index);
 
           const panelHeader = (
@@ -249,7 +250,7 @@ function Step2_TeacherScores({ form, formValues, id }) {
           );
 
           return (
-            <Panel header={panelHeader} key={index.toString()}>
+            <Panel header={panelHeader} key={index.toString()} forceRender>
 
               {/* Auto-Calculated Statistics */}
               <Row gutter={16} style={{ marginBottom: 20 }}>

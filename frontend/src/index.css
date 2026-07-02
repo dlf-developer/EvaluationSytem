@@ -91,3 +91,30 @@ color: #0b5ed7 !important;
 {
   width: 100%;
 }
+
+/* ── Ant Design Table – always-visible sort arrows ── */
+.ant-table-column-sorter-up,
+.ant-table-column-sorter-down {
+  color: #8c8c8c !important;
+  font-size: 14px !important;
+  opacity: 1 !important;
+  transition: color 0.15s ease;
+}
+
+/* Active (currently sorted) arrow gets brand colour */
+.ant-table-column-sorter-up.active,
+.ant-table-column-sorter-down.active {
+  color: #1a4d2e !important;
+}
+
+/* Hover — slightly darker */
+.ant-table-column-sorters:hover .ant-table-column-sorter-up,
+.ant-table-column-sorters:hover .ant-table-column-sorter-down {
+  color: #595959 !important;
+}
+
+/* Ensure wrapper doesn't dim the icons */
+.ant-table-column-sorter {
+  opacity: 1 !important;
+  color: #8c8c8c !important;
+}
