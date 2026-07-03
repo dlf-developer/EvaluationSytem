@@ -181,31 +181,50 @@ const AccountabilityDoc = ({ data }) => {
         <Text style={s.sectionHead}>Additional Information</Text>
         <View style={s.table}>
           <View style={s.tableRow}>
-            <View style={[s.th, { width: "20%" }]}><Text>CPD (Hours)</Text></View>
-            <View style={[s.th, { width: "20%" }]}><Text>Field Trips</Text></View>
-            <View style={[s.th, { width: "20%" }]}><Text>Excursions</Text></View>
-            <View style={[s.th, { width: "20%" }]}><Text>Outdoor Activities</Text></View>
-            <View style={[s.thLast, { width: "20%" }]}><Text>Smilies</Text></View>
+            <View style={[s.th, { width: "25%" }]}><Text>Teacher</Text></View>
+            <View style={[s.th, { width: "15%" }]}><Text>CPD (Hours)</Text></View>
+            <View style={[s.th, { width: "15%" }]}><Text>Field Trips</Text></View>
+            <View style={[s.th, { width: "15%" }]}><Text>Excursions</Text></View>
+            <View style={[s.th, { width: "15%" }]}><Text>Outdoor Act</Text></View>
+            <View style={[s.thLast, { width: "15%" }]}><Text>Smilies</Text></View>
           </View>
-          <View style={s.tableRowLast}>
-            <View style={[s.td, { width: "20%" }]}><Text>{cpdHours}</Text></View>
-            <View style={[s.td, { width: "20%" }]}><Text>{fieldTrips}</Text></View>
-            <View style={[s.td, { width: "20%" }]}><Text>{excursions}</Text></View>
-            <View style={[s.td, { width: "20%" }]}><Text>{outdoorAct}</Text></View>
-            <View style={[s.tdLast, { width: "20%" }]}><Text>{smilies}</Text></View>
-          </View>
+          {teacherScores.map((ts, idx, arr) => (
+            <View key={idx} style={idx === arr.length - 1 ? s.tableRowLast : s.tableRow}>
+              <View style={[s.td, { width: "25%" }]}><Text>{ts.teacherName}</Text></View>
+              <View style={[s.td, { width: "15%" }]}><Text>{ts.cpdHours ?? cpdHours ?? 0}</Text></View>
+              <View style={[s.td, { width: "15%" }]}><Text>{ts.fieldTrips ?? fieldTrips ?? 0}</Text></View>
+              <View style={[s.td, { width: "15%" }]}><Text>{ts.excursions ?? excursions ?? 0}</Text></View>
+              <View style={[s.td, { width: "15%" }]}><Text>{ts.outdoorAct ?? outdoorAct ?? 0}</Text></View>
+              <View style={[s.tdLast, { width: "15%" }]}><Text>{ts.smilies ?? smilies ?? 0}</Text></View>
+            </View>
+          ))}
+          {teacherScores.length === 0 && (
+            <View style={s.tableRowLast}>
+              <View style={[s.tdLast, { width: "100%", textAlign: "center" }]}><Text>No additional information available</Text></View>
+            </View>
+          )}
         </View>
 
         {/* ── REMARKS ── */}
         <Text style={s.sectionHead}>Remarks</Text>
-        <View style={s.qBox}>
-          <Text style={s.qLabel}>Contribution / Achievement</Text>
-          <Text style={s.qAnswer}>{contributionAchievement || "N/A"}</Text>
-        </View>
-        <View style={s.qBox}>
-          <Text style={s.qLabel}>Overall Remarks</Text>
-          <Text style={s.qAnswer}>{overallRemarks || "N/A"}</Text>
-        </View>
+        {teacherScores.map((ts, idx) => (
+          <View key={idx} style={{ marginBottom: 6 }}>
+            <Text style={s.sectionSubHead}>Teacher: {ts.teacherName}</Text>
+            <View style={s.qBox}>
+              <Text style={s.qLabel}>Contribution / Achievement</Text>
+              <Text style={s.qAnswer}>{ts.contributionAchievement || contributionAchievement || "N/A"}</Text>
+            </View>
+            <View style={s.qBox}>
+              <Text style={s.qLabel}>Overall Remarks</Text>
+              <Text style={s.qAnswer}>{ts.overallRemarks || overallRemarks || "N/A"}</Text>
+            </View>
+          </View>
+        ))}
+        {teacherScores.length === 0 && (
+          <View style={s.qBox}>
+            <Text style={s.qAnswer}>No remarks available</Text>
+          </View>
+        )}
 
         {/* ── SIGNATURES ── */}
         <View style={s.signatureContainer}>

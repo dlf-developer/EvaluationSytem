@@ -71,6 +71,15 @@ const teacherScoreSchema = new Schema({
     microTeaching: { type: Number, default: 0 },         // out of 20
     microTeaching_na: { type: Boolean, default: false },
 
+    // Page 4 — Additional Activities & Remarks (per-teacher)
+    cpdHours: { type: Number, default: 0 },
+    fieldTrips: { type: Number, default: 0 },
+    excursions: { type: Number, default: 0 },
+    outdoorAct: { type: Number, default: 0 },
+    smilies: { type: Number, default: 0 },
+    contributionAchievement: { type: String, default: "" },
+    overallRemarks: { type: String, default: "" },
+
     // Page 4 — Summary (calculated)
     totalScore: { type: Number, default: 0 },            // auto = sum of all out of 100
     maxMarks: { type: Number, default: 100 },

@@ -1,9 +1,10 @@
 import React from "react";
-import { Form, Input, Row, Col, Table, Divider, Typography, Tag, Alert } from "antd";
+import { Form, Input, Row, Col, Table, Divider, Typography, Tag, Alert, Collapse, Empty } from "antd";
 import { Box } from "@chakra-ui/react";
 
 const { TextArea } = Input;
 const { Title, Text } = Typography;
+const { Panel } = Collapse;
 
 const MANUAL_FIELDS = [
   { key: "lessonPlanScore",   max: 10 },
@@ -37,6 +38,8 @@ function computeTeacherTotal(s) {
 }
 
 function Step4_Summary({ form, formValues }) {
+  const teacherScores = formValues?.teacherScores || form.getFieldValue("teacherScores") || [];
+
   return (
     <Box>
       <Title level={4} style={{ marginBottom: 24 }}>Summary & Text Details</Title>
@@ -48,12 +51,13 @@ function Step4_Summary({ form, formValues }) {
           const scores = getFieldValue("teacherScores") || [];
 
           const hasAnyNA = scores.some((s) => {
-            const daNA = s.daAverage_na;
-            const annualNA = s.sec1_na && s.sec2_na && s.sec3_na && s.sec4_na;
-            return s.lessonPlanScore_na || s.qualityOfQPScore_na || daNA || s.mindspark_na || annualNA || s.microTeaching_na;
+            const daNA = s?.daAverage_na;
+            const annualNA = s?.sec1_na && s?.sec2_na && s?.sec3_na && s?.sec4_na;
+            return s?.lessonPlanScore_na || s?.qualityOfQPScore_na || daNA || s?.mindspark_na || annualNA || s?.microTeaching_na;
           });
 
           const dataSource = scores.map((s, index) => {
+            if (!s) return null;
             const { total, maxMarks, pct, daNA, annualNA } = computeTeacherTotal(s);
 
             // Persist computed values for saving
@@ -87,7 +91,7 @@ function Step4_Summary({ form, formValues }) {
               maxMarks,
               pct: pct + "%",
             };
-          });
+          }).filter(Boolean);
 
           const columns = [
             { title: "Teacher", dataIndex: "name", key: "name", width: 120 },
@@ -143,48 +147,66 @@ function Step4_Summary({ form, formValues }) {
         }}
       </Form.Item>
 
-      <Divider orientation="left">Additional Activities & Remarks</Divider>
+      <Divider orientation="left">Additional Activities & Remarks (Per Teacher)</Divider>
 
-      <Row gutter={24}>
-        <Col span={8}>
-          <Form.Item name="cpdHours" label="CPD (No. of Hours)">
-            <Input size="large" placeholder="e.g. 12" />
-          </Form.Item>
-        </Col>
-        <Col span={8}>
-          <Form.Item name="fieldTrips" label="No. of Field Trips">
-            <Input size="large" placeholder="e.g. 3" />
-          </Form.Item>
-        </Col>
-        <Col span={8}>
-          <Form.Item name="excursions" label="Excursions (Number)">
-            <Input size="large" placeholder="e.g. 2" />
-          </Form.Item>
-        </Col>
-        <Col span={8}>
-          <Form.Item name="outdoorAct" label="Outdoor Act (Number)">
-            <Input size="large" placeholder="e.g. 5" />
-          </Form.Item>
-        </Col>
-        <Col span={8}>
-          <Form.Item name="smilies" label="Smilies (Number)">
-            <Input size="large" placeholder="e.g. 10" />
-          </Form.Item>
-        </Col>
-      </Row>
+      {teacherScores.length === 0 ? (
+        <Empty description="No teachers selected." />
+      ) : (
+        <Collapse defaultActiveKey={teacherScores.map((_, idx) => idx.toString())}>
+          {teacherScores.filter(Boolean).map((score, index) => (
+            <Panel
+              header={
+                <span style={{ fontWeight: 600 }}>
+                  {score.teacherName || `Teacher ${index + 1}`}
+                </span>
+              }
+              key={index.toString()}
+              forceRender
+            >
+              <Row gutter={24}>
+                <Col span={8}>
+                  <Form.Item name={["teacherScores", index, "cpdHours"]} label="CPD (No. of Hours)">
+                    <Input size="large" placeholder="e.g. 12" />
+                  </Form.Item>
+                </Col>
+                <Col span={8}>
+                  <Form.Item name={["teacherScores", index, "fieldTrips"]} label="No. of Field Trips">
+                    <Input size="large" placeholder="e.g. 3" />
+                  </Form.Item>
+                </Col>
+                <Col span={8}>
+                  <Form.Item name={["teacherScores", index, "excursions"]} label="Excursions (Number)">
+                    <Input size="large" placeholder="e.g. 2" />
+                  </Form.Item>
+                </Col>
+                <Col span={8}>
+                  <Form.Item name={["teacherScores", index, "outdoorAct"]} label="Outdoor Act (Number)">
+                    <Input size="large" placeholder="e.g. 5" />
+                  </Form.Item>
+                </Col>
+                <Col span={8}>
+                  <Form.Item name={["teacherScores", index, "smilies"]} label="Smilies (Number)">
+                    <Input size="large" placeholder="e.g. 10" />
+                  </Form.Item>
+                </Col>
+              </Row>
 
-      <Row gutter={24} style={{ marginTop: 16 }}>
-        <Col span={24}>
-          <Form.Item name="contributionAchievement" label="Contribution / Achievement">
-            <TextArea rows={4} placeholder="Enter any specific contributions or achievements..." />
-          </Form.Item>
-        </Col>
-        <Col span={24}>
-          <Form.Item name="overallRemarks" label="Overall Remarks">
-            <TextArea rows={4} placeholder="Enter final remarks for this period..." />
-          </Form.Item>
-        </Col>
-      </Row>
+              <Row gutter={24} style={{ marginTop: 8 }}>
+                <Col span={24}>
+                  <Form.Item name={["teacherScores", index, "contributionAchievement"]} label="Contribution / Achievement">
+                    <TextArea rows={3} placeholder="Enter any specific contributions or achievements..." />
+                  </Form.Item>
+                </Col>
+                <Col span={24}>
+                  <Form.Item name={["teacherScores", index, "overallRemarks"]} label="Overall Remarks">
+                    <TextArea rows={3} placeholder="Enter final remarks for this teacher..." />
+                  </Form.Item>
+                </Col>
+              </Row>
+            </Panel>
+          ))}
+        </Collapse>
+      )}
 
     </Box>
   );
