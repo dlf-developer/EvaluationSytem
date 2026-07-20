@@ -146,21 +146,42 @@ function AccountabilityReport() {
                   </Tr>
                 </Thead>
                 <Tbody>
-                  {data.teacherScores?.map((ts, idx) => (
-                    <Tr key={idx}>
-                      <Td fontWeight="500">{ts.teacherName}</Td>
-                      <Td isNumeric>{ts.classroomWalkthroughAvg || 0}</Td>
-                      <Td isNumeric>{ts.notebookCheckingAvg || 0}</Td>
-                      <Td isNumeric>{ts.lessonPlanScore || 0}</Td>
-                      <Td isNumeric>{ts.qualityOfQPScore || 0}</Td>
-                      <Td isNumeric>{ts.daAverage || 0}</Td>
-                      <Td isNumeric>{ts.mindspark || 0}</Td>
-                      <Td isNumeric>{ts.annualReducedTo10 || 0}</Td>
-                      <Td isNumeric>{ts.microTeaching || 0}</Td>
-                      <Td isNumeric fontWeight="bold" color={ts.totalScore < 50 ? "red.500" : "green.500"}>{ts.totalScore || 0}</Td>
-                      <Td isNumeric fontWeight="bold">{ts.percentage || 0}%</Td>
-                    </Tr>
-                  ))}
+                  {data.teacherScores?.map((ts, idx) => {
+                    let total = (ts.classroomWalkthroughAvg || 0) + (ts.notebookCheckingAvg || 0);
+                    let maxMarks = 10 + 10;
+
+                    if (!ts.lessonPlanScore_na) { total += ts.lessonPlanScore || 0; maxMarks += 10; }
+                    if (!ts.qualityOfQPScore_na) { total += ts.qualityOfQPScore || 0; maxMarks += 10; }
+
+                    const daNA = ts.daAverage_na;
+                    if (!daNA) { total += ts.daAverage || 0; maxMarks += 10; }
+
+                    if (!ts.mindspark_na) { total += ts.mindspark || 0; maxMarks += 10; }
+
+                    const annualNA = ts.sec1_na && ts.sec2_na && ts.sec3_na && ts.sec4_na;
+                    if (!annualNA) { total += ts.annualReducedTo10 || 0; maxMarks += 10; }
+
+                    if (!ts.microTeaching_na) { total += ts.microTeaching || 0; maxMarks += 20; }
+
+                    const calculatedTotal = parseFloat(total.toFixed(2));
+                    const calculatedPct = maxMarks > 0 ? parseFloat(((total / maxMarks) * 100).toFixed(2)) : 0;
+
+                    return (
+                      <Tr key={idx}>
+                        <Td fontWeight="500">{ts.teacherName}</Td>
+                        <Td isNumeric>{ts.classroomWalkthroughAvg || 0}</Td>
+                        <Td isNumeric>{ts.notebookCheckingAvg || 0}</Td>
+                        <Td isNumeric>{ts.lessonPlanScore_na ? "N/A" : (ts.lessonPlanScore || 0)}</Td>
+                        <Td isNumeric>{ts.qualityOfQPScore_na ? "N/A" : (ts.qualityOfQPScore || 0)}</Td>
+                        <Td isNumeric>{daNA ? "N/A" : (ts.daAverage || 0)}</Td>
+                        <Td isNumeric>{ts.mindspark_na ? "N/A" : (ts.mindspark || 0)}</Td>
+                        <Td isNumeric>{annualNA ? "N/A" : (ts.annualReducedTo10 || 0)}</Td>
+                        <Td isNumeric>{ts.microTeaching_na ? "N/A" : (ts.microTeaching || 0)}</Td>
+                        <Td isNumeric fontWeight="bold" color={calculatedPct < 50 ? "red.500" : "green.500"}>{calculatedTotal}</Td>
+                        <Td isNumeric fontWeight="bold">{calculatedPct}%</Td>
+                      </Tr>
+                    );
+                  })}
                   {(!data.teacherScores || data.teacherScores.length === 0) && (
                     <Tr><Td colSpan={11} textAlign="center" color="gray.500">No teacher scores</Td></Tr>
                   )}

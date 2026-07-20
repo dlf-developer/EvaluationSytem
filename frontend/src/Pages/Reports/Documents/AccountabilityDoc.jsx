@@ -151,25 +151,46 @@ const AccountabilityDoc = ({ data }) => {
             <View style={[s.th, s.colScore]}><Text>Total (/100)</Text></View>
             <View style={[s.thLast, s.colScore]}><Text>Percent</Text></View>
           </View>
-          {teacherScores.map((ts, idx, arr) => (
-            <View key={idx} style={idx === arr.length - 1 ? s.tableRowLast : s.tableRow}>
-              <View style={[s.td, s.colName]}><Text>{ts.teacherName}</Text></View>
-              <View style={[s.td, s.colScore]}><Text>{ts.classroomWalkthroughAvg || 0}</Text></View>
-              <View style={[s.td, s.colScore]}><Text>{ts.notebookCheckingAvg || 0}</Text></View>
-              <View style={[s.td, s.colScore]}><Text>{ts.lessonPlanScore || 0}</Text></View>
-              <View style={[s.td, s.colScore]}><Text>{ts.qualityOfQPScore || 0}</Text></View>
-              <View style={[s.td, s.colScore]}><Text>{ts.daAverage || 0}</Text></View>
-              <View style={[s.td, s.colScore]}><Text>{ts.mindspark || 0}</Text></View>
-              <View style={[s.td, s.colScore]}><Text>{ts.annualReducedTo10 || 0}</Text></View>
-              <View style={[s.td, s.colScore]}><Text>{ts.microTeaching || 0}</Text></View>
-              <View style={[s.td, s.colScore]}>
-                <Text style={{ color: ts.totalScore < 50 ? C.danger : C.success, fontWeight: 600 }}>
-                  {ts.totalScore || 0}
-                </Text>
+          {teacherScores.map((ts, idx, arr) => {
+            let total = (ts.classroomWalkthroughAvg || 0) + (ts.notebookCheckingAvg || 0);
+            let maxMarks = 10 + 10;
+
+            if (!ts.lessonPlanScore_na) { total += ts.lessonPlanScore || 0; maxMarks += 10; }
+            if (!ts.qualityOfQPScore_na) { total += ts.qualityOfQPScore || 0; maxMarks += 10; }
+
+            const daNA = ts.daAverage_na;
+            if (!daNA) { total += ts.daAverage || 0; maxMarks += 10; }
+
+            if (!ts.mindspark_na) { total += ts.mindspark || 0; maxMarks += 10; }
+
+            const annualNA = ts.sec1_na && ts.sec2_na && ts.sec3_na && ts.sec4_na;
+            if (!annualNA) { total += ts.annualReducedTo10 || 0; maxMarks += 10; }
+
+            if (!ts.microTeaching_na) { total += ts.microTeaching || 0; maxMarks += 20; }
+
+            const calculatedTotal = parseFloat(total.toFixed(2));
+            const calculatedPct = maxMarks > 0 ? parseFloat(((total / maxMarks) * 100).toFixed(2)) : 0;
+
+            return (
+              <View key={idx} style={idx === arr.length - 1 ? s.tableRowLast : s.tableRow}>
+                <View style={[s.td, s.colName]}><Text>{ts.teacherName}</Text></View>
+                <View style={[s.td, s.colScore]}><Text>{ts.classroomWalkthroughAvg || 0}</Text></View>
+                <View style={[s.td, s.colScore]}><Text>{ts.notebookCheckingAvg || 0}</Text></View>
+                <View style={[s.td, s.colScore]}><Text>{ts.lessonPlanScore_na ? "N/A" : (ts.lessonPlanScore || 0)}</Text></View>
+                <View style={[s.td, s.colScore]}><Text>{ts.qualityOfQPScore_na ? "N/A" : (ts.qualityOfQPScore || 0)}</Text></View>
+                <View style={[s.td, s.colScore]}><Text>{daNA ? "N/A" : (ts.daAverage || 0)}</Text></View>
+                <View style={[s.td, s.colScore]}><Text>{ts.mindspark_na ? "N/A" : (ts.mindspark || 0)}</Text></View>
+                <View style={[s.td, s.colScore]}><Text>{annualNA ? "N/A" : (ts.annualReducedTo10 || 0)}</Text></View>
+                <View style={[s.td, s.colScore]}><Text>{ts.microTeaching_na ? "N/A" : (ts.microTeaching || 0)}</Text></View>
+                <View style={[s.td, s.colScore]}>
+                  <Text style={{ color: calculatedPct < 50 ? C.danger : C.success, fontWeight: 600 }}>
+                    {calculatedTotal}
+                  </Text>
+                </View>
+                <View style={[s.tdLast, s.colScore]}><Text>{calculatedPct}%</Text></View>
               </View>
-              <View style={[s.tdLast, s.colScore]}><Text>{ts.percentage || 0}%</Text></View>
-            </View>
-          ))}
+            );
+          })}
           {teacherScores.length === 0 && (
             <View style={s.tableRowLast}>
               <View style={[s.tdLast, { width: "100%", textAlign: "center" }]}><Text>No teacher scores available</Text></View>

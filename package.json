@@ -1,0 +1,10 @@
+{
+  "name": "evaluationsystem-root",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "npx concurrently \"npm run start:dev --prefix Backend\" \"npm run start --prefix frontend\"",
+    "start:prod": "npx concurrently \"npm run start:prod --prefix Backend\" \"npm run build --prefix frontend && npm run production --prefix frontend\"",
+    "install:all": "npm install --prefix Backend && npm install --prefix frontend"
+  }
+}

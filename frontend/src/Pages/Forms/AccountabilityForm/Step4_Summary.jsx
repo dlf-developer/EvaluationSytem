@@ -6,14 +6,6 @@ const { TextArea } = Input;
 const { Title, Text } = Typography;
 const { Panel } = Collapse;
 
-const MANUAL_FIELDS = [
-  { key: "lessonPlanScore",   max: 10 },
-  { key: "qualityOfQPScore",  max: 10 },
-  { key: "daAverage",         max: 10 },
-  { key: "mindspark",         max: 10 },
-  { key: "annualReducedTo10", max: 10 },
-  { key: "microTeaching",     max: 20 },
-];
 
 /** Compute a teacher's total skipping N/A fields. */
 function computeTeacherTotal(s) {
@@ -60,14 +52,18 @@ function Step4_Summary({ form, formValues }) {
             if (!s) return null;
             const { total, maxMarks, pct, daNA, annualNA } = computeTeacherTotal(s);
 
-            // Persist computed values for saving
-            setTimeout(() => {
-              setFieldsValue({
-                [`teacherScores[${index}].totalScore`]: total,
-                [`teacherScores[${index}].percentage`]: parseFloat(pct),
-                [`teacherScores[${index}].maxMarks`]: maxMarks,
-              });
-            }, 0);
+            // Persist computed values for saving using setFieldValue path arrays if values changed
+            const currentTotal = form.getFieldValue(["teacherScores", index, "totalScore"]);
+            const currentPct = form.getFieldValue(["teacherScores", index, "percentage"]);
+            const currentMax = form.getFieldValue(["teacherScores", index, "maxMarks"]);
+
+            if (currentTotal !== total || currentPct !== parseFloat(pct) || currentMax !== maxMarks) {
+              setTimeout(() => {
+                form.setFieldValue(["teacherScores", index, "totalScore"], total);
+                form.setFieldValue(["teacherScores", index, "percentage"], parseFloat(pct));
+                form.setFieldValue(["teacherScores", index, "maxMarks"], maxMarks);
+              }, 0);
+            }
 
             const naCell = (val, isNA) =>
               isNA ? (
@@ -203,6 +199,11 @@ function Step4_Summary({ form, formValues }) {
                   </Form.Item>
                 </Col>
               </Row>
+
+              {/* Hidden preservation fields for computed score summary */}
+              <Form.Item name={["teacherScores", index, "totalScore"]} hidden><Input /></Form.Item>
+              <Form.Item name={["teacherScores", index, "percentage"]} hidden><Input /></Form.Item>
+              <Form.Item name={["teacherScores", index, "maxMarks"]} hidden><Input /></Form.Item>
             </Panel>
           ))}
         </Collapse>

@@ -326,9 +326,51 @@ const Details = () => {
       ) : (
         <>
           <div className="modern-form-header">
-            <div className="header-section">
+            <div className="header-section" style={{ width: "100%" }}>
               <h2 className="form-title">Observation Form</h2>
               <div className="form-subtitle">Complete your evaluation</div>
+              
+              {formDetails && (() => {
+                const teacherName = formDetails?.teacherID?.name || formDetails?.userId?.name || "—";
+                const observerName = formDetails?.teacherID ? (formDetails?.userId?.name || "—") : (formDetails?.coordinatorID?.name || "—");
+                
+                return (
+                  <div style={{
+                    marginTop: "16px",
+                    padding: "16px 24px",
+                    backgroundColor: "#f9fafb",
+                    borderRadius: "12px",
+                    border: "1px solid #e5e7eb",
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: "24px 32px",
+                    fontSize: "14px",
+                    color: "#4b5563",
+                    boxShadow: "0 1px 2px 0 rgba(0, 0, 0, 0.05)"
+                  }}>
+                    <div>
+                      <span style={{ fontWeight: 600, color: "#374151" }}>Teacher: </span>
+                      {teacherName}
+                    </div>
+                    <div>
+                      <span style={{ fontWeight: 600, color: "#374151" }}>Class & Section: </span>
+                      {formDetails?.className ? `${formDetails.className} - ${formDetails.section || "—"}` : "—"}
+                    </div>
+                    <div>
+                      <span style={{ fontWeight: 600, color: "#374151" }}>Date: </span>
+                      {formDetails?.date ? new Date(formDetails.date).toLocaleDateString("en-IN", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric"
+                      }) : "—"}
+                    </div>
+                    <div>
+                      <span style={{ fontWeight: 600, color: "#374151" }}>Observer: </span>
+                      {observerName}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           </div>
 

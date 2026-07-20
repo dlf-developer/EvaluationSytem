@@ -118,10 +118,11 @@ const GetAllTeachers = async (req, res) => {
   try {
     const users = await User.find(
       {
-        access: { $in: ["Teacher"] },
+        access: "Teacher",
       },
       "-password",
     ).sort({ createdAt: -1 });
+    console.log("GetAllTeachers returning users:", users.map(u => ({ name: u.name, access: u.access })));
     res.status(200).json(users);
   } catch (err) {
     res.status(400).send(err);
@@ -132,10 +133,11 @@ const GetAllObserver = async (req, res) => {
   try {
     const users = await User.find(
       {
-        access: { $in: ["Observer"] },
+        access: "Observer",
       },
       "-password",
     ).sort({ createdAt: -1 });
+    console.log("GetAllObserver returning users:", users.map(u => ({ name: u.name, access: u.access })));
     res.status(200).json(users);
   } catch (err) {
     res.status(400).send(err);

@@ -112,9 +112,42 @@ const getSingleAccountability = async (req, res) => {
     }
 };
 
+// Helper to calculate totalScore and percentage for teacherScores on the backend
+const calculateScoresForForm = (body) => {
+    if (body && Array.isArray(body.teacherScores)) {
+        body.teacherScores = body.teacherScores.map(s => {
+            let total = (s.classroomWalkthroughAvg || 0) + (s.notebookCheckingAvg || 0);
+            let maxMarks = 10 + 10;
+
+            if (!s.lessonPlanScore_na) { total += s.lessonPlanScore || 0; maxMarks += 10; }
+            if (!s.qualityOfQPScore_na) { total += s.qualityOfQPScore || 0; maxMarks += 10; }
+
+            const daNA = s.daAverage_na;
+            if (!daNA) { total += s.daAverage || 0; maxMarks += 10; }
+
+            if (!s.mindspark_na) { total += s.mindspark || 0; maxMarks += 10; }
+
+            const annualNA = s.sec1_na && s.sec2_na && s.sec3_na && s.sec4_na;
+            if (!annualNA) { total += s.annualReducedTo10 || 0; maxMarks += 10; }
+
+            if (!s.microTeaching_na) { total += s.microTeaching || 0; maxMarks += 20; }
+
+            const pct = maxMarks > 0 ? parseFloat(((total / maxMarks) * 100).toFixed(2)) : 0;
+            
+            return {
+                ...s,
+                totalScore: parseFloat(total.toFixed(2)),
+                maxMarks,
+                percentage: pct
+            };
+        });
+    }
+};
+
 // ── Update / Save draft ───────────────────────────────────────────────────────
 const updateAccountability = async (req, res) => {
     try {
+        calculateScoresForForm(req.body);
         const updated = await AccountabilityMechanism.findByIdAndUpdate(
             req.params.id,
             req.body,
@@ -130,6 +163,7 @@ const updateAccountability = async (req, res) => {
 // ── Publish ───────────────────────────────────────────────────────────────────
 const publishAccountability = async (req, res) => {
     try {
+        calculateScoresForForm(req.body);
         const updated = await AccountabilityMechanism.findByIdAndUpdate(
             req.params.id,
             { ...req.body, isDraft: false, isComplete: true },

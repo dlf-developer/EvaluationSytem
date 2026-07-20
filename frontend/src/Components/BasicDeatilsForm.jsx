@@ -24,6 +24,9 @@ function BasicDetailsForm() {
   const TeachersList = useSelector((state) => state.user.GetTeachersLists);
   const ObserverList = useSelector((state) => state.user.GetObserverLists);
 
+  console.log("DEBUG: ObserverList loaded in BasicDetailsForm:", ObserverList);
+  console.log("DEBUG: TeachersList loaded in BasicDetailsForm:", TeachersList);
+
   const disableFutureDates = (current) => {
     // Get the current date without the time part
     const today = new Date();
@@ -169,20 +172,26 @@ function BasicDetailsForm() {
 
             </Form.Item>
 
-            <div className="d-flex gap-3 align-items-center justify-content-between">
-              <Form.Item
-                className="w-100"
-                label="Date"
-                name="date"
-                rules={[{ required: true, message: "Please select a date!" }]}
-              >
-                <DatePicker className="w-100" format="YYYY-MM-DD"  disabledDate={disableFutureDates}/>
-              </Form.Item>
-              {CurrectUserRole === UserRole[2] && (
-                <>
+            <Form.Item
+              label="Date"
+              name="date"
+              rules={[{ required: true, message: "Please select a date!" }]}
+            >
+              <DatePicker className="w-100" format="YYYY-MM-DD"  disabledDate={disableFutureDates}/>
+            </Form.Item>
+
+            {CurrectUserRole === UserRole[2] && (
+              <>
+                <div className="d-flex gap-3 align-items-center justify-content-between">
                   <Form.Item
-                  className="w-100"
-                    label="Coordinator ID"
+                    className="w-100"
+                    label="Teacher Name"
+                  >
+                    <Input value={getUserId()?.name} disabled />
+                  </Form.Item>
+                  <Form.Item
+                    className="w-100"
+                    label="Coordinator Name"
                     name="coordinatorID"
                     rules={[
                       {
@@ -194,7 +203,7 @@ function BasicDetailsForm() {
                     <Select
                       showSearch
                       placeholder="Select a Coordinator"
-                      options={ObserverList?.map((item) => ({
+                      options={ObserverList?.filter((item) => item.access === "Observer")?.map((item) => ({
                         value: item._id,
                         label: item.name,
                       }))}
@@ -203,42 +212,42 @@ function BasicDetailsForm() {
                       }
                     />
                   </Form.Item>
-                  <Form.Item
+                </div>
+                <Form.Item
                   hidden
-                    className="w-100"
-                    label="Coordinator"
-                    name="isCoordinator"
-                  >
-                    <Select
-                      onChange={(value) => {
-                        setIsCoordinator(true);
-                        setIsTeacher(false); // Disable Teacher when Coordinator is selected
-                        form.resetFields(["teacherID"]); // Reset teacher-related fields
-                      }}
-                    >
-                      <Option value={false}>No</Option>
-                      <Option value={true}>Yes</Option>
-                    </Select>
-                  </Form.Item>
-                </>
-              )}
-
-              {CurrectUserRole === UserRole[1] && (
-                <>
-               
-                  <Form.Item
                   className="w-100"
-                    label="Teacher ID"
+                  label="Coordinator"
+                  name="isCoordinator"
+                >
+                  <Select
+                    onChange={(value) => {
+                      setIsCoordinator(true);
+                      setIsTeacher(false); // Disable Teacher when Coordinator is selected
+                      form.resetFields(["teacherID"]); // Reset teacher-related fields
+                    }}
+                  >
+                    <Option value={false}>No</Option>
+                    <Option value={true}>Yes</Option>
+                  </Select>
+                </Form.Item>
+              </>
+            )}
+
+            {CurrectUserRole === UserRole[1] && (
+              <>
+                <div className="d-flex gap-3 align-items-center justify-content-between">
+                  <Form.Item
+                    className="w-100"
+                    label="Teacher Name"
                     name="teacherID"
                     rules={[
                       { required: true, message: "Please select a Teacher!" },
                     ]}
                   >
                     <Select
-                    
                       showSearch
                       placeholder="Select a Teacher"
-                      options={TeachersList?.map((item) => ({
+                      options={TeachersList?.filter((item) => item.access === "Teacher")?.map((item) => ({
                         value: item._id,
                         label: item.name,
                       }))}
@@ -248,26 +257,32 @@ function BasicDetailsForm() {
                     />
                   </Form.Item>
                   <Form.Item
-                  hidden
                     className="w-100"
-                    label="Teachers"
-                    name="isTeacher"
+                    label="Coordinator Name"
                   >
-                    <Select
-                      onChange={(value) => {
-                        setIsTeacher(true);
-                        setIsCoordinator(false); // Disable Coordinator when Teacher is selected
-                        form.resetFields(["coordinatorID"]); // Reset coordinator-related fields
-                      }}
-                      disabled={isCoordinator} // Disable if Coordinator is selected
-                    >
-                      <Option value={false}>No</Option>
-                      <Option value={true}>Yes</Option>
-                    </Select>
+                    <Input value={getUserId()?.name} disabled />
                   </Form.Item>
-                </>
-              )}
-            </div>
+                </div>
+                <Form.Item
+                  hidden
+                  className="w-100"
+                  label="Teachers"
+                  name="isTeacher"
+                >
+                  <Select
+                    onChange={(value) => {
+                      setIsTeacher(true);
+                      setIsCoordinator(false); // Disable Coordinator when Teacher is selected
+                      form.resetFields(["coordinatorID"]); // Reset coordinator-related fields
+                    }}
+                    disabled={isCoordinator} // Disable if Coordinator is selected
+                  >
+                    <Option value={false}>No</Option>
+                    <Option value={true}>Yes</Option>
+                  </Select>
+                </Form.Item>
+              </>
+            )}
 
             {CurrectUserRole === UserRole[0] && (
               <>
@@ -310,7 +325,7 @@ function BasicDetailsForm() {
 
                 {isCoordinator && (
                   <Form.Item
-                    label="Coordinator ID"
+                    label="Coordinator Name"
                     name="coordinatorID"
                     rules={[
                       {
@@ -322,7 +337,7 @@ function BasicDetailsForm() {
                     <Select
                       showSearch
                       placeholder="Select a Coordinator"
-                      options={ObserverList?.map((item) => ({
+                      options={ObserverList?.filter((item) => item.access === "Observer")?.map((item) => ({
                         value: item._id,
                         label: item.name,
                       }))}
@@ -335,7 +350,7 @@ function BasicDetailsForm() {
 
                 {isTeacher && (
                   <Form.Item
-                    label="Teacher ID"
+                    label="Teacher Name"
                     name="teacherID"
                     rules={[
                       { required: true, message: "Please select a Teacher!" },
@@ -344,7 +359,7 @@ function BasicDetailsForm() {
                     <Select
                       showSearch
                       placeholder="Select a Teacher"
-                      options={TeachersList?.map((item) => ({
+                      options={TeachersList?.filter((item) => item.access === "Teacher")?.map((item) => ({
                         value: item._id,
                         label: item.name,
                       }))}
