@@ -1,4 +1,4 @@
-import { Font, StyleSheet, Text, View } from "@react-pdf/renderer";
+import { StyleSheet, Text, View } from "@react-pdf/renderer";
 import React, { useEffect, useState } from "react";
 import { getAllTimes } from "../../../Utils/auth";
 import {
@@ -6,19 +6,7 @@ import {
   questionsOld,
   cutoffDate,
 } from "../../../Components/normalData";
-
-Font.register({
-  family: "Open Sans",
-  fonts: [
-    {
-      src: "https://cdn.jsdelivr.net/npm/open-sans-all@0.1.3/fonts/open-sans-regular.ttf",
-    },
-    {
-      src: "https://cdn.jsdelivr.net/npm/open-sans-all@0.1.3/fonts/open-sans-600.ttf",
-      fontWeight: 600,
-    },
-  ],
-});
+import { PDF_FONT } from "../pdfFonts"; // registers NotoSansDevanagari (Hindi + Latin)
 
 function AnswerComp({ data, type }) {
   const [totalCount, setTotalCount] = useState(0);
@@ -148,6 +136,6 @@ const styles = StyleSheet.create({
   testCenter: {
     textAlign: "center",
     fontWeight: "bold",
-    fontFamily: "Open Sans",
+    fontFamily: PDF_FONT,
   },
 });

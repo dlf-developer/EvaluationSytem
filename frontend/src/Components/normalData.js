@@ -46,7 +46,7 @@ export const questions = [
   { name: "DEAR period observed", key: "dearPeriod", category: "activities" },
 
   {
-    name: "Children in proper uniform along with I.Card (Defaulters marked regularly - Pg 82 of Almanac)",
+    name: "Children in proper uniform along with I.Card",
     key: "uniformTieBeltShoesICard",
     category: "student",
   },
@@ -96,7 +96,7 @@ export const questions = [
   },
 
   {
-    name: "Supplementary Reading Record marked (Pg no. 88-90 of Almanac)",
+    name: "Supplementary Reading Record marked",
     key: "supplementaryReadingRecord",
     category: "admin",
   },
@@ -245,7 +245,7 @@ export const questions2 = [
   { name: "DEAR period observed", key: "dearPeriod", category: "activities" },
 
   {
-    name: "Children in proper uniform along with I.Card (Defaulters marked regularly - Pg 82 of Almanac)",
+    name: "Children in proper uniform along with I.Card ",
     key: "uniformTieBeltShoesICard",
     category: "student",
   },
@@ -295,7 +295,7 @@ export const questions2 = [
   },
 
   {
-    name: "Supplementary Reading Record marked (Pg no. 88-90 of Almanac)",
+    name: "Supplementary Reading Record marked",
     key: "supplementaryReadingRecord",
     category: "admin",
   },

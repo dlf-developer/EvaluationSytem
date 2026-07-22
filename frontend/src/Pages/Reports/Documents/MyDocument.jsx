@@ -6,7 +6,6 @@ import {
   Document,
   StyleSheet,
   Image,
-  Font,
 } from "@react-pdf/renderer";
 import Logo from "../Imgs/Logo.png";
 import LogoBanner from "../Imgs/image.png";
@@ -17,19 +16,7 @@ import {
   cutoffDate,
 } from "../../../Components/normalData";
 import { calculateScorenew } from "../../../Utils/calculateScore";
-
-Font.register({
-  family: "Open Sans",
-  fonts: [
-    {
-      src: "https://cdn.jsdelivr.net/npm/open-sans-all@0.1.3/fonts/open-sans-regular.ttf",
-    },
-    {
-      src: "https://cdn.jsdelivr.net/npm/open-sans-all@0.1.3/fonts/open-sans-600.ttf",
-      fontWeight: 600,
-    },
-  ],
-});
+import { PDF_FONT } from "../pdfFonts"; // registers NotoSansDevanagari (Hindi + Latin)
 
 const styles = StyleSheet.create({
   page: {
@@ -65,7 +52,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     flexDirection: "row",
     marginBottom: 5,
-    fontFamily: "Open Sans",
+    fontFamily: PDF_FONT,
     fontSize: 12,
   },
   table: {
@@ -81,22 +68,22 @@ const styles = StyleSheet.create({
   colTeacher: { width: "20%", borderRightWidth: 1, padding: 5 },
   colObserver: { width: "20%", borderRightWidth: 1, padding: 5 },
   headerText: {
-    fontFamily: "Open Sans",
-    fontWeight: 600,
+    fontFamily: PDF_FONT,
+    fontWeight: "bold",
     fontSize: 11,
     textAlign: "center",
   },
   cellText: {
-    fontFamily: "Open Sans",
+    fontFamily: PDF_FONT,
     fontSize: 11,
     textAlign: "center",
   },
   cellTextLeft: {
-    fontFamily: "Open Sans",
+    fontFamily: PDF_FONT,
     fontSize: 11,
   },
   pageNumber: {
-    fontFamily: "Open Sans",
+    fontFamily: PDF_FONT,
     fontSize: 10,
     textAlign: "right",
     marginTop: 5,

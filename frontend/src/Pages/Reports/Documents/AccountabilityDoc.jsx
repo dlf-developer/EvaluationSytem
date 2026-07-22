@@ -6,19 +6,11 @@ import {
   Document,
   StyleSheet,
   Image,
-  Font,
 } from "@react-pdf/renderer";
 import Logo from "../Imgs/Logo.png";
 import LogoBanner from "../Imgs/image.png";
 import { getAllTimes } from "../../../Utils/auth";
-
-Font.register({
-  family: "Open Sans",
-  fonts: [
-    { src: "https://cdn.jsdelivr.net/npm/open-sans-all@0.1.3/fonts/open-sans-regular.ttf" },
-    { src: "https://cdn.jsdelivr.net/npm/open-sans-all@0.1.3/fonts/open-sans-600.ttf", fontWeight: 600 },
-  ],
-});
+import { PDF_FONT } from "../pdfFonts"; // registers NotoSansDevanagari (Hindi + Latin)
 
 const C = {
   primary: "#4A6741",
@@ -33,7 +25,7 @@ const C = {
 };
 
 const s = StyleSheet.create({
-  page: { backgroundColor: C.white, fontFamily: "Open Sans", fontSize: 9, padding: 18 },
+  page: { backgroundColor: C.white, fontFamily: PDF_FONT, fontSize: 9, padding: 18 },
 
   // Header
   header: { flexDirection: "row", alignItems: "center", justifyContent: "center", marginBottom: 6, paddingBottom: 6, borderBottomWidth: 1, borderBottomColor: C.border },

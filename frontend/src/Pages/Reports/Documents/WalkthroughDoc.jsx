@@ -6,27 +6,12 @@ import {
   Document,
   StyleSheet,
   Image,
-  Font,
 } from "@react-pdf/renderer";
 
 import Logo from "../Imgs/Logo.png";
 import LogoBanner from "../Imgs/image.png";
 import { getAllTimes } from "../../../Utils/auth";
-
-// ✅ Register Hindi + English Supported Font
-Font.register({
-  family: "NotoSansDevanagari",
-  fonts: [
-    {
-      src: "/fonts/NotoSansDevanagari-Regular.ttf",
-      fontWeight: "normal",
-    },
-    {
-      src: "/fonts/NotoSansDevanagari-Bold.ttf",
-      fontWeight: "bold",
-    },
-  ],
-});
+import { PDF_FONT } from "../pdfFonts"; // registers NotoSansDevanagari (Hindi + Latin)
 
 function WalkthroughDoc({ data }) {
   const RenderData = ({ keyName, keylenght }) => (
@@ -270,7 +255,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 12,
-    fontFamily: "NotoSansDevanagari",
+    fontFamily: PDF_FONT,
   },
   generalBox: {
     flexDirection: "row",
@@ -291,20 +276,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     padding: 5,
     borderRightWidth: 1,
-    fontFamily: "NotoSansDevanagari",
+    fontFamily: PDF_FONT,
   },
   headerCellLarge: {
     width: "70%",
     fontSize: 14,
     padding: 5,
     borderRightWidth: 1,
-    fontFamily: "NotoSansDevanagari",
+    fontFamily: PDF_FONT,
   },
   headerCellMedium: {
     width: "20%",
     padding: 5,
     fontSize: 14,
-    fontFamily: "NotoSansDevanagari",
+    fontFamily: PDF_FONT,
   },
   sectionHeader: {
     borderTopWidth: 1,
@@ -314,15 +299,15 @@ const styles = StyleSheet.create({
   centerText: {
     fontSize: 14,
     textAlign: "center",
-    fontFamily: "NotoSansDevanagari",
+    fontFamily: PDF_FONT,
   },
   Question: {
     fontSize: 11,
-    fontFamily: "NotoSansDevanagari",
+    fontFamily: PDF_FONT,
   },
   boldText: {
     fontSize: 11,
-    fontFamily: "NotoSansDevanagari",
+    fontFamily: PDF_FONT,
     fontWeight: "bold",
   },
 });

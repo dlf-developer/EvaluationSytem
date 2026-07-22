@@ -3,6 +3,7 @@ import React from 'react';
 import Logo from '../Imgs/Logo.png';
 import LogoBanner from '../Imgs/image.png';
 import { getAllTimes } from '../../../Utils/auth';
+import { PDF_FONT } from '../pdfFonts'; // registers NotoSansDevanagari (Hindi + Latin)
 
 function NoteBookDoc({ data }) {
 
@@ -225,7 +226,7 @@ function NoteBookDoc({ data }) {
                     <View style={styles.observationSection}>
                         <Text style={styles.subTitle}>OBSERVER'S COMMENTS</Text>
                         <View style={{ borderWidth: 1, padding: 10, minHeight: 60, borderColor: '#000' }}>
-                            <Text style={{ fontSize: 10, lineHeight: 1.5 }}>
+                            <Text style={{ fontSize: 10, lineHeight: 1.5, fontFamily: PDF_FONT }}>
                                 {data?.observerFeedback || "No feedback provided."}
                             </Text>
                         </View>
@@ -234,7 +235,7 @@ function NoteBookDoc({ data }) {
                     <View style={styles.observationSection}>
                         <Text style={styles.subTitle}>TEACHER'S REFLECTION / COMMENTS</Text>
                         <View style={{ borderWidth: 1, padding: 10, minHeight: 60, borderColor: '#000' }}>
-                            <Text style={{ fontSize: 10, lineHeight: 1.5 }}>
+                            <Text style={{ fontSize: 10, lineHeight: 1.5, fontFamily: PDF_FONT }}>
                                 {data?.teacherReflationFeedback || "No reflection provided."}
                             </Text>
                         </View>
@@ -323,11 +324,13 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         borderBottomWidth: 1,
         borderColor: '#000',
+        fontFamily: PDF_FONT,
     },
     cellAnswer: {
         padding: 5,
         fontSize: 10,
         textAlign: 'center',
+        fontFamily: PDF_FONT,
     },
     observationSection: {
         marginTop: 20,
@@ -336,6 +339,7 @@ const styles = StyleSheet.create({
         fontSize: 12,
         fontWeight: 'bold',
         marginBottom: 10,
+        fontFamily: PDF_FONT,
     },
     observationTable: {
         borderWidth: 1,
@@ -349,6 +353,7 @@ const styles = StyleSheet.create({
         fontSize: 10,
         padding: 5,
         borderColor: '#000',
+        fontFamily: PDF_FONT,
     },
     remarks: {
         width: '25%',
@@ -356,6 +361,7 @@ const styles = StyleSheet.create({
         padding: 5,
         borderColor: '#000',
         textAlign: 'center',
+        fontFamily: PDF_FONT,
     },
     footerSection: {
         marginTop: 20,
