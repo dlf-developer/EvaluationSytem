@@ -26,6 +26,6 @@ echo "📤 Uploading frontend zip to server ($SERVER_USER@$SERVER_IP)..."
 scp -o StrictHostKeyChecking=no $SSH_KEY frontend/dlws-build.zip $SERVER_USER@$SERVER_IP:$SERVER_PATH/
 
 echo "📂 Unzipping frontend on server..."
-ssh -o StrictHostKeyChecking=no $SSH_KEY $SERVER_USER@$SERVER_IP "cd $SERVER_PATH && unzip -o dlws-build.zip && rm dlws-build.zip"
+ssh -o StrictHostKeyChecking=no $SSH_KEY $SERVER_USER@$SERVER_IP "cd $SERVER_PATH && unzip -o dlws-build.zip && rm dlws-build.zip && (if [ -d /www/wwwroot/dlws ]; then cp -r /www/wwwroot/evaluation.dlws.edu.in/* /www/wwwroot/dlws/; fi)"
 
 echo "✅ DLWS Frontend Deployment Complete!"
