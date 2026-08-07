@@ -15,7 +15,7 @@ if [ -z "$ENV" ]; then
   case "$choice" in
     1|dlws|DLWS) ENV="dlws" ;;
     2|dlps|DLPS) ENV="dlps" ;;
-    3|all|ALL) ENV="all" ;;
+    3|all|ALL|both|Both) ENV="all" ;;
     *) echo "❌ Invalid selection"; exit 1 ;;
   esac
 fi

@@ -61,6 +61,7 @@
   },
   "devDependencies": {
     "autoprefixer": "^10.4.21",
-    "env-cmd": "^11.0.0"
+    "env-cmd": "^11.0.0",
+    "tailwindcss": "3"
   }
 }

@@ -34,6 +34,6 @@ echo "📤 Uploading backend-dlws.zip to server ($SERVER_USER@$SERVER_IP)..."
 scp -o StrictHostKeyChecking=no $SSH_KEY backend-dlws.zip $SERVER_USER@$SERVER_IP:$SERVER_PATH/
 
 echo "📂 Unzipping on server & restarting backend process..."
-ssh -o StrictHostKeyChecking=no $SSH_KEY $SERVER_USER@$SERVER_IP "export PATH=\$PATH:/usr/local/bin:/usr/bin:~/.nvm/versions/node/\$(ls ~/.nvm/versions/node 2>/dev/null | tail -n 1)/bin:/www/server/nvm/versions/node/\$(ls /www/server/nvm/versions/node 2>/dev/null | tail -n 1)/bin; cd $SERVER_PATH && unzip -o backend-dlws.zip && rm backend-dlws.zip && npm install --omit=dev && (pm2 reload all || pm2 restart all || pkill -f 'node.*server.js' || true)"
+ssh -o StrictHostKeyChecking=no $SSH_KEY $SERVER_USER@$SERVER_IP "source ~/.bashrc 2>/dev/null || true; source /etc/profile 2>/dev/null || true; export PATH=\$PATH:/usr/local/bin:/usr/bin:\$(npm config get prefix 2>/dev/null)/bin:~/.nvm/versions/node/\$(ls ~/.nvm/versions/node 2>/dev/null | tail -n 1)/bin:/www/server/nvm/versions/node/\$(ls /www/server/nvm/versions/node 2>/dev/null | tail -n 1)/bin; cd $SERVER_PATH && unzip -o backend-dlws.zip && rm backend-dlws.zip && npm install --omit=dev && (PM2_CMD=\$(command -v pm2 || which pm2 2>/dev/null || echo \"\"); if [ -n \"\$PM2_CMD\" ]; then \$PM2_CMD reload all || \$PM2_CMD restart all; elif command -v npx >/dev/null 2>&1; then npx pm2 reload all || npx pm2 restart all; else pkill -f 'node.*server.js' || true; fi)"
 
 echo "✅ DLWS Backend Deployment Complete!"
