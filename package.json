@@ -2,9 +2,38 @@
   "name": "evaluationsystem-root",
   "version": "1.0.0",
   "private": true,
+  "workspaces": [
+    "frontend",
+    "Backend"
+  ],
   "scripts": {
     "start": "npx concurrently \"npm run start:dev --prefix Backend\" \"npm run start --prefix frontend\"",
     "start:prod": "npx concurrently \"npm run start:prod --prefix Backend\" \"npm run build --prefix frontend && npm run production --prefix frontend\"",
+    "start:dev": "npm run start:dev --prefix frontend",
+    "start:dlps": "npm run start:dlps --prefix frontend",
+    "start:dlws": "npm run start:dlws --prefix frontend",
+    "build:dev": "npm run build:dev --prefix frontend",
+    "build:dlps": "npm run build:dlps --prefix frontend",
+    "build:dlws": "npm run build:dlws --prefix frontend",
+    "build:frontend:dev": "npm run build:dev --prefix frontend",
+    "build:frontend:dlps": "npm run build:dlps --prefix frontend",
+    "build:frontend:dlws": "npm run build:dlws --prefix frontend",
+    "zip:frontend:dlps": "npm run zip:dlps --prefix frontend",
+    "zip:frontend:dlws": "npm run zip:dlws --prefix frontend",
+    "zip:backend:dlps": "bash zip-backend-dlps.sh",
+    "zip:backend:dlws": "bash zip-backend-dlws.sh",
+    "deploy": "bash deploy.sh",
+    "deploy:dlps": "bash deploy.sh dlps",
+    "deploy:dlws": "bash deploy.sh dlws",
+    "deploy:all": "bash deploy.sh all",
+    "deploy:frontend:dlps": "bash deploy-frontend-dlps.sh",
+    "deploy:frontend:dlws": "bash deploy-frontend-dlws.sh",
+    "deploy:backend:dlps": "bash deploy-backend-dlps.sh",
+    "deploy:backend:dlws": "bash deploy-backend-dlws.sh",
+    "zip": "bash zip.sh",
+    "zip:dlps": "bash zip.sh dlps",
+    "zip:dlws": "bash zip.sh dlws",
+    "zip:all": "bash zip.sh all",
     "install:all": "npm install --prefix Backend && npm install --prefix frontend"
   }
 }

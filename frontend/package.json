@@ -36,16 +36,21 @@
     "react-scripts": "5.0.1",
     "react-toastify": "^10.0.6",
     "serve": "^14.2.4",
-    "tailwindcss": "^4.0.14",
     "web-vitals": "^2.1.4",
     "xlsx": "^0.18.5"
   },
   "scripts": {
-    "production": "PORT=3010 serve -s build",
     "start": "react-scripts start",
+    "start:dev": "env-cmd -f .env.development react-scripts start",
+    "start:dlps": "env-cmd -f .env.dlps react-scripts start",
+    "start:dlws": "env-cmd -f .env.dlws react-scripts start",
     "build": "react-scripts build",
-    "build:dev": "env-cmd -f .env.development react-scripts build",
-    "build:prod": "env-cmd -f .env.production react-scripts build",
+    "build:dev": "BROWSERSLIST_CONFIG=.browserslistrc env-cmd -f .env.development react-scripts build",
+    "build:dlps": "BROWSERSLIST_CONFIG=.browserslistrc env-cmd -f .env.dlps react-scripts build",
+    "build:dlws": "BROWSERSLIST_CONFIG=.browserslistrc env-cmd -f .env.dlws react-scripts build",
+    "zip:dlps": "npm run build:dlps && cd build && zip -r ../dlps-build.zip . && cd ..",
+    "zip:dlws": "npm run build:dlws && cd build && zip -r ../dlws-build.zip . && cd ..",
+    "production": "PORT=3011 serve -s build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
@@ -55,19 +60,9 @@
       "react-app/jest"
     ]
   },
-  "browserslist": {
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
-    ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ]
-  },
+  "postcss": {},
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.0.14",
     "autoprefixer": "^10.4.21",
     "env-cmd": "^11.0.0"
   }

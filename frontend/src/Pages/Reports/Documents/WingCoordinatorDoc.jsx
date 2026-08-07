@@ -176,17 +176,17 @@ const WingCoordinatorDoc = ({ data }) => {
         </View>
 
         {/* Monthly report */}
-        {monthlyReport.length > 0 && (
+        {monthlyReport?.length > 0 && (
           <View>
             <Text style={s.sectionHead}>Monthly Report</Text>
-            {monthlyReport.map((item, i) => (
+            {monthlyReport.filter(Boolean).map((item, i) => (
               <View key={i} style={s.qBox}>
-                <Text style={s.qLabel}>{item.question}</Text>
+                <Text style={s.qLabel}>{item.question || "—"}</Text>
                 {item.type === "text" ? (
                   <Text style={s.qAnswer}>{item.answer || "—"}</Text>
                 ) : (
                   <View style={[s.table, { marginTop: 4 }]}>
-                    {item.tableData?.length > 0 ? (
+                    {item.tableData?.filter(Boolean)?.length > 0 ? (
                       <View>
                         <View style={s.tableRow}>
                           {(item.columns || []).map((col, cIdx, arr) => (
@@ -195,17 +195,20 @@ const WingCoordinatorDoc = ({ data }) => {
                             </View>
                           ))}
                         </View>
-                        {item.tableData.map((row, rIdx, rArr) => (
+                        {item.tableData.filter(Boolean).map((row, rIdx, rArr) => (
                           <View key={rIdx} style={rIdx === rArr.length - 1 ? s.tableRowLast : s.tableRow}>
-                            {(item.columns || []).map((col, cIdx, cArr) => (
-                              <View key={cIdx} style={[s.td, cIdx === cArr.length - 1 ? { flex: 1 } : { flex: 1, borderRightWidth: 1, borderRightColor: C.border }]}>
-                                <Text>
-                                  {typeof row[`col_${cIdx}`] === "boolean"
-                                    ? (row[`col_${cIdx}`] ? "✔️" : "—")
-                                    : (row[`col_${cIdx}`] || "—")}
-                                </Text>
-                              </View>
-                            ))}
+                            {(item.columns || []).map((col, cIdx, cArr) => {
+                              const cellVal = row?.[`col_${cIdx}`];
+                              return (
+                                <View key={cIdx} style={[s.td, cIdx === cArr.length - 1 ? { flex: 1 } : { flex: 1, borderRightWidth: 1, borderRightColor: C.border }]}>
+                                  <Text>
+                                    {typeof cellVal === "boolean"
+                                      ? (cellVal ? "✔️" : "—")
+                                      : (cellVal || "—")}
+                                  </Text>
+                                </View>
+                              );
+                            })}
                           </View>
                         ))}
                       </View>

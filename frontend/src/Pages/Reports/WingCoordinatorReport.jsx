@@ -357,11 +357,11 @@ function WingCoordinatorReport() {
                         <Text fontSize="sm" color="brand.text">{item.answer || <Text as="span" color="gray.400" fontStyle="italic">No answer provided</Text>}</Text>
                       ) : (
                         <Box mt={2} overflowX="auto" bg="white" p={2} borderRadius="md" borderWidth="1px" borderColor="gray.200">
-                          {item.tableData?.length > 0 ? (
+                          {item.tableData?.filter(Boolean)?.length > 0 ? (
                             <Table
                               size="small"
                               pagination={false}
-                              dataSource={item.tableData}
+                              dataSource={item.tableData.filter(Boolean)}
                               rowKey={(_, idx) => idx}
                               columns={(item.columns || []).map((col, cIdx) => ({
                                 title: col,
