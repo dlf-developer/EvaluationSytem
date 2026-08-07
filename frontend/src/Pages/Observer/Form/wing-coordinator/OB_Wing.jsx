@@ -243,6 +243,61 @@ const FileUploadField = ({ index, form, handleInputBlur }) => {
           Supports PDF documents only (.pdf)
         </p>
       </Dragger>
+
+      {fileList.length > 0 && (
+        <VStack spacing={3} mt={4} align="stretch">
+          <Text fontSize="xs" fontWeight="700" color="gray.600">
+            PDF Document Previews:
+          </Text>
+          {fileList.map((file, fIdx) => (
+            <Box
+              key={file.uid || fIdx}
+              borderWidth="1px"
+              borderColor="gray.200"
+              borderRadius="lg"
+              bg="white"
+              overflow="hidden"
+              boxShadow="xs"
+            >
+              <Flex
+                justify="space-between"
+                align="center"
+                px={3}
+                py={2}
+                bg="gray.100"
+                borderBottomWidth="1px"
+                borderBottomColor="gray.200"
+              >
+                <Text fontSize="xs" fontWeight="600" color="gray.700" isTruncated>
+                  📄 {file.name}
+                </Text>
+                <HStack spacing={2}>
+                  <Button
+                    size="xs"
+                    colorScheme="red"
+                    variant="ghost"
+                    onClick={() => handleRemove(file)}
+                  >
+                    Remove
+                  </Button>
+                </HStack>
+              </Flex>
+              {file.url && (
+                <Box h="450px" w="100%" bg="gray.50">
+                  <iframe
+                    src={file.url}
+                    title={file.name}
+                    width="100%"
+                    height="100%"
+                    style={{ border: "none" }}
+                  />
+                </Box>
+              )}
+            </Box>
+          ))}
+        </VStack>
+      )}
+
       <Form.Item name={["monthlyReport", index, "files"]} hidden>
         <Input />
       </Form.Item>

@@ -397,19 +397,112 @@ function WingCoordinatorReport() {
                       )}
 
                       {item.files?.length > 0 && (
-                        <Box mt={3} pt={2} borderTopWidth="1px" borderTopColor="gray.200">
-                          <Text fontSize="xs" fontWeight="600" color="gray.500" mb={1.5}>
-                            Attached Files:
+                        <Box mt={4} pt={3} borderTopWidth="1px" borderTopColor="gray.200">
+                          <Text fontSize="xs" fontWeight="700" color="gray.600" mb={3}>
+                            Attached PDF Documents:
                           </Text>
-                          <HStack spacing={3} flexWrap="wrap">
+                          <VStack spacing={4} align="stretch">
                             {item.files.map((file, fIdx) => {
-                              const isImage = file.url?.startsWith("data:image/") || file.type?.startsWith("image/");
-                              return isImage ? (
-                                <Box key={fIdx} p={2} bg="white" borderRadius="md" borderWidth="1px" borderColor="gray.200" maxW="220px">
-                                  <Image src={file.url} maxH="130px" w="auto" objectFit="contain" borderRadius="sm" alt={file.name} />
-                                  <Text fontSize="10px" color="gray.600" mt={1} isTruncated title={file.name}>{file.name}</Text>
-                                </Box>
-                              ) : (
+                              const isPdf =
+                                file.type === "application/pdf" ||
+                                file.url?.startsWith("data:application/pdf") ||
+                                file.name?.toLowerCase().endsWith(".pdf");
+
+                              if (isPdf && file.url) {
+                                return (
+                                  <Box
+                                    key={fIdx}
+                                    borderRadius="xl"
+                                    overflow="hidden"
+                                    borderWidth="1px"
+                                    borderColor="gray.200"
+                                    bg="white"
+                                    boxShadow="sm"
+                                  >
+                                    <Flex
+                                      align="center"
+                                      justify="space-between"
+                                      bg="gray.50"
+                                      px={4}
+                                      py={2.5}
+                                      borderBottomWidth="1px"
+                                      borderBottomColor="gray.200"
+                                    >
+                                      <Text fontSize="xs" fontWeight="600" color="brand.text">
+                                        📄 {file.name || `Uploaded PDF Document #${fIdx + 1}`}
+                                      </Text>
+                                      <HStack spacing={2}>
+                                        <Button
+                                          size="xs"
+                                          colorScheme="teal"
+                                          onClick={() => {
+                                            const link = document.createElement("a");
+                                            link.href = file.url;
+                                            link.download = file.name || `document_${fIdx + 1}.pdf`;
+                                            link.click();
+                                          }}
+                                        >
+                                          Download PDF
+                                        </Button>
+                                        <Button
+                                          size="xs"
+                                          variant="outline"
+                                          colorScheme="blue"
+                                          onClick={() => {
+                                            const win = window.open();
+                                            if (win) {
+                                              win.document.write(
+                                                `<iframe src="${file.url}" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>`
+                                              );
+                                            }
+                                          }}
+                                        >
+                                          Open Fullscreen
+                                        </Button>
+                                      </HStack>
+                                    </Flex>
+                                    <Box position="relative" w="100%" h="600px" bg="gray.100">
+                                      <iframe
+                                        src={file.url}
+                                        title={file.name || `PDF Viewer ${fIdx + 1}`}
+                                        width="100%"
+                                        height="100%"
+                                        style={{ border: "none" }}
+                                      />
+                                    </Box>
+                                  </Box>
+                                );
+                              }
+
+                              const isImage =
+                                file.url?.startsWith("data:image/") || file.type?.startsWith("image/");
+                              if (isImage) {
+                                return (
+                                  <Box
+                                    key={fIdx}
+                                    p={3}
+                                    bg="white"
+                                    borderRadius="lg"
+                                    borderWidth="1px"
+                                    borderColor="gray.200"
+                                    maxW="350px"
+                                  >
+                                    <Image
+                                      src={file.url}
+                                      maxH="240px"
+                                      w="auto"
+                                      objectFit="contain"
+                                      borderRadius="md"
+                                      alt={file.name}
+                                    />
+                                    <Text fontSize="xs" color="gray.600" mt={2} fontWeight="500">
+                                      {file.name}
+                                    </Text>
+                                  </Box>
+                                );
+                              }
+
+                              return (
                                 <Badge
                                   key={fIdx}
                                   px={3}
@@ -421,7 +514,6 @@ function WingCoordinatorReport() {
                                   display="inline-flex"
                                   alignItems="center"
                                   gap={1}
-                                  _hover={{ bg: "teal.100" }}
                                   onClick={() => {
                                     if (file.url) {
                                       const link = document.createElement("a");
@@ -435,7 +527,7 @@ function WingCoordinatorReport() {
                                 </Badge>
                               );
                             })}
-                          </HStack>
+                          </VStack>
                         </Box>
                       )}
                     </Box>

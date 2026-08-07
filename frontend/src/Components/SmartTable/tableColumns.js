@@ -178,7 +178,7 @@ export const getFortnightlyColumns = ({
     title: "Action",
     key: "action",
     dataIndex: "action",
-    width: "280px",
+    width: "320px",
     render: (_, record) => {
       const { isTeacherComplete, isCoordinatorComplete, isObserverInitiation } =
         record;
@@ -197,10 +197,10 @@ export const getFortnightlyColumns = ({
           (currentUserRole === UserRole[2] && isTeacherComplete && !isCoordinatorComplete);
 
         return (
-          <Flex gap={1} align="center">
+          <Flex gap={2} align="center" flexWrap="nowrap">
             <Link to={`/fortnightly-monitor/report/${record._id}`}>
               <Button
-                size="md"
+                size="sm"
                 variant="outline"
                 colorScheme="blue"
                 fontWeight="medium"
@@ -213,7 +213,7 @@ export const getFortnightlyColumns = ({
             {canContinue && (
               <Link to={`/fortnightly-monitor/create/${record._id}`}>
                 <Button
-                  size="md"
+                  size="sm"
                   variant="outline"
                   colorScheme="orange"
                   fontWeight="medium"
@@ -227,7 +227,7 @@ export const getFortnightlyColumns = ({
             {canEdit && (
               <Link to={`/fortnightly-monitor/edit/${record._id}`}>
                 <Button
-                  size="md"
+                  size="sm"
                   variant="outline"
                   colorScheme="green"
                   fontWeight="medium"
@@ -238,20 +238,20 @@ export const getFortnightlyColumns = ({
               </Link>
             )}
 
-            {showReminder && <Reminder id={record?._id} />}
+            {showReminder && <Reminder id={record?._id} size="sm" />}
           </Flex>
         );
       };
 
       return (
-        <Flex gap={1} align="center">
+        <Flex gap={2} align="center" flexWrap="nowrap">
           {renderAction()}
           {currentUserRole === UserRole[1] && onDelete && (
             <Button
-              size="md"
+              size="sm"
               variant="outline"
               colorScheme="red"
-              px={2}
+              px={2.5}
               flexShrink={0}
               onClick={() => onDelete(record._id)}
               title="Delete"
@@ -419,7 +419,7 @@ export const getClassroomColumns = ({
     title: "Action",
     key: "action",
     dataIndex: "action",
-    width: "280px",
+    width: "320px",
     render: (_, record) => {
       const { isTeacherCompletes, isObserverCompleted } = record;
       const renderAction = () => {
@@ -427,7 +427,7 @@ export const getClassroomColumns = ({
           <>
             <Link to={`/classroom-walkthrough/report/${record._id}`}>
               <Button
-                size="md"
+                size="sm"
                 variant="outline"
                 colorScheme="blue"
                 fontWeight="medium"
@@ -439,7 +439,7 @@ export const getClassroomColumns = ({
             {currentUserRole === UserRole[1] && (
               <Link to={`/classroom-walkthrough/edit/${record._id}`}>
                 <Button
-                  size="md"
+                  size="sm"
                   variant="outline"
                   colorScheme="green"
                   fontWeight="medium"
@@ -452,7 +452,7 @@ export const getClassroomColumns = ({
             {currentUserRole === UserRole[2] && (!isTeacherCompletes || !isObserverCompleted) && (
               <Link to={`/classroom-walkthrough/create/${record._id}`}>
                 <Button
-                  size="md"
+                  size="sm"
                   variant="outline"
                   colorScheme="orange"
                   fontWeight="medium"
@@ -463,21 +463,21 @@ export const getClassroomColumns = ({
               </Link>
             )}
             {currentUserRole === UserRole[1] && (!isTeacherCompletes || !isObserverCompleted) && (
-              <Reminder id={record?._id} type="form2" />
+              <Reminder id={record?._id} type="form2" size="sm" />
             )}
           </>
         );
       };
 
       return (
-        <Flex gap={1} align="center">
+        <Flex gap={2} align="center" flexWrap="nowrap">
           {renderAction()}
           {currentUserRole === UserRole[1] && onDelete && (
             <Button
-              size="md"
+              size="sm"
               variant="outline"
               colorScheme="red"
-              px={2}
+              px={2.5}
               flexShrink={0}
               onClick={() => onDelete(record._id)}
               title="Delete"
@@ -676,7 +676,7 @@ export const getNotebookColumns = ({
     title: "Action",
     key: "action",
     dataIndex: "action",
-    width: "280px",
+    width: "320px",
     render: (_, record) => {
       const { isObserverComplete, isTeacherComplete, isReflation } = record;
 
@@ -686,10 +686,10 @@ export const getNotebookColumns = ({
           // Fully done (Teacher reflection submitted) → everyone sees View Report
           if (isReflation) {
             return (
-              <Flex gap={1}>
+              <Flex gap={2} align="center" flexWrap="nowrap">
                 <Link to={`/notebook-checking-proforma/report/${record._id}`}>
                   <Button
-                    size="md"
+                    size="sm"
                     variant="outline"
                     colorScheme="blue"
                     fontWeight="medium"
@@ -707,7 +707,7 @@ export const getNotebookColumns = ({
             return (
               <Link to={`/notebook-checking-proforma/complete/${record._id}`}>
                 <Button
-                  size="md"
+                  size="sm"
                   variant="solid"
                   colorScheme="orange"
                   fontWeight="medium"
@@ -721,10 +721,10 @@ export const getNotebookColumns = ({
 
           // Observer already done — show View Report
           return (
-            <Flex gap={1}>
+            <Flex gap={2} align="center" flexWrap="nowrap">
               <Link to={`/notebook-checking-proforma/report/${record._id}`}>
                 <Button
-                  size="md"
+                  size="sm"
                   variant="outline"
                   colorScheme="blue"
                   fontWeight="medium"
@@ -743,7 +743,7 @@ export const getNotebookColumns = ({
             return (
               <Link to={`/notebook-checking-proforma/create/${record._id}`}>
                 <Button
-                  size="md"
+                  size="sm"
                   variant="outline"
                   colorScheme="blue"
                   fontWeight="medium"
@@ -754,7 +754,7 @@ export const getNotebookColumns = ({
               </Link>
             );
           } else {
-            return <Reminder id={record?._id} type="form3" />;
+            return <Reminder id={record?._id} type="form3" size="sm" />;
           }
         }
 
@@ -763,7 +763,7 @@ export const getNotebookColumns = ({
           return (
             <Link to={`/notebook-checking-proforma/edit/${record._id}`}>
               <Button
-                size="md"
+                size="sm"
                 variant="outline"
                 colorScheme="blue"
                 fontWeight="medium"
@@ -775,18 +775,18 @@ export const getNotebookColumns = ({
           );
         }
 
-        return <Reminder id={record?._id} type="form3" />;
+        return <Reminder id={record?._id} type="form3" size="sm" />;
       };
 
       return (
-        <Flex gap={1} align="center">
+        <Flex gap={2} align="center" flexWrap="nowrap">
           {renderAction()}
           {currentUserRole === UserRole[1] && onDelete && (
             <Button
-              size="md"
+              size="sm"
               variant="outline"
               colorScheme="red"
-              px={2}
+              px={2.5}
               flexShrink={0}
               onClick={() => onDelete(record._id)}
               title="Delete"
@@ -880,12 +880,12 @@ export const getWeeklyColumns = ({ data = [], currentUserRole, onDelete }) => [
     title: "Action",
     key: "action",
     dataIndex: "action",
-    width: "240px",
+    width: "320px",
     render: (_, record) => (
-      <Stack direction="row" spacing={2}>
+      <Flex gap={2} align="center" flexWrap="nowrap">
         <Link to={`/weekly4form/report/${record._id}`}>
           <Button
-            size="md"
+            size="sm"
             variant="outline"
             colorScheme="blue"
             fontWeight="medium"
@@ -897,7 +897,7 @@ export const getWeeklyColumns = ({ data = [], currentUserRole, onDelete }) => [
         {!record?.isCompleted && currentUserRole === UserRole[2] && (
           <Link to={`/weekly4form/create/${record?._id}`}>
             <Button
-              size="md"
+              size="sm"
               variant="outline"
               colorScheme="orange"
               fontWeight="medium"
@@ -908,14 +908,14 @@ export const getWeeklyColumns = ({ data = [], currentUserRole, onDelete }) => [
           </Link>
         )}
         {currentUserRole === UserRole[1] && !record?.isCompleted && (
-          <Reminder id={record?._id} type="form4" />
+          <Reminder id={record?._id} type="form4" size="sm" />
         )}
         {(currentUserRole === UserRole[0] || currentUserRole === UserRole[1]) && onDelete && (
           <Button
-            size="md"
+            size="sm"
             variant="outline"
             colorScheme="red"
-            px={2}
+            px={2.5}
             flexShrink={0}
             onClick={() => onDelete(record._id)}
             title="Delete"
@@ -923,7 +923,7 @@ export const getWeeklyColumns = ({ data = [], currentUserRole, onDelete }) => [
             <DeleteFilled />
           </Button>
         )}
-      </Stack>
+      </Flex>
     ),
   },
 ];
@@ -2106,7 +2106,7 @@ export const getCoScholasticColumns = ({
     title: "Action",
     key: "action",
     dataIndex: "action",
-    width: "280px",
+    width: "320px",
     render: (_, record) => {
       const { isTeacherCompletes, isObserverCompleted } = record;
       const renderAction = () => {
@@ -2114,7 +2114,7 @@ export const getCoScholasticColumns = ({
           <>
             <Link to={`/co-scholastic/report/${record._id}`}>
               <Button
-                size="md"
+                size="sm"
                 variant="outline"
                 colorScheme="blue"
                 fontWeight="medium"
@@ -2128,7 +2128,7 @@ export const getCoScholasticColumns = ({
               (currentUserRole === "Teacher" && !isTeacherCompletes)) && (
               <Link to={`/co-scholastic/create/${record._id}`}>
                 <Button
-                  size="md"
+                  size="sm"
                   variant="outline"
                   colorScheme="orange"
                   fontWeight="medium"
@@ -2142,7 +2142,7 @@ export const getCoScholasticColumns = ({
             {(currentUserRole === "Superadmin" || currentUserRole === "Observer") && (
               <Link to={`/co-scholastic/edit/${record._id}`}>
                 <Button
-                  size="md"
+                  size="sm"
                   variant="outline"
                   colorScheme="green"
                   fontWeight="medium"
@@ -2154,21 +2154,21 @@ export const getCoScholasticColumns = ({
             )}
 
             {(!isTeacherCompletes || !isObserverCompleted) && (currentUserRole === "Superadmin" || (currentUserRole === "Observer" && isObserverCompleted)) && (
-              <Reminder id={record?._id} type="coscholastic" />
+              <Reminder id={record?._id} type="coscholastic" size="sm" />
             )}
           </>
         );
       };
 
       return (
-        <Flex gap={1} align="center">
+        <Flex gap={2} align="center" flexWrap="nowrap">
           {renderAction()}
           {(currentUserRole === "Superadmin" || currentUserRole === "Observer") && onDelete && (
             <Button
-              size="md"
+              size="sm"
               variant="outline"
               colorScheme="red"
-              px={2}
+              px={2.5}
               flexShrink={0}
               onClick={() => onDelete(record._id)}
               title="Delete"
