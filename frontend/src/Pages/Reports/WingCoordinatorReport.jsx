@@ -14,7 +14,7 @@ import {
 import Logo from "./Imgs/Logo.png";
 import LogoBanner from "./Imgs/image.png";
 import WingCoordinatorDoc from "./Documents/WingCoordinatorDoc";
-import { getAllTimes } from "../../Utils/auth";
+import { getAllTimes, getUserId } from "../../Utils/auth";
 
 // ── score helpers ─────────────────────────────────────────────────────────────
 const form1Score = (form) => {
@@ -263,6 +263,7 @@ function WingCoordinatorReport() {
   const fmt = (d) => getAllTimes(d)?.formattedDate2 ?? "—";
   const dateRange = data?.range?.length === 2 ? `${fmt(data.range[0])} – ${fmt(data.range[1])}` : "—";
   const classes = Array.isArray(data?.className) ? data.className.join(", ") : data?.className ?? "—";
+  const observerName = data?.userId?.name || getUserId()?.name || "—";
 
   const FORM_TABS = [
     { key: "form1", label: "Fortnightly Monitor",       color: "green"  },
@@ -291,7 +292,7 @@ function WingCoordinatorReport() {
             </Button>
             <Box>
               <Heading size="lg" color="brand.text">Wing Coordinator Report</Heading>
-              <Text color="gray.500" fontSize="sm">{dateRange} · {classes}</Text>
+              <Text color="gray.500" fontSize="sm">{dateRange} · {classes} · Observer: {observerName}</Text>
             </Box>
           </HStack>
           <Button
@@ -337,7 +338,8 @@ function WingCoordinatorReport() {
             {/* Meta info */}
             <Box bg="white" borderRadius="2xl" p={5} boxShadow="sm" borderWidth="1px" borderColor="gray.100" mb={6}>
               <Text fontWeight="700" color="brand.text" mb={3}>Report Details</Text>
-              <SimpleGrid columns={{ base: 2, md: 4 }} spacing={4}>
+              <SimpleGrid columns={{ base: 2, md: 5 }} spacing={4}>
+                <MetaCard label="Observer" value={observerName} />
                 <MetaCard label="Date Range" value={dateRange} />
                 <MetaCard label="Classes" value={classes} />
                 <MetaCard label="Created" value={fmt(data.createdAt)} />
@@ -363,25 +365,77 @@ function WingCoordinatorReport() {
                               pagination={false}
                               dataSource={item.tableData.filter(Boolean)}
                               rowKey={(_, idx) => idx}
-                              columns={(item.columns || []).map((col, cIdx) => ({
-                                title: col,
-                                dataIndex: `col_${cIdx}`,
-                                key: `col_${cIdx}`,
-                                render: (val) => {
-                                  if (typeof val === "boolean") {
-                                    return val ? (
-                                      <span style={{ color: "#4A6741", fontWeight: "bold", fontSize: "15px" }}>✔️</span>
-                                    ) : (
-                                      <span style={{ color: "#CBD5E0", fontSize: "15px" }}>—</span>
-                                    );
+                              columns={[
+                                {
+                                  title: "S.No.",
+                                  dataIndex: "sNo",
+                                  key: "sNo",
+                                  width: "60px",
+                                  render: (_, __, idx) => idx + 1,
+                                },
+                                ...(item.columns || []).map((col, cIdx) => ({
+                                  title: col,
+                                  dataIndex: `col_${cIdx}`,
+                                  key: `col_${cIdx}`,
+                                  render: (val) => {
+                                    if (typeof val === "boolean") {
+                                      return val ? (
+                                        <span style={{ color: "#4A6741", fontWeight: "bold", fontSize: "15px" }}>✔️</span>
+                                      ) : (
+                                        <span style={{ color: "#CBD5E0", fontSize: "15px" }}>—</span>
+                                      );
+                                    }
+                                    return val || "—";
                                   }
-                                  return val || "—";
-                                }
-                              }))}
+                                }))
+                              ]}
                             />
                           ) : (
                             <Text fontSize="sm" color="gray.400" fontStyle="italic">No table data provided</Text>
                           )}
+                        </Box>
+                      )}
+
+                      {item.files?.length > 0 && (
+                        <Box mt={3} pt={2} borderTopWidth="1px" borderTopColor="gray.200">
+                          <Text fontSize="xs" fontWeight="600" color="gray.500" mb={1.5}>
+                            Attached Files:
+                          </Text>
+                          <HStack spacing={3} flexWrap="wrap">
+                            {item.files.map((file, fIdx) => {
+                              const isImage = file.url?.startsWith("data:image/") || file.type?.startsWith("image/");
+                              return isImage ? (
+                                <Box key={fIdx} p={2} bg="white" borderRadius="md" borderWidth="1px" borderColor="gray.200" maxW="220px">
+                                  <Image src={file.url} maxH="130px" w="auto" objectFit="contain" borderRadius="sm" alt={file.name} />
+                                  <Text fontSize="10px" color="gray.600" mt={1} isTruncated title={file.name}>{file.name}</Text>
+                                </Box>
+                              ) : (
+                                <Badge
+                                  key={fIdx}
+                                  px={3}
+                                  py={1.5}
+                                  colorScheme="teal"
+                                  borderRadius="md"
+                                  cursor="pointer"
+                                  fontSize="xs"
+                                  display="inline-flex"
+                                  alignItems="center"
+                                  gap={1}
+                                  _hover={{ bg: "teal.100" }}
+                                  onClick={() => {
+                                    if (file.url) {
+                                      const link = document.createElement("a");
+                                      link.href = file.url;
+                                      link.download = file.name || `attachment_${fIdx + 1}`;
+                                      link.click();
+                                    }
+                                  }}
+                                >
+                                  📎 {file.name || `Attachment #${fIdx + 1}`}
+                                </Badge>
+                              );
+                            })}
+                          </HStack>
                         </Box>
                       )}
                     </Box>

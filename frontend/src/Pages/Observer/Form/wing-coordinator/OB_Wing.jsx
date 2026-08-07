@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Form, Checkbox, message, Input, Table } from "antd";
+import { Form, Checkbox, message, Input, Table, Upload } from "antd";
 import Fillter_Wing from "./Fillter_Wing";
 import { getAllTimes } from "../../../../Utils/auth";
 import {
@@ -32,7 +32,10 @@ import {
   ArrowLeftOutlined,
   ReloadOutlined,
   SyncOutlined,
+  InboxOutlined,
 } from "@ant-design/icons";
+
+const { Dragger } = Upload;
 
 const FORM_TITLES = [
   { key: "form1", label: "Fortnightly Monitor", color: "green" },
@@ -154,6 +157,98 @@ const ScorePill = ({ label, value }) =>
       </Badge>
     </HStack>
   ) : null;
+
+// ── File Upload Component (Drag & Drop + Select File - PDF Only) ───────────────
+const FileUploadField = ({ index, form, handleInputBlur }) => {
+  const [fileList, setFileList] = useState([]);
+
+  useEffect(() => {
+    const currentFiles = form.getFieldValue(["monthlyReport", index, "files"]) || [];
+    if (Array.isArray(currentFiles)) {
+      setFileList(currentFiles);
+    }
+  }, [form, index]);
+
+  const beforeUpload = (file) => {
+    const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+    if (!isPdf) {
+      message.error(`${file.name} is not a PDF file. Only PDF files are allowed.`);
+      return Upload.LIST_IGNORE;
+    }
+    return true;
+  };
+
+  const handleCustomUpload = async ({ file, onSuccess }) => {
+    try {
+      const base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = (error) => reject(error);
+      });
+
+      const newFileObj = {
+        uid: file.uid || Date.now().toString() + Math.random().toString(36).substring(2, 5),
+        name: file.name,
+        status: "done",
+        url: base64,
+        type: "application/pdf",
+        size: file.size,
+      };
+
+      const updatedList = [...fileList, newFileObj];
+      setFileList(updatedList);
+      form.setFieldValue(["monthlyReport", index, "files"], updatedList);
+      onSuccess("ok");
+      handleInputBlur();
+    } catch (err) {
+      message.error("Failed to upload file");
+    }
+  };
+
+  const handleRemove = (file) => {
+    const updatedList = fileList.filter((f) => f.uid !== file.uid);
+    setFileList(updatedList);
+    form.setFieldValue(["monthlyReport", index, "files"], updatedList);
+    handleInputBlur();
+  };
+
+  return (
+    <Box mt={3} p={3} bg="gray.50" borderRadius="lg" borderWidth="1px" borderColor="gray.200">
+      <Text fontSize="xs" fontWeight="600" color="gray.700" mb={2}>
+        Upload PDF Attachments (Drag & drop or select PDF file):
+      </Text>
+      <Dragger
+        accept=".pdf,application/pdf"
+        beforeUpload={beforeUpload}
+        customRequest={handleCustomUpload}
+        fileList={fileList}
+        onRemove={handleRemove}
+        multiple
+        showUploadList={true}
+        style={{
+          padding: "16px",
+          background: "#ffffff",
+          borderColor: "#CBD5E1",
+          borderRadius: "8px",
+        }}
+      >
+        <p className="ant-upload-drag-icon">
+          <InboxOutlined style={{ fontSize: "28px", color: "#4A6741" }} />
+        </p>
+        <p className="ant-upload-text" style={{ fontSize: "13px", fontWeight: "600", color: "#334155" }}>
+          Click or drag PDF files to this area to upload
+        </p>
+        <p className="ant-upload-hint" style={{ fontSize: "11px", color: "#64748B" }}>
+          Supports PDF documents only (.pdf)
+        </p>
+      </Dragger>
+      <Form.Item name={["monthlyReport", index, "files"]} hidden>
+        <Input />
+      </Form.Item>
+    </Box>
+  );
+};
 
 // ── Step Indicator ─────────────────────────────────────────────────────────────
 const StepIndicator = ({ current }) => (
@@ -579,7 +674,17 @@ function OB_Wing() {
                       {(fields, { add, remove }) => (
                         <Box minW="max-content">
                           {fields.length > 0 && (
-                            <Flex mb={2} gap={2} px={1}>
+                            <Flex mb={2} gap={2} px={1} align="center">
+                              <Text
+                                fontSize="xs"
+                                fontWeight="600"
+                                color="gray.500"
+                                w="45px"
+                                minW="45px"
+                                textAlign="center"
+                              >
+                                S.No.
+                              </Text>
                               {item.columns.map((col, i) => {
                                 const isCheckbox = col === "Ticket Raised" || col === "Resolved?";
                                 return (
@@ -599,8 +704,23 @@ function OB_Wing() {
                               <Box w="32px" />
                             </Flex>
                           )}
-                          {fields.map(({ key, name, ...restField }) => (
+                          {fields.map(({ key, name, ...restField }, rowIndex) => (
                             <Flex key={key} gap={2} mb={2} align="center">
+                              <Flex
+                                w="45px"
+                                minW="45px"
+                                h="32px"
+                                align="center"
+                                justify="center"
+                                fontSize="xs"
+                                fontWeight="600"
+                                color="gray.600"
+                                bg="gray.100"
+                                borderRadius="md"
+                                flexShrink={0}
+                              >
+                                {rowIndex + 1}
+                              </Flex>
                               {item.columns.map((col, i) => {
                                 const isCheckbox = col === "Ticket Raised" || col === "Resolved?";
                                 return (
@@ -666,6 +786,10 @@ function OB_Wing() {
                     </Form.List>
                   </Box>
                 )}
+
+                {item.allowFileUpload && (
+                  <FileUploadField index={index} form={form} handleInputBlur={handleInputBlur} />
+                )}
               </Box>
             </Flex>
           </Box>
@@ -674,7 +798,68 @@ function OB_Wing() {
     </Box>
   );
 
-  // ── Form Selection Section ──────────────────────────────────────────────────
+  // ── Form Selection Handlers ──────────────────────────────────────────────────
+  const handleSelectAllSection = (type, completedItems) => {
+    const currentSelected = selectedItems[type] || [];
+    const isAllSelected =
+      completedItems.length > 0 &&
+      completedItems.every((item) =>
+        currentSelected.some((s) => s._id === item._id)
+      );
+
+    if (isAllSelected) {
+      const completedIds = new Set(completedItems.map((i) => i._id));
+      setSelectedItems((prev) => ({
+        ...prev,
+        [type]: (prev[type] || []).filter((i) => !completedIds.has(i._id)),
+      }));
+    } else {
+      const existingIds = new Set(currentSelected.map((i) => i._id));
+      const toAdd = completedItems.filter((i) => !existingIds.has(i._id));
+      setSelectedItems((prev) => ({
+        ...prev,
+        [type]: [...(prev[type] || []), ...toAdd],
+      }));
+    }
+  };
+
+  const handleSelectAllGlobal = (allCompletedBySection) => {
+    let totalAvailable = 0;
+    let totalSelected = 0;
+
+    Object.keys(allCompletedBySection).forEach((key) => {
+      const items = allCompletedBySection[key] || [];
+      totalAvailable += items.length;
+      const currentSelected = selectedItems[key] || [];
+      totalSelected += items.filter((item) =>
+        currentSelected.some((s) => s._id === item._id)
+      ).length;
+    });
+
+    const isAllGlobalSelected =
+      totalAvailable > 0 && totalSelected === totalAvailable;
+
+    if (isAllGlobalSelected) {
+      setSelectedItems({
+        form1: [],
+        form2: [],
+        form3: [],
+        form4: [],
+        form5: [],
+      });
+    } else {
+      const newSelected = {};
+      Object.keys(allCompletedBySection).forEach((key) => {
+        const items = allCompletedBySection[key] || [];
+        const currentSelected = selectedItems[key] || [];
+        const existingIds = new Set(currentSelected.map((i) => i._id));
+        const toAdd = items.filter((i) => !existingIds.has(i._id));
+        newSelected[key] = [...currentSelected, ...toAdd];
+      });
+      setSelectedItems(newSelected);
+    }
+  };
+
   const renderFormCard = (item, type) => {
     const isChecked = selectedItems[type]?.some((i) => i._id === item._id);
     const teacherName =
@@ -788,156 +973,220 @@ function OB_Wing() {
     );
   };
 
-  const renderFormSelection = () => (
-    <Box>
-      <Box mb={6}>
-        <Heading size="md" color="brand.text" mb={1}>
-          Form Selection
-        </Heading>
-        <Text fontSize="sm" color="gray.500">
-          Search for forms by date range and class, then select the ones to
-          include.
-        </Text>
-      </Box>
+  const renderFormSelection = () => {
+    const allCompletedBySection = {};
+    let totalAvailableForms = 0;
+    let totalSelectedForms = 0;
 
-      {/* Filter card */}
-      <Box
-        bg="white"
-        borderRadius="xl"
-        borderWidth="1px"
-        borderColor="gray.100"
-        p={5}
-        mb={6}
-        boxShadow="sm"
-      >
-        <Text fontSize="sm" fontWeight="600" color="brand.text" mb={4}>
-          Search Filters
-        </Text>
-        <Fillter_Wing saveData={setFormData} data={currForm} />
-      </Box>
+    if (getFilteredDataList) {
+      (formData?.formTypes?.length > 0
+        ? FORM_TITLES.filter((f) => formData.formTypes.includes(f.key))
+        : FORM_TITLES
+      ).forEach(({ key }) => {
+        const items = getFilteredDataList?.[key] || [];
+        const completed = items.filter((item) => {
+          const isComp =
+            (item?.isCoordinatorComplete && item?.isTeacherComplete) ||
+            (item?.isObserverCompleted && item?.isTeacherCompletes) ||
+            (item?.isTeacherComplete && item?.isObserverComplete) ||
+            item?.isCompleted;
 
-      {/* Form type sections */}
-      {getFilteredDataList ? (
-        <VStack spacing={6} align="stretch">
-          {(formData?.formTypes?.length > 0
-            ? FORM_TITLES.filter((f) => formData.formTypes.includes(f.key))
-            : FORM_TITLES
-          ).map(({ key, label, color }) => {
-            const items = getFilteredDataList?.[key] || [];
-            const completed = items.filter((item) => {
-              const isComp =
-                (item?.isCoordinatorComplete && item?.isTeacherComplete) ||
-                (item?.isObserverCompleted && item?.isTeacherCompletes) ||
-                (item?.isTeacherComplete && item?.isObserverComplete) ||
-                item?.isCompleted;
+          if (!isComp) return false;
 
-              if (!isComp) return false;
+          if (formData?.observers && formData.observers.length > 0) {
+            let observerId;
+            if (key === "form1") {
+              observerId = item?.userId?._id || item?.userId;
+            } else if (key === "form2") {
+              observerId = item?.createdBy?._id || item?.createdBy;
+            } else if (key === "form3") {
+              observerId = item?.grenralDetails?.NameofObserver?._id || item?.grenralDetails?.NameofObserver || item?.createdBy?._id || item?.createdBy;
+            } else if (key === "form4") {
+              observerId = item?.isInitiated?.Observer?._id || item?.isInitiated?.Observer || item?.userId?._id || item?.userId;
+            } else if (key === "form5") {
+              observerId = item?.createdBy?._id || item?.createdBy;
+            }
 
-              if (formData?.observers && formData.observers.length > 0) {
-                let observerId;
-                if (key === "form1") {
-                  observerId = item?.userId?._id || item?.userId;
-                } else if (key === "form2") {
-                  observerId = item?.createdBy?._id || item?.createdBy;
-                } else if (key === "form3") {
-                  observerId = item?.grenralDetails?.NameofObserver?._id || item?.grenralDetails?.NameofObserver || item?.createdBy?._id || item?.createdBy;
-                } else if (key === "form4") {
-                  observerId = item?.isInitiated?.Observer?._id || item?.isInitiated?.Observer || item?.userId?._id || item?.userId;
-                } else if (key === "form5") {
-                  observerId = item?.createdBy?._id || item?.createdBy;
-                }
+            const obsIdStr = observerId?.toString();
+            return formData.observers.includes(obsIdStr);
+          }
+          return true;
+        });
 
-                const obsIdStr = observerId?.toString();
-                return formData.observers.includes(obsIdStr);
-              }
-              return true;
-            });
-            const selected = selectedItems[key]?.length || 0;
+        allCompletedBySection[key] = completed;
+        totalAvailableForms += completed.length;
 
-            return (
-              <Box key={key}>
-                <Flex align="center" justify="space-between" mb={3}>
-                  <HStack spacing={2}>
-                    <Box w={2} h={5} borderRadius="full" bg={`${color}.400`} />
-                    <Heading size="sm" color="brand.text">
-                      {label}
-                    </Heading>
-                    <Badge colorScheme={color} variant="subtle" fontSize="xs">
-                      {completed.length} available
-                    </Badge>
-                  </HStack>
-                  <HStack spacing={2}>
-                    {selected > 0 && (
-                      <Badge
-                        bg="brand.primary"
-                        color="white"
-                        borderRadius="full"
-                        px={2}
-                        fontSize="xs"
-                      >
-                        {selected} selected
-                      </Badge>
-                    )}
-                    <Button
-                      size="xs"
-                      variant="outline"
-                      borderColor="gray.200"
-                      color="gray.500"
-                      _hover={{ borderColor: "brand.primary", color: "brand.primary", bg: "brand.background" }}
-                      leftIcon={<ReloadOutlined spin={syncing[key]} />}
-                      isLoading={syncing[key]}
-                      loadingText="Syncing…"
-                      onClick={(e) => { e.stopPropagation(); handleSync(key); }}
-                      title="Re-fetch latest data for these reports"
-                    >
-                      Refresh
-                    </Button>
-                  </HStack>
-                </Flex>
+        const currentSelected = selectedItems[key] || [];
+        totalSelectedForms += completed.filter((item) =>
+          currentSelected.some((s) => s._id === item._id)
+        ).length;
+      });
+    }
 
-                {completed.length > 0 ? (
-                  <VStack spacing={2} align="stretch">
-                    {completed.map((item) => renderFormCard(item, key))}
-                  </VStack>
-                ) : (
-                  <Box
-                    bg="gray.50"
-                    borderRadius="lg"
-                    p={4}
-                    textAlign="center"
-                    borderWidth="1px"
-                    borderColor="gray.100"
-                    borderStyle="dashed"
-                  >
-                    <Text fontSize="sm" color="gray.400">
-                      No completed forms found for the selected filter.
-                    </Text>
-                  </Box>
-                )}
-              </Box>
-            );
-          })}
-        </VStack>
-      ) : (
+    const isAllGlobalSelected =
+      totalAvailableForms > 0 && totalSelectedForms === totalAvailableForms;
+
+    return (
+      <Box>
+        <Flex justify="space-between" align="center" mb={6} flexWrap="wrap" gap={4}>
+          <Box>
+            <Heading size="md" color="brand.text" mb={1}>
+              Form Selection
+            </Heading>
+            <Text fontSize="sm" color="gray.500">
+              Search for forms by date range and class, then select the ones to
+              include.
+            </Text>
+          </Box>
+
+          {totalAvailableForms > 0 && (
+            <Button
+              size="sm"
+              colorScheme={isAllGlobalSelected ? "red" : "green"}
+              variant={isAllGlobalSelected ? "outline" : "solid"}
+              bg={isAllGlobalSelected ? "transparent" : "brand.primary"}
+              color={isAllGlobalSelected ? "red.600" : "white"}
+              _hover={{ bg: isAllGlobalSelected ? "red.50" : "brand.secondary" }}
+              onClick={() => handleSelectAllGlobal(allCompletedBySection)}
+            >
+              {isAllGlobalSelected ? "Deselect All Forms" : `Select All Forms (${totalAvailableForms})`}
+            </Button>
+          )}
+        </Flex>
+
+        {/* Filter card */}
         <Box
-          bg="gray.50"
+          bg="white"
           borderRadius="xl"
-          p={10}
-          textAlign="center"
           borderWidth="1px"
           borderColor="gray.100"
-          borderStyle="dashed"
+          p={5}
+          mb={6}
+          boxShadow="sm"
         >
-          <FileTextOutlined
-            style={{ fontSize: 32, color: "#CBD5E0", marginBottom: 12 }}
-          />
-          <Text color="gray.400" fontSize="sm">
-            Apply a date range and class filter above to load available forms.
+          <Text fontSize="sm" fontWeight="600" color="brand.text" mb={4}>
+            Search Filters
           </Text>
+          <Fillter_Wing saveData={setFormData} data={currForm} />
         </Box>
-      )}
-    </Box>
-  );
+
+        {/* Form type sections */}
+        {getFilteredDataList ? (
+          <VStack spacing={6} align="stretch">
+            {(formData?.formTypes?.length > 0
+              ? FORM_TITLES.filter((f) => formData.formTypes.includes(f.key))
+              : FORM_TITLES
+            ).map(({ key, label, color }) => {
+              const completed = allCompletedBySection[key] || [];
+              const selected = selectedItems[key]?.length || 0;
+              const isSectionAllSelected =
+                completed.length > 0 &&
+                completed.every((item) =>
+                  (selectedItems[key] || []).some((s) => s._id === item._id)
+                );
+
+              return (
+                <Box key={key}>
+                  <Flex align="center" justify="space-between" mb={3}>
+                    <HStack spacing={2}>
+                      <Box w={2} h={5} borderRadius="full" bg={`${color}.400`} />
+                      <Heading size="sm" color="brand.text">
+                        {label}
+                      </Heading>
+                      <Badge colorScheme={color} variant="subtle" fontSize="xs">
+                        {completed.length} available
+                      </Badge>
+                    </HStack>
+                    <HStack spacing={2}>
+                      {completed.length > 0 && (
+                        <Button
+                          size="xs"
+                          variant="outline"
+                          colorScheme={isSectionAllSelected ? "red" : "green"}
+                          borderColor={isSectionAllSelected ? "red.200" : "green.300"}
+                          color={isSectionAllSelected ? "red.600" : "green.700"}
+                          bg={isSectionAllSelected ? "red.50" : "green.50"}
+                          _hover={{ bg: isSectionAllSelected ? "red.100" : "green.100" }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSelectAllSection(key, completed);
+                          }}
+                        >
+                          {isSectionAllSelected ? "Deselect All" : `Select All (${completed.length})`}
+                        </Button>
+                      )}
+                      {selected > 0 && (
+                        <Badge
+                          bg="brand.primary"
+                          color="white"
+                          borderRadius="full"
+                          px={2}
+                          fontSize="xs"
+                        >
+                          {selected} selected
+                        </Badge>
+                      )}
+                      <Button
+                        size="xs"
+                        variant="outline"
+                        borderColor="gray.200"
+                        color="gray.500"
+                        _hover={{ borderColor: "brand.primary", color: "brand.primary", bg: "brand.background" }}
+                        leftIcon={<ReloadOutlined spin={syncing[key]} />}
+                        isLoading={syncing[key]}
+                        loadingText="Syncing…"
+                        onClick={(e) => { e.stopPropagation(); handleSync(key); }}
+                        title="Re-fetch latest data for these reports"
+                      >
+                        Refresh
+                      </Button>
+                    </HStack>
+                  </Flex>
+
+                  {completed.length > 0 ? (
+                    <VStack spacing={2} align="stretch">
+                      {completed.map((item) => renderFormCard(item, key))}
+                    </VStack>
+                  ) : (
+                    <Box
+                      bg="gray.50"
+                      borderRadius="lg"
+                      p={4}
+                      textAlign="center"
+                      borderWidth="1px"
+                      borderColor="gray.100"
+                      borderStyle="dashed"
+                    >
+                      <Text fontSize="sm" color="gray.400">
+                        No completed forms found for the selected filter.
+                      </Text>
+                    </Box>
+                  )}
+                </Box>
+              );
+            })}
+          </VStack>
+        ) : (
+          <Box
+            bg="gray.50"
+            borderRadius="xl"
+            p={10}
+            textAlign="center"
+            borderWidth="1px"
+            borderColor="gray.100"
+            borderStyle="dashed"
+          >
+            <FileTextOutlined
+              style={{ fontSize: 32, color: "#CBD5E0", marginBottom: 12 }}
+            />
+            <Text color="gray.400" fontSize="sm">
+              Apply a date range and class filter above to load available forms.
+            </Text>
+          </Box>
+        )}
+      </Box>
+    );
+  };
 
   // ── Review & Publish Section ────────────────────────────────────────────────
   const renderReview = () => (

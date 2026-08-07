@@ -143,6 +143,7 @@ const WingCoordinatorDoc = ({ data }) => {
 
   const dateRange = range?.length === 2 ? `${fmt(range[0])} – ${fmt(range[1])}` : "—";
   const classes = Array.isArray(className) ? className.join(", ") : (className ?? "—");
+  const observerName = data?.userId?.name || "—";
 
   return (
     <Document>
@@ -151,7 +152,7 @@ const WingCoordinatorDoc = ({ data }) => {
       <Page size="A4" style={s.page}>
         <PageHeader title="Wing Coordinator Report" />
         <Text style={[s.qLabel, { textAlign: "center", marginBottom: 16 }]}>
-          {dateRange}  |  {classes}
+          {dateRange}  |  {classes}  |  Observer: {observerName}
         </Text>
 
         {/* Summary table */}
@@ -189,6 +190,9 @@ const WingCoordinatorDoc = ({ data }) => {
                     {item.tableData?.filter(Boolean)?.length > 0 ? (
                       <View>
                         <View style={s.tableRow}>
+                          <View style={[s.th, { width: 30, borderRightWidth: 1, borderRightColor: C.border }]}>
+                            <Text>S.No.</Text>
+                          </View>
                           {(item.columns || []).map((col, cIdx, arr) => (
                             <View key={cIdx} style={[s.th, cIdx === arr.length - 1 ? { flex: 1 } : { flex: 1, borderRightWidth: 1, borderRightColor: C.border }]}>
                               <Text>{col}</Text>
@@ -197,6 +201,9 @@ const WingCoordinatorDoc = ({ data }) => {
                         </View>
                         {item.tableData.filter(Boolean).map((row, rIdx, rArr) => (
                           <View key={rIdx} style={rIdx === rArr.length - 1 ? s.tableRowLast : s.tableRow}>
+                            <View style={[s.td, { width: 30, borderRightWidth: 1, borderRightColor: C.border }]}>
+                              <Text>{rIdx + 1}</Text>
+                            </View>
                             {(item.columns || []).map((col, cIdx, cArr) => {
                               const cellVal = row?.[`col_${cIdx}`];
                               return (
@@ -215,6 +222,33 @@ const WingCoordinatorDoc = ({ data }) => {
                     ) : (
                       <Text style={s.td}>No data</Text>
                     )}
+                  </View>
+                )}
+
+                {item.files?.length > 0 && (
+                  <View style={{ marginTop: 4 }}>
+                    <Text style={{ fontSize: 7, fontWeight: 600, color: C.gray, marginBottom: 2 }}>
+                      Attached Files:
+                    </Text>
+                    {item.files.map((file, fIdx) => {
+                      const isImage = file.url?.startsWith("data:image/") || file.type?.startsWith("image/");
+                      return (
+                        <View key={fIdx} style={{ marginBottom: 4 }}>
+                          {isImage ? (
+                            <View style={{ borderWidth: 1, borderColor: C.border, borderRadius: 4, padding: 3, backgroundColor: C.lightGray }}>
+                              <Image src={file.url} style={{ width: 220, height: 140, objectFit: "contain" }} />
+                              <Text style={{ fontSize: 6, color: C.gray, marginTop: 2 }}>{file.name}</Text>
+                            </View>
+                          ) : (
+                            <View style={{ backgroundColor: C.primaryLight, borderWidth: 1, borderColor: C.primary, borderRadius: 3, padding: 3 }}>
+                              <Text style={{ fontSize: 7, color: C.primary, fontWeight: 600 }}>
+                                📎 Attached File: {file.name || `Attachment #${fIdx + 1}`}
+                              </Text>
+                            </View>
+                          )}
+                        </View>
+                      );
+                    })}
                   </View>
                 )}
               </View>

@@ -99,16 +99,7 @@ const ObserverReports = () => {
         })}
       </Flex>
 
-      <Box
-        bg="white"
-        borderRadius="2xl"
-        boxShadow="sm"
-        borderWidth="1px"
-        borderColor="gray.100"
-        p={6}
-        w="100%"
-        overflowX="auto"
-      >
+      <Box w="100%">
         {currStep === 0 && <FormOneReport />}
         {currStep === 1 && <FormTwoReport />}
         {currStep === 2 && <FormThreeReport />}

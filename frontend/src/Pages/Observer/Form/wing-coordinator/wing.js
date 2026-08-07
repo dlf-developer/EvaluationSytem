@@ -3,7 +3,7 @@ export const inputsWing = [
   {
     question: "Morning Assembly Planning & Coordination",
     type: "table",
-    columns: ["Date", "Class on Duty", "Theme of the Assembly", "Highlights", "Any Issues Faced?"],
+    columns: ["Date", "Class on Duty", "Theme of the Assembly", "Highlights", "Any Reward?", "Any Issues Faced?"],
   },
   {
     question: "Anecdotal Records Updated? Any Concerns?",
@@ -17,7 +17,7 @@ export const inputsWing = [
   {
     question: "I C.A.R.E Certificates for the Month?",
     type: "table",
-    columns: ["Date", "Content"],
+    columns: ["Date", "Student Name", "Class", "Whether posted on edunext", "Content"],
   },
   {
     question: "Experiential Think Rooms / Micro Teaching Sessions Attended ",
@@ -26,12 +26,20 @@ export const inputsWing = [
   },
   {
     question: "Key Outcomes of Result Discussion?",
-    type: "text",
+    type: "table",
+    columns: [
+      "Concern subjects and class",
+      "High achiever Subjects and class",
+      "Any smilye awarded to class",
+      "Any smilye awarded to teacher",
+    ],
+    allowFileUpload: true,
   },
   {
     question: "Identified Learners on the Way (L.O.W.)",
     type: "table",
-    columns: ["Name", "Class Section", "Subject", "Remarks"],
+    columns: ["Name", "Class Section", "Subject", "Strength of child", "Action plan", "Remarks"],
+    allowFileUpload: true,
   },
   {
     question: "C.W.S.N Names & Progress",
@@ -41,23 +49,26 @@ export const inputsWing = [
       "Identified using PRASHAST Checklists (Y/N)",
       "Receiving Sensorium / Counsellor Intervention (Y/N)",
       "Diagnosis",
+      "Half yearly progress",
       "Team Meetings Conducted Offline or Online (Y/N)",
     ],
   },
   {
     question: "Parent Meetings (Online/Offline)",
     type: "table",
-    columns: ["Date", "Name of the Teacher", "Name of the Student", "Class & Section", "Reason of Meeting"],
+    columns: ["Date", "Name of the Teacher", "Name of the Student", "Class & Section", "Reason of Meeting", "Outcome of meeting"],
+    allowFileUpload: true,
   },
   {
-    question: "Detentions Arranged",
+    question: "Detention arranged/ Extra input classes",
     type: "table",
-    columns: ["Date", "Name of the MT/ST/WC", "Name of the Students", "Class & Section", "Name of the subject"],
+    columns: ["Date", "Detention/extra input class?", "Name of the MT/ST/WC", "Name of the Students", "Class & Section", "Name of the subject", "Outcome"],
   },
   {
     question: "Care Calls Made",
     type: "table",
-    columns: ["Date", "Name of the MT/ST/WC", "Name of the Student", "Class & Section", "Reason"],
+    columns: ["Date", "Name of the MT/ST/WC", "Name of the Student", "Class & Section", "Reason", "Outcome"],
+    allowFileUpload: true,
   },
   {
     question: "Reflection Forms Filled",
@@ -67,6 +78,30 @@ export const inputsWing = [
   {
     question: "Last Syllabus Completion Check Date",
     type: "text",
+  },
+  {
+    question: "Class and Subject Work Status",
+    type: "table",
+    columns: [
+      "Date",
+      "Class",
+      "Name of student",
+      "Subject",
+      "Status of work",
+      "Status of checking",
+      "Feedback/Action plan",
+    ],
+  },
+  {
+    question: "Excursions Planned",
+    type: "table",
+    columns: [
+      "Date of excursion",
+      "Class",
+      "Venue",
+      "Teachers accompany",
+      "Feedback/concerns",
+    ],
   },
   {
     question: "Hygiene Concerns (Washrooms)",

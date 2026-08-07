@@ -183,20 +183,48 @@ export const getFortnightlyColumns = ({
       const { isTeacherComplete, isCoordinatorComplete, isObserverInitiation } =
         record;
       const renderAction = () => {
-        if (isTeacherComplete && isCoordinatorComplete) {
-          return (
-            <Flex gap={1} align="center">
-              <Link to={`/fortnightly-monitor/report/${record._id}`}>
+        const canContinue =
+          (currentUserRole === UserRole[2] && !isTeacherComplete && isObserverInitiation) ||
+          (currentUserRole === UserRole[1] && isTeacherComplete && !isCoordinatorComplete);
+
+        const canEdit =
+          (currentUserRole === UserRole[2] && isTeacherComplete) ||
+          (currentUserRole === UserRole[1] && isCoordinatorComplete) ||
+          (isTeacherComplete && isCoordinatorComplete);
+
+        const showReminder =
+          (currentUserRole === UserRole[1] && !isTeacherComplete) ||
+          (currentUserRole === UserRole[2] && isTeacherComplete && !isCoordinatorComplete);
+
+        return (
+          <Flex gap={1} align="center">
+            <Link to={`/fortnightly-monitor/report/${record._id}`}>
+              <Button
+                size="md"
+                variant="outline"
+                colorScheme="blue"
+                fontWeight="medium"
+                flexShrink={0}
+              >
+                View Report
+              </Button>
+            </Link>
+
+            {canContinue && (
+              <Link to={`/fortnightly-monitor/create/${record._id}`}>
                 <Button
                   size="md"
                   variant="outline"
-                  colorScheme="blue"
+                  colorScheme="orange"
                   fontWeight="medium"
                   flexShrink={0}
                 >
-                  View Report
+                  Continue Form
                 </Button>
               </Link>
+            )}
+
+            {canEdit && (
               <Link to={`/fortnightly-monitor/edit/${record._id}`}>
                 <Button
                   size="md"
@@ -208,89 +236,11 @@ export const getFortnightlyColumns = ({
                   Edit
                 </Button>
               </Link>
-            </Flex>
-          );
-        }
-        if (
-          currentUserRole === UserRole[1] &&
-          !isTeacherComplete &&
-          !isCoordinatorComplete &&
-          !isObserverInitiation
-        )
-          return <Reminder id={record?._id} />;
+            )}
 
-        if (
-          currentUserRole === UserRole[2] &&
-          !isTeacherComplete &&
-          !isCoordinatorComplete &&
-          isObserverInitiation
-        )
-          return (
-            <Link to={`/fortnightly-monitor/create/${record._id}`}>
-              <Button
-                size="md"
-                variant="outline"
-                colorScheme="blue"
-                fontWeight="medium"
-                flexShrink={0}
-              >
-                Continue Form
-              </Button>
-            </Link>
-          );
-
-        if (
-          currentUserRole === UserRole[2] &&
-          isTeacherComplete &&
-          !isCoordinatorComplete
-        )
-          return (
-            <Flex gap={1} align="center">
-              <Reminder id={record?._id} />
-              <Link to={`/fortnightly-monitor/edit/${record._id}`}>
-                <Button
-                  size="md"
-                  variant="outline"
-                  colorScheme="green"
-                  fontWeight="medium"
-                  flexShrink={0}
-                >
-                  Edit
-                </Button>
-              </Link>
-            </Flex>
-          );
-
-        if (
-          currentUserRole === UserRole[1] &&
-          isTeacherComplete &&
-          !isCoordinatorComplete
-        )
-          return (
-            <Link to={`/fortnightly-monitor/create/${record._id}`}>
-              <Button
-                size="md"
-                variant="outline"
-                colorScheme="blue"
-                fontWeight="medium"
-                flexShrink={0}
-              >
-                Continue Form
-              </Button>
-            </Link>
-          );
-
-        if (
-          (currentUserRole === UserRole[1] &&
-            !isTeacherComplete &&
-            isObserverInitiation) ||
-          (currentUserRole === UserRole[1] &&
-            !isTeacherComplete &&
-            isCoordinatorComplete)
-        )
-          return <Reminder id={record?._id} />;
-
-        return null;
+            {showReminder && <Reminder id={record?._id} />}
+          </Flex>
+        );
       };
 
       return (
@@ -473,45 +423,9 @@ export const getClassroomColumns = ({
     render: (_, record) => {
       const { isTeacherCompletes, isObserverCompleted } = record;
       const renderAction = () => {
-        if (isTeacherCompletes && isObserverCompleted) {
-          return (
-            <>
-              <Link to={`/classroom-walkthrough/report/${record._id}`}>
-                <Button
-                  size="md"
-                  variant="outline"
-                  colorScheme="blue"
-                  fontWeight="medium"
-                  flexShrink={0}
-                >
-                  View Report
-                </Button>
-              </Link>
-              {currentUserRole === UserRole[1] && (
-                <Link to={`/classroom-walkthrough/edit/${record._id}`}>
-                  <Button
-                    size="md"
-                    variant="outline"
-                    colorScheme="green"
-                    fontWeight="medium"
-                    flexShrink={0}
-                  >
-                    Edit
-                  </Button>
-                </Link>
-              )}
-            </>
-          );
-        }
-        if (currentUserRole === UserRole[1]) {
-          return <Reminder id={record?._id} type="form2" />;
-        }
-        if (
-          currentUserRole === UserRole[2] &&
-          (!isTeacherCompletes || !isObserverCompleted)
-        ) {
-          return (
-            <Link to={`/classroom-walkthrough/create/${record._id}`}>
+        return (
+          <>
+            <Link to={`/classroom-walkthrough/report/${record._id}`}>
               <Button
                 size="md"
                 variant="outline"
@@ -519,12 +433,40 @@ export const getClassroomColumns = ({
                 fontWeight="medium"
                 flexShrink={0}
               >
-                Continue Form
+                View Report
               </Button>
             </Link>
-          );
-        }
-        return null;
+            {currentUserRole === UserRole[1] && (
+              <Link to={`/classroom-walkthrough/edit/${record._id}`}>
+                <Button
+                  size="md"
+                  variant="outline"
+                  colorScheme="green"
+                  fontWeight="medium"
+                  flexShrink={0}
+                >
+                  Edit
+                </Button>
+              </Link>
+            )}
+            {currentUserRole === UserRole[2] && (!isTeacherCompletes || !isObserverCompleted) && (
+              <Link to={`/classroom-walkthrough/create/${record._id}`}>
+                <Button
+                  size="md"
+                  variant="outline"
+                  colorScheme="orange"
+                  fontWeight="medium"
+                  flexShrink={0}
+                >
+                  Continue Form
+                </Button>
+              </Link>
+            )}
+            {currentUserRole === UserRole[1] && (!isTeacherCompletes || !isObserverCompleted) && (
+              <Reminder id={record?._id} type="form2" />
+            )}
+          </>
+        );
       };
 
       return (
@@ -941,31 +883,30 @@ export const getWeeklyColumns = ({ data = [], currentUserRole, onDelete }) => [
     width: "240px",
     render: (_, record) => (
       <Stack direction="row" spacing={2}>
-        {record?.isCompleted ? (
-          <Link to={`/weekly4form/report/${record._id}`}>
-            <Button
-              size="md"
-              variant="outline"
-              colorScheme="blue"
-              fontWeight="medium"
-              flexShrink={0}
-            >
-              View Report
-            </Button>
-          </Link>
-        ) : currentUserRole === UserRole[2] ? (
+        <Link to={`/weekly4form/report/${record._id}`}>
+          <Button
+            size="md"
+            variant="outline"
+            colorScheme="blue"
+            fontWeight="medium"
+            flexShrink={0}
+          >
+            View Report
+          </Button>
+        </Link>
+        {!record?.isCompleted && currentUserRole === UserRole[2] && (
           <Link to={`/weekly4form/create/${record?._id}`}>
             <Button
               size="md"
               variant="outline"
-              colorScheme="blue"
+              colorScheme="orange"
               fontWeight="medium"
               flexShrink={0}
             >
               Continue Form
             </Button>
           </Link>
-        ) : null}
+        )}
         {currentUserRole === UserRole[1] && !record?.isCompleted && (
           <Reminder id={record?._id} type="form4" />
         )}
@@ -2015,43 +1956,48 @@ export const getCoScholasticColumns = ({
   onDelete,
 }) => [
   {
-    title: currentUserRole === "Observer" ? "Observer Name" : "Teacher Name",
-    key: "personName",
-    dataIndex: "grenralDetails",
+    title: "Observer Name",
+    key: "observerName",
+    dataIndex: "createdBy",
     width: "160px",
     sortable: true,
-    sorter: (a, b) => {
-      const aName =
-        currentUserRole === "Observer"
-          ? a?.createdBy?.name || ""
-          : a?.grenralDetails?.NameoftheVisitingTeacher?.name || "";
-      const bName =
-        currentUserRole === "Observer"
-          ? b?.createdBy?.name || ""
-          : b?.grenralDetails?.NameoftheVisitingTeacher?.name || "";
-      return aName.localeCompare(bName);
-    },
+    sorter: (a, b) =>
+      (a?.createdBy?.name || a?.userId?.name || "").localeCompare(
+        b?.createdBy?.name || b?.userId?.name || "",
+      ),
     render: (val, record) => (
       <Text fontWeight="500" fontSize="sm">
-        {currentUserRole === "Observer"
-          ? record?.createdBy?.name
-          : val?.NameoftheVisitingTeacher?.name || "—"}
+        {val?.name || record?.userId?.name || "—"}
       </Text>
     ),
     filterConfig: {
       type: "select",
-      options: [...new Set(
-        data.map((r) =>
-          currentUserRole === "Observer"
-            ? r?.createdBy?.name
-            : r?.grenralDetails?.NameoftheVisitingTeacher?.name,
-        ).filter(Boolean)
-      )],
+      options: [...new Set(data.map((r) => r?.createdBy?.name || r?.userId?.name).filter(Boolean))],
+      matchFn: (record, vals) =>
+        vals.includes(record?.createdBy?.name || record?.userId?.name || ""),
+    },
+  },
+  {
+    title: "Teacher Name",
+    key: "teacherName",
+    dataIndex: "grenralDetails",
+    width: "160px",
+    sortable: true,
+    sorter: (a, b) => {
+      const aName = a?.grenralDetails?.NameoftheVisitingTeacher?.name || a?.teacherID?.name || (typeof a?.grenralDetails?.NameoftheVisitingTeacher === "string" ? a?.grenralDetails?.NameoftheVisitingTeacher : "");
+      const bName = b?.grenralDetails?.NameoftheVisitingTeacher?.name || b?.teacherID?.name || (typeof b?.grenralDetails?.NameoftheVisitingTeacher === "string" ? b?.grenralDetails?.NameoftheVisitingTeacher : "");
+      return aName.localeCompare(bName);
+    },
+    render: (val, record) => (
+      <Text fontSize="sm" color="gray.700">
+        {val?.NameoftheVisitingTeacher?.name || record?.teacherID?.name || (typeof val?.NameoftheVisitingTeacher === "string" ? val?.NameoftheVisitingTeacher : "—")}
+      </Text>
+    ),
+    filterConfig: {
+      type: "select",
+      options: [...new Set(data.map((r) => r?.grenralDetails?.NameoftheVisitingTeacher?.name || r?.teacherID?.name || (typeof r?.grenralDetails?.NameoftheVisitingTeacher === "string" ? r?.grenralDetails?.NameoftheVisitingTeacher : null)).filter(Boolean))],
       matchFn: (record, vals) => {
-        const name =
-          currentUserRole === "Observer"
-            ? record?.createdBy?.name
-            : record?.grenralDetails?.NameoftheVisitingTeacher?.name;
+        const name = record?.grenralDetails?.NameoftheVisitingTeacher?.name || record?.teacherID?.name || (typeof record?.grenralDetails?.NameoftheVisitingTeacher === "string" ? record?.grenralDetails?.NameoftheVisitingTeacher : "");
         return vals.includes(name || "");
       },
     },
@@ -2164,80 +2110,54 @@ export const getCoScholasticColumns = ({
     render: (_, record) => {
       const { isTeacherCompletes, isObserverCompleted } = record;
       const renderAction = () => {
-        if (isTeacherCompletes && isObserverCompleted) {
-          return (
-            <>
-              <Link to={`/co-scholastic/report/${record._id}`}>
-                <Button
-                  size="md"
-                  variant="outline"
-                  colorScheme="blue"
-                  fontWeight="medium"
-                  flexShrink={0}
-                >
-                  View Report
-                </Button>
-              </Link>
-              {(currentUserRole === "Superadmin" || currentUserRole === "Observer") && (
-                <Link to={`/co-scholastic/edit/${record._id}`}>
-                  <Button
-                    size="md"
-                    variant="outline"
-                    colorScheme="green"
-                    fontWeight="medium"
-                    flexShrink={0}
-                  >
-                    Edit
-                  </Button>
-                </Link>
-              )}
-            </>
-          );
-        }
+        return (
+          <>
+            <Link to={`/co-scholastic/report/${record._id}`}>
+              <Button
+                size="md"
+                variant="outline"
+                colorScheme="blue"
+                fontWeight="medium"
+                flexShrink={0}
+              >
+                View Report
+              </Button>
+            </Link>
 
-        if (currentUserRole === "Superadmin") {
-          return <Reminder id={record?._id} type="coscholastic" />;
-        }
-
-        if (currentUserRole === "Observer") {
-          if (!isObserverCompleted) {
-            return (
+            {((currentUserRole === "Observer" && !isObserverCompleted) ||
+              (currentUserRole === "Teacher" && !isTeacherCompletes)) && (
               <Link to={`/co-scholastic/create/${record._id}`}>
                 <Button
                   size="md"
                   variant="outline"
-                  colorScheme="blue"
+                  colorScheme="orange"
                   fontWeight="medium"
                   flexShrink={0}
                 >
                   Continue Form
                 </Button>
               </Link>
-            );
-          } else {
-            return <Reminder id={record?._id} type="coscholastic" />;
-          }
-        }
+            )}
 
-        if (currentUserRole === "Teacher") {
-          if (!isTeacherCompletes) {
-            return (
-              <Link to={`/co-scholastic/create/${record._id}`}>
+            {(currentUserRole === "Superadmin" || currentUserRole === "Observer") && (
+              <Link to={`/co-scholastic/edit/${record._id}`}>
                 <Button
                   size="md"
                   variant="outline"
-                  colorScheme="blue"
+                  colorScheme="green"
                   fontWeight="medium"
                   flexShrink={0}
                 >
-                  Continue Form
+                  Edit
                 </Button>
               </Link>
-            );
-          }
-        }
+            )}
 
-        return null;
+            {(!isTeacherCompletes || !isObserverCompleted) && (currentUserRole === "Superadmin" || (currentUserRole === "Observer" && isObserverCompleted)) && (
+              <Reminder id={record?._id} type="coscholastic" />
+            )}
+          </>
+        );
       };
 
       return (
