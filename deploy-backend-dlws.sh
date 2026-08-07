@@ -34,6 +34,6 @@ echo "📤 Uploading backend-dlws.zip to server ($SERVER_USER@$SERVER_IP)..."
 scp -o StrictHostKeyChecking=no $SSH_KEY backend-dlws.zip $SERVER_USER@$SERVER_IP:$SERVER_PATH/
 
 echo "📂 Unzipping on server & restarting backend process..."
-ssh -o StrictHostKeyChecking=no $SSH_KEY $SERVER_USER@$SERVER_IP "cd $SERVER_PATH && unzip -o backend-dlws.zip && rm backend-dlws.zip && npm install --omit=dev && (/www/server/panel/pyenv/bin/python -c \"import sys; sys.path.append('/www/server/panel/class'); import projectModel.nodeModel as nodeModel; nodeModel.main().restart_project({'name': 'DLWSBackend'})\" 2>/dev/null || /www/server/panel/pyenv/bin/python -c \"import sys; sys.path.append('/www/server/panel/class'); import projectModel.nodeModel as nodeModel; nodeModel.main().start_project({'name': 'DLWSBackend'})\" 2>/dev/null || (fuser -k 5010/tcp 2>/dev/null || true; nohup /www/server/nodejs/v22.13.0/bin/node server.js > app.log 2>&1 &))"
+ssh -o StrictHostKeyChecking=no $SSH_KEY $SERVER_USER@$SERVER_IP "cd $SERVER_PATH && unzip -o backend-dlws.zip && rm backend-dlws.zip && npm install --omit=dev"
 
 echo "✅ DLWS Backend Deployment Complete!"
