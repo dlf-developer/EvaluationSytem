@@ -34,6 +34,6 @@ echo "📤 Uploading backend-dlps.zip to server ($SERVER_USER@$SERVER_IP)..."
 scp -o StrictHostKeyChecking=no $SSH_KEY backend-dlps.zip $SERVER_USER@$SERVER_IP:$SERVER_PATH/
 
 echo "📂 Unzipping on server & restarting backend process..."
-ssh -o StrictHostKeyChecking=no $SSH_KEY $SERVER_USER@$SERVER_IP "cd $SERVER_PATH && unzip -o backend-dlps.zip && rm backend-dlps.zip && npm install --omit=dev && (fuser -k 8000/tcp 2>/dev/null || lsof -ti:8000 | xargs kill -9 2>/dev/null || true) && (NODE_EXEC=\$(ls /www/server/nodejs/v*/bin/node 2>/dev/null | tail -n 1 || echo 'node'); nohup \$NODE_EXEC server.js > app.log 2>&1 &)"
+ssh -o StrictHostKeyChecking=no $SSH_KEY $SERVER_USER@$SERVER_IP "cd $SERVER_PATH && unzip -o backend-dlps.zip && rm backend-dlps.zip && npm install --omit=dev && (/www/server/panel/pyenv/bin/python -c \"import sys; sys.path.append('/www/server/panel/class'); import projectModel.nodeModel as nodeModel; nodeModel.main().restart_project({'name': 'backend'})\" 2>/dev/null || /www/server/panel/pyenv/bin/python -c \"import sys; sys.path.append('/www/server/panel/class'); import projectModel.nodeModel as nodeModel; nodeModel.main().start_project({'name': 'backend'})\" 2>/dev/null || (fuser -k 8000/tcp 2>/dev/null || true; nohup /www/server/nodejs/v22.13.0/bin/node server.js > app.log 2>&1 &))"
 
 echo "✅ DLPS Backend Deployment Complete!"
