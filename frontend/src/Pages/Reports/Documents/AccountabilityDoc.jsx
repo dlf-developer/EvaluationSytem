@@ -7,8 +7,7 @@ import {
   StyleSheet,
   Image,
 } from "@react-pdf/renderer";
-import Logo from "../Imgs/Logo.png";
-import LogoBanner from "../Imgs/image.png";
+import { LOGO_BASE64, BANNER_BASE64 } from "../logoAssets";
 import { getAllTimes } from "../../../Utils/auth";
 import { PDF_FONT } from "../pdfFonts"; // registers NotoSansDevanagari (Hindi + Latin)
 
@@ -74,8 +73,8 @@ const fmt = (d) => getAllTimes(d)?.formattedDate2 ?? "—";
 const PageHeader = ({ title }) => (
   <View>
     <View style={s.header}>
-      <Image src={Logo} style={s.logo} />
-      <Image src={LogoBanner} style={s.logoBanner} />
+      <Image src={LOGO_BASE64} style={s.logo} />
+      <Image src={BANNER_BASE64} style={s.logoBanner} />
     </View>
     <Text style={s.reportTitle}>{title}</Text>
   </View>
@@ -164,7 +163,7 @@ const AccountabilityDoc = ({ data }) => {
             const calculatedPct = maxMarks > 0 ? parseFloat(((total / maxMarks) * 100).toFixed(2)) : 0;
 
             return (
-              <View key={idx} style={idx === arr.length - 1 ? s.tableRowLast : s.tableRow}>
+              <View key={idx} style={idx === arr.length - 1 ? s.tableRowLast : s.tableRow} wrap={false}>
                 <View style={[s.td, s.colName]}><Text>{ts.teacherName}</Text></View>
                 <View style={[s.td, s.colScore]}><Text>{ts.classroomWalkthroughAvg || 0}</Text></View>
                 <View style={[s.td, s.colScore]}><Text>{ts.notebookCheckingAvg || 0}</Text></View>
@@ -202,7 +201,7 @@ const AccountabilityDoc = ({ data }) => {
             <View style={[s.thLast, { width: "15%" }]}><Text>Smilies</Text></View>
           </View>
           {teacherScores.map((ts, idx, arr) => (
-            <View key={idx} style={idx === arr.length - 1 ? s.tableRowLast : s.tableRow}>
+            <View key={idx} style={idx === arr.length - 1 ? s.tableRowLast : s.tableRow} wrap={false}>
               <View style={[s.td, { width: "25%" }]}><Text>{ts.teacherName}</Text></View>
               <View style={[s.td, { width: "15%" }]}><Text>{ts.cpdHours ?? cpdHours ?? 0}</Text></View>
               <View style={[s.td, { width: "15%" }]}><Text>{ts.fieldTrips ?? fieldTrips ?? 0}</Text></View>
@@ -221,7 +220,7 @@ const AccountabilityDoc = ({ data }) => {
         {/* ── REMARKS ── */}
         <Text style={s.sectionHead}>Remarks</Text>
         {teacherScores.map((ts, idx) => (
-          <View key={idx} style={{ marginBottom: 6 }}>
+          <View key={idx} style={{ marginBottom: 6 }} wrap={false}>
             <Text style={s.sectionSubHead}>Teacher: {ts.teacherName}</Text>
             <View style={s.qBox}>
               <Text style={s.qLabel}>Contribution / Achievement</Text>
@@ -240,7 +239,7 @@ const AccountabilityDoc = ({ data }) => {
         )}
 
         {/* ── SIGNATURES ── */}
-        <View style={s.signatureContainer}>
+        <View style={s.signatureContainer} wrap={false}>
           <View style={s.signatureBox}>
             <View style={s.signatureLine}></View>
             <Text style={s.signatureText}>{userId?.name || "Observer"}</Text>

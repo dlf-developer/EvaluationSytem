@@ -15,8 +15,7 @@ import {
   HStack,
 } from "@chakra-ui/react";
 import ReactPDF from "@react-pdf/renderer";
-import Logo from "./Imgs/Logo.png";
-import LogoBanner from "./Imgs/image.png";
+import { LOGO_BASE64, BANNER_BASE64 } from "./logoAssets";
 import { GetNoteBookForm } from "../../redux/Form/noteBookSlice";
 import NoteBookDoc from "./Documents/NoteBookDoc";
 import { getAllTimes } from "../../Utils/auth";
@@ -171,13 +170,13 @@ function NotebookPDF() {
             borderColor="gray.200"
           >
             <Image
-              src={Logo}
+              src={LOGO_BASE64}
               w={{ base: "100px", md: "100px" }}
               h="auto"
               alt="Logo"
             />
             <Image
-              src={LogoBanner}
+              src={BANNER_BASE64}
               w={{ base: "200px", md: "400px" }}
               h="auto"
               alt="Banner"

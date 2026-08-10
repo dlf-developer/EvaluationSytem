@@ -7,8 +7,7 @@ import { GetSingleFormsOne } from "../../redux/Form/fortnightlySlice";
 import { Button, Spin, Table, Tag } from "antd";
 import { DownloadOutlined } from "@ant-design/icons";
 import { Box, Flex, Heading, Image } from "@chakra-ui/react";
-import Logo from "./Imgs/Logo.png";
-import LogoBanner from "./Imgs/image.png";
+import { LOGO_BASE64, BANNER_BASE64 } from "./logoAssets";
 import {
   questions,
   questionsOld,
@@ -125,13 +124,13 @@ function Reader() {
           borderColor="gray.100"
         >
           <Image
-            src={Logo}
+            src={LOGO_BASE64}
             w={{ base: "150px", sm: "100px" }}
             h="auto"
             alt="Logo"
           />
           <Image
-            src={LogoBanner}
+            src={BANNER_BASE64}
             w={{ base: "150px", sm: "300px" }}
             h="auto"
             alt="Logo Banner"

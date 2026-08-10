@@ -9,8 +9,7 @@ import {
   Box, Flex, Heading, Text, Image, HStack,
   SimpleGrid, Button, Divider, Table as ChakraTable, Thead, Tbody, Tr, Th, Td
 } from "@chakra-ui/react";
-import Logo from "./Imgs/Logo.png";
-import LogoBanner from "./Imgs/image.png";
+import { LOGO_BASE64, BANNER_BASE64 } from "./logoAssets";
 import AccountabilityDoc from "./Documents/AccountabilityDoc";
 import { getAllTimes } from "../../Utils/auth";
 
@@ -111,8 +110,8 @@ function AccountabilityReport() {
           <>
             {/* Logo banner */}
             <Flex justify="center" align="center" gap={6} bg="white" p={5} borderRadius="2xl" boxShadow="sm" borderWidth="1px" borderColor="gray.100" mb={6}>
-              <Image src={Logo} h="70px" w="auto" alt="Logo" />
-              <Image src={LogoBanner} h="50px" w="auto" alt="Banner" />
+              <Image src={LOGO_BASE64} h="70px" w="auto" alt="Logo" />
+              <Image src={BANNER_BASE64} h="50px" w="auto" alt="Banner" />
             </Flex>
 
             {/* Meta info */}

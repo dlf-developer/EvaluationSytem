@@ -208,20 +208,7 @@ function WingCoordinator() {
         const { isDraft, isComplete } = record;
         return (
           <Flex gap={1} align="center">
-            {isDraft && !isComplete && (
-              <Link to={`/wing-coordinator/${record._id}`}>
-                <Button
-                  size="md"
-                  variant="outline"
-                  colorScheme="blue"
-                  fontWeight="medium"
-                  flexShrink={0}
-                >
-                  Continue Form
-                </Button>
-              </Link>
-            )}
-            {!isDraft && isComplete && (
+            {isComplete ? (
               <Link to={`/wing-coordinator/report/${record._id}`}>
                 <Button
                   size="md"
@@ -231,6 +218,18 @@ function WingCoordinator() {
                   flexShrink={0}
                 >
                   View Report
+                </Button>
+              </Link>
+            ) : (
+              <Link to={`/wing-coordinator/${record._id}`}>
+                <Button
+                  size="md"
+                  variant="outline"
+                  colorScheme="blue"
+                  fontWeight="medium"
+                  flexShrink={0}
+                >
+                  Continue Form
                 </Button>
               </Link>
             )}

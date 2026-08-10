@@ -1,7 +1,6 @@
 import { Document, Image, Page, StyleSheet, Text, View } from '@react-pdf/renderer';
 import React from 'react';
-import Logo from '../Imgs/Logo.png';
-import LogoBanner from '../Imgs/image.png';
+import { LOGO_BASE64, BANNER_BASE64 } from '../logoAssets';
 import { getAllTimes } from '../../../Utils/auth';
 import { PDF_FONT } from '../pdfFonts'; // registers NotoSansDevanagari (Hindi + Latin)
 
@@ -67,8 +66,8 @@ function NoteBookDoc({ data }) {
                 <View style={styles.container}>
                     {/* Header Section */}
                     <View style={styles.headerSection}>
-                        <Image src={Logo} style={styles.logo} />
-                        <Image src={LogoBanner} style={styles.logoBanner} />
+                        <Image src={LOGO_BASE64} style={styles.logo} />
+                        <Image src={BANNER_BASE64} style={styles.logoBanner} />
                     </View>
 
                     {/* Section One */}
@@ -146,8 +145,8 @@ function NoteBookDoc({ data }) {
 
 
                 <View style={styles.headerSection}>
-                        <Image src={Logo} style={styles.logo} />
-                        <Image src={LogoBanner} style={styles.logoBanner} />
+                        <Image src={LOGO_BASE64} style={styles.logo} />
+                        <Image src={BANNER_BASE64} style={styles.logoBanner} />
                     </View>
 
                     {/* Section One */}

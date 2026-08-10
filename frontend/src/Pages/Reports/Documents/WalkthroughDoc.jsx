@@ -8,8 +8,7 @@ import {
   Image,
 } from "@react-pdf/renderer";
 
-import Logo from "../Imgs/Logo.png";
-import LogoBanner from "../Imgs/image.png";
+import { LOGO_BASE64, BANNER_BASE64 } from "../logoAssets";
 import { getAllTimes } from "../../../Utils/auth";
 import { PDF_FONT } from "../pdfFonts"; // registers NotoSansDevanagari (Hindi + Latin)
 
@@ -94,8 +93,8 @@ function WalkthroughDoc({ data }) {
       <Page size="A4" style={styles.page}>
         <View style={styles.container}>
           <View style={styles.section}>
-            <Image src={Logo} style={styles.logo} />
-            <Image src={LogoBanner} style={styles.logoBanner} />
+            <Image src={LOGO_BASE64} style={styles.logo} />
+            <Image src={BANNER_BASE64} style={styles.logoBanner} />
           </View>
 
           <View style={styles.centered}>

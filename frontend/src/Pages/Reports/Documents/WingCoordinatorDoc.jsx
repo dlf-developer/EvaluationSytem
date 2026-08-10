@@ -7,8 +7,7 @@ import {
   StyleSheet,
   Image,
 } from "@react-pdf/renderer";
-import Logo from "../Imgs/Logo.png";
-import LogoBanner from "../Imgs/image.png";
+import { LOGO_BASE64, BANNER_BASE64 } from "../logoAssets";
 import { getAllTimes } from "../../../Utils/auth";
 import { PDF_FONT } from "../pdfFonts"; // registers NotoSansDevanagari (Hindi + Latin)
 
@@ -94,8 +93,8 @@ const form3Score = (formName) => {
 const PageHeader = ({ title }) => (
   <View>
     <View style={s.header}>
-      <Image src={Logo} style={s.logo} />
-      <Image src={LogoBanner} style={s.logoBanner} />
+      <Image src={LOGO_BASE64} style={s.logo} />
+      <Image src={BANNER_BASE64} style={s.logoBanner} />
     </View>
     <Text style={s.reportTitle}>{title}</Text>
   </View>
@@ -181,7 +180,7 @@ const WingCoordinatorDoc = ({ data }) => {
           <View>
             <Text style={s.sectionHead}>Monthly Report</Text>
             {monthlyReport.filter(Boolean).map((item, i) => (
-              <View key={i} style={s.qBox}>
+              <View key={i} style={s.qBox} wrap={false}>
                 <Text style={s.qLabel}>{item.question || "—"}</Text>
                 {item.type === "text" ? (
                   <Text style={s.qAnswer}>{item.answer || "—"}</Text>
@@ -200,7 +199,7 @@ const WingCoordinatorDoc = ({ data }) => {
                           ))}
                         </View>
                         {item.tableData.filter(Boolean).map((row, rIdx, rArr) => (
-                          <View key={rIdx} style={rIdx === rArr.length - 1 ? s.tableRowLast : s.tableRow}>
+                          <View key={rIdx} style={rIdx === rArr.length - 1 ? s.tableRowLast : s.tableRow} wrap={false}>
                             <View style={[s.td, { width: 30, borderRightWidth: 1, borderRightColor: C.border }]}>
                               <Text>{rIdx + 1}</Text>
                             </View>
@@ -265,7 +264,7 @@ const WingCoordinatorDoc = ({ data }) => {
             const tScore = form1Score(item.teacherForm);
             const oScore = form1Score(item.observerForm);
             return (
-              <View key={`f1-${idx}`} style={s.recordBox}>
+              <View key={`f1-${idx}`} style={s.recordBox} wrap={false}>
                 <Text style={s.sectionHead}>Record {idx + 1}</Text>
                 <View style={s.metaGrid}>
                   <MetaRow label="Teacher" value={item.teacherID?.name} />
@@ -288,7 +287,7 @@ const WingCoordinatorDoc = ({ data }) => {
         <Page size="A4" style={s.page}>
           <PageHeader title="Classroom Walkthrough" />
           {form2.map((item, idx) => (
-            <View key={`f2-${idx}`} style={s.recordBox}>
+            <View key={`f2-${idx}`} style={s.recordBox} wrap={false}>
               <Text style={s.sectionHead}>Record {idx + 1}</Text>
               <View style={s.metaGrid}>
                 <MetaRow label="Teacher" value={item.grenralDetails?.NameoftheVisitingTeacher?.name} />
@@ -304,7 +303,7 @@ const WingCoordinatorDoc = ({ data }) => {
                 <View>
                   <Text style={s.sectionSubHead}>Observer Feedback</Text>
                   {item.ObserverFeedback.map((f, fi) => (
-                    <View key={fi} style={s.qBox}>
+                    <View key={fi} style={s.qBox} wrap={false}>
                       <Text style={s.qLabel}>{f.question}</Text>
                       <Text style={s.qAnswer}>{f.answer}</Text>
                     </View>
@@ -315,7 +314,7 @@ const WingCoordinatorDoc = ({ data }) => {
                 <View>
                   <Text style={s.sectionSubHead}>Teacher Feedback</Text>
                   {item.TeacherFeedback.map((f, fi) => (
-                    <View key={fi} style={s.qBox}>
+                    <View key={fi} style={s.qBox} wrap={false}>
                       <Text style={s.qLabel}>{f.question}</Text>
                       <Text style={s.qAnswer}>{f.answer}</Text>
                     </View>
@@ -335,7 +334,7 @@ const WingCoordinatorDoc = ({ data }) => {
             const tScore = form3Score(item.TeacherForm);
             const oScore = form3Score(item.ObserverForm);
             return (
-              <View key={`f3-${idx}`} style={s.recordBox}>
+              <View key={`f3-${idx}`} style={s.recordBox} wrap={false}>
                 <Text style={s.sectionHead}>Record {idx + 1}</Text>
                 <View style={s.metaGrid}>
                   <MetaRow label="Teacher" value={item.teacherID?.name ?? item.createdBy?.name} />
@@ -375,7 +374,7 @@ const WingCoordinatorDoc = ({ data }) => {
         <Page size="A4" style={s.page}>
           <PageHeader title="Co-Scholastic Classroom Observation" />
           {form5.map((item, idx) => (
-            <View key={`f5-${idx}`} style={s.recordBox}>
+            <View key={`f5-${idx}`} style={s.recordBox} wrap={false}>
               <Text style={s.sectionHead}>Record {idx + 1}</Text>
               <View style={s.metaGrid}>
                 <MetaRow label="Teacher" value={item.grenralDetails?.NameoftheVisitingTeacher?.name ?? item.createdBy?.name} />
@@ -403,7 +402,7 @@ const WingCoordinatorDoc = ({ data }) => {
               <View style={[s.th, s.col50Last]}><Text>Date</Text></View>
             </View>
             {form4.map((f, i) => (
-              <View key={i} style={i === form4.length - 1 ? s.tableRowLast : s.tableRow}>
+              <View key={i} style={i === form4.length - 1 ? s.tableRowLast : s.tableRow} wrap={false}>
                 <View style={[s.td, s.col50]}><Text>{f.teacherId?.name ?? f.userId?.name ?? "—"}</Text></View>
                 <View style={[s.td, s.col50Last]}><Text>{fmt(f.createdAt)}</Text></View>
               </View>
