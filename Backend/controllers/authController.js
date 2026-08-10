@@ -241,70 +241,118 @@ const getFillterForms = async (req, res) => {
         const userId = req.user.id;
         const { range, className, observers } = req.body;
 
-        if (!range || range.length !== 2 || !Array.isArray(className) || className.length === 0) {
-            return res.status(400).json({ message: "Invalid request parameters" });
+        if (!range || !Array.isArray(range) || range.length !== 2 || !range[0] || !range[1] || !Array.isArray(className) || className.length === 0) {
+            return res.status(400).json({ message: "Invalid request parameters. Date range and Class are required." });
         }
 
         const [fromDate, toDate] = range;
 
-        // Convert to Date objects
+        // Convert to Date objects and handle full-day range boundaries
         const from = new Date(fromDate);
-        const to = new Date(toDate);
-        to.setHours(23, 59, 59, 999); // Ensure we include the entire 'to' day
+        let to = new Date(toDate);
 
-        // Observer filter logic
-        const observerFilter1 = observers && observers.length > 0 ? { $or: [{ coordinatorID: { $in: observers } }, { userId: { $in: observers } }] } : {};
+        if (isNaN(from.getTime()) || isNaN(to.getTime())) {
+            return res.status(400).json({ message: "Invalid date range parameters." });
+        }
+
+        console.log("=== getFillterForms called ===");
+        console.log("Input range:", range);
+        console.log("Parsed from:", from.toISOString(), "to:", to.toISOString());
+        console.log("className:", className);
+
+        // Ensure 'to' date covers up to 23:59:59.999
+        to.setHours(23, 59, 59, 999);
+        const toUTC = new Date(to);
+        toUTC.setUTCHours(23, 59, 59, 999);
+        if (toUTC > to) to = toUTC;
+
+        // Date filter helper:
+        // Prioritize primary date field when it exists and is non-null.
+        // Fall back to createdAt ONLY if primary date field is null or missing.
+        const makeDateFilter = (field) => ({
+            $or: [
+                { [field]: { $gte: from, $lte: to } },
+                {
+                    $and: [
+                        { $or: [{ [field]: null }, { [field]: { $exists: false } }] },
+                        { createdAt: { $gte: from, $lte: to } }
+                    ]
+                }
+            ]
+        });
+
+        // Observer filter logic (strictly checking Observer fields)
+        const observerFilter1 = observers && observers.length > 0 ? { $or: [{ coordinatorID: { $in: observers } }, { isObserverInitiation: true, userId: { $in: observers } }] } : {};
         const observerFilter2 = observers && observers.length > 0 ? { createdBy: { $in: observers } } : {};
         const observerFilter3 = observers && observers.length > 0 ? { $or: [{ 'grenralDetails.NameofObserver': { $in: observers } }, { createdBy: { $in: observers } }] } : {};
-        const observerFilter4 = observers && observers.length > 0 ? { $or: [{ "isInitiated.Observer": { $in: observers } }] } : {};
+        const observerFilter4 = observers && observers.length > 0 ? { $or: [{ "isInitiated.Observer": { $in: observers } }, { coordinatorID: { $in: observers } }] } : {};
         const observerFilter5 = observers && observers.length > 0 ? { createdBy: { $in: observers } } : {};
 
         // Fetch filtered forms
         const form1 = await Form1.find({
             className: { $in: className },
-            createdAt: { $gte: from, $lte: to },
+            ...makeDateFilter("date"),
             isTeacherComplete: true,
             isCoordinatorComplete: true,
             ...observerFilter1
-        }).populate("userId teacherID", "-password -mobile -employeeId");
+        }).populate("userId teacherID coordinatorID", "-password -mobile -employeeId");
 
         const form2 = await Form2.find({
             "grenralDetails.className": { $in: className },
-            createdAt: { $gte: from, $lte: to },
+            ...makeDateFilter("grenralDetails.DateOfObservation"),
             isTeacherCompletes: true,
             isObserverCompleted: true,
             ...observerFilter2
-        }).populate("grenralDetails.NameoftheVisitingTeacher createdBy", "-password -mobile -employeeId");
+        }).populate("grenralDetails.NameoftheVisitingTeacher createdBy teacherID", "-password -mobile -employeeId");
 
         const form3 = await Form3.find({
             "grenralDetails.className": { $in: className },
-            createdAt: { $gte: from, $lte: to },
+            ...makeDateFilter("grenralDetails.DateOfObservation"),
             isTeacherComplete: true,
             isObserverComplete: true,
             // isReflation: true,
             ...observerFilter3
-        }).populate("teacherID createdBy", "-password -mobile -employeeId");
+        }).populate("teacherID createdBy grenralDetails.NameofObserver", "-password -mobile -employeeId");
 
         const form4 = await Weekly4Form.find({
-            createdAt: { $gte: from, $lte: to },
+            ...makeDateFilter("date"),
             isCompleted: true,
             ...observerFilter4
-        }).populate("teacherId userId", "-password -mobile -employeeId");
+        }).populate("teacherId userId coordinatorID isInitiated.Observer", "-password -mobile -employeeId");
 
         const form5 = await CoScholastic.find({
             "grenralDetails.className": { $in: className },
-            createdAt: { $gte: from, $lte: to },
+            ...makeDateFilter("grenralDetails.DateOfObservation"),
             isTeacherCompletes: true,
             isObserverCompleted: true,
             ...observerFilter5
-        }).populate("grenralDetails.NameoftheVisitingTeacher createdBy", "-password -mobile -employeeId");
+        }).populate("grenralDetails.NameoftheVisitingTeacher createdBy teacherID", "-password -mobile -employeeId");
+
+        // Strict post-filter in memory to guarantee zero dates outside [from, to] slip through
+        const filterByDateRange = (list, getDateFn) => {
+            return list.filter((item) => {
+                const targetDate = getDateFn(item) || item?.createdAt;
+                if (!targetDate) return false;
+                const d = new Date(targetDate);
+                if (isNaN(d.getTime())) return false;
+                return d >= from && d <= to;
+            });
+        };
+
+        const finalForm1 = filterByDateRange(form1, (i) => i.date);
+        const finalForm2 = filterByDateRange(form2, (i) => i.grenralDetails?.DateOfObservation);
+        const finalForm3 = filterByDateRange(form3, (i) => i.grenralDetails?.DateOfObservation);
+        const finalForm4 = filterByDateRange(form4, (i) => i.date);
+        const finalForm5 = filterByDateRange(form5, (i) => i.grenralDetails?.DateOfObservation);
+
+        console.log(`Final Filtered Results: form1=${finalForm1.length}, form2=${finalForm2.length}, form3=${finalForm3.length}, form4=${finalForm4.length}, form5=${finalForm5.length}`);
 
         res.json({
-            form1,
-            form2,
-            form3,
-            form4,
-            form5
+            form1: finalForm1,
+            form2: finalForm2,
+            form3: finalForm3,
+            form4: finalForm4,
+            form5: finalForm5
         });
 
     } catch (error) {

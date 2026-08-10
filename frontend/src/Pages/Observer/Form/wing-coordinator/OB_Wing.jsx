@@ -648,7 +648,8 @@ function OB_Wing() {
               borderColor: "#E2E8F0",
               fontSize: 14,
               resize: "none",
-              overflow: "hidden",
+              overflowX: "hidden",
+              overflowY: "hidden",
               transition: "height 0.15s ease",
             }}
           />
@@ -718,7 +719,8 @@ function OB_Wing() {
                         fontSize: 14,
                         padding: "8px 12px",
                         resize: "none",
-                        overflow: "hidden",
+                        overflowX: "hidden",
+                        overflowY: "hidden",
                         transition: "height 0.15s ease",
                       }}
                     />
@@ -813,7 +815,8 @@ function OB_Wing() {
                                         style={{
                                           fontSize: 13,
                                           resize: "none",
-                                          overflow: "hidden",
+                                          overflowX: "hidden",
+                                          overflowY: "hidden",
                                           transition: "height 0.15s ease",
                                         }}
                                       />
@@ -1006,7 +1009,13 @@ function OB_Wing() {
                     ·
                   </Text>
                   <Text fontSize="xs" color="gray.500">
-                    {getAllTimes(item?.createdAt)?.formattedDate2}
+                    {
+                      getAllTimes(
+                        type === "form1" || type === "form4"
+                          ? (item?.date || item?.createdAt)
+                          : (item?.grenralDetails?.DateOfObservation || item?.createdAt)
+                      )?.formattedDate2
+                    }
                   </Text>
                 </HStack>
               </Box>
@@ -1049,21 +1058,25 @@ function OB_Wing() {
           if (!isComp) return false;
 
           if (formData?.observers && formData.observers.length > 0) {
-            let observerId;
+            const possibleObserverIds = [];
+
             if (key === "form1") {
-              observerId = item?.userId?._id || item?.userId;
+              if (item?.coordinatorID) possibleObserverIds.push(item?.coordinatorID?._id || item?.coordinatorID);
+              if (item?.isObserverInitiation && item?.userId) possibleObserverIds.push(item?.userId?._id || item?.userId);
             } else if (key === "form2") {
-              observerId = item?.createdBy?._id || item?.createdBy;
+              if (item?.createdBy) possibleObserverIds.push(item?.createdBy?._id || item?.createdBy);
             } else if (key === "form3") {
-              observerId = item?.grenralDetails?.NameofObserver?._id || item?.grenralDetails?.NameofObserver || item?.createdBy?._id || item?.createdBy;
+              if (item?.grenralDetails?.NameofObserver) possibleObserverIds.push(item?.grenralDetails?.NameofObserver?._id || item?.grenralDetails?.NameofObserver);
+              if (item?.createdBy) possibleObserverIds.push(item?.createdBy?._id || item?.createdBy);
             } else if (key === "form4") {
-              observerId = item?.isInitiated?.Observer?._id || item?.isInitiated?.Observer || item?.userId?._id || item?.userId;
+              if (item?.isInitiated?.Observer) possibleObserverIds.push(item?.isInitiated?.Observer?._id || item?.isInitiated?.Observer);
+              if (item?.coordinatorID) possibleObserverIds.push(item?.coordinatorID?._id || item?.coordinatorID);
             } else if (key === "form5") {
-              observerId = item?.createdBy?._id || item?.createdBy;
+              if (item?.createdBy) possibleObserverIds.push(item?.createdBy?._id || item?.createdBy);
             }
 
-            const obsIdStr = observerId?.toString();
-            return formData.observers.includes(obsIdStr);
+            const obsIdStrs = possibleObserverIds.map((id) => id?.toString()).filter(Boolean);
+            return obsIdStrs.some((idStr) => formData.observers.includes(idStr));
           }
           return true;
         });

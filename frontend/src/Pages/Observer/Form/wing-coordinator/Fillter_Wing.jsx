@@ -42,17 +42,18 @@ function Fillter_Wing({ saveData, data }) {
 
     useEffect(() => {
         if (data && !didAutoFetch.current) {
+            const hasValidRange = Array.isArray(data?.range) && data.range.length === 2 && data?.range[0] && data?.range[1];
             form.setFieldsValue({
-                range: data?.range ? [dayjs(data.range[0]), dayjs(data.range[1])] : [],
+                range: hasValidRange ? [dayjs(data.range[0]), dayjs(data.range[1])] : [],
                 className: data?.className || [],
                 formTypes: data?.formTypes || ['form1', 'form2', 'form3', 'form4', 'form5'],
                 observers: data?.observers || [],
             });
 
-            if (data?.className) {
+            if (data?.className?.length > 0 && hasValidRange) {
                 const payload = {
-                    range: data?.range,
-                    className: data?.className,
+                    range: data.range,
+                    className: data.className,
                     formTypes: data?.formTypes || ['form1', 'form2', 'form3', 'form4', 'form5'],
                     observers: data?.observers || [],
                 };
@@ -64,7 +65,24 @@ function Fillter_Wing({ saveData, data }) {
 
     const onFinish = async (values) => {
         saveData(values);
-        await dispatch(getFilteredData(values));
+        if (!values?.range || !Array.isArray(values.range) || values.range.length !== 2 || !values.range[0] || !values.range[1]) {
+            message.warning("Please select a valid Date Range before searching.");
+            return;
+        }
+        const d1 = dayjs(values.range[0]);
+        const d2 = dayjs(values.range[1]);
+        if (!d1.isValid() || !d2.isValid()) {
+            message.warning("Invalid Date Range selected.");
+            return;
+        }
+        const formattedValues = {
+            ...values,
+            range: [
+                d1.startOf('day').toISOString(),
+                d2.endOf('day').toISOString()
+            ]
+        };
+        await dispatch(getFilteredData(formattedValues));
     };
 
     const handleClear = () => {
