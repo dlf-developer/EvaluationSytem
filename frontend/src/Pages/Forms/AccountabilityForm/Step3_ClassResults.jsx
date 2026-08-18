@@ -248,7 +248,8 @@ function Step3_ClassResults({ form, formValues, id }) {
                     shouldUpdate={(prev, curr) => {
                       const p = prev.teacherScores?.[index] || {};
                       const c = curr.teacherScores?.[index] || {};
-                      return p.daSec1 !== c.daSec1 || p.daSec2 !== c.daSec2
+                      return p.daSec1High !== c.daSec1High || p.daSec1Low !== c.daSec1Low
+                          || p.daSec2High !== c.daSec2High || p.daSec2Low !== c.daSec2Low
                           || p.daSec1_na !== c.daSec1_na || p.daSec2_na !== c.daSec2_na;
                     }}
                     noStyle
@@ -257,10 +258,30 @@ function Step3_ClassResults({ form, formValues, id }) {
                       const s = getFieldValue(["teacherScores", index]) || {};
                       let sum = 0;
                       let count = 0;
-                      if (!s.daSec1_na && s.daSec1 !== undefined) { sum += s.daSec1; count++; }
-                      if (!s.daSec2_na && s.daSec2 !== undefined) { sum += s.daSec2; count++; }
+
+                      if (!s.daSec1_na) {
+                        if (s.daSec1High !== undefined && s.daSec1High !== null && s.daSec1High !== "") {
+                          const val = parseFloat(s.daSec1High);
+                          if (!isNaN(val)) { sum += val; count++; }
+                        }
+                        if (s.daSec1Low !== undefined && s.daSec1Low !== null && s.daSec1Low !== "") {
+                          const val = parseFloat(s.daSec1Low);
+                          if (!isNaN(val)) { sum += val; count++; }
+                        }
+                      }
+
+                      if (!s.daSec2_na) {
+                        if (s.daSec2High !== undefined && s.daSec2High !== null && s.daSec2High !== "") {
+                          const val = parseFloat(s.daSec2High);
+                          if (!isNaN(val)) { sum += val; count++; }
+                        }
+                        if (s.daSec2Low !== undefined && s.daSec2Low !== null && s.daSec2Low !== "") {
+                          const val = parseFloat(s.daSec2Low);
+                          if (!isNaN(val)) { sum += val; count++; }
+                        }
+                      }
                       
-                      const daAvg = count > 0 ? ((sum / count) * 2).toFixed(2) : "0.00";
+                      const daAvg = count > 0 ? (sum / count).toFixed(2) : "0.00";
                       setTimeout(() => form.setFieldValue(["teacherScores", index, "daAverage"], parseFloat(daAvg)), 0);
                       return (
                         <Box p={3} bg="blue.50" borderRadius="md" borderLeft="4px solid" borderColor="blue.400">

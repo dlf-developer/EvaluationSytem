@@ -57,41 +57,85 @@ function Weekly4FormReport() {
       title: "Answer",
       dataIndex: "answer",
       key: "answer",
-      render: (answer, record) =>
-        record?.sections ? (
-          <>
-            {record?.sections?.map((item) => (
-              <Tag color={item?.answer === "Yes" ? "green" : "red"}>
-                {item?.answer}
-              </Tag>
-            ))}
-          </>
-        ) : (
-          <Tag color={answer === "Yes" ? "green" : "red"}>{answer}</Tag>
-        ),
+      render: (answer, record) => {
+        if (record?.lowStudents && Array.isArray(record.lowStudents) && record.lowStudents.length > 0) {
+          return <Tag color="blue">{record.lowStudents.length} Student(s)</Tag>;
+        }
+        if (record?.sections) {
+          return (
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              {record?.sections?.map((item, i) => (
+                <Tag key={i} color={item?.answer === "Yes" ? "green" : item?.answer === "N/A" ? "default" : "red"}>
+                  {item?.answer}
+                </Tag>
+              ))}
+            </div>
+          );
+        }
+        if (!answer) return <Tag color="yellow">N/A</Tag>;
+        return (
+          <Tag color={answer === "Yes" ? "green" : answer === "N/A" ? "default" : "red"}>
+            {answer}
+          </Tag>
+        );
+      },
     },
     {
       title: "Class Name",
       dataIndex: "section",
       key: "section",
-      render: (classId, record) =>
-        record?.sections ? (
-          <>
-            {record?.sections?.map((item) => (
-              <p className="text-nowrap">
-                {item?.className} / {item?.section}
-              </p>
-            ))}
-          </>
-        ) : (
-          <Text>{classId}</Text>
-        ),
+      render: (classId, record) => {
+        if (record?.lowStudents && Array.isArray(record.lowStudents) && record.lowStudents.length > 0) {
+          return (
+            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              {record.lowStudents.map((item, i) => (
+                <p key={i} className="text-nowrap" style={{ margin: 0 }}>
+                  {item?.classSection || "N/A"}
+                </p>
+              ))}
+            </div>
+          );
+        }
+        if (record?.sections) {
+          return (
+            <>
+              {record?.sections?.map((item, i) => (
+                <p key={i} className="text-nowrap" style={{ margin: 0 }}>
+                  {item?.className ? `${item.className} / ` : ""}{item?.section}
+                </p>
+              ))}
+            </>
+          );
+        }
+        return <Text>{classId || "N/A"}</Text>;
+      },
     },
     {
-      title: "Additional Info",
+      title: "Additional Info / Student Details",
       dataIndex: "textArea",
       key: "textArea",
-      render: (text) => <span>{text || <Tag color="yellow">N/A</Tag>}</span>,
+      render: (text, record) => {
+        if (record?.lowStudents && Array.isArray(record.lowStudents) && record.lowStudents.length > 0) {
+          return (
+            <div style={{ overflowX: "auto" }}>
+              <Table
+                size="small"
+                pagination={false}
+                bordered
+                dataSource={record.lowStudents}
+                rowKey={(r, i) => i}
+                columns={[
+                  { title: "Student Name", dataIndex: "name", key: "name" },
+                  { title: "Class & Sec", dataIndex: "classSection", key: "classSection" },
+                  { title: "Subject", dataIndex: "subject", key: "subject" },
+                  { title: "Remarks", dataIndex: "remarks", key: "remarks" },
+                ]}
+              />
+            </div>
+          );
+        }
+        return <span>{text || <Tag color="yellow">N/A</Tag>}</span>;
+      },
     },
   ];
 
