@@ -44,7 +44,7 @@ exports.createForm = async (req, res) => {
 
     const classData = await ClassDetails.findOne({ _id: className });
     if (!classData) {
-      res
+      return res
         .status(400)
         .json({ success: false, message: " Class and Section is Required!" });
     }

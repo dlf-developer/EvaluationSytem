@@ -255,11 +255,6 @@ const getFillterForms = async (req, res) => {
             return res.status(400).json({ message: "Invalid date range parameters." });
         }
 
-        console.log("=== getFillterForms called ===");
-        console.log("Input range:", range);
-        console.log("Parsed from:", from.toISOString(), "to:", to.toISOString());
-        console.log("className:", className);
-
         // Ensure 'to' date covers up to 23:59:59.999
         to.setHours(23, 59, 59, 999);
         const toUTC = new Date(to);
@@ -344,8 +339,6 @@ const getFillterForms = async (req, res) => {
         const finalForm3 = filterByDateRange(form3, (i) => i.grenralDetails?.DateOfObservation);
         const finalForm4 = filterByDateRange(form4, (i) => i.date);
         const finalForm5 = filterByDateRange(form5, (i) => i.grenralDetails?.DateOfObservation);
-
-        console.log(`Final Filtered Results: form1=${finalForm1.length}, form2=${finalForm2.length}, form3=${finalForm3.length}, form4=${finalForm4.length}, form5=${finalForm5.length}`);
 
         res.json({
             form1: finalForm1,

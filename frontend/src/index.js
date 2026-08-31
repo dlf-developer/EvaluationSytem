@@ -12,37 +12,45 @@ import "./index.css";
 import "./output.css";
 import "react-loading-skeleton/dist/skeleton.css";
 import App from "./App";
+import ErrorBoundary from "./Components/ErrorBoundary";
+import { initFrontendLogger } from "./Utils/logger";
+
+// Initialize global frontend runtime error logging & console traps
+initFrontendLogger();
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
   <React.StrictMode>
-    <Provider store={store}>
-      <BrowserRouter>
-        <ChakraProvider theme={theme} resetCSS={false}>
-          <ConfigProvider
-            theme={{
-              components: {
-                Modal: {
-                  titleFontSize: 25,
+    <ErrorBoundary>
+      <Provider store={store}>
+        <BrowserRouter>
+          <ChakraProvider theme={theme} resetCSS={false}>
+            <ConfigProvider
+              theme={{
+                components: {
+                  Modal: {
+                    titleFontSize: 25,
+                  },
+                  Input: {
+                    activeBorderColor: "#1677ff",
+                    hoverBorderColor: "#4f6f52",
+                    activeShadow: "#4f6f52",
+                  },
+                  Button: {
+                    // colorPrimary: "linear-gradient(135deg, #6253e1, #04befe)",
+                    border: "none",
+                  },
                 },
-                Input: {
-                  activeBorderColor: "#1677ff",
-                  hoverBorderColor: "#4f6f52",
-                  activeShadow: "#4f6f52",
-                },
-                Button: {
-                  // colorPrimary: "linear-gradient(135deg, #6253e1, #04befe)",
-                  border: "none",
-                },
-              },
-            }}
-          >
-            <App />
-          </ConfigProvider>
-        </ChakraProvider>
-      </BrowserRouter>
-    </Provider>
+              }}
+            >
+              <App />
+            </ConfigProvider>
+          </ChakraProvider>
+        </BrowserRouter>
+      </Provider>
+    </ErrorBoundary>
   </React.StrictMode>,
 );
 
 reportWebVitals();
+

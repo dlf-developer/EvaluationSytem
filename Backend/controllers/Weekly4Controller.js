@@ -57,7 +57,7 @@ exports.createWeekly4Form = async (req, res) => {
     };
 
     // Step 6: Process observers and create forms
-    if (payload?.isInitiated?.Observer?.length) {
+    if (Array.isArray(payload?.isInitiated?.Observer) && payload.isInitiated.Observer.length) {
       for (const observer of payload.isInitiated.Observer) {
         const observerPayload = {
           ...payload,
@@ -161,7 +161,7 @@ const createNonInitiatedForm = async (Payload, res) => {
     const teacher = await User.findById(Payload?.teacherId);
     const UserName = await User.findById(Payload?.isInitiated?.Observer);
     if (!UserName) {
-      res.status(404).send({ message: "Observer Not Exist!" });
+      return res.status(404).json({ success: false, message: "Observer Not Exist!" });
     }
     const newForm = new Weekly4Form(Payload);
     const savedForm = await newForm.save();
@@ -183,9 +183,13 @@ const createNonInitiatedForm = async (Payload, res) => {
       return res.status(400).json({ success: false, error: "Form not saved" });
     return res.status(201).json({ success: true, data: savedForm });
   } catch (error) {
+    if (res.headersSent) {
+      return;
+    }
     return res.status(400).json({ success: false, error: error.message });
   }
 };
+
 
 // Get all Weekly4Forms
 exports.getAllWeekly4Forms = async (req, res) => {

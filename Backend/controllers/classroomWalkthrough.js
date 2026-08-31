@@ -46,7 +46,7 @@ exports.createForm = async (req, res) => {
 
         const classData = await ClassDetails.findById(className);
         if (!classData) {
-            res.status(400).json({ success: false, message: " Class and Section is Required!" })
+            return res.status(400).json({ success: false, message: " Class and Section is Required!" });
         }
 
         // Create the new form data

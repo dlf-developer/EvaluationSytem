@@ -33,7 +33,7 @@ rm -rf $STAGING_DIR
 echo "📤 Uploading backend-dlps.zip to server ($SERVER_USER@$SERVER_IP)..."
 scp -o StrictHostKeyChecking=no $SSH_KEY backend-dlps.zip $SERVER_USER@$SERVER_IP:$SERVER_PATH/
 
-echo "📂 Unzipping on server & restarting backend process..."
-ssh -o StrictHostKeyChecking=no $SSH_KEY $SERVER_USER@$SERVER_IP "cd $SERVER_PATH && unzip -o backend-dlps.zip && rm backend-dlps.zip && npm install --omit=dev"
+ssh -o StrictHostKeyChecking=no $SSH_KEY $SERVER_USER@$SERVER_IP "cd $SERVER_PATH && unzip -o backend-dlps.zip && rm backend-dlps.zip && npm install --omit=dev && (pkill -f 'NODE_PROJECT_NAME=backend' || pkill -f 'node.*backend' || true) && su - www -s /bin/bash -c 'cd $SERVER_PATH && PATH=$SERVER_PATH/node_modules/.bin:/www/server/nodejs/v22.13.0/bin:\$PATH NODE_PROJECT_NAME=backend nohup node server.js > /dev/null 2>&1 &'"
+
 
 echo "✅ DLPS Backend Deployment Complete!"
