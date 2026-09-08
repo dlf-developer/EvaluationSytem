@@ -33,7 +33,18 @@ rm -rf $STAGING_DIR
 echo "📤 Uploading backend-dlws.zip to server ($SERVER_USER@$SERVER_IP)..."
 scp -o StrictHostKeyChecking=no $SSH_KEY backend-dlws.zip $SERVER_USER@$SERVER_IP:$SERVER_PATH/
 
-ssh -o StrictHostKeyChecking=no $SSH_KEY $SERVER_USER@$SERVER_IP "cd $SERVER_PATH && unzip -o backend-dlws.zip && rm backend-dlws.zip && npm install --omit=dev && (pkill -f 'NODE_PROJECT_NAME=api.dlws' || pkill -f 'node.*api.dlws' || true) && su - www -s /bin/bash -c 'cd $SERVER_PATH && PATH=$SERVER_PATH/node_modules/.bin:/www/server/nodejs/v22.13.0/bin:\$PATH NODE_PROJECT_NAME=api.dlws nohup node server.js > /dev/null 2>&1 &'"
+ssh -o StrictHostKeyChecking=no $SSH_KEY $SERVER_USER@$SERVER_IP "
+  cd $SERVER_PATH
+  unzip -o backend-dlws.zip
+  rm -f backend-dlws.zip
+  npm install --omit=dev
+  if [ -f /www/server/nodejs/vhost/pids/DLWSBackend.pid ]; then
+    kill -9 \$(cat /www/server/nodejs/vhost/pids/DLWSBackend.pid) 2>/dev/null || true
+  fi
+  fuser -k 5010/tcp 2>/dev/null || true
+  sleep 1
+  bash /www/server/nodejs/vhost/scripts/DLWSBackend.sh
+"
 
 
 echo "✅ DLWS Backend Deployment Complete!"

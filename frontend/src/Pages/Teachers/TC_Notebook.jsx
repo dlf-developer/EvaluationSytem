@@ -19,12 +19,14 @@ import { BsEmojiFrown, BsEmojiNeutral, BsEmojiSmile } from "react-icons/bs";
 import { EditNoteBook, GetNoteBookForm } from "../../redux/Form/noteBookSlice";
 import { getAllTimes } from "../../Utils/auth";
 import { getCreateClassSection } from "../../redux/userSlice";
+import CommonStepper from "../../Components/CommonStepper";
 
 const { Option } = Select;
 
 function TC_Notebook() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const [currStep, setCurrStep] = useState(0);
   const [formData, setFormData] = useState({});
   const [sectionState, setSectionState] = useState([]);
   const [newData, setNewData] = useState();
@@ -373,14 +375,61 @@ function TC_Notebook() {
     </Box>
   );
 
+  const steps = [
+    { title: "General Information" },
+    { title: "Notebook Parameters" },
+    { title: "Review & Submit" },
+  ];
+
+  const saveDraft = async (data, targetStep) => {
+    let finalClassName = data.className;
+    if (finalClassName && newData?.length > 0) {
+      const classObj = newData.find((c) => c.className === finalClassName);
+      if (classObj) {
+        finalClassName = classObj._id;
+      }
+    }
+    const payload = {
+      data: {
+        ...data,
+        className: finalClassName,
+        isDraft: true,
+        isTeacherComplete: false,
+        currentStep: targetStep !== undefined ? targetStep : currStep,
+      },
+      id: FormId,
+    };
+    try {
+      await dispatch(EditNoteBook(payload));
+    } catch (e) {
+      console.error("Draft save error:", e);
+    }
+  };
+
   const handleNext = () => {
     form
       .validateFields()
-      .then((values) => {
-        setFormData((prev) => ({ ...prev, ...values }));
-        handleSubmit({ ...formData, ...values });
+      .then(async (values) => {
+        const merged = { ...formData, ...values };
+        setFormData(merged);
+        if (currStep < steps.length - 1) {
+          await saveDraft(merged, currStep + 1);
+          setCurrStep((prev) => prev + 1);
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        } else {
+          handleSubmit(merged);
+        }
       })
-      .catch(() => message.error("Please complete all required fields."));
+      .catch(() => message.error("Please complete all required fields on this step."));
+  };
+
+  const handleBack = async () => {
+    const currentValues = form.getFieldsValue();
+    const merged = { ...formData, ...currentValues };
+    setFormData(merged);
+    await saveDraft(merged, currStep - 1);
+    setCurrStep((prev) => prev - 1);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleSubmit = async (data) => {
@@ -395,14 +444,14 @@ function TC_Notebook() {
     }
 
     const payload = {
-      data: { ...data, className: finalClassName },
+      data: { ...data, className: finalClassName, isDraft: false, isTeacherComplete: true, currentStep: 2 },
       id: FormId,
     };
 
     const response = await dispatch(EditNoteBook(payload));
     if (response?.payload && response?.payload?.success) {
-      navigate("/notebook-checking-proforma");
-      message.success(response?.payload?.message);
+      message.success(response?.payload?.message || "Form submitted successfully!");
+      navigate(`/notebook-checking-proforma/report/${FormId}`);
     }
   };
 
@@ -491,6 +540,11 @@ function TC_Notebook() {
             Provide your self-evaluation for notebook maintenance.
           </Text>
         </Box>
+
+        <Box mb={8} bg="white" p={6} borderRadius="2xl" boxShadow="sm" borderWidth="1px" borderColor="gray.100">
+          <CommonStepper steps={steps} currentStep={currStep} />
+        </Box>
+
         <SimpleGrid columns={{ base: 1, lg: 3 }} spacing={8}>
           <Box gridColumn={{ lg: "span 2" }}>
             <Form
@@ -500,96 +554,189 @@ function TC_Notebook() {
                 calculateSelfAssessmentScore(allValues); // Trigger the calculation
               }}
             >
-              <Box
-                bg="white"
-                p={8}
-                borderRadius="2xl"
-                boxShadow="sm"
-                borderWidth="1px"
-                borderColor="gray.100"
-                mb={8}
-              >
-                <Heading size="md" color="gray.700" mb={6}>
-                  General Information
-                </Heading>
-                <Form.Item
-                  hidden
-                  className="mb-0"
-                  name="isTeacherComplete"
-                  initialValue={true}
+              {currStep === 0 && (
+                <Box
+                  bg="white"
+                  p={8}
+                  borderRadius="2xl"
+                  boxShadow="sm"
+                  borderWidth="1px"
+                  borderColor="gray.100"
+                  mb={8}
                 >
-                  <Radio.Group
-                    size="large"
-                    options={[true, false].map((value) => ({
-                      label: value,
-                      value: value,
-                    }))}
-                    optionType="button"
-                    buttonStyle="solid"
-                  />
-                </Form.Item>
+                  <Heading size="md" color="gray.700" mb={6}>
+                    General Information
+                  </Heading>
+                  <Form.Item
+                    hidden
+                    className="mb-0"
+                    name="isTeacherComplete"
+                    initialValue={true}
+                  >
+                    <Radio.Group
+                      size="large"
+                      options={[true, false].map((value) => ({
+                        label: value,
+                        value: value,
+                      }))}
+                      optionType="button"
+                      buttonStyle="solid"
+                    />
+                  </Form.Item>
 
-                {renderGeneralDetails()}
-              </Box>
-              <Box>
-                {renderSections(
-                  "Maintenance Of Notebooks",
-                  [
-                    "I have checked that NBs are in a good physical condition.",
-                    "I have checked that the work presentation is neat.",
-                    "I have ensured that the work of the learners is complete.",
-                    "I have checked the appropriateness of Headings / CW / HW.",
-                    "There is no scribbling on the last page/any pages thereof.",
-                    "I have ensured that the child has implemented the previous feedback and done the correction work.",
-                  ],
-                  "maintenanceOfNotebooks",
-                )}
-                {renderSections(
-                  "Quality Of Oppurtunities",
-                  [
-                    "I have provided HOTs and VBQs with every chapter.",
-                    "I have made app. remarks about the quality of answers.",
-                    "I have developed vocab of students (pre-post activities).",
-                    "I have taken up at least 2 CSPs fortnightly with clear LOs.",
-                    "The quality questions given by me offer a scope for original thinking by learners.",
-                    "The writing tasks / questions given by me provide a scope for independent encounters.",
-                  ],
-                  "qualityOfOppurtunities",
-                )}
-                {renderSections(
-                  "Quality Of Teacher Feedback",
-                  [
-                    "I have provided timely and regular feedback.",
-                    "I have corrected all the notebook work.",
-                    "I have provided positive reinforcement.",
-                    "I have provided personalized feedback.",
-                    "My feedback provides learners directions for improvement.",
-                    "My feedback facilitates learners with clear directions on what good work looks like.",
-                  ],
-                  "qualityOfTeacherFeedback",
-                )}
-                {renderSections(
-                  "Quality Of Learner",
-                  [
-                    "I have checked / addressed the common misconceptions",
-                    "I have given remarks if the answers are copied or if there are common errors.",
-                  ],
-                  "qualityOfLearner",
-                )}
-              </Box>
-              <Flex justify="flex-end" mb={6}>
-                <Button
-                  size="large"
-                  type="primary"
-                  onClick={handleNext}
-                  style={{
-                    borderRadius: "8px",
-                    boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-                    minWidth: "150px",
-                  }}
+                  {renderGeneralDetails()}
+                </Box>
+              )}
+
+              {currStep === 1 && (
+                <Box>
+                  {renderSections(
+                    "Maintenance Of Notebooks",
+                    [
+                      "I have checked that NBs are in a good physical condition.",
+                      "I have checked that the work presentation is neat.",
+                      "I have ensured that the work of the learners is complete.",
+                      "I have checked the appropriateness of Headings / CW / HW.",
+                      "There is no scribbling on the last page/any pages thereof.",
+                      "I have ensured that the child has implemented the previous feedback and done the correction work.",
+                    ],
+                    "maintenanceOfNotebooks",
+                  )}
+                  {renderSections(
+                    "Quality Of Oppurtunities",
+                    [
+                      "I have provided HOTs and VBQs with every chapter.",
+                      "I have made app. remarks about the quality of answers.",
+                      "I have developed vocab of students (pre-post activities).",
+                      "I have taken up at least 2 CSPs fortnightly with clear LOs.",
+                      "The quality questions given by me offer a scope for original thinking by learners.",
+                      "The writing tasks / questions given by me provide a scope for independent encounters.",
+                    ],
+                    "qualityOfOppurtunities",
+                  )}
+                  {renderSections(
+                    "Quality Of Teacher Feedback",
+                    [
+                      "I have provided timely and regular feedback.",
+                      "I have corrected all the notebook work.",
+                      "I have provided positive reinforcement.",
+                      "I have provided personalized feedback.",
+                      "My feedback provides learners directions for improvement.",
+                      "My feedback facilitates learners with clear directions on what good work looks like.",
+                    ],
+                    "qualityOfTeacherFeedback",
+                  )}
+                  {renderSections(
+                    "Quality Of Learner",
+                    [
+                      "I have checked / addressed the common misconceptions",
+                      "I have given remarks if the answers are copied or if there are common errors.",
+                    ],
+                    "qualityOfLearner",
+                  )}
+                </Box>
+              )}
+
+              {currStep === 2 && (
+                <Box
+                  bg="white"
+                  p={8}
+                  borderRadius="2xl"
+                  boxShadow="sm"
+                  borderWidth="1px"
+                  borderColor="gray.100"
+                  mb={8}
                 >
-                  Submit Evaluation
-                </Button>
+                  <Heading size="md" color="gray.700" mb={3}>
+                    Review & Confirm Evaluation
+                  </Heading>
+                  <Text color="gray.500" mb={6} fontSize="sm">
+                    Please verify your responses before final submission. Click on any section to go back and make edits.
+                  </Text>
+                  <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4} mb={6}>
+                    <Box
+                      p={5}
+                      bg="gray.50"
+                      borderRadius="xl"
+                      borderWidth="1px"
+                      borderColor="gray.200"
+                      cursor="pointer"
+                      onClick={() => setCurrStep(0)}
+                    >
+                      <Text fontWeight="bold" color="gray.800">
+                        1. General Information
+                      </Text>
+                      <Text color="green.600" fontSize="sm" mt={1}>
+                        Class & Strength details filled
+                      </Text>
+                      <Button type="link" style={{ padding: 0, marginTop: "8px" }}>
+                        Edit Details →
+                      </Button>
+                    </Box>
+                    <Box
+                      p={5}
+                      bg="gray.50"
+                      borderRadius="xl"
+                      borderWidth="1px"
+                      borderColor="gray.200"
+                      cursor="pointer"
+                      onClick={() => setCurrStep(1)}
+                    >
+                      <Text fontWeight="bold" color="gray.800">
+                        2. Notebook Parameters
+                      </Text>
+                      <Text color="green.600" fontSize="sm" mt={1}>
+                        All 4 parameter categories completed
+                      </Text>
+                      <Button type="link" style={{ padding: 0, marginTop: "8px" }}>
+                        Edit Parameters →
+                      </Button>
+                    </Box>
+                  </SimpleGrid>
+                </Box>
+              )}
+
+              <Flex justify="space-between" align="center" mt={6} mb={6}>
+                {currStep > 0 ? (
+                  <Button
+                    size="large"
+                    onClick={handleBack}
+                    style={{ borderRadius: "8px", minWidth: "120px" }}
+                  >
+                    ← Back
+                  </Button>
+                ) : (
+                  <Box />
+                )}
+                <Flex gap={3} align="center">
+                  <Button
+                    size="large"
+                    onClick={async () => {
+                      const values = form.getFieldsValue();
+                      const merged = { ...formData, ...values };
+                      setFormData(merged);
+                      await saveDraft(merged, currStep);
+                      message.success("Draft saved successfully!");
+                    }}
+                    style={{ borderRadius: "8px" }}
+                  >
+                    Save Draft
+                  </Button>
+                  <Button
+                    size="large"
+                    type="primary"
+                    onClick={handleNext}
+                    style={{
+                      borderRadius: "8px",
+                      boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                      minWidth: "150px",
+                      background: "#1a4d2e",
+                      border: "none",
+                    }}
+                  >
+                    {currStep < steps.length - 1 ? "Next Step →" : "Submit Evaluation"}
+                  </Button>
+                </Flex>
               </Flex>
             </Form>
           </Box>

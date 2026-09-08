@@ -32,6 +32,8 @@ const classroomWalkthrough = new Schema({
     isTeacherCompletes:{type:Boolean},
     TeacherFeedback:{type:Array},
     teacherID: { type: Schema.Types.ObjectId, ref: 'User' },
+    isDraft: { type: Boolean, default: true },
+    currentStep: { type: Number, default: 0 },
 }, { timestamps: true })
 
 const Form2 = mongoose.model('Form2', classroomWalkthrough);

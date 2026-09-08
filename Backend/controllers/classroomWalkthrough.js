@@ -167,16 +167,19 @@ exports.editWalkthrouForm = async (req, res) => {
         }
 
         // Ensure isTeacherCompletes is set to false
-        UpdateValue.isTeacherCompletes = false;
+        if (req.body.isDraft !== undefined) UpdateValue.isDraft = req.body.isDraft;
+        if (req.body.currentStep !== undefined) UpdateValue.currentStep = req.body.currentStep;
+        if (req.body.isObserverCompleted !== undefined) UpdateValue.isObserverCompleted = req.body.isObserverCompleted;
 
         // Update the form
         const updatedForm = await Form2.findByIdAndUpdate(formId, UpdateValue, {
             new: true,
         }).populate('grenralDetails.NameoftheVisitingTeacher', 'name email');
 
-        // Notify the teacher that the observer has filled/updated their section
+        // Notify the teacher ONLY on final completion (not on intermediate draft steps)
         const teacher = updatedForm?.grenralDetails?.NameoftheVisitingTeacher;
-        if (teacher?.email) {
+        const isFinalSubmit = req.body.isObserverCompleted === true && req.body.isDraft !== true;
+        if (isFinalSubmit && teacher?.email) {
             const route = `classroom-walkthrough/create/${formId}`;
             const emailData = formCompletedEmail({
                 recipientName: teacher.name,

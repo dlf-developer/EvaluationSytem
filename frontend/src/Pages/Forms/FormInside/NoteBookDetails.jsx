@@ -22,6 +22,7 @@ import { BsEmojiFrown, BsEmojiNeutral, BsEmojiSmile } from "react-icons/bs";
 import {
   CreateNoteBookForm,
   GetNoteBookForm,
+  EditNoteBook,
 } from "../../../redux/Form/noteBookSlice";
 import { getUserId } from "../../../Utils/auth";
 import { UserRole } from "../../../config/config";
@@ -38,6 +39,7 @@ const NoteBookDetails = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const FormId = useParams()?.id;
+  const [savedFormId, setSavedFormId] = useState(FormId || null);
   const { loading, GetObserverLists } = useSelector((state) => state?.user);
   //   const {isLoading,formDataList} = useSelector((state)=>state?.walkThroughForm)
   // Fetch notebook form details
@@ -58,6 +60,8 @@ const NoteBookDetails = () => {
           userAccess === UserRole[1])
       ) {
         navigate(`/notebook-checking-proforma/report/${FormId}`);
+      } else if (userAccess === UserRole[2] && !isTeacherComplete) {
+        navigate(`/notebook-checking-proforma/edit/${FormId}`);
       } else {
         message.error("Something went wrong!");
       }
@@ -449,47 +453,83 @@ const NoteBookDetails = () => {
     </Box>
   );
 
+  const saveDraft = async (data, targetStep) => {
+    try {
+      const payloadData = {
+        ...data,
+        isDraft: true,
+        currentStep: targetStep !== undefined ? targetStep : currStep,
+      };
+      if (savedFormId) {
+        await dispatch(EditNoteBook({ id: savedFormId, data: payloadData }));
+      } else {
+        const res = await dispatch(CreateNoteBookForm(payloadData));
+        if (res?.payload?.form?._id) {
+          setSavedFormId(res.payload.form._id);
+        }
+      }
+    } catch (e) {
+      console.error("Draft save error:", e);
+    }
+  };
+
   const handleNext = () => {
     form
       .validateFields()
-      .then((values) => {
-        // Merge current step data with existing formData
-        setFormData((prev) => ({
-          ...prev,
-          ...values,
-        }));
+      .then(async (values) => {
+        const mergedData = { ...formData, ...values };
+        setFormData(mergedData);
 
-        // Determine if it's the last step
         const isLastStep = currStep >= steps.length - 1;
 
         if (isLastStep) {
-          handleSubmit({ ...formData, ...values });
+          handleSubmit(mergedData);
         } else {
+          await saveDraft(mergedData, currStep + 1);
           setCurrStep((prevStep) => prevStep + 1);
+          window.scrollTo({ top: 0, behavior: "smooth" });
         }
       })
       .catch((errorInfo) => {
-        const fieldErrors = errorInfo.errorFields
-          .map((field) => field.name)
-          .join(", ");
-        message.error(`Please complete all required fields`);
+        message.error(`Please complete all required fields on this step.`);
       });
   };
 
+  const handleBack = async () => {
+    const currentValues = form.getFieldsValue();
+    const mergedData = { ...formData, ...currentValues };
+    setFormData(mergedData);
+    await saveDraft(mergedData, currStep - 1);
+    setCurrStep((prev) => prev - 1);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   const handleSubmit = async (finalData) => {
-    const data = await dispatch(CreateNoteBookForm(finalData));
-    if (data?.payload?.status) {
-      message.success(data?.payload?.message);
-      const userInfo = data?.payload?.form?.grenralDetails;
+    const submissionData = {
+      ...finalData,
+      isDraft: false,
+      isTeacherComplete: true,
+      currentStep: 1,
+    };
+    let data;
+    if (savedFormId) {
+      data = await dispatch(EditNoteBook({ id: savedFormId, data: submissionData }));
+    } else {
+      data = await dispatch(CreateNoteBookForm(submissionData));
+    }
+    const formRecord = data?.payload?.form || data?.payload?.updatedForm;
+    if (data?.payload?.status || data?.payload?.success) {
+      message.success(data?.payload?.message || "Form submitted successfully!");
+      const userInfo = formRecord?.grenralDetails;
       const activity = {
         observerMessage: `${getUserId()?.name} has completed the Notebook Checking Proforma Form For ${userInfo?.className} | ${userInfo?.Subject} | ${userInfo?.Section}.`,
         teacherMessage: `You have completed Notebook Checking Proforma Form For ${userInfo?.className} | ${userInfo?.Subject} | ${userInfo?.Section}..`,
-        route: `/notebook-checking-proforma/report/${data?.payload?.form?._id}`,
+        route: `/notebook-checking-proforma/report/${formRecord?._id}`,
         date: new Date(),
         reciverId: userInfo?.NameofObserver,
         senderId: getUserId()?.id,
         fromNo: 3,
-        data: data?.payload?.form,
+        data: formRecord,
       };
 
       const activitiRecord = await dispatch(CreateActivityApi(activity));
@@ -498,10 +538,10 @@ const NoteBookDetails = () => {
       }
 
       navigate(
-        `/notebook-checking-proforma/report/${data?.payload?.form?._id}`,
+        `/notebook-checking-proforma/report/${formRecord?._id}`,
       );
     } else {
-      message.success(data?.payload?.message);
+      message.error(data?.payload?.message || "Failed to submit form.");
     }
   };
 
@@ -645,30 +685,45 @@ const NoteBookDetails = () => {
                   )}
                 </Box>
 
-                <Flex justify="space-between" mt={6} pt={6} pb={8}>
+                <Flex justify="space-between" align="center" mt={6} pt={6} pb={8}>
                   {currStep > 0 ? (
                     <Button
                       size="large"
-                      onClick={() => setCurrStep(currStep - 1)}
+                      onClick={handleBack}
                       style={{ borderRadius: "8px", minWidth: "120px" }}
                     >
-                      Back
+                      ← Back
                     </Button>
                   ) : (
                     <Box />
                   )}
-                  <Button
-                    type="primary"
-                    size="large"
-                    onClick={handleNext}
-                    style={{
-                      borderRadius: "8px",
-                      minWidth: "120px",
-                      background: "#1a4d2e",
-                    }}
-                  >
-                    {currStep === steps.length - 1 ? "Submit" : "Next"}
-                  </Button>
+                  <Flex gap={3} align="center">
+                    <Button
+                      size="large"
+                      onClick={async () => {
+                        const values = form.getFieldsValue();
+                        const merged = { ...formData, ...values };
+                        setFormData(merged);
+                        await saveDraft(merged, currStep);
+                        message.success("Draft saved successfully!");
+                      }}
+                      style={{ borderRadius: "8px" }}
+                    >
+                      Save Draft
+                    </Button>
+                    <Button
+                      type="primary"
+                      size="large"
+                      onClick={handleNext}
+                      style={{
+                        borderRadius: "8px",
+                        minWidth: "120px",
+                        background: "#1a4d2e",
+                      }}
+                    >
+                      {currStep === steps.length - 1 ? "Submit" : "Next →"}
+                    </Button>
+                  </Flex>
                 </Flex>
               </Box>
 

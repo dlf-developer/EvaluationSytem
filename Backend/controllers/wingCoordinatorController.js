@@ -157,6 +157,42 @@ const deleteWingCoordinator = async (req, res) => {
     }
 };
 
+// ✅ Duplicate a WingCoordinator entry
+const duplicateWingCoordinator = async (req, res) => {
+    try {
+        const original = await WingCoordinator.findById(req.params.id);
+        if (!original) {
+            return res.status(404).json({ success: false, message: 'WingCoordinator not found' });
+        }
+
+        const data = original.toObject();
+        delete data._id;
+        delete data.createdAt;
+        delete data.updatedAt;
+        delete data.__v;
+
+        const currentUserId = req.user?._id || req.user?.id || original.userId;
+        const duplicatedWing = new WingCoordinator({
+            ...data,
+            formName: original.formName ? `${original.formName} (Copy)` : 'Wing Coordinator Report (Copy)',
+            userId: currentUserId,
+            isComplete: false,
+            isDraft: true,
+            isDuplicate: true,
+        });
+
+        const saved = await duplicatedWing.save();
+        res.status(201).json({
+            success: true,
+            message: 'Wing Coordinator report duplicated successfully',
+            data: saved,
+        });
+    } catch (error) {
+        console.error('Error duplicating wing coordinator:', error);
+        res.status(500).json({ success: false, message: 'Error duplicating WingCoordinator', error: error.message });
+    }
+};
+
 // ✅ Export all functions
 module.exports = {
     publishWingCoordinator,
@@ -167,4 +203,5 @@ module.exports = {
     deleteWingCoordinator,
     getSingleWingCoordinatorById,
     syncWingCoordinator,
+    duplicateWingCoordinator,
 };

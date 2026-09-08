@@ -63,6 +63,19 @@ import AccountabilityReport from "../Pages/Reports/AccountabilityReport";
 
 const role = getUserId()?.access;
 const isLoggedIn = getToken() !== null ? getToken() : null;
+const getLoginRedirect = () => {
+  if (
+    typeof window !== "undefined" &&
+    window.location.pathname &&
+    window.location.pathname !== "/"
+  ) {
+    return `/login?redirect=${encodeURIComponent(
+      window.location.pathname + window.location.search
+    )}`;
+  }
+  return "/login";
+};
+
 const protects = {
   Teacher: [
     {
@@ -71,7 +84,7 @@ const protects = {
         isLoggedIn && role === "Teacher" ? (
           <TeacherLayout />
         ) : (
-          <Navigate to="/login" />
+          <Navigate to={getLoginRedirect()} replace />
         ),
       children: [
         { path: "/", element: <Navigate to="/dashboard" /> },
@@ -104,7 +117,11 @@ const protects = {
         },
         {
           path: "/notebook-checking-proforma/create/:id",
-          element: <NoteBookDetails />,
+          element: <TC_Notebook />,
+        },
+        {
+          path: "/notebook-checking-proforma/initiate/create/:id",
+          element: <TC_Notebook />,
         },
         {
           path: "/fortnightly-monitor/edit/:id",
@@ -138,7 +155,7 @@ const protects = {
         isLoggedIn && role === "Superadmin" ? (
           <DashboardLayout />
         ) : (
-          <Navigate to="/login" />
+          <Navigate to={getLoginRedirect()} replace />
         ),
       children: [
         { path: "/", element: <Navigate to="/dashboard" /> },
@@ -166,9 +183,50 @@ const protects = {
         },
         { path: "/notebook-checking-proforma", element: <NoteBook /> },
         {
+          path: "/notebook-checking-proforma/create",
+          element: <NoteBookDetails />,
+        },
+        {
+          path: "/notebook-checking-proforma/create/:id",
+          element: <ObserverNotebook />,
+        },
+        {
+          path: "/notebook-checking-proforma/initiate/create/:id",
+          element: <ObserverNotebook />,
+        },
+        {
+          path: "/notebook-checking-proforma/edit/:id",
+          element: <OB_Notebook />,
+        },
+        {
+          path: "/notebook-checking-proforma/complete/:id",
+          element: <NotebookComplete />,
+        },
+        {
           path: "/notebook-checking-proforma/report/:id",
           element: <NotebookPDF />,
         },
+        {
+          path: "/classroom-walkthrough/create",
+          element: <DetailsWalkthrough />,
+        },
+        {
+          path: "/classroom-walkthrough/create/:id",
+          element: <DetailsWalkthrough />,
+        },
+        {
+          path: "/classroom-walkthrough/edit/:id",
+          element: <OB_WalkthroughEdit />,
+        },
+        { path: "/co-scholastic/create", element: <CoScholasticDetails /> },
+        { path: "/co-scholastic/create/:id", element: <CoScholasticDetails /> },
+        { path: "/weekly4form/create", element: <Weely4Form /> },
+        { path: "/weekly4form/create/:id", element: <Weely4Form /> },
+        { path: "/weekly4form/edit/:id", element: <Weely4Form /> },
+        { path: "/fortnightly-monitor/create", element: <BasicDetailsForm /> },
+        { path: "/fortnightly-monitor/create/:id", element: <Details /> },
+        { path: "/fortnightly-monitor/initiate/create/:id", element: <Details /> },
+        { path: "/fortnightly-monitor/edit/:id", element: <FortnightlyMonitorEdit /> },
         { path: "/weekly4form", element: <Weekly /> },
         { path: "/weekly4form/report/:id", element: <Weekly4FormReport /> },
         { path: "/wing-coordinator", element: <WingCoordinator /> },
@@ -187,7 +245,7 @@ const protects = {
         isLoggedIn && role === "Observer" ? (
           <ObserverLayout />
         ) : (
-          <Navigate to="/login" />
+          <Navigate to={getLoginRedirect()} replace />
         ),
       children: [
         { path: "/", element: <Navigate to="/dashboard" /> },
@@ -230,7 +288,15 @@ const protects = {
         },
         { path: "/notebook-checking-proforma", element: <Notebook /> },
         {
+          path: "/notebook-checking-proforma/create",
+          element: <NoteBookDetails />,
+        },
+        {
           path: "/notebook-checking-proforma/create/:id",
+          element: <ObserverNotebook />,
+        },
+        {
+          path: "/notebook-checking-proforma/initiate/create/:id",
           element: <ObserverNotebook />,
         },
         {
@@ -286,7 +352,23 @@ const protects = {
         { path: "/forget-password", element: <ForgetPassword /> },
         { path: "/reset-password/:token", element: <ResetPassword /> },
         { path: "/test", element: <TextBox /> },
-        { path: "*", element: <NotFound404 /> },
+        {
+          path: "*",
+          element: (
+            <Navigate
+              to={
+                typeof window !== "undefined" &&
+                window.location.pathname &&
+                window.location.pathname !== "/"
+                  ? `/login?redirect=${encodeURIComponent(
+                      window.location.pathname + window.location.search
+                    )}`
+                  : "/login"
+              }
+              replace
+            />
+          ),
+        },
       ],
     },
   ],

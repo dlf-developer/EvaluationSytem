@@ -1,11 +1,11 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { getUserId, getAllTimes } from "../../Utils/auth";
 import { Table } from "antd";
 import { UserRole } from "../../config/config";
-import { PlusOutlined } from "@ant-design/icons";
+import { PlusOutlined, DeleteFilled, CopyOutlined } from "@ant-design/icons";
 import { Link, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { createWingForm, GetWingFrom, deleteWingForm } from "../../redux/userSlice";
+import { createWingForm, GetWingFrom, deleteWingForm, duplicateWingForm } from "../../redux/userSlice";
 import {
   Box,
   Button,
@@ -16,9 +16,9 @@ import {
   Stack,
   Tag,
   Text,
+  Tooltip,
 } from "@chakra-ui/react";
 import { message, Modal } from "antd";
-import { DeleteFilled } from "@ant-design/icons";
 
 import SmartTable from "../../Components/SmartTable";
 
@@ -27,6 +27,7 @@ function WingCoordinator() {
   const dispatch = useDispatch();
   const id = getUserId()?.id;
   const { getWingFormlist, loading } = useSelector((s) => s?.user);
+  const [duplicatingId, setDuplicatingId] = useState(null);
 
   useEffect(() => {
     dispatch(GetWingFrom(id));
@@ -35,6 +36,23 @@ function WingCoordinator() {
   const createFrom = async () => {
     const res = await dispatch(createWingForm()).unwrap();
     if (res?.success) navigate(`/wing-coordinator/${res?.data?._id}`);
+  };
+
+  const handleDuplicate = async (recordId) => {
+    try {
+      setDuplicatingId(recordId);
+      const res = await dispatch(duplicateWingForm(recordId)).unwrap();
+      if (res?.success && res?.data?._id) {
+        message.success("Report duplicated successfully");
+        navigate(`/wing-coordinator/${res.data._id}`);
+      } else {
+        message.error(res?.message || "Failed to duplicate report");
+      }
+    } catch (error) {
+      message.error(error?.message || "An error occurred while duplicating");
+    } finally {
+      setDuplicatingId(null);
+    }
   };
 
   const handleDelete = (formId) => {
@@ -90,15 +108,29 @@ function WingCoordinator() {
       title: "REPORT NAME",
       dataIndex: "formName",
       key: "formName",
-      width: 180,
+      width: 200,
       filterConfig: {
         type: "text"
       },
-      render: (val) => (
-        <Text fontSize="sm" fontWeight="600" color="brand.text">
-          {val || "—"}
-        </Text>
-      ),
+      render: (val) => {
+        if (!val) return <Text fontSize="sm" color="gray.400">—</Text>;
+        const isLong = val.length > 24;
+        const displayVal = isLong ? `${val.slice(0, 24)}...` : val;
+        return (
+          <Tooltip label={val} placement="topLeft" hasArrow isDisabled={!isLong}>
+            <Text
+              fontSize="sm"
+              fontWeight="600"
+              color="brand.text"
+              isTruncated
+              maxW="200px"
+              title={val}
+            >
+              {displayVal}
+            </Text>
+          </Tooltip>
+        );
+      },
     },
     {
       title: "OBSERVER",
@@ -110,11 +142,25 @@ function WingCoordinator() {
         options: observerFilters,
         matchFn: (record, vals) => vals.includes(record?.userId?.name || "")
       },
-      render: (user) => (
-        <Text fontSize="sm" fontWeight="500" color="gray.600">
-          {user?.name || "—"}
-        </Text>
-      ),
+      render: (user) => {
+        const name = user?.name || "—";
+        const isLong = name.length > 20;
+        const displayVal = isLong ? `${name.slice(0, 20)}...` : name;
+        return (
+          <Tooltip label={name} placement="topLeft" hasArrow isDisabled={!isLong}>
+            <Text
+              fontSize="sm"
+              fontWeight="500"
+              color="gray.600"
+              isTruncated
+              maxW="180px"
+              title={name}
+            >
+              {displayVal}
+            </Text>
+          </Tooltip>
+        );
+      },
     },
     {
       title: "CLASSES",
@@ -132,10 +178,21 @@ function WingCoordinator() {
           return vals.includes(record.className);
         }
       },
-      render: (classes) =>
-        Array.isArray(classes) && classes.length > 0 ? (
-          <Flex flexWrap="wrap" gap={1}>
-            {classes.map((c, i) => (
+      render: (classes) => {
+        if (!Array.isArray(classes) || classes.length === 0) {
+          return (
+            <Text fontSize="sm" color="gray.400">
+              —
+            </Text>
+          );
+        }
+        const maxDisplay = 2;
+        const displayed = classes.slice(0, maxDisplay);
+        const remaining = classes.length - maxDisplay;
+
+        return (
+          <Flex flexWrap="wrap" gap={1} align="center">
+            {displayed.map((c, i) => (
               <Tag
                 key={i}
                 size="sm"
@@ -146,12 +203,22 @@ function WingCoordinator() {
                 {c}
               </Tag>
             ))}
+            {remaining > 0 && (
+              <Tooltip label={classes.join(", ")} placement="top" hasArrow>
+                <Tag
+                  size="sm"
+                  colorScheme="gray"
+                  variant="solid"
+                  borderRadius="full"
+                  cursor="pointer"
+                >
+                  +{remaining} more
+                </Tag>
+              </Tooltip>
+            )}
           </Flex>
-        ) : (
-          <Text fontSize="sm" color="gray.400">
-            —
-          </Text>
-        ),
+        );
+      },
     },
     {
       title: "CREATED",
@@ -171,39 +238,58 @@ function WingCoordinator() {
       title: "STATUS",
       dataIndex: "isComplete",
       key: "isComplete",
-      width: 140,
+      width: 190,
       filterConfig: {
         type: "boolean",
         trueLabel: "Completed",
         falseLabel: "Pending"
       },
-      render: (isComplete) => (
-        <Box
-          as="span"
-          display="inline-flex"
-          alignItems="center"
-          px="10px"
-          py="4px"
-          borderRadius="full"
-          bg="white"
-          border="1px solid"
-          borderColor={isComplete ? "green.400" : "orange.400"}
-        >
-          <Text
-            as="span"
-            fontSize="11px"
-            fontWeight="600"
-            color={isComplete ? "green.500" : "orange.500"}
-          >
-            {isComplete ? "Completed" : "Pending"}
-          </Text>
-        </Box>
-      ),
+      render: (isComplete, record) => {
+        const isDuplicate = record?.isDuplicate || record?.formName?.includes("(Copy)");
+        return (
+          <Flex gap={2} align="center" flexWrap="wrap">
+            <Box
+              as="span"
+              display="inline-flex"
+              alignItems="center"
+              px="10px"
+              py="4px"
+              borderRadius="full"
+              bg="white"
+              border="1px solid"
+              borderColor={isComplete ? "green.400" : "orange.400"}
+            >
+              <Text
+                as="span"
+                fontSize="11px"
+                fontWeight="600"
+                color={isComplete ? "green.500" : "orange.500"}
+              >
+                {isComplete ? "Completed" : "Pending"}
+              </Text>
+            </Box>
+            {isDuplicate && (
+              <Tag
+                size="sm"
+                colorScheme="purple"
+                variant="subtle"
+                borderRadius="full"
+                fontWeight="600"
+                px="8px"
+                py="2px"
+                fontSize="11px"
+              >
+                Duplicate
+              </Tag>
+            )}
+          </Flex>
+        );
+      },
     },
     {
       title: "ACTION",
       key: "action",
-      width: 280,
+      width: 360,
       render: (_, record) => {
         const { isDraft, isComplete } = record;
         return (
@@ -233,6 +319,19 @@ function WingCoordinator() {
                 </Button>
               </Link>
             )}
+            <Button
+              size="md"
+              variant="outline"
+              colorScheme="purple"
+              fontWeight="medium"
+              flexShrink={0}
+              leftIcon={<CopyOutlined />}
+              isLoading={duplicatingId === record._id}
+              onClick={() => handleDuplicate(record._id)}
+              title="Duplicate Report"
+            >
+              Duplicate
+            </Button>
             {(getUserId()?.access === UserRole[0] || getUserId()?.access === UserRole[1]) && (
               <Button
                 size="md"

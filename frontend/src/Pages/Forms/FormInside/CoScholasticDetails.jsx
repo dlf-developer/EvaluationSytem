@@ -19,12 +19,16 @@ import {
   Input,
   Radio,
   Spin,
+  Space,
 } from "antd";
+import { SaveOutlined } from "@ant-design/icons";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
+import moment from "moment";
 import {
   CreateCoScholastic,
   GetCoScholasticForm,
+  EditUpdateCoScholasticForm,
 } from "../../../redux/Form/coScholasticSlice";
 import {
   getCreateClassSection,
@@ -47,49 +51,90 @@ const gradeColor = (g) => {
 
 function CoScholasticDetails() {
   const [currStep, setCurrStep] = useState(0);
-  const [formData, setFormData] = useState({});
   const [form] = Form.useForm();
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const FormId = useParams()?.id;
+  const [activeFormId, setActiveFormId] = useState(FormId);
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const { loading, GetTeachersLists } = useSelector((state) => state?.user);
-  const { isLoading, formDataList } = useSelector(
-    (state) => state?.coScholastic,
-  );
+  const { isLoading } = useSelector((state) => state?.coScholastic);
   const [newData, setNewData] = useState([]);
 
   const fetchClassData = async () => {
     try {
       const res = await dispatch(getCreateClassSection());
       if (res?.payload?.success) {
-        setNewData(
-          res?.payload?.classDetails.sort(
-            (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
-          ),
+        const sorted = (res?.payload?.classDetails || []).sort(
+          (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
         );
+        setNewData(sorted);
+        return sorted;
       } else {
         message.error("Failed to fetch class data.");
+        return [];
       }
     } catch (error) {
       message.error("An error occurred while fetching class data.");
+      return [];
     }
   };
 
   useEffect(() => {
-    if (FormId) {
-      dispatch(GetCoScholasticForm(FormId)).then(({ payload }) => {
-        const { isObserverCompleted, createdBy } = payload;
-        if (isObserverCompleted && createdBy?._id === getUserId().id) {
-          navigate(`/co-scholastic/report/${FormId}`);
-        } else {
-          message.error("Something went wrong!");
-        }
-      });
-    } else {
-      dispatch(GetTeacherList());
-      fetchClassData();
-    }
-  }, [FormId, dispatch]);
+    dispatch(GetTeacherList());
+    fetchClassData().then((classes) => {
+      if (FormId) {
+        setActiveFormId(FormId);
+        dispatch(GetCoScholasticForm(FormId)).then(({ payload }) => {
+          if (!payload) return;
+          const { isObserverCompleted, createdBy, grenralDetails, currentStep } = payload;
+          if (isObserverCompleted && createdBy?._id === getUserId().id) {
+            navigate(`/co-scholastic/report/${FormId}`);
+            return;
+          }
+
+          if (currentStep !== undefined && !isNaN(currentStep)) {
+            setCurrStep(Math.min(currentStep, 2));
+          }
+
+          // Resolve className to match class ID if possible
+          let matchedClass = null;
+          if (grenralDetails?.className && classes?.length) {
+            matchedClass = classes.find(
+              (c) =>
+                c._id === grenralDetails.className ||
+                c.className === grenralDetails.className,
+            );
+          }
+          if (matchedClass) {
+            setSectionState(matchedClass);
+          }
+
+          form.setFieldsValue({
+            NameoftheVisitingTeacher:
+              grenralDetails?.NameoftheVisitingTeacher?._id ||
+              grenralDetails?.NameoftheVisitingTeacher,
+            DateOfObservation: grenralDetails?.DateOfObservation
+              ? moment(grenralDetails.DateOfObservation)
+              : null,
+            className: matchedClass ? matchedClass._id : grenralDetails?.className,
+            Section: grenralDetails?.Section,
+            Subject: grenralDetails?.Subject,
+            Topic: grenralDetails?.Topic,
+            classroomManagement: payload.classroomManagement,
+            planningAndExecution: payload.planningAndExecution,
+            studentEngagement: payload.studentEngagement,
+            instructionAndFacilitation: payload.instructionAndFacilitation,
+            ObserverFeedback: payload.ObserverFeedback,
+          });
+
+          calculateScore();
+        });
+      }
+    });
+  }, [FormId, dispatch, form]);
 
   const yesNoNAOptions = useMemo(() => ["1", "2", "3", "4", "N/A"], []);
 
@@ -439,22 +484,6 @@ function CoScholasticDetails() {
     </>
   );
 
-  /* ─── Navigation ─────────────────────────────────────────────────── */
-  const handleNext = () => {
-    form
-      .validateFields()
-      .then((values) => {
-        setFormData((prev) => ({ ...prev, ...values }));
-        if (currStep < steps.length - 1) {
-          setCurrStep((prev) => prev + 1);
-          window.scrollTo({ top: 0, behavior: "smooth" });
-        } else {
-          handleSubmit({ ...formData, ...values });
-        }
-      })
-      .catch(() => message.error("Please complete all required fields."));
-  };
-
   const calculateScoreFromData = (data) => {
     let total = 0;
     let outOf = 0;
@@ -486,59 +515,180 @@ function CoScholasticDetails() {
               : "F";
 
     return {
-      totalScore: total,
-      getOutOfScore: outOf,
+      totalScores: total,
+      scoreOutof: outOf,
       percentageScore: parseFloat(pct.toFixed(2)),
-      grade: g,
-      numOfParameters: naCount,
+      Grade: g,
+      NumberofParametersNotApplicable: naCount,
     };
   };
 
-  const handleSubmit = async (data) => {
-    const {
-      totalScore,
-      getOutOfScore,
-      percentageScore,
-      grade,
-      numOfParameters,
-    } = calculateScoreFromData(data);
+  const getStepFields = (step) => {
+    if (step === 0) {
+      return [
+        "NameoftheVisitingTeacher",
+        "DateOfObservation",
+        "className",
+        "Section",
+        "Subject",
+        "Topic",
+      ];
+    } else if (step === 1) {
+      return [
+        "classroomManagement",
+        "planningAndExecution",
+        "studentEngagement",
+        "instructionAndFacilitation",
+      ];
+    } else if (step === 2) {
+      return ["ObserverFeedback"];
+    }
+    return [];
+  };
 
-    const submissionData = {
-      ...data,
-      totalScores: totalScore,
-      scoreOutof: getOutOfScore,
-      percentageScore,
-      Grade: grade,
-      NumberofParametersNotApplicable: numOfParameters,
+  // Helper to persist draft to DB
+  const persistDraft = async (targetStep) => {
+    const values = form.getFieldsValue(true);
+    const scoreData = calculateScoreFromData(values);
+    const stepToSave = targetStep !== undefined ? targetStep : currStep;
+
+    const basePayload = {
+      ...values,
+      ...scoreData,
+      isDraft: true,
+      currentStep: stepToSave,
+      isObserverCompleted: false,
+      DateOfObservation: values.DateOfObservation
+        ? values.DateOfObservation.toDate()
+        : new Date(),
     };
 
-    const response = await dispatch(CreateCoScholastic(submissionData));
-    if (response?.payload?.status) {
-      const receiverId =
-        response?.payload?.form?.grenralDetails?.NameoftheVisitingTeacher ||
-        response?.payload?.form?.teacherID;
-      const BasicData = response?.payload?.form?.grenralDetails;
-      const observerMessage = `You have completed the Co-Scholastic form for ${BasicData?.className} | ${BasicData?.Section} | ${BasicData?.Subject}.`;
-      const teacherMessage = `A new Co-Scholastic form has been completed by ${getUserId()?.name} for ${BasicData?.className} | ${BasicData?.Section} | ${BasicData?.Subject}.`;
-      const activity = {
-        observerMessage,
-        teacherMessage,
-        route: `/co-scholastic/report/${response?.payload?.form?._id}`,
-        date: new Date(),
-        reciverId: receiverId,
-        senderId: getUserId()?.id,
-        fromNo: 2,
-        data: response?.payload,
+    if (activeFormId) {
+      await dispatch(
+        EditUpdateCoScholasticForm({ id: activeFormId, data: basePayload }),
+      );
+    } else {
+      const res = await dispatch(CreateCoScholastic(basePayload));
+      if (res?.payload?.status && res?.payload?.form?._id) {
+        const newId = res.payload.form._id;
+        setActiveFormId(newId);
+        window.history.replaceState(null, "", `/co-scholastic/create/${newId}`);
+      }
+    }
+  };
+
+  /* ─── Navigation ─────────────────────────────────────────────────── */
+  const handleNext = async () => {
+    try {
+      const fields = getStepFields(currStep);
+      await form.validateFields(fields);
+
+      setIsSavingDraft(true);
+      const nextStep = currStep + 1;
+      await persistDraft(nextStep);
+      setCurrStep(nextStep);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch (err) {
+      console.error("Step validation failed", err);
+      message.error("Please complete all required fields on this step.");
+    } finally {
+      setIsSavingDraft(false);
+    }
+  };
+
+  const handleBack = async () => {
+    if (currStep > 0) {
+      setIsSavingDraft(true);
+      const prevStep = currStep - 1;
+      try {
+        await persistDraft(prevStep);
+      } catch (e) {
+        console.warn("Silent draft save on Back", e);
+      } finally {
+        setIsSavingDraft(false);
+        setCurrStep(prevStep);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    }
+  };
+
+  const handleSaveDraft = async () => {
+    try {
+      setIsSavingDraft(true);
+      await persistDraft(currStep);
+      message.success("Draft saved successfully to database!");
+    } catch (e) {
+      console.error("Draft save failed", e);
+      message.error("Failed to save draft.");
+    } finally {
+      setIsSavingDraft(false);
+    }
+  };
+
+  const handleSubmit = async () => {
+    try {
+      await form.validateFields();
+      setIsSubmitting(true);
+      const values = form.getFieldsValue(true);
+      const scoreData = calculateScoreFromData(values);
+
+      const submissionData = {
+        ...values,
+        ...scoreData,
+        isDraft: false,
+        isObserverCompleted: true,
+        currentStep: 2,
+        DateOfObservation: values.DateOfObservation
+          ? values.DateOfObservation.toDate()
+          : new Date(),
       };
 
-      const activitiRecord = await dispatch(CreateActivityApi(activity));
-      if (!activitiRecord?.payload?.success) {
-        message.error("Error on Activity Record");
+      let response;
+      if (activeFormId) {
+        response = await dispatch(
+          EditUpdateCoScholasticForm({ id: activeFormId, data: submissionData }),
+        );
+      } else {
+        response = await dispatch(CreateCoScholastic(submissionData));
       }
-      message.success(response?.payload?.message);
-      navigate(`/co-scholastic/report/${response?.payload?.form?._id}`);
-    } else {
-      throw new Error(response.payload.message || "Error submitting the form.");
+
+      const formResult = response?.payload?.form;
+      if (response?.payload?.status || formResult?._id) {
+        const targetId = formResult?._id || activeFormId;
+        const receiverId =
+          formResult?.grenralDetails?.NameoftheVisitingTeacher ||
+          formResult?.teacherID;
+        const BasicData = formResult?.grenralDetails || values;
+
+        const observerMessage = `You have completed the Co-Scholastic form for ${BasicData?.className} | ${BasicData?.Section} | ${BasicData?.Subject}.`;
+        const teacherMessage = `A new Co-Scholastic form has been completed by ${getUserId()?.name} for ${BasicData?.className} | ${BasicData?.Section} | ${BasicData?.Subject}.`;
+        const activity = {
+          observerMessage,
+          teacherMessage,
+          route: `/co-scholastic/report/${targetId}`,
+          date: new Date(),
+          reciverId: receiverId,
+          senderId: getUserId()?.id,
+          fromNo: 2,
+          data: response?.payload,
+        };
+
+        const activitiRecord = await dispatch(CreateActivityApi(activity));
+        if (!activitiRecord?.payload?.success) {
+          message.error("Error on Activity Record");
+        }
+        message.success(response?.payload?.message || "Form submitted successfully!");
+        navigate(`/co-scholastic/report/${targetId}`);
+      } else {
+        throw new Error(
+          response?.payload?.message || "Error submitting the form.",
+        );
+      }
+    } catch (err) {
+      console.error("Submission error:", err);
+      message.error("Please complete all required fields before submitting.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -552,7 +702,7 @@ function CoScholasticDetails() {
             Co-Scholastic Classroom Observation Checklist
           </Heading>
           <Text fontSize="sm" color="gray.500">
-            Complete all steps to submit the observation record.
+            Multi-step observation form with automatic draft saves at every step.
           </Text>
         </Box>
 
@@ -562,20 +712,18 @@ function CoScholasticDetails() {
           bg="white"
           px={6}
           py={5}
-          top="90"
-          zIndex="1000"
           borderRadius="2xl"
           borderWidth="1px"
           borderColor="gray.100"
           boxShadow="0 1px 4px rgba(0,0,0,0.05)"
         >
-          <CommonStepper steps={steps} current={currStep} />
+          <CommonStepper steps={steps} currentStep={currStep} />
         </Box>
 
         {/* Two-column layout */}
         <Flex direction={{ base: "column", lg: "row" }} gap={6} align="stretch">
           {/* ── Left: form ─────────────────────────────────────────── */}
-          <Box  flex="1" minW={0}>
+          <Box flex="1" minW={0}>
             <Spin spinning={loading || isLoading}>
               <Form
                 form={form}
@@ -600,48 +748,70 @@ function CoScholasticDetails() {
                 </Box>
 
                 {/* Navigation buttons */}
-                <Flex justify="space-between" mt={5}>
-                  {currStep > 0 ? (
+                <Flex justify="space-between" align="center" mt={6}>
+                  <Button
+                    size="large"
+                    disabled={currStep === 0}
+                    onClick={handleBack}
+                    style={{ borderRadius: "10px", minWidth: "120px" }}
+                  >
+                    ← Back
+                  </Button>
+
+                  <Space size="middle">
                     <Button
                       size="large"
-                      onClick={() => {
-                        setCurrStep((p) => p - 1);
-                        window.scrollTo({ top: 0, behavior: "smooth" });
-                      }}
-                      style={{ borderRadius: "10px", minWidth: "120px" }}
+                      icon={<SaveOutlined />}
+                      onClick={handleSaveDraft}
+                      loading={isSavingDraft}
+                      style={{ borderRadius: "10px" }}
                     >
-                      ← Back
+                      Save Draft
                     </Button>
-                  ) : (
-                    <Box />
-                  )}
-                  <Button
-                    type="primary"
-                    size="large"
-                    onClick={handleNext}
-                    style={{
-                      borderRadius: "10px",
-                      minWidth: "140px",
-                      background: "#4A6741",
-                      border: "none",
-                      fontWeight: 600,
-                    }}
-                  >
-                    {currStep < steps.length - 1 ? "Next →" : "Submit"}
-                  </Button>
+
+                    {currStep < steps.length - 1 ? (
+                      <Button
+                        type="primary"
+                        size="large"
+                        onClick={handleNext}
+                        loading={isSavingDraft}
+                        style={{
+                          borderRadius: "10px",
+                          minWidth: "140px",
+                          background: "#4A6741",
+                          border: "none",
+                          fontWeight: 600,
+                        }}
+                      >
+                        Next →
+                      </Button>
+                    ) : (
+                      <Button
+                        type="primary"
+                        size="large"
+                        onClick={handleSubmit}
+                        loading={isSubmitting}
+                        style={{
+                          borderRadius: "10px",
+                          minWidth: "150px",
+                          background: "#1a4d2e",
+                          border: "none",
+                          fontWeight: 600,
+                        }}
+                      >
+                        Submit Evaluation
+                      </Button>
+                    )}
+                  </Space>
                 </Flex>
               </Form>
             </Spin>
           </Box>
 
           {/* ── Right: score panel (sticky) ─────────────────────────── */}
-          <Box
-            w={{ base: "100%", lg: "280px" }}
-            flexShrink={0}
-          >
+          <Box w={{ base: "100%", lg: "280px" }} flexShrink={0}>
             <Box
-            position={{ base: "sticky", md: "sticky" }}
-
+              position={{ base: "relative", lg: "sticky" }}
               top="16px"
               bg="white"
               borderRadius="2xl"
@@ -667,7 +837,9 @@ function CoScholasticDetails() {
                   <Text
                     fontSize="48px"
                     fontWeight="800"
-                    color={percentageScore > 0 ? "brand.secondary" : "gray.200"}
+                    color={
+                      percentageScore > 0 ? "brand.secondary" : "gray.200"
+                    }
                     lineHeight="1"
                     transition="color 0.3s"
                   >

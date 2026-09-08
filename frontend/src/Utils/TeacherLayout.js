@@ -25,7 +25,17 @@ const TeacherLayout = () => {
   };
 
   // Not logged in → redirect to login
-  if (!token) return <Navigate to="/login" replace />;
+  if (!token) {
+    const currentPath =
+      typeof window !== "undefined"
+        ? window.location.pathname + window.location.search
+        : "";
+    const to =
+      currentPath && currentPath !== "/"
+        ? `/login?redirect=${encodeURIComponent(currentPath)}`
+        : "/login";
+    return <Navigate to={to} replace />;
+  }
   // Logged in but wrong role → show Unauthorized
   if (role !== "Teacher") return <Unauthorized />;
 

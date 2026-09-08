@@ -15,7 +15,7 @@ elif [ -f "$HOME/.ssh/aaPanel.pem" ]; then
 fi
 
 echo "🚀 Building frontend for DLWS environment..."
-npm run build:dlws --prefix frontend
+CI=false npm run build:dlws --prefix frontend
 
 echo "📦 Zipping frontend build files..."
 cd frontend/build
@@ -25,7 +25,22 @@ cd ../..
 echo "📤 Uploading frontend zip to server ($SERVER_USER@$SERVER_IP)..."
 scp -o StrictHostKeyChecking=no $SSH_KEY frontend/dlws-build.zip $SERVER_USER@$SERVER_IP:$SERVER_PATH/
 
-echo "📂 Unzipping frontend on server..."
-ssh -o StrictHostKeyChecking=no $SSH_KEY $SERVER_USER@$SERVER_IP "cd $SERVER_PATH && unzip -o dlws-build.zip && rm dlws-build.zip && (if [ -d /www/wwwroot/dlws ]; then cp -r /www/wwwroot/evaluation.dlws.edu.in/* /www/wwwroot/dlws/; fi)"
+echo "📂 Updating build directory on server and restarting frontend service..."
+ssh -o StrictHostKeyChecking=no $SSH_KEY $SERVER_USER@$SERVER_IP "
+  cd $SERVER_PATH
+  rm -rf build_new && mkdir -p build_new
+  unzip -o dlws-build.zip -d build_new > /dev/null
+  rm -rf build && mv build_new build
+  rm -f dlws-build.zip
+  cp -r build/* .
 
-echo "✅ DLWS Frontend Deployment Complete!"
+  # Restart Node evaluation2 Service on port 3011
+  if [ -f /www/server/nodejs/vhost/pids/evaluation2.pid ]; then
+    kill -9 \$(cat /www/server/nodejs/vhost/pids/evaluation2.pid) 2>/dev/null || true
+  fi
+  fuser -k 3011/tcp 2>/dev/null || true
+  sleep 1
+  bash /www/server/nodejs/vhost/scripts/evaluation2.sh
+"
+
+echo "✅ DLWS Frontend Deployment Complete & Service Restarted!"

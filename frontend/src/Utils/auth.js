@@ -4,14 +4,31 @@ import {jwtDecode} from "jwt-decode";
 
 export const getToken = () => {
   if (typeof window !== "undefined") {
-    return localStorage.getItem("token") || null;
+    const token = localStorage.getItem("token");
+    if (!token) return null;
+    try {
+      const decoded = jwtDecode(token);
+      if (decoded.exp && decoded.exp * 1000 < Date.now()) {
+        localStorage.removeItem("token");
+        return null;
+      }
+      return token;
+    } catch (e) {
+      localStorage.removeItem("token");
+      return null;
+    }
   }
   return null;
 };
 
 export const getUserId = () => {
-  const token = getToken()
-  return token ? jwtDecode(token) : null;
+  const token = getToken();
+  if (!token) return null;
+  try {
+    return jwtDecode(token);
+  } catch (e) {
+    return null;
+  }
 };
 
 export const getAllTimes = (timestamp) => {

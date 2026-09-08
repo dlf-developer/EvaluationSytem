@@ -349,21 +349,38 @@ exports.FormFill = async (req, res) => {
 
     // Create an object to store the updates
     let updateData = {};
+    const isDraft = req.body.isDraft !== undefined ? req.body.isDraft : (!isCoordinatorComplete && !isTeacherComplete);
+    const currentStep = req.body.currentStep !== undefined ? req.body.currentStep : (data?.currentStep || 0);
 
     if (isCoordinatorComplete) {
       updateData = {
         isCoordinatorComplete,
+        isDraft: false,
+        currentStep,
         ObserverSubmissionDate: new Date(),
-        observerForm,
+        observerForm: observerForm || data?.observerForm,
       };
     } else if (isTeacherComplete) {
       updateData = {
         isTeacherComplete,
+        isDraft: false,
+        currentStep,
         TeacherSubmissionDate: new Date(),
-        teacherForm,
-        className: FindClass?.className || className,
-        date: data?.date || date,
-        section: data?.section || Section,
+        teacherForm: teacherForm || data?.teacherForm,
+        className: FindClass?.className || className || data?.className,
+        date: date || data?.date,
+        section: Section || data?.section,
+      };
+    } else {
+      // Step-by-step draft persistence
+      updateData = {
+        isDraft: true,
+        currentStep,
+        ...(observerForm ? { observerForm } : {}),
+        ...(teacherForm ? { teacherForm } : {}),
+        ...(className || FindClass ? { className: FindClass?.className || className } : {}),
+        ...(date ? { date } : {}),
+        ...(Section ? { section: Section } : {}),
       };
     }
 

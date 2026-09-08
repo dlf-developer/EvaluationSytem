@@ -15,6 +15,8 @@ exports.createWeekly4Form = async (req, res) => {
     dateOfSubmission,
     isCompleted,
     isInitiated,
+    isDraft,
+    currentStep,
   } = req.body;
 
   try {
@@ -34,7 +36,7 @@ exports.createWeekly4Form = async (req, res) => {
     const classNamesMap = await getClassNamesForFormData(FormData);
 
     // Step 4: Replace classId with className in FormData
-    const updatedFormData = FormData.map((formItem) => {
+    const updatedFormData = FormData?.map((formItem) => {
       if (formItem?.classId && Array.isArray(formItem.classId)) {
         return {
           ...formItem,
@@ -47,11 +49,14 @@ exports.createWeekly4Form = async (req, res) => {
     });
 
     // Step 5: Prepare the payload
+    const isDraftSave = isDraft === true;
     const payload = {
       FormData: updatedFormData,
       date,
       dateOfSubmission,
-      isCompleted,
+      isCompleted: isDraftSave ? false : (isCompleted !== undefined ? isCompleted : true),
+      isDraft: isDraftSave,
+      currentStep: currentStep !== undefined ? currentStep : 0,
       isInitiated,
       teacherId: userId,
     };
@@ -166,8 +171,8 @@ const createNonInitiatedForm = async (Payload, res) => {
     const newForm = new Weekly4Form(Payload);
     const savedForm = await newForm.save();
 
-    // Send HTML email to observer: teacher has submitted their section
-    if (UserName?.email) {
+    // Send HTML email to observer: teacher has submitted their section ONLY if not draft
+    if (!Payload.isDraft && Payload.isCompleted && UserName?.email) {
       const route = `weekly4form/create/${savedForm._id}`;
       const emailData = formCompletedEmail({
         recipientName: UserName.name,
@@ -312,7 +317,7 @@ exports.getWeekly4FormById = async (req, res) => {
 // };
 
 exports.updateWeekly4Form = async (req, res) => {
-  const { FormData, date, dateOfSubmission, isCompleted, isInitiated } =
+  const { FormData, date, dateOfSubmission, isCompleted, isInitiated, isDraft, currentStep } =
     req.body;
   try {
     // Fetch class names for each classId in FormData
@@ -338,13 +343,18 @@ exports.updateWeekly4Form = async (req, res) => {
       }
     });
 
+    const isDraftSave = isDraft === true;
     const Payload = {
       FormData,
       date,
       dateOfSubmission,
-      isCompleted,
+      isCompleted: isDraftSave ? false : (isCompleted !== undefined ? isCompleted : true),
+      isDraft: isDraftSave,
       isInitiated,
     };
+    if (currentStep !== undefined) {
+      Payload.currentStep = currentStep;
+    }
 
     const updatedForm = await Weekly4Form.findByIdAndUpdate(
       req.params.id,
@@ -356,8 +366,8 @@ exports.updateWeekly4Form = async (req, res) => {
       return res.status(404).json({ message: "Form not found" });
     }
 
-    // Send HTML email to the observer about the teacher's submission
-    if (updatedForm.isInitiated?.Observer?.email) {
+    // Send HTML email to the observer about the teacher's submission ONLY if not a draft
+    if (!isDraftSave && Payload.isCompleted && updatedForm.isInitiated?.Observer?.email) {
       const route = `weekly4form/create/${req.params.id}`;
       const emailData = formCompletedEmail({
         recipientName: updatedForm.isInitiated?.Observer?.name || "Observer",

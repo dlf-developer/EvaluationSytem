@@ -132,6 +132,23 @@ export const deleteCreateClassSection = createAsyncThunk(
   },
 );
 
+export const updateCreateClassSection = createAsyncThunk(
+  "updateCreateClassSection",
+  async ({ id, data }, { rejectWithValue }) => {
+    try {
+      const response = await axiosInstanceToken.put(
+        `/class/update/${id}`,
+        data
+      );
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error?.response?.data?.message || error.message || "Failed to update class details"
+      );
+    }
+  }
+);
+
 // weekly 4 form
 
 export const initiateFromObserver = createAsyncThunk(
@@ -292,6 +309,22 @@ export const syncWingForm = createAsyncThunk(
   },
 );
 
+export const duplicateWingForm = createAsyncThunk(
+  "duplicateWingForm",
+  async (payload, { rejectWithValue }) => {
+    try {
+      const response = await axiosInstanceToken.post(
+        `/wing-coordinator/duplicate/${payload}`,
+      );
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error?.response?.data?.message || error.message || "Failed to duplicate form"
+      );
+    }
+  },
+);
+
 // Accountability Mechanism Form
 
 export const createAccountability = createAsyncThunk(
@@ -350,6 +383,22 @@ export const deleteAccountabilityForm = createAsyncThunk(
       `/accountability/${payload}`
     );
     return response.data;
+  }
+);
+
+export const duplicateAccountabilityForm = createAsyncThunk(
+  "duplicateAccountabilityForm",
+  async (payload, { rejectWithValue }) => {
+    try {
+      const response = await axiosInstanceToken.post(
+        `/accountability/duplicate/${payload}`
+      );
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error?.response?.data?.message || error.message || "Failed to duplicate form"
+      );
+    }
   }
 );
 

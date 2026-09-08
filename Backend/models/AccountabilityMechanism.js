@@ -94,6 +94,7 @@ const accountabilitySchema = new Schema({
     userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     isDraft: { type: Boolean, default: true },
     isComplete: { type: Boolean, default: false },
+    isDuplicate: { type: Boolean, default: false },
 
     // Per-teacher scored data (one entry per selected teacher)
     teacherScores: [teacherScoreSchema],

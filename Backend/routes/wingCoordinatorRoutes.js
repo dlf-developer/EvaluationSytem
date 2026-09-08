@@ -14,6 +14,7 @@ router.delete('/:id', authMiddleware, wingCoordinatorController.deleteWingCoordi
 router.put('/status/:id', authMiddleware, wingCoordinatorController.publishWingCoordinator);
 
 router.post('/sync/:id', authMiddleware, wingCoordinatorController.syncWingCoordinator);
+router.post('/duplicate/:id', authMiddleware, wingCoordinatorController.duplicateWingCoordinator);
 
 module.exports = router;
  

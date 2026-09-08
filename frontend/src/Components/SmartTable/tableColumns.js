@@ -14,7 +14,7 @@
 import React from "react";
 import { Box, Text, Flex, Tag, Stack, Button } from "@chakra-ui/react";
 import { Link } from "react-router-dom";
-import { DeleteFilled } from "@ant-design/icons";
+import { DeleteFilled, EditOutlined } from "@ant-design/icons";
 import { getAllTimes } from "../../Utils/auth";
 import { UserRole } from "../../config/config";
 import Reminder from "../Reminder";
@@ -1028,7 +1028,7 @@ export const getUserColumns = ({ onDelete }) => [
 // ─────────────────────────────────────────────────────────────────────────────
 // 6. CLASS & SECTION TABLE (Admin)
 // ─────────────────────────────────────────────────────────────────────────────
-export const getClassSectionColumns = ({ onDelete }) => [
+export const getClassSectionColumns = ({ onEdit, onDelete }) => [
   {
     title: "Class Name",
     key: "className",
@@ -1050,7 +1050,7 @@ export const getClassSectionColumns = ({ onDelete }) => [
       <Flex wrap="wrap" gap={1}>
         {(sections || []).map((s, i) => (
           <Tag key={i} variant="subtle" colorScheme="blue" fontSize="xs">
-            {s.name}
+            {s.name || s}
           </Tag>
         ))}
       </Flex>
@@ -1064,7 +1064,7 @@ export const getClassSectionColumns = ({ onDelete }) => [
       <Flex wrap="wrap" gap={1}>
         {(subjects || []).map((s, i) => (
           <Tag key={i} variant="subtle" colorScheme="green" fontSize="xs">
-            {s.name}
+            {s.name || s}
           </Tag>
         ))}
       </Flex>
@@ -1074,19 +1074,32 @@ export const getClassSectionColumns = ({ onDelete }) => [
     title: "Action",
     key: "action",
     dataIndex: "action",
-    width: "140px",
+    width: "180px",
     render: (_, record) => (
-      <Button
-        size="sm"
-        variant="ghost"
-        colorScheme="red"
-        color="red.600"
-        _hover={{ bg: "red.50" }}
-        leftIcon={<DeleteFilled />}
-        onClick={() => onDelete(record)}
-      >
-        Delete
-      </Button>
+      <Flex gap={2} align="center">
+        {onEdit && (
+          <Button
+            size="sm"
+            variant="outline"
+            colorScheme="blue"
+            leftIcon={<EditOutlined />}
+            onClick={() => onEdit(record)}
+          >
+            Edit
+          </Button>
+        )}
+        <Button
+          size="sm"
+          variant="ghost"
+          colorScheme="red"
+          color="red.600"
+          _hover={{ bg: "red.50" }}
+          leftIcon={<DeleteFilled />}
+          onClick={() => onDelete(record)}
+        >
+          Delete
+        </Button>
+      </Flex>
     ),
   },
 ];
@@ -1094,7 +1107,7 @@ export const getClassSectionColumns = ({ onDelete }) => [
 // ─────────────────────────────────────────────────────────────────────────────
 // 7. WING COORDINATOR TABLE
 // ─────────────────────────────────────────────────────────────────────────────
-export const getWingCoordinatorColumns = ({ data = [] }) => [
+export const getWingCoordinatorColumns = ({ data = [], onDuplicate }) => [
   {
     title: "Teacher",
     key: "teacherName",
@@ -1131,8 +1144,29 @@ export const getWingCoordinatorColumns = ({ data = [] }) => [
     title: "Status",
     key: "isCompleted",
     dataIndex: "isCompleted",
-    width: "130px",
-    render: (val) => <StatusBadge value={val} />,
+    width: "190px",
+    render: (val, record) => {
+      const isDuplicate = record?.isDuplicate || record?.formName?.includes("(Copy)");
+      return (
+        <Flex gap={2} align="center">
+          <StatusBadge value={val} />
+          {isDuplicate && (
+            <Tag
+              size="sm"
+              colorScheme="purple"
+              variant="subtle"
+              borderRadius="full"
+              fontWeight="600"
+              px="8px"
+              py="2px"
+              fontSize="11px"
+            >
+              Duplicate
+            </Tag>
+          )}
+        </Flex>
+      );
+    },
     filterConfig: {
       type: "boolean",
       trueLabel: "Completed",
@@ -1143,33 +1177,48 @@ export const getWingCoordinatorColumns = ({ data = [] }) => [
     title: "Action",
     key: "action",
     dataIndex: "action",
-    width: "160px",
-    render: (_, record) =>
-      record?.isCompleted ? (
-        <Link to={`/wing-coordinator/report/${record._id}`}>
+    width: "240px",
+    render: (_, record) => (
+      <Flex gap={2} align="center">
+        {record?.isCompleted ? (
+          <Link to={`/wing-coordinator/report/${record._id}`}>
+            <Button
+              size="md"
+              variant="outline"
+              colorScheme="blue"
+              fontWeight="medium"
+              flexShrink={0}
+            >
+              View Report
+            </Button>
+          </Link>
+        ) : (
+          <Link to={`/wing-coordinator/${record._id}`}>
+            <Button
+              size="md"
+              variant="outline"
+              colorScheme="blue"
+              fontWeight="medium"
+              flexShrink={0}
+            >
+              Continue
+            </Button>
+          </Link>
+        )}
+        {onDuplicate && (
           <Button
             size="md"
             variant="outline"
-            colorScheme="blue"
+            colorScheme="purple"
             fontWeight="medium"
             flexShrink={0}
+            onClick={() => onDuplicate(record._id)}
           >
-            View Report
+            Duplicate
           </Button>
-        </Link>
-      ) : (
-        <Link to={`/wing-coordinator/create/${record._id}`}>
-          <Button
-            size="md"
-            variant="outline"
-            colorScheme="blue"
-            fontWeight="medium"
-            flexShrink={0}
-          >
-            Continue
-          </Button>
-        </Link>
-      ),
+        )}
+      </Flex>
+    ),
   },
 ];
 

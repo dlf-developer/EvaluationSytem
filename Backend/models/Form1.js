@@ -74,6 +74,8 @@ const creationDetailsSchema = new Schema({
   // ObservationDates: { type: Date, default: null },
   TeacherSubmissionDate: { type: Date, default: null },
   ObserverSubmissionDate: { type: Date, default: null },
+  isDraft: { type: Boolean, default: true },
+  currentStep: { type: Number, default: 0 },
 }, { timestamps: true });
 
 const Form1 = mongoose.model('Form1', creationDetailsSchema);

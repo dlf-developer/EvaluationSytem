@@ -13,7 +13,8 @@ const WingCoordinator = new Schema({
     monthlyReport:{type:Array},
     userId:{ type: Schema.Types.ObjectId, ref: 'User',require:true },
     isComplete:{type:Boolean},
-    isDraft:{type:Boolean}
+    isDraft:{type:Boolean},
+    isDuplicate:{type:Boolean, default:false}
 }, { timestamps: true });
 
 module.exports = mongoose.model('WingCoordinator', WingCoordinator);

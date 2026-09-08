@@ -25,6 +25,8 @@ exports.createForm = async (req, res) => {
         NumberofParametersNotApplicable,
         isObserverCompleted,
         ObserverFeedback,
+        isDraft,
+        currentStep,
     } = req.body;
     const userId = req?.user?.id;
 
@@ -39,20 +41,29 @@ exports.createForm = async (req, res) => {
             return res.status(400).json({ message: "Name of the Visiting Teacher is required." });
         }
 
-        const classData = await ClassDetails.findById(className);
-        if (!classData) {
+        let resolvedClassName = className;
+        if (className) {
+            const classData = await ClassDetails.findById(className);
+            if (classData) {
+                resolvedClassName = classData.className;
+            }
+        }
+        if (!resolvedClassName) {
             return res.status(400).json({ success: false, message: "Class and Section is Required!" });
         }
 
+        const isDraftSave = isDraft === true;
         const newForm = new CoScholastic({
             createdBy: userId,
-            isObserverCompleted: ObserverFeedback ? true : false,
+            isDraft: isDraftSave,
+            currentStep: currentStep !== undefined ? currentStep : 0,
+            isObserverCompleted: isDraftSave ? false : (isObserverCompleted !== undefined ? isObserverCompleted : (ObserverFeedback ? true : false)),
             ObserverFeedback: ObserverFeedback || [],
             isTeacherCompletes: false,
             grenralDetails: {
                 NameoftheVisitingTeacher,
                 DateOfObservation: DateOfObservation || new Date(),
-                className: classData?.className,
+                className: resolvedClassName,
                 Section,
                 Subject,
                 Topic,
@@ -70,26 +81,29 @@ exports.createForm = async (req, res) => {
 
         const savedForm = await newForm.save();
         
-        await createNotification({
-            title: 'You are invited to fill the Co-Scholastic Classroom Observation',
-            route: `co-scholastic/create/${savedForm._id}`,
-            reciverId: NameoftheVisitingTeacher,
-        });
+        // Notify teacher only if finalized and NOT draft
+        if (!isDraftSave && newForm.isObserverCompleted) {
+            await createNotification({
+                title: 'You are invited to fill the Co-Scholastic Classroom Observation',
+                route: `co-scholastic/create/${savedForm._id}`,
+                reciverId: NameoftheVisitingTeacher,
+            });
 
-        const recipientUser = await User.findById(NameoftheVisitingTeacher);
-        const route = `co-scholastic/create/${savedForm._id}`;
-        const emailData = formInitiatedEmail({
-          recipientName: recipientUser?.name,
-          initiatorName: user.name,
-          formTitle: "Co-Scholastic Classroom Observation",
-          formRoute: route,
-          className: classData?.className,
-          section: Section,
-          subject: Subject,
-        });
-        await sendEmail(recipientUser.email, emailData.subject, emailData.html);
+            const recipientUser = await User.findById(NameoftheVisitingTeacher);
+            const route = `co-scholastic/create/${savedForm._id}`;
+            const emailData = formInitiatedEmail({
+              recipientName: recipientUser?.name,
+              initiatorName: user.name,
+              formTitle: "Co-Scholastic Classroom Observation",
+              formRoute: route,
+              className: resolvedClassName,
+              section: Section,
+              subject: Subject,
+            });
+            await sendEmail(recipientUser.email, emailData.subject, emailData.html);
+        }
 
-        res.status(201).json({ message: "Form created successfully", form: savedForm, status: true });
+        res.status(201).json({ message: isDraftSave ? "Draft saved successfully" : "Form created successfully", form: savedForm, status: true });
     } catch (error) {
         console.error("Error creating Co-Scholastic Form:", error);
         res.status(500).json({ message: "Error creating Co-Scholastic Form.", status: false, error });
@@ -115,6 +129,8 @@ exports.editCoScholasticForm = async (req, res) => {
         NumberofParametersNotApplicable,
         isObserverCompleted,
         ObserverFeedback,
+        isDraft,
+        currentStep,
     } = req.body;
     const userId = req?.user?.id;
     const formId = req.params.id;
@@ -131,11 +147,15 @@ exports.editCoScholasticForm = async (req, res) => {
             return res.status(404).json({ message: "Form does not exist." });
         }
 
+        const isDraftSave = isDraft === true;
         const UpdateValue = {};
 
         if (NameoftheVisitingTeacher) UpdateValue["grenralDetails.NameoftheVisitingTeacher"] = NameoftheVisitingTeacher;
         if (DateOfObservation) UpdateValue["grenralDetails.DateOfObservation"] = DateOfObservation;
-        if (className) UpdateValue["grenralDetails.className"] = className;
+        if (className) {
+            const classData = await ClassDetails.findById(className);
+            UpdateValue["grenralDetails.className"] = classData ? classData.className : className;
+        }
         if (Section) UpdateValue["grenralDetails.Section"] = Section;
         if (Subject) UpdateValue["grenralDetails.Subject"] = Subject;
         if (Topic) UpdateValue["grenralDetails.Topic"] = Topic;
@@ -147,19 +167,24 @@ exports.editCoScholasticForm = async (req, res) => {
         if (scoreOutof) UpdateValue.scoreOutof = scoreOutof;
         if (percentageScore) UpdateValue.percentageScore = percentageScore;
         if (Grade) UpdateValue.Grade = Grade;
-        if (NumberofParametersNotApplicable) UpdateValue.NumberofParametersNotApplicable = NumberofParametersNotApplicable;
+        if (NumberofParametersNotApplicable !== undefined) UpdateValue.NumberofParametersNotApplicable = NumberofParametersNotApplicable;
         if (ObserverFeedback) {
             UpdateValue.ObserverFeedback = ObserverFeedback;
         }
 
+        UpdateValue.isDraft = isDraftSave;
+        if (currentStep !== undefined) {
+            UpdateValue.currentStep = currentStep;
+        }
+        UpdateValue.isObserverCompleted = isDraftSave ? false : (isObserverCompleted !== undefined ? isObserverCompleted : true);
         UpdateValue.isTeacherCompletes = false;
 
         const updatedForm = await CoScholastic.findByIdAndUpdate(formId, UpdateValue, { new: true })
             .populate('grenralDetails.NameoftheVisitingTeacher', 'name email');
 
-        // Notify the teacher that the observer has filled/updated their section
+        // Notify the teacher only if observer completed the form and it is NOT a draft
         const teacher = updatedForm?.grenralDetails?.NameoftheVisitingTeacher;
-        if (teacher?.email) {
+        if (!isDraftSave && UpdateValue.isObserverCompleted && teacher?.email) {
             const route = `co-scholastic/create/${formId}`;
             const emailData = formCompletedEmail({
                 recipientName: teacher.name,
@@ -174,7 +199,7 @@ exports.editCoScholasticForm = async (req, res) => {
         }
 
         res.status(200).json({
-            message: 'Form updated successfully!',
+            message: isDraftSave ? 'Draft saved successfully!' : 'Form updated successfully!',
             success: true,
             updatedForm,
         });
@@ -258,7 +283,7 @@ exports.GetTeacherForm = async (req, res) => {
 exports.TeacherContinueForm = async (req, res) => {
     const userId = req?.user?.id;
     const FormID = req?.params?.id;
-    const { TeacherFeedback, isTeacherCompletes } = req.body;
+    const { TeacherFeedback, isTeacherCompletes, isDraft, currentStep } = req.body;
 
     try {
         const user = await User.findById(userId, "-password -mobile -employeeId -customId");
@@ -275,21 +300,26 @@ exports.TeacherContinueForm = async (req, res) => {
             return res.status(404).json({ message: "Form not found." });
         }
 
-        form.TeacherFeedback = TeacherFeedback || form.TeacherFeedback;
-        form.isTeacherCompletes = isTeacherCompletes ?? form.isTeacherCompletes;
+        const isDraftSave = isDraft === true;
+        if (TeacherFeedback) form.TeacherFeedback = TeacherFeedback;
+        form.isTeacherCompletes = isDraftSave ? false : (isTeacherCompletes ?? form.isTeacherCompletes);
+        form.isDraft = isDraftSave;
+        if (currentStep !== undefined) form.currentStep = currentStep;
 
-        const route = `co-scholastic/create/${FormID}`;
-        const emailData = formCompletedEmail({
-          recipientName: form.createdBy.name,
-          completorName: form?.grenralDetails?.NameoftheVisitingTeacher?.name,
-          formTitle: "Co-Scholastic Classroom Observation",
-          formRoute: route,
-          role: "Teacher",
-        });
-        await sendEmail(form.createdBy.email, emailData.subject, emailData.html);
+        if (!isDraftSave && form.isTeacherCompletes && form.createdBy?.email) {
+            const route = `co-scholastic/create/${FormID}`;
+            const emailData = formCompletedEmail({
+              recipientName: form.createdBy.name,
+              completorName: form?.grenralDetails?.NameoftheVisitingTeacher?.name,
+              formTitle: "Co-Scholastic Classroom Observation",
+              formRoute: route,
+              role: "Teacher",
+            });
+            await sendEmail(form.createdBy.email, emailData.subject, emailData.html);
+        }
         
         await form.save();
-        res.status(200).json({ message: "Form Successfully Completed." });
+        res.status(200).json({ message: isDraftSave ? "Draft saved successfully." : "Form Successfully Completed.", form });
     } catch (error) {
         res.status(500).json({ message: "An error occurred while updating the form.", error });
     }

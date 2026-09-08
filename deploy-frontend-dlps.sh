@@ -15,7 +15,7 @@ elif [ -f "$HOME/.ssh/aaPanel.pem" ]; then
 fi
 
 echo "🚀 Building frontend for DLPS environment..."
-npm run build:dlps --prefix frontend
+CI=false npm run build:dlps --prefix frontend
 
 echo "📦 Zipping frontend build files..."
 cd frontend/build
@@ -25,7 +25,22 @@ cd ../..
 echo "📤 Uploading frontend zip to server ($SERVER_USER@$SERVER_IP)..."
 scp -o StrictHostKeyChecking=no $SSH_KEY frontend/dlps-build.zip $SERVER_USER@$SERVER_IP:$SERVER_PATH/
 
-echo "📂 Unzipping frontend on server..."
-ssh -o StrictHostKeyChecking=no $SSH_KEY $SERVER_USER@$SERVER_IP "cd $SERVER_PATH && unzip -o dlps-build.zip && rm dlps-build.zip && (if [ -d /www/wwwroot/evaluation.dlps.co.in ]; then cp -r /www/wwwroot/frontend/* /www/wwwroot/evaluation.dlps.co.in/; fi)"
+echo "📂 Updating build directory on server and restarting frontend service..."
+ssh -o StrictHostKeyChecking=no $SSH_KEY $SERVER_USER@$SERVER_IP "
+  cd $SERVER_PATH
+  rm -rf build_new && mkdir -p build_new
+  unzip -o dlps-build.zip -d build_new > /dev/null
+  rm -rf build && mv build_new build
+  rm -f dlps-build.zip
+  cp -r build/* .
 
-echo "✅ DLPS Frontend Deployment Complete!"
+  # Restart Node Frontend Service on port 3010
+  if [ -f /www/server/nodejs/vhost/pids/Frontend.pid ]; then
+    kill -9 \$(cat /www/server/nodejs/vhost/pids/Frontend.pid) 2>/dev/null || true
+  fi
+  fuser -k 3010/tcp 2>/dev/null || true
+  sleep 1
+  bash /www/server/nodejs/vhost/scripts/Frontend.sh
+"
+
+echo "✅ DLPS Frontend Deployment Complete & Service Restarted!"

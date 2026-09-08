@@ -2,6 +2,7 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Box, Flex, Heading, Text, Button, VStack } from "@chakra-ui/react";
 import { ArrowLeftOutlined } from "@ant-design/icons";
+import { getToken } from "../Utils/auth";
 
 const NotFound404 = () => {
   const navigate = useNavigate();
@@ -50,9 +51,12 @@ const NotFound404 = () => {
             bg="brand.primary"
             color="white"
             _hover={{ bg: "brand.secondary" }}
-            onClick={() => navigate("/dashboard")}
+            onClick={() => {
+              const token = getToken();
+              navigate(token ? "/dashboard" : "/login");
+            }}
           >
-            Dashboard
+            {getToken() ? "Dashboard" : "Log In"}
           </Button>
         </Flex>
       </VStack>

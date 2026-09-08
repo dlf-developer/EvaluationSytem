@@ -240,6 +240,42 @@ const calculateTeacherScores = async (req, res) => {
     }
 };
 
+// ✅ Duplicate an Accountability entry
+const duplicateAccountability = async (req, res) => {
+    try {
+        const original = await AccountabilityMechanism.findById(req.params.id);
+        if (!original) {
+            return res.status(404).json({ success: false, message: 'Accountability report not found' });
+        }
+
+        const data = original.toObject();
+        delete data._id;
+        delete data.createdAt;
+        delete data.updatedAt;
+        delete data.__v;
+
+        const currentUserId = req.user?._id || req.user?.id || original.userId;
+        const duplicated = new AccountabilityMechanism({
+            ...data,
+            formName: original.formName ? `${original.formName} (Copy)` : 'Accountability Report (Copy)',
+            userId: currentUserId,
+            isDraft: true,
+            isComplete: false,
+            isDuplicate: true,
+        });
+
+        const saved = await duplicated.save();
+        res.status(201).json({
+            success: true,
+            message: 'Accountability report duplicated successfully',
+            data: saved,
+        });
+    } catch (error) {
+        console.error('Error duplicating accountability report:', error);
+        res.status(500).json({ success: false, message: 'Error duplicating Accountability report', error: error.message });
+    }
+};
+
 module.exports = {
     createAccountability,
     getAccountabilities,
@@ -248,4 +284,5 @@ module.exports = {
     publishAccountability,
     deleteAccountability,
     calculateTeacherScores,
+    duplicateAccountability,
 };

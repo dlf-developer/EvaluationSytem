@@ -14,6 +14,10 @@ import "react-loading-skeleton/dist/skeleton.css";
 import App from "./App";
 import ErrorBoundary from "./Components/ErrorBoundary";
 import { initFrontendLogger } from "./Utils/logger";
+import { logVersion } from "./version";
+
+// Log deployment version and build info first when app loads
+logVersion();
 
 // Initialize global frontend runtime error logging & console traps
 initFrontendLogger();
@@ -53,4 +57,3 @@ root.render(
 );
 
 reportWebVitals();
-

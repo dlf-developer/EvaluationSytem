@@ -25,6 +25,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import {
   CreateWalkThrough,
   GetWalkThroughForm,
+  EditUpdateClassForm,
 } from "../../../redux/Form/classroomWalkthroughSlice";
 import {
   getCreateClassSection,
@@ -33,6 +34,7 @@ import {
 import { getUserId } from "../../../Utils/auth";
 import "./DetailsWalkthrough.css";
 import { CreateActivityApi } from "../../../redux/Activity/activitySlice";
+import moment from "moment";
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -52,6 +54,7 @@ function DetailsWalkthrough() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const FormId = useParams()?.id;
+  const [savedFormId, setSavedFormId] = useState(FormId || null);
   const { loading, GetTeachersLists } = useSelector((state) => state?.user);
   const { isLoading, formDataList } = useSelector(
     (state) => state?.walkThroughForm,
@@ -76,18 +79,29 @@ function DetailsWalkthrough() {
   };
 
   useEffect(() => {
+    dispatch(GetTeacherList());
+    fetchClassData();
     if (FormId) {
+      setSavedFormId(FormId);
       dispatch(GetWalkThroughForm(FormId)).then(({ payload }) => {
-        const { isObserverCompleted, createdBy } = payload;
-        if (isObserverCompleted && createdBy?._id === getUserId().id) {
-          navigate(`/classroom-walkthrough/report/${FormId}`);
-        } else {
-          message.error("Something went wrong!");
+        if (payload) {
+          const { isObserverCompleted, isDraft, createdBy, grenralDetails, currentStep } = payload;
+          if (isObserverCompleted && !isDraft && createdBy?._id === getUserId().id) {
+            navigate(`/classroom-walkthrough/report/${FormId}`);
+            return;
+          }
+          form.setFieldsValue({
+            ...payload,
+            ...grenralDetails,
+            NameoftheVisitingTeacher: grenralDetails?.NameoftheVisitingTeacher?._id || grenralDetails?.NameoftheVisitingTeacher,
+            DateOfObservation: grenralDetails?.DateOfObservation ? moment(grenralDetails.DateOfObservation) : null,
+          });
+          setFormData(payload);
+          if (currentStep !== undefined && currentStep !== null && currentStep >= 0 && currentStep <= 2) {
+            setCurrStep(currentStep);
+          }
         }
       });
-    } else {
-      dispatch(GetTeacherList());
-      fetchClassData();
     }
   }, [FormId, dispatch]);
 
@@ -457,19 +471,64 @@ function DetailsWalkthrough() {
   );
 
   /* ─── Navigation ─────────────────────────────────────────────────── */
+  const saveDraftData = async (data, targetStep) => {
+    const {
+      totalScore,
+      getOutOfScore,
+      percentageScore,
+      grade,
+      numOfParameters,
+    } = calculateScoreFromData(data);
+
+    const payloadData = {
+      ...data,
+      totalScores: totalScore,
+      scoreOutof: getOutOfScore,
+      percentageScore,
+      Grade: grade,
+      NumberofParametersNotApplicable: numOfParameters,
+      isDraft: true,
+      currentStep: targetStep !== undefined ? targetStep : currStep,
+    };
+
+    try {
+      if (savedFormId) {
+        await dispatch(EditUpdateClassForm({ id: savedFormId, data: payloadData }));
+      } else {
+        const res = await dispatch(CreateWalkThrough(payloadData));
+        if (res?.payload?.form?._id) {
+          setSavedFormId(res.payload.form._id);
+        }
+      }
+    } catch (e) {
+      console.error("Draft save error:", e);
+    }
+  };
+
   const handleNext = () => {
     form
       .validateFields()
-      .then((values) => {
-        setFormData((prev) => ({ ...prev, ...values }));
+      .then(async (values) => {
+        const mergedData = { ...formData, ...values };
+        setFormData(mergedData);
         if (currStep < steps.length - 1) {
+          await saveDraftData(mergedData, currStep + 1);
           setCurrStep((prev) => prev + 1);
           window.scrollTo({ top: 0, behavior: "smooth" });
         } else {
-          handleSubmit({ ...formData, ...values });
+          handleSubmit(mergedData);
         }
       })
-      .catch(() => message.error("Please complete all required fields."));
+      .catch(() => message.error("Please complete all required fields on this step."));
+  };
+
+  const handleBack = async () => {
+    const currentValues = form.getFieldsValue();
+    const mergedData = { ...formData, ...currentValues };
+    setFormData(mergedData);
+    await saveDraftData(mergedData, currStep - 1);
+    setCurrStep((prev) => prev - 1);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const calculateScoreFromData = (data) => {
@@ -527,20 +586,31 @@ function DetailsWalkthrough() {
       percentageScore,
       Grade: grade,
       NumberofParametersNotApplicable: numOfParameters,
+      isDraft: false,
+      isFinalSubmit: true,
+      isObserverCompleted: true,
+      currentStep: 2,
     };
 
-    const response = await dispatch(CreateWalkThrough(submissionData));
-    if (response?.payload?.status) {
+    let response;
+    if (savedFormId) {
+      response = await dispatch(EditUpdateClassForm({ id: savedFormId, data: submissionData }));
+    } else {
+      response = await dispatch(CreateWalkThrough(submissionData));
+    }
+
+    const formResult = response?.payload?.form || response?.payload?.updatedForm;
+    if (response?.payload?.status || response?.payload?.success) {
       const receiverId =
-        response?.payload?.form?.grenralDetails?.NameoftheVisitingTeacher ||
-        response?.payload?.form?.teacherID;
-      const BasicData = response?.payload?.form?.grenralDetails;
+        formResult?.grenralDetails?.NameoftheVisitingTeacher ||
+        formResult?.teacherID;
+      const BasicData = formResult?.grenralDetails;
       const observerMessage = `You have completed the walkthrough form for ${BasicData?.className} | ${BasicData?.Section} | ${BasicData?.Subject}.`;
       const teacherMessage = `A new walkthrough form has been completed by ${getUserId()?.name} for ${BasicData?.className} | ${BasicData?.Section} | ${BasicData?.Subject}.`;
       const activity = {
         observerMessage,
         teacherMessage,
-        route: `/classroom-walkthrough/report/${response?.payload?.form?._id}`,
+        route: `/classroom-walkthrough/report/${formResult?._id}`,
         date: new Date(),
         reciverId: receiverId,
         senderId: getUserId()?.id,
@@ -552,10 +622,10 @@ function DetailsWalkthrough() {
       if (!activitiRecord?.payload?.success) {
         message.error("Error on Activity Record");
       }
-      message.success(response?.payload?.message);
-      navigate(`/classroom-walkthrough/report/${response?.payload?.form?._id}`);
+      message.success(response?.payload?.message || "Form submitted successfully!");
+      navigate(`/classroom-walkthrough/report/${formResult?._id}`);
     } else {
-      throw new Error(response.payload.message || "Error submitting the form.");
+      throw new Error(response?.payload?.message || "Error submitting the form.");
     }
   };
 
@@ -617,14 +687,11 @@ function DetailsWalkthrough() {
                 </Box>
 
                 {/* Navigation buttons */}
-                <Flex justify="space-between" mt={5}>
+                <Flex justify="space-between" align="center" mt={5}>
                   {currStep > 0 ? (
                     <Button
                       size="large"
-                      onClick={() => {
-                        setCurrStep((p) => p - 1);
-                        window.scrollTo({ top: 0, behavior: "smooth" });
-                      }}
+                      onClick={handleBack}
                       style={{ borderRadius: "10px", minWidth: "120px" }}
                     >
                       ← Back
@@ -632,20 +699,35 @@ function DetailsWalkthrough() {
                   ) : (
                     <Box />
                   )}
-                  <Button
-                    type="primary"
-                    size="large"
-                    onClick={handleNext}
-                    style={{
-                      borderRadius: "10px",
-                      minWidth: "140px",
-                      background: "#4A6741",
-                      border: "none",
-                      fontWeight: 600,
-                    }}
-                  >
-                    {currStep < steps.length - 1 ? "Next →" : "Submit"}
-                  </Button>
+                  <Flex gap={3} align="center">
+                    <Button
+                      size="large"
+                      onClick={async () => {
+                        const values = form.getFieldsValue();
+                        const merged = { ...formData, ...values };
+                        setFormData(merged);
+                        await saveDraftData(merged, currStep);
+                        message.success("Draft saved successfully!");
+                      }}
+                      style={{ borderRadius: "10px" }}
+                    >
+                      Save Draft
+                    </Button>
+                    <Button
+                      type="primary"
+                      size="large"
+                      onClick={handleNext}
+                      style={{
+                        borderRadius: "10px",
+                        minWidth: "140px",
+                        background: "#4A6741",
+                        border: "none",
+                        fontWeight: 600,
+                      }}
+                    >
+                      {currStep < steps.length - 1 ? "Next →" : "Submit"}
+                    </Button>
+                  </Flex>
                 </Flex>
               </Form>
             </Spin>

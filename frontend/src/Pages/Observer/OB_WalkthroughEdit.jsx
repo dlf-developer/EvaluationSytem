@@ -326,33 +326,68 @@ function OB_WalkthroughEdit() {
     </>
   );
 
+  const saveDraft = async (data, targetStep) => {
+    try {
+      await dispatch(
+        EditUpdateClassForm({
+          id: FormId,
+          data: {
+            ...data,
+            isDraft: true,
+            currentStep: targetStep !== undefined ? targetStep : currStep,
+          },
+        })
+      );
+    } catch (e) {
+      console.error("Draft save error:", e);
+    }
+  };
+
   const handleNext = () => {
     form
       .validateFields()
-      .then((values) => {
-        setFormData((prev) => ({ ...prev, ...values }));
+      .then(async (values) => {
+        const merged = { ...formData, ...values };
+        setFormData(merged);
         if (currStep < steps.length - 1) {
+          await saveDraft(merged, currStep + 1);
           setCurrStep((prev) => prev + 1);
+          window.scrollTo({ top: 0, behavior: "smooth" });
         } else {
-          handleSubmit({ ...formData, ...values });
+          handleSubmit(merged);
         }
       })
-      .catch(() => message.error("Please complete all required fields."));
+      .catch(() => message.error("Please complete all required fields on this step."));
+  };
+
+  const handleBack = async () => {
+    const currentValues = form.getFieldsValue();
+    const merged = { ...formData, ...currentValues };
+    setFormData(merged);
+    await saveDraft(merged, currStep - 1);
+    setCurrStep((prev) => prev - 1);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleSubmit = async (data) => {
     const payload = {
       id: FormId,
-      data: data,
+      data: {
+        ...data,
+        isDraft: false,
+        isFinalSubmit: true,
+        isObserverCompleted: true,
+        currentStep: 2,
+      },
     };
     const response = await dispatch(EditUpdateClassForm(payload));
     if (response?.payload?.success) {
-      message.success(response?.payload?.message);
+      message.success(response?.payload?.message || "Form updated successfully!");
       navigate(
-        `/classroom-walkthrough/report/${response?.payload?.updatedForm?._id}`,
+        `/classroom-walkthrough/report/${response?.payload?.updatedForm?._id || FormId}`,
       );
     } else {
-      message.error(response?.payload?.message);
+      message.error(response?.payload?.message || "Error submitting form.");
     }
   };
 
@@ -390,27 +425,44 @@ function OB_WalkthroughEdit() {
                 {currStep > 0 ? (
                   <Button
                     size="large"
-                    onClick={() => setCurrStep((prev) => prev - 1)}
+                    onClick={handleBack}
                     style={{ borderRadius: "8px" }}
                   >
-                    Back
+                    ← Back
                   </Button>
                 ) : (
                   <Box />
                 )}
-                <Button
-                  size="large"
-                  type="primary"
-                  onClick={handleNext}
-                  style={{
-                    borderRadius: "8px",
-                    boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-                  }}
-                >
-                  {currStep < steps.length - 1
-                    ? "Next Step"
-                    : "Submit Walkthrough"}
-                </Button>
+                <Flex gap={3} align="center">
+                  <Button
+                    size="large"
+                    onClick={async () => {
+                      const values = form.getFieldsValue();
+                      const merged = { ...formData, ...values };
+                      setFormData(merged);
+                      await saveDraft(merged, currStep);
+                      message.success("Draft saved successfully!");
+                    }}
+                    style={{ borderRadius: "8px" }}
+                  >
+                    Save Draft
+                  </Button>
+                  <Button
+                    size="large"
+                    type="primary"
+                    onClick={handleNext}
+                    style={{
+                      borderRadius: "8px",
+                      boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                      background: "#4A6741",
+                      border: "none",
+                    }}
+                  >
+                    {currStep < steps.length - 1
+                      ? "Next Step →"
+                      : "Submit Walkthrough"}
+                  </Button>
+                </Flex>
               </Flex>
             </Form>
           </Spin>

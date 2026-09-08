@@ -10,5 +10,6 @@ router.put('/:id', authMiddleware, accountabilityController.updateAccountability
 router.put('/status/:id', authMiddleware, accountabilityController.publishAccountability);
 router.delete('/:id', authMiddleware, accountabilityController.deleteAccountability);
 router.post('/calculate', authMiddleware, accountabilityController.calculateTeacherScores);
+router.post('/duplicate/:id', authMiddleware, accountabilityController.duplicateAccountability);
 
 module.exports = router;

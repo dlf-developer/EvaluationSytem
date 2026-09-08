@@ -322,6 +322,8 @@ const SmartTable = ({
                       verticalAlign="middle"
                       maxW={col.maxWidth || col.width || "none"}
                       whiteSpace={col.noWrap !== false ? "nowrap" : "normal"}
+                      overflow="hidden"
+                      textOverflow="ellipsis"
                     >
                       {col.render ? (
                         col.render(record[col.dataIndex], record, rowIndex)

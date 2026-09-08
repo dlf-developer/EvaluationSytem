@@ -28,14 +28,15 @@ function TeacherCoScholastic() {
     (state) => state?.coScholastic,
   );
   const [form] = Form.useForm();
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
   
   const Fectch = async () => {
     const data = await dispatch(GetCoScholasticForm(FormId));
-    const { isTeacherCompletes } = data?.payload;
+    const { isTeacherCompletes, TeacherFeedback } = data?.payload || {};
     if (isTeacherCompletes) {
       navigate(`/co-scholastic/report/${FormId}`);
-    } else {
-      message.success("Add your feedback");
+    } else if (TeacherFeedback && Array.isArray(TeacherFeedback)) {
+      form.setFieldsValue({ TeacherFeedback });
     }
   };
 
@@ -112,10 +113,33 @@ function TeacherCoScholastic() {
       .catch(() => message.error("Please complete all required fields."));
   };
 
+  const handleSaveDraft = async () => {
+    try {
+      setIsSavingDraft(true);
+      const values = form.getFieldsValue(true);
+      const payload = {
+        data: {
+          isTeacherCompletes: false,
+          isDraft: true,
+          TeacherFeedback: values?.TeacherFeedback,
+        },
+        id: FormId,
+      };
+      await dispatch(TeacherCoScholasticComplete(payload));
+      message.success("Draft saved successfully!");
+    } catch (e) {
+      console.error(e);
+      message.error("Failed to save draft.");
+    } finally {
+      setIsSavingDraft(false);
+    }
+  };
+
   const handleSubmit = async (data) => {
     const payload = {
       data: {
         isTeacherCompletes: true,
+        isDraft: false,
         TeacherFeedback: data?.TeacherFeedback,
       },
       id: FormId,
@@ -420,13 +444,24 @@ function TeacherCoScholastic() {
                 ],
                 "TeacherFeedback",
               )}
-              <Flex justify="flex-end" mt={6}>
+              <Flex justify="flex-end" gap={4} mt={6}>
+                <Button
+                  size="large"
+                  onClick={handleSaveDraft}
+                  loading={isSavingDraft}
+                  style={{
+                    minWidth: "140px",
+                    borderRadius: "8px",
+                  }}
+                >
+                  Save Draft
+                </Button>
                 <Button
                   type="primary"
                   size="large"
                   onClick={handleNext}
                   style={{
-                    minWidth: "200px",
+                    minWidth: "180px",
                     borderRadius: "8px",
                     background: "#1a4d2e",
                   }}

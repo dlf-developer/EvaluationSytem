@@ -1,6 +1,6 @@
 {
   "name": "frontend",
-  "version": "0.1.0",
+  "version": "1.0.2",
   "private": true,
   "dependencies": {
     "@ant-design/icons": "^5.5.1",
@@ -43,10 +43,10 @@
     "start:dev": "env-cmd -f .env.development react-scripts start",
     "start:dlps": "env-cmd -f .env.dlps react-scripts start",
     "start:dlws": "env-cmd -f .env.dlws react-scripts start",
-    "build": "react-scripts build",
-    "build:dev": "BROWSERSLIST_CONFIG=.browserslistrc env-cmd -f .env.development react-scripts build",
-    "build:dlps": "BROWSERSLIST_CONFIG=.browserslistrc env-cmd -f .env.dlps react-scripts build",
-    "build:dlws": "BROWSERSLIST_CONFIG=.browserslistrc env-cmd -f .env.dlws react-scripts build",
+    "build": "node update-version.js && react-scripts build",
+    "build:dev": "node update-version.js && BROWSERSLIST_CONFIG=.browserslistrc env-cmd -f .env.development react-scripts build",
+    "build:dlps": "node update-version.js && BROWSERSLIST_CONFIG=.browserslistrc env-cmd -f .env.dlps react-scripts build",
+    "build:dlws": "node update-version.js && BROWSERSLIST_CONFIG=.browserslistrc env-cmd -f .env.dlws react-scripts build",
     "zip:dlps": "npm run build:dlps && cd build && zip -r ../dlps-build.zip . && cd ..",
     "zip:dlws": "npm run build:dlws && cd build && zip -r ../dlws-build.zip . && cd ..",
     "production": "PORT=3011 serve -s build",

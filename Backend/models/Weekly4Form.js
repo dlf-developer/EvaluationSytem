@@ -13,6 +13,8 @@ const weekly4FormSchema = new Schema(
       Observer: { type: Schema.Types.ObjectId, ref: "User" },
     },
     isCompleted: { type: Boolean, default: false },
+    isDraft: { type: Boolean, default: true },
+    currentStep: { type: Number, default: 0 },
     FormData: { type: Array },
   },
   { timestamps: true },

@@ -94,6 +94,20 @@ function Login() {
     return `${m}:${s.toString().padStart(2, "0")}`;
   };
 
+  const redirectToTarget = () => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const redirect = params.get("redirect");
+      if (redirect && redirect.startsWith("/")) {
+        window.location.replace(redirect);
+        return;
+      }
+    } catch (e) {
+      // ignore
+    }
+    window.location.replace("/");
+  };
+
   // Handle Password Login
   const handlePasswordLogin = async () => {
     let emailError = "";
@@ -113,7 +127,7 @@ function Login() {
       if (res?.token) {
         localStorage.setItem("token", res.token);
         message.success("Logged in successfully!");
-        window.location.replace("/");
+        redirectToTarget();
       } else {
         message.error(res?.message || "Login failed");
       }
@@ -168,7 +182,7 @@ function Login() {
       if (res?.token) {
         localStorage.setItem("token", res.token);
         message.success("Logging in...");
-        window.location.replace("/");
+        redirectToTarget();
       } else {
         message.error(res?.message || "Verification failed");
       }

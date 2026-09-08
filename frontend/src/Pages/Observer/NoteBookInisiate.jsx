@@ -75,7 +75,7 @@ function NoteBookInisiate() {
         const activity = {
           observerMessage: `You have Initiated Notebook Checking Proforma Form.`,
           teacherMessage: `${getUserId()?.name} has Initiated Notebook Checking Proforma Form.`,
-          route: `/notebook-checking-proforma/report/${response?.form?._id}`,
+          route: `/notebook-checking-proforma`,
           date: new Date(),
           reciverId: payload?.teacherIDs,
           senderId: getUserId()?.id,

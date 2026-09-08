@@ -42,28 +42,50 @@ exports.getClassDetailById = async (req, res) => {
 
 // Update a class detail by ID
 exports.updateClassDetailById = async (req, res) => {
-    if (req.user.access !== 'Superadmin') {
-        return res.status(401).send({ error: 'Unauthorized' });
-    }
-    const updates = Object.keys(req.body);
-    const allowedUpdates = ['className', 'sections'];
-    const isValidOperation = updates.every((update) => allowedUpdates.includes(update));
-
-    if (!isValidOperation) {
-        return res.status(400).send({ error: 'Invalid updates!' });
-    }
-
     try {
-        const classDetail = await ClassDetails.findById(req.params.id);
-        if (!classDetail) {
-            return res.status(404).send();
+        if (req.user.access !== 'Superadmin') {
+            return res.status(401).send({ success: false, error: 'Unauthorized' });
         }
 
-        updates.forEach((update) => classDetail[update] = req.body[update]);
+        const classDetail = await ClassDetails.findById(req.params.id);
+        if (!classDetail) {
+            return res.status(404).send({ success: false, message: 'Class not found' });
+        }
+
+        const { className, sections, subjects } = req.body;
+
+        if (className !== undefined && typeof className === 'string' && className.trim() !== '') {
+            classDetail.className = className.trim();
+        }
+
+        if (Array.isArray(sections)) {
+            classDetail.sections = sections
+                .map((s) => {
+                    if (typeof s === 'string') return { name: s.trim() };
+                    if (s && typeof s === 'object' && s.name) return { name: s.name.trim() };
+                    return null;
+                })
+                .filter(Boolean);
+        }
+
+        if (Array.isArray(subjects)) {
+            classDetail.subjects = subjects
+                .map((s) => {
+                    if (typeof s === 'string') return { name: s.trim() };
+                    if (s && typeof s === 'object' && s.name) return { name: s.name.trim() };
+                    return null;
+                })
+                .filter(Boolean);
+        }
+
         await classDetail.save();
-        return res.status(200).send(classDetail);
+        return res.status(200).send({
+            success: true,
+            message: "Class details updated successfully",
+            classDetail
+        });
     } catch (error) {
-        return res.status(400).send(error);
+        return res.status(500).send({ success: false, message: "Error updating class details", error: error.message });
     }
 };
 

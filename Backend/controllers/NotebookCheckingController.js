@@ -4,7 +4,7 @@ const Form3 = require("../models/Form3");
 const notification = require("../models/notification");
 const User = require("../models/User");
 const sendEmail = require("../utils/emailService");
-const { formInitiatedEmail, formCompletedEmail, reflectionSubmittedEmail } = require("../utils/emailTemplates");
+const { formInitiatedEmail, formCompletedEmail, reflectionSubmittedEmail, reminderEmail } = require("../utils/emailTemplates");
 
 exports.createForm = async (req, res) => {
   const {
@@ -90,6 +90,10 @@ exports.createForm = async (req, res) => {
       initiatorName: user.name,
       formTitle: "Notebook Checking Proforma",
       formRoute: route,
+      className: classData?.className,
+      section: Section,
+      subject: Subject,
+      date: DateOfObservation,
     });
     if (recipientEmail?.email) {
       await sendEmail(recipientEmail.email, emailData.subject, emailData.html);
@@ -158,8 +162,8 @@ exports.createInitiate = async (req, res) => {
 
           // Create and save the notification
           await new notification({
-            title: "You are invited to fill the Notbook Form Initiated",
-            route: `notebook-checking-proforma/initiate/create/${formData._id}`,
+            title: "You are invited to fill the Notebook Form Initiated",
+            route: `notebook-checking-proforma/create/${formData._id}`,
             reciverId: teacher._id,
             date: new Date(),
             status: "unSeen",
@@ -335,6 +339,7 @@ exports.updateObserverFields = async (req, res) => {
 
 
         // Build the payload dynamically to include only provided fields
+        const isDraftSave = isDraft === true;
         const payload = {
             NotebooksObserver: {
                 ClassStrength,
@@ -342,7 +347,9 @@ exports.updateObserverFields = async (req, res) => {
                 Absentees,
                 Defaulters,
             },
-            isObserverComplete: true,
+            isObserverComplete: isDraftSave ? false : (isObserverComplete !== undefined ? isObserverComplete : true),
+            isDraft: isDraftSave,
+            currentStep: currentStep !== undefined ? currentStep : (existingForm.currentStep || 0),
             ObserverForm: {
                 maintenanceOfNotebooks,
                 qualityOfOppurtunities,
@@ -376,9 +383,9 @@ exports.updateObserverFields = async (req, res) => {
         }
 
 
-        // Send email to teacher if they exist
-        if (teacher?.email) {
-          const route = `notebook-checking-proforma/create/${formId}`;
+        // Send email to teacher if completed and not a draft
+        if (!isDraftSave && teacher?.email) {
+          const route = `notebook-checking-proforma/complete/${formId}`;
           const emailData = formCompletedEmail({
             recipientName: teacher.name,
             completorName: observer.name,
@@ -391,13 +398,13 @@ exports.updateObserverFields = async (req, res) => {
           } catch (emailError) {
             console.error("Failed to send email:", emailError);
           }
-        } else {
+        } else if (!isDraftSave) {
           console.warn("Teacher email not found. Skipping email sending.");
         }
 
         res.status(200).json({
             success: true,
-            message: "Observer fields updated successfully.",
+            message: isDraftSave ? "Draft saved successfully." : "Observer fields updated successfully.",
             data: updatedForm,
         });
     } catch (error) {
@@ -528,6 +535,8 @@ const updatePayload = (existingForm, userId, changes) => {
     [`grenralDetails.className`]: changes.className,
     [`grenralDetails.Section`]: changes.Section,
     [`grenralDetails.Subject`]: changes.Subject,
+    [`isDraft`]: changes.isDraft,
+    [`currentStep`]: changes.currentStep,
   };
 
   const payload = {};
@@ -650,6 +659,8 @@ exports.EditUpdateNotebook = async (req, res) => {
             className: finalClassName,
             Subject: req.body.Subject,
             Section: req.body.Section,
+            isDraft: req.body.isDraft,
+            currentStep: req.body.currentStep,
         };
 
         const existingForm = await Form3.findById(formId).populate({
@@ -678,8 +689,8 @@ exports.EditUpdateNotebook = async (req, res) => {
             updatedForm,
         });
 
-        // Send email if the teacher completes the form
-        if (req.body.isTeacherComplete) {
+        // Send email if the teacher completes the form (not a draft)
+        if (req.body.isTeacherComplete && !req.body.isDraft) {
             const observerEmail = existingForm?.grenralDetails?.NameofObserver?.email;
             const teacherName = req?.user?.name;
             const observerName = existingForm?.grenralDetails?.NameofObserver?.name;
@@ -769,7 +780,7 @@ exports.updateTeacherReflationFeedback = async (req, res) => {
       const observer = await User.findById(form.grenralDetails.NameofObserver);
 
       if (observer?.email && teacher?.name) {
-        const route = `notebook-checking-proforma/complete/${id}`;
+        const route = `notebook-checking-proforma/report/${id}`;
         const emailData = reflectionSubmittedEmail({
           recipientName: observer.name,
           teacherName: teacher.name,
@@ -857,15 +868,20 @@ exports.ReminderFormThree = async (req, res) => {
       return res.status(400).json({ message: "Recipient email not found" });
     }
 
-    const subject = "Reminder: Notebook Checking Proforma Submission Pending";
-    const body = `
-Dear ${receiverName},
+    const route = isTeacher
+      ? `notebook-checking-proforma/create/${formId}`
+      : (!FormDetails?.isTeacherComplete
+          ? `notebook-checking-proforma/create/${formId}`
+          : `notebook-checking-proforma/complete/${formId}`);
 
-This is a reminder from ${sender} to complete your section of the Notebook Checking Proforma.
+    const emailData = reminderEmail({
+      recipientName: receiverName,
+      senderName: sender,
+      formTitle: "Notebook Checking Proforma",
+      formRoute: route,
+    });
 
-The Admin Team`;
-
-    await sendEmail(receiverEmail, subject, body);
+    await sendEmail(receiverEmail, emailData.subject, emailData.html);
 
     return res.status(200).json({ success: true, message: "Reminder sent successfully." });
 

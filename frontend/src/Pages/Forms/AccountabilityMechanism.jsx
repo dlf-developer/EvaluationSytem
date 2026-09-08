@@ -1,14 +1,15 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { getUserId, getAllTimes } from "../../Utils/auth";
 import { Table } from "antd";
 import { UserRole } from "../../config/config";
-import { PlusOutlined, DeleteFilled } from "@ant-design/icons";
+import { PlusOutlined, DeleteFilled, CopyOutlined } from "@ant-design/icons";
 import { Link, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import {
   createAccountability,
   getAccountabilities,
   deleteAccountabilityForm,
+  duplicateAccountabilityForm,
 } from "../../redux/userSlice";
 import {
   Box,
@@ -19,6 +20,7 @@ import {
   Spinner,
   Tag,
   Text,
+  Tooltip,
 } from "@chakra-ui/react";
 import { message, Modal } from "antd";
 
@@ -29,6 +31,7 @@ function AccountabilityMechanism() {
   const dispatch = useDispatch();
   const id = getUserId()?.id;
   const { accountabilityList, loading } = useSelector((s) => s?.user);
+  const [duplicatingId, setDuplicatingId] = useState(null);
 
   useEffect(() => {
     dispatch(getAccountabilities(id));
@@ -37,6 +40,23 @@ function AccountabilityMechanism() {
   const createForm = async () => {
     const res = await dispatch(createAccountability()).unwrap();
     if (res?.success) navigate(`/accountability/${res?.data?._id}`);
+  };
+
+  const handleDuplicate = async (recordId) => {
+    try {
+      setDuplicatingId(recordId);
+      const res = await dispatch(duplicateAccountabilityForm(recordId)).unwrap();
+      if (res?.success && res?.data?._id) {
+        message.success("Report duplicated successfully");
+        navigate(`/accountability/${res.data._id}`);
+      } else {
+        message.error(res?.message || "Failed to duplicate report");
+      }
+    } catch (error) {
+      message.error(error?.message || "An error occurred while duplicating");
+    } finally {
+      setDuplicatingId(null);
+    }
   };
 
   const handleDelete = (formId) => {
@@ -78,12 +98,26 @@ function AccountabilityMechanism() {
       title: "REPORT NAME",
       dataIndex: "formName",
       key: "formName",
-      width: 180,
-      render: (val) => (
-        <Text fontSize="sm" fontWeight="600" color="brand.text">
-          {val || "—"}
-        </Text>
-      ),
+      width: 200,
+      render: (val) => {
+        if (!val) return <Text fontSize="sm" color="gray.400">—</Text>;
+        const isLong = val.length > 24;
+        const displayVal = isLong ? `${val.slice(0, 24)}...` : val;
+        return (
+          <Tooltip label={val} placement="topLeft" hasArrow isDisabled={!isLong}>
+            <Text
+              fontSize="sm"
+              fontWeight="600"
+              color="brand.text"
+              isTruncated
+              maxW="200px"
+              title={val}
+            >
+              {displayVal}
+            </Text>
+          </Tooltip>
+        );
+      },
     },
     {
       title: "OBSERVER",
@@ -95,11 +129,25 @@ function AccountabilityMechanism() {
         options: observerFilters,
         matchFn: (record, vals) => vals.includes(record?.userId?.name || "")
       },
-      render: (user) => (
-        <Text fontSize="sm" fontWeight="500" color="gray.600">
-          {user?.name || "—"}
-        </Text>
-      ),
+      render: (user) => {
+        const name = user?.name || "—";
+        const isLong = name.length > 20;
+        const displayVal = isLong ? `${name.slice(0, 20)}...` : name;
+        return (
+          <Tooltip label={name} placement="topLeft" hasArrow isDisabled={!isLong}>
+            <Text
+              fontSize="sm"
+              fontWeight="500"
+              color="gray.600"
+              isTruncated
+              maxW="180px"
+              title={name}
+            >
+              {displayVal}
+            </Text>
+          </Tooltip>
+        );
+      },
     },
     {
       title: "DATE RANGE",
@@ -155,39 +203,58 @@ function AccountabilityMechanism() {
       title: "STATUS",
       dataIndex: "isComplete",
       key: "isComplete",
-      width: 140,
+      width: 190,
       filterConfig: {
         type: "boolean",
         trueLabel: "Completed",
         falseLabel: "Pending"
       },
-      render: (isComplete) => (
-        <Box
-          as="span"
-          display="inline-flex"
-          alignItems="center"
-          px="10px"
-          py="4px"
-          borderRadius="full"
-          bg="white"
-          border="1px solid"
-          borderColor={isComplete ? "green.400" : "orange.400"}
-        >
-          <Text
-            as="span"
-            fontSize="11px"
-            fontWeight="600"
-            color={isComplete ? "green.500" : "orange.500"}
-          >
-            {isComplete ? "Completed" : "Pending"}
-          </Text>
-        </Box>
-      ),
+      render: (isComplete, record) => {
+        const isDuplicate = record?.isDuplicate || record?.formName?.includes("(Copy)");
+        return (
+          <Flex gap={2} align="center" flexWrap="wrap">
+            <Box
+              as="span"
+              display="inline-flex"
+              alignItems="center"
+              px="10px"
+              py="4px"
+              borderRadius="full"
+              bg="white"
+              border="1px solid"
+              borderColor={isComplete ? "green.400" : "orange.400"}
+            >
+              <Text
+                as="span"
+                fontSize="11px"
+                fontWeight="600"
+                color={isComplete ? "green.500" : "orange.500"}
+              >
+                {isComplete ? "Completed" : "Pending"}
+              </Text>
+            </Box>
+            {isDuplicate && (
+              <Tag
+                size="sm"
+                colorScheme="purple"
+                variant="subtle"
+                borderRadius="full"
+                fontWeight="600"
+                px="8px"
+                py="2px"
+                fontSize="11px"
+              >
+                Duplicate
+              </Tag>
+            )}
+          </Flex>
+        );
+      },
     },
     {
       title: "ACTION",
       key: "action",
-      width: 280,
+      width: 360,
       render: (_, record) => {
         const { isDraft, isComplete } = record;
         return (
@@ -218,6 +285,19 @@ function AccountabilityMechanism() {
                 </Button>
               </Link>
             )}
+            <Button
+              size="md"
+              variant="outline"
+              colorScheme="purple"
+              fontWeight="medium"
+              flexShrink={0}
+              leftIcon={<CopyOutlined />}
+              isLoading={duplicatingId === record._id}
+              onClick={() => handleDuplicate(record._id)}
+              title="Duplicate Report"
+            >
+              Duplicate
+            </Button>
             {(getUserId()?.access === UserRole[0] || getUserId()?.access === UserRole[1]) && (
               <Button
                 size="md"
