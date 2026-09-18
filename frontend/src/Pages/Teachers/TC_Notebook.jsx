@@ -452,6 +452,8 @@ function TC_Notebook() {
     if (response?.payload && response?.payload?.success) {
       message.success(response?.payload?.message || "Form submitted successfully!");
       navigate(`/notebook-checking-proforma/report/${FormId}`);
+    } else {
+      message.error(response?.payload?.message || response?.error?.message || "Failed to submit form.");
     }
   };
 

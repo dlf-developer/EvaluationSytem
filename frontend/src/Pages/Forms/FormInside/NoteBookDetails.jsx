@@ -464,8 +464,9 @@ const NoteBookDetails = () => {
         await dispatch(EditNoteBook({ id: savedFormId, data: payloadData }));
       } else {
         const res = await dispatch(CreateNoteBookForm(payloadData));
-        if (res?.payload?.form?._id) {
-          setSavedFormId(res.payload.form._id);
+        const newId = res?.payload?.form?._id || res?.payload?.updatedForm?._id;
+        if (newId) {
+          setSavedFormId(newId);
         }
       }
     } catch (e) {
@@ -541,7 +542,7 @@ const NoteBookDetails = () => {
         `/notebook-checking-proforma/report/${formRecord?._id}`,
       );
     } else {
-      message.error(data?.payload?.message || "Failed to submit form.");
+      message.error(data?.payload?.message || data?.error?.message || "Failed to submit form.");
     }
   };
 

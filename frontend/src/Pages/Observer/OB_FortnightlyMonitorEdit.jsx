@@ -25,6 +25,7 @@ import {
   cutoffDate,
 } from "../../Components/normalData";
 import { calculateScorenew } from "../../Utils/calculateScore";
+import ModernRadioGroup from "../../Components/ModernRadioGroup";
 
 function OB_FortnightlyMonitorEdit() {
   const [form] = Form.useForm();
@@ -220,11 +221,9 @@ function OB_FortnightlyMonitorEdit() {
                             },
                           ]}
                         >
-                          <Radio.Group
-                            block
+                          <ModernRadioGroup
                             options={yesNoNAOptions}
-                            optionType="button"
-                            buttonStyle="solid"
+                            onCustomChange={calculateScore}
                           />
                         </Form.Item>
                       </Box>

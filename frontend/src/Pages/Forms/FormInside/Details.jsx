@@ -1,23 +1,26 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
-  Form,
-  InputNumber,
   Row,
   Col,
   message,
   Spin,
-  Radio,
-  Tag,
-  Table,
-  Descriptions,
   Card,
   Empty,
   Button,
   Select,
   DatePicker,
-  Input,
   Alert,
+  Modal,
+  Tag,
 } from "antd";
+import {
+  CheckCircleFilled,
+  ExclamationCircleFilled,
+  ArrowLeftOutlined,
+  ArrowRightOutlined,
+  SaveOutlined,
+  CheckOutlined,
+} from "@ant-design/icons";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   GetSingleFormComplete,
@@ -36,31 +39,65 @@ import {
   cutoffDate,
 } from "../../../Components/normalData";
 import { CreateActivityApi } from "../../../redux/Activity/activitySlice";
-import CommonStepper from "../../../Components/CommonStepper";
-import "../../../App.css"; // Import the custom CSS
+import ModernRadioGroup from "../../../Components/ModernRadioGroup";
+import moment from "moment";
+import "../../../App.css";
 
 const { Option } = Select;
 
 const Details = () => {
-  const [form] = Form.useForm();
   const [currStep, setCurrStep] = useState(0);
+  const [answers, setAnswers] = useState({});
+  const [validationErrors, setValidationErrors] = useState({});
+  const [classInfo, setClassInfo] = useState({
+    className: "",
+    section: "",
+    date: null,
+    coordinatorID: "",
+  });
+  const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const [formDetails, setFormDetails] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isCoordinator, setIsCoordinator] = useState(false);
-  const [selfAssessmentScore, setSelfAssessmentScore] = useState(0);
-  const [ObserverID, setObserverID] = useState("");
   const [sectionState, setSectionState] = useState();
+  const [newData, setNewData] = useState(false);
+  const [betaLoading, setBetaLoading] = useState(false);
+
   const Id = useParams().id;
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const GetUserAccess = getUserId()?.access;
-  const isLoading2 = useSelector((state) => state?.Forms?.loading);
-  const [betaLoading, setBetaLoading] = useState(false);
-  const [appnewData, setAppnewData] = useState(null);
-  const [newData, setNewData] = useState(false);
-  const CurrectUserRole = getUserId().access;
+
+  const currentUser = getUserId();
+  const GetUserAccess = currentUser?.access;
   const ObserverList = useSelector((state) => state.user.GetObserverLists);
 
+  const steps = [
+    { title: "Displays & Setup", key: "displays", total: 12 },
+    { title: "Routines & Activities", key: "routines", total: 13 },
+    { title: "Records & Registers", key: "records", total: 10 },
+    { title: "Review & Submit", key: "review", total: 35 },
+  ];
+
+  const yesNoNAOptions = ["Yes", "No", "Sometimes", "N/A"];
+
+  const activeQuestions = useMemo(() => {
+    return formDetails?.createdAt < cutoffDate ? questionsOld : questions;
+  }, [formDetails]);
+
+  const step0Questions = useMemo(() => activeQuestions.slice(0, 12), [activeQuestions]);
+  const step1Questions = useMemo(() => activeQuestions.slice(12, 25), [activeQuestions]);
+  const step2Questions = useMemo(() => activeQuestions.slice(25), [activeQuestions]);
+
+  const stepQuestionMap = useMemo(() => [
+    step0Questions,
+    step1Questions,
+    step2Questions,
+    [],
+  ], [step0Questions, step1Questions, step2Questions]);
+
+  // Fetch Class Data
   const fetchClassData = async () => {
     try {
       const res = await dispatch(getCreateClassSection());
@@ -70,12 +107,9 @@ const Details = () => {
             (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
           ),
         );
-      } else {
-        message.error("Failed to fetch class data.");
       }
     } catch (error) {
       console.error("Error fetching class data:", error);
-      message.error("An error occurred while fetching class data.");
     }
   };
 
@@ -88,160 +122,270 @@ const Details = () => {
         const loadedForm = response?.payload;
         setFormDetails(loadedForm);
         setIsLoading(false);
+
         if (loadedForm) {
-          const userAnswers = GetUserAccess === UserRole[1] ? loadedForm.observerForm : loadedForm.teacherForm;
-          if (userAnswers) {
-            form.setFieldsValue(userAnswers);
+          const isObserver = GetUserAccess === UserRole[1];
+          const isComplete = isObserver
+            ? loadedForm.isCoordinatorComplete
+            : loadedForm.isTeacherComplete;
+          const userAnswers = isObserver
+            ? loadedForm.observerForm
+            : loadedForm.teacherForm;
+
+          if (userAnswers && typeof userAnswers === "object") {
+            const initialAnswers = {};
+            Object.entries(userAnswers).forEach(([k, v]) => {
+              if (
+                k !== "_id" &&
+                k !== "totalScore" &&
+                k !== "OutOf" &&
+                k !== "ObservationDates" &&
+                v !== null &&
+                v !== undefined
+              ) {
+                initialAnswers[k] = v;
+              }
+            });
+            setAnswers(initialAnswers);
           }
-          if (loadedForm.currentStep !== undefined && loadedForm.currentStep !== null && loadedForm.currentStep >= 0 && loadedForm.currentStep <= 3) {
+
+          setClassInfo({
+            className: loadedForm.className || "",
+            section: loadedForm.section || "",
+            date: loadedForm.date ? moment(loadedForm.date) : null,
+            coordinatorID:
+              loadedForm.coordinatorID?._id || loadedForm.coordinatorID || "",
+          });
+
+          if (
+            loadedForm.currentStep !== undefined &&
+            loadedForm.currentStep !== null &&
+            loadedForm.currentStep >= 0 &&
+            loadedForm.currentStep <= 3
+          ) {
             setCurrStep(loadedForm.currentStep);
           }
-        }
-        const { className, date, section } = response?.payload || {};
-        if (!className || !date || !section) {
-          dispatch(GetObserverList());
-          setBetaLoading(!className || !date || !section);
-          message.success("Fill All the data!");
-        } else if (
-          response?.payload?.isCoordinatorComplete &&
-          response?.payload?.isTeacherComplete
-        ) {
-          message.success("Form is already submitted!");
-          navigate(`/fortnightly-monitor/report/${Id}`);
-        } else if (
-          GetUserAccess === UserRole[1] &&
-          response?.payload?.isCoordinatorComplete
-        ) {
-          message.success("Form is already submitted!");
-          navigate(`/fortnightly-monitor/report/${Id}`);
-        } else if (
-          GetUserAccess === UserRole[2] &&
-          response?.payload?.isTeacherComplete
-        ) {
-          message.success("Form is already submitted!");
-          navigate(`/fortnightly-monitor/report/${Id}`);
+
+          const { className, date, section } = loadedForm;
+          if (!className || !date || !section) {
+            dispatch(GetObserverList());
+            setBetaLoading(true);
+          }
+
+          if (
+            loadedForm.isCoordinatorComplete &&
+            loadedForm.isTeacherComplete
+          ) {
+            message.info("Form is already submitted!");
+            navigate(`/fortnightly-monitor/report/${Id}`);
+          } else if (
+            GetUserAccess === UserRole[1] &&
+            loadedForm.isCoordinatorComplete
+          ) {
+            message.info("Form is already submitted!");
+            navigate(`/fortnightly-monitor/report/${Id}`);
+          } else if (
+            GetUserAccess === UserRole[2] &&
+            loadedForm.isTeacherComplete
+          ) {
+            message.info("Form is already submitted!");
+            navigate(`/fortnightly-monitor/report/${Id}`);
+          }
         }
       })
-      .catch(() => {
+      .catch((err) => {
+        console.error("Error loading form:", err);
         message.error("Error fetching form details.");
         setIsLoading(false);
       });
-  }, [Id, navigate, !ObserverID]);
+  }, [Id, navigate]);
 
-  // Enum options
-  const yesNoNAOptions = ["Yes", "No", "Sometimes", "N/A"];
+  // Answer handler
+  const handleAnswerChange = (questionKey, value) => {
+    setAnswers((prev) => ({
+      ...prev,
+      [questionKey]: value,
+    }));
+    // Clear validation error when answered
+    if (validationErrors[questionKey]) {
+      setValidationErrors((prev) => {
+        const next = { ...prev };
+        delete next[questionKey];
+        return next;
+      });
+    }
+  };
 
-  const steps = [
-    { title: "Displays & Setup" },
-    { title: "Routines & Activities" },
-    { title: "Records & Registers" },
-    { title: "Review & Submit" },
-  ];
+  // Calculations
+  const { s0Answered, s1Answered, s2Answered, totalAnswered, selfScore, outOfScore } =
+    useMemo(() => {
+      const count = (arr) => arr.filter((q) => !!answers[q.key]).length;
+      const s0 = count(step0Questions);
+      const s1 = count(step1Questions);
+      const s2 = count(step2Questions);
+      const total = s0 + s1 + s2;
 
-  const saveDraft = async (values, targetStep) => {
+      let score = 0;
+      let outOf = 0;
+      activeQuestions.forEach((q) => {
+        const ans = answers[q.key];
+        if (ans === "Yes") {
+          score += 1;
+          outOf += 1;
+        } else if (ans === "Sometimes") {
+          score += 0.5;
+          outOf += 1;
+        } else if (ans === "No") {
+          outOf += 1;
+        }
+      });
+
+      return {
+        s0Answered: s0,
+        s1Answered: s1,
+        s2Answered: s2,
+        totalAnswered: total,
+        selfScore: score,
+        outOfScore: outOf,
+      };
+    }, [answers, step0Questions, step1Questions, step2Questions, activeQuestions]);
+
+  // Save Draft
+  const saveDraft = async (answersToSave = answers, targetStep = currStep, showMessage = false) => {
     if (!Id || !GetUserAccess) return;
     const isObserver = GetUserAccess === UserRole[1];
+
     const payload = {
       id: Id,
       data: {
         isDraft: true,
-        currentStep: targetStep !== undefined ? targetStep : currStep,
-        ...(isObserver ? { observerForm: values } : { teacherForm: values }),
-        ...(values?.className ? { className: values.className } : {}),
-        ...(values?.section ? { Section: values.section } : {}),
-        ...(values?.date ? { date: values.date } : {}),
+        currentStep: targetStep,
+        ...(isObserver
+          ? { observerForm: answersToSave }
+          : { teacherForm: answersToSave }),
+        ...(classInfo.className ? { className: classInfo.className } : {}),
+        ...(classInfo.section ? { Section: classInfo.section } : {}),
+        ...(classInfo.date
+          ? { date: classInfo.date.toISOString ? classInfo.date.toISOString() : classInfo.date }
+          : {}),
       },
     };
+
+    setIsSavingDraft(true);
     try {
       await dispatch(GetSingleFormComplete(payload));
+      if (showMessage) {
+        message.success("Draft saved successfully!");
+      }
     } catch (e) {
       console.error("Draft save error:", e);
+      if (showMessage) {
+        message.error("Failed to save draft.");
+      }
+    } finally {
+      setIsSavingDraft(false);
     }
   };
 
-  const handleStepNext = async () => {
-    try {
-      const activeQuestions = formDetails?.createdAt < cutoffDate ? questionsOld : questions;
-      let fieldsToValidate = [];
-      if (currStep === 0) {
-        if (betaLoading) {
-          fieldsToValidate.push("className", "section", "date");
-        }
-        fieldsToValidate.push(...activeQuestions.slice(0, 12).map((q) => q.key));
-      } else if (currStep === 1) {
-        fieldsToValidate.push(...activeQuestions.slice(12, 25).map((q) => q.key));
-      } else if (currStep === 2) {
-        fieldsToValidate.push(...activeQuestions.slice(25).map((q) => q.key));
+  // Validate current step questions
+  const validateStep = (stepIndex) => {
+    const currentQuestions = stepQuestionMap[stepIndex] || [];
+    const errors = {};
+    let firstMissingKey = null;
+
+    if (stepIndex === 0 && betaLoading) {
+      if (!classInfo.className) errors.className = true;
+      if (!classInfo.section) errors.section = true;
+      if (!classInfo.date) errors.date = true;
+    }
+
+    currentQuestions.forEach((q) => {
+      if (!answers[q.key]) {
+        errors[q.key] = true;
+        if (!firstMissingKey) firstMissingKey = q.key;
       }
-      await form.validateFields(fieldsToValidate);
-      const values = form.getFieldsValue();
-      await saveDraft(values, currStep + 1);
-      setCurrStep((prev) => prev + 1);
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    } catch (err) {
+    });
+
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
       message.error("Please answer all required questions on this step before continuing.");
+      if (firstMissingKey) {
+        const el = document.getElementById(`question-card-${firstMissingKey}`);
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }
+      return false;
+    }
+
+    setValidationErrors({});
+    return true;
+  };
+
+  // Step Navigation
+  const handleStepNext = async () => {
+    if (currStep < 3) {
+      const isValid = validateStep(currStep);
+      if (!isValid) return;
+
+      const nextStep = currStep + 1;
+      await saveDraft(answers, nextStep, false);
+      setCurrStep(nextStep);
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
 
   const handleStepBack = async () => {
-    const values = form.getFieldsValue();
-    await saveDraft(values, currStep - 1);
-    setCurrStep((prev) => prev - 1);
+    if (currStep > 0) {
+      const prevStep = currStep - 1;
+      await saveDraft(answers, prevStep, false);
+      setCurrStep(prevStep);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
+  const handleStepClick = async (targetStep) => {
+    if (targetStep === currStep) return;
+    // Always save draft before jumping
+    await saveDraft(answers, targetStep, false);
+    setCurrStep(targetStep);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const [totalCount, setTotalCount] = useState(0);
-  const [totalCountMein, setTotalCountMein] = useState(0);
-  const type = "teacherForm";
-
-  useEffect(() => {
-    if (!formDetails || !formDetails[type]) return;
-
-    const validValues2 = ["Yes", "Sometimes"];
-    const Assesscount = Object.values(formDetails[type]).filter((value) =>
-      validValues2.includes(value),
-    ).length;
-
-    const validValues = ["Yes", "No", "Sometimes"]; // Include these values
-    const count = Object.values(formDetails[type]).filter((value) =>
-      validValues.includes(value),
-    ).length;
-
-    setTotalCount(count);
-  }, [formDetails, type]);
-
-  const onFinish = async (values) => {
+  // Submit Evaluation
+  const handleSubmit = async () => {
     if (!Id || !GetUserAccess) {
       message.error("Invalid form submission!");
       return;
     }
 
+    const isObserver = GetUserAccess === UserRole[1];
     let payload = {
       id: Id,
       data: {},
     };
 
-    // Assign payload based on user role and form status
-    if (GetUserAccess === UserRole[1] && !formDetails?.isCoordinatorComplete) {
+    if (isObserver && !formDetails?.isCoordinatorComplete) {
       payload.data = {
         isCoordinatorComplete: true,
-        observerForm: values,
+        observerForm: answers,
       };
-    } else if (
-      GetUserAccess === UserRole[2] &&
-      !formDetails?.isTeacherComplete
-    ) {
+    } else if (!isObserver && !formDetails?.isTeacherComplete) {
       payload.data = {
         isTeacherComplete: true,
-        teacherForm: values,
+        teacherForm: answers,
       };
 
-      if (formDetails.isObserverInitiation) {
+      if (formDetails?.isObserverInitiation || betaLoading) {
         payload.data = {
           ...payload.data,
-          className: values?.className,
-          date: values?.date,
-          Section: values?.section,
+          className: classInfo.className,
+          date: classInfo.date
+            ? classInfo.date.toISOString
+              ? classInfo.date.toISOString()
+              : classInfo.date
+            : new Date(),
+          Section: classInfo.section,
         };
       }
     } else {
@@ -249,21 +393,21 @@ const Details = () => {
       return;
     }
 
-    setIsLoading(true);
+    setIsSubmitting(true);
     try {
-      // Dispatch form submission
       const res = await dispatch(GetSingleFormComplete(payload));
 
-      if (res.payload.message) {
-        setIsLoading(false);
-        setAppnewData(res?.payload?.form);
+      if (res.payload?.message || res.payload?.form) {
         message.success("Form submitted successfully!");
-        // Activity object
+        setIsSubmitModalOpen(false);
+
+        // Activity Record
         const receiverId =
-          UserRole[2] === getUserId().access
+          UserRole[2] === currentUser.access
             ? res?.payload?.form?.coordinatorID?._id ||
               res?.payload?.form?.userId?._id
             : formDetails?.teacherID?._id || formDetails?.userId?._id;
+
         const observerMessage = payload?.data?.className
           ? `${
               res?.payload?.form?.teacherID?.name ||
@@ -271,7 +415,7 @@ const Details = () => {
             } has completed the Fortnightly Monitor Form for ${
               res?.payload?.form?.className
             } | ${res?.payload?.form?.section}`
-          : UserRole[1] === getUserId().access
+          : UserRole[1] === currentUser.access
             ? `You have completed the Fortnightly Monitor Form for ${formDetails?.className} | ${formDetails?.section}`
             : `${
                 formDetails?.teacherID?.name || formDetails?.userId?.name
@@ -281,7 +425,7 @@ const Details = () => {
 
         const teacherMessage = payload?.data?.className
           ? `You have completed the Fortnightly Monitor Form for ${res?.payload?.form?.className} | ${res?.payload?.form?.section}`
-          : UserRole[1] === getUserId().access
+          : UserRole[1] === currentUser.access
             ? `${
                 formDetails?.coordinatorID?.name || formDetails?.userId?.name
               } has completed the Fortnightly Monitor Form for ${
@@ -295,129 +439,102 @@ const Details = () => {
           route: `/fortnightly-monitor/report/${Id}`,
           date: new Date(),
           reciverId: receiverId,
-          senderId: getUserId()?.id,
+          senderId: currentUser?.id,
           fromNo: 1,
           data: res.payload,
         };
 
-        const activitiRecord = await dispatch(CreateActivityApi(activity));
-        if (!activitiRecord?.payload?.success) {
-          message.error("Error on Activity Record");
-        }
+        await dispatch(CreateActivityApi(activity));
         navigate(`/fortnightly-monitor/report/${Id}`);
       } else {
-        throw new Error(res.payload.message || "Error submitting the form.");
+        throw new Error(res.payload?.message || "Error submitting the form.");
       }
     } catch (error) {
-      message.error(error.message);
+      console.error("Submission error:", error);
+      message.error(error.message || "An error occurred during submission.");
+    } finally {
+      setIsSubmitting(false);
     }
-  };
-
-  // Calculate self-assessment score
-  const calculateScore = () => {
-    const values = form.getFieldsValue();
-    let score = 0;
-
-    const currentQuestions =
-      formDetails?.createdAt < cutoffDate ? questionsOld : questions;
-
-    currentQuestions.forEach((key) => {
-      const answer = values[key?.key];
-      if (answer === "Yes")
-        score += 1; // Add 1 for "Yes"
-      else if (answer === "No")
-        score += 0; // No points for "No"
-      else if (answer === "Sometimes") score += 0.5; // Add 0.5 for "0.5"
-      // Ignore "N/A" (or any undefined answer)
-    });
-    setSelfAssessmentScore(score);
-    getTotalScorevalu(values);
-  };
-
-  const getTotalScorevalu = (formValue) => {
-    const validValues = ["Yes", "No", "Sometimes"]; // Include these values
-    const count = Object.values(formValue).filter((value) =>
-      validValues.includes(value),
-    ).length;
-    setTotalCountMein(count);
-  };
-
-  const getTotalScore = (type) => {
-    if (!formDetails) return 0;
-
-    // Count "Yes", "Sometimes", and "No" as 1
-    const validValues = ["Yes", "Sometimes", "No"];
-    const scores = Object.values(formDetails[type]).reduce((sum, value) => {
-      return sum + (validValues.includes(value) ? 1 : 0); // Add 1 if value matches
-    }, 0);
-
-    return scores; // Return total score
-  };
-
-  const getSelfAssemnetScrore = (type) => {
-    if (!formDetails) return 0;
-    const validValues = { Yes: 1, Sometimes: 0.5 };
-    const scores = Object.values(formDetails[type]).reduce((sum, value) => {
-      return sum + (validValues[value] || 0); // Add score if value matches, otherwise add 0
-    }, 0);
-    return scores;
   };
 
   const disableFutureDates = (current) => {
-    // Get the current date without the time part
     const today = new Date();
-    today.setHours(0, 0, 0, 0); // Reset time to 00:00:00 to compare only the date
-
-    // Disable dates that are in the future
+    today.setHours(0, 0, 0, 0);
     return current && current.toDate() > today;
   };
 
-  const SideQuestion = document.querySelectorAll("#SideQuestion");
-  const heights = Array.from(SideQuestion).map(
-    (element) => element.offsetHeight,
-  );
-
   const SectionSubject = (value) => {
-    if (value) {
-      const filteredData = newData?.filter((data) => data?._id === value);
+    if (value && newData) {
+      const filteredData = newData.filter((data) => data?._id === value);
       if (filteredData?.length > 0) {
-        setSectionState(filteredData[0]); // Set the filtered data to sectionState
+        setSectionState(filteredData[0]);
+        setClassInfo((prev) => ({ ...prev, className: filteredData[0].className }));
       }
     }
-
-    return []; // Return an empty array if the value is falsy
   };
 
+  const stepCounts = [s0Answered, s1Answered, s2Answered, totalAnswered];
+
   return (
-    <div className="modern-form-container">
+    <div className="modern-form-container" style={{ maxWidth: "1280px", margin: "0 auto", padding: "24px 16px" }}>
       {isLoading ? (
-        <div className="modern-loader">
+        <div className="modern-loader" style={{ display: "flex", justifyContent: "center", padding: "80px 0" }}>
           <Spin size="large" />
         </div>
       ) : (
         <>
-          <div className="modern-form-header">
+          {/* Header */}
+          <div className="modern-form-header" style={{ marginBottom: "20px" }}>
             <div className="header-section" style={{ width: "100%" }}>
-              <h2 className="form-title">Observation Form</h2>
-              <div className="form-subtitle">Complete your evaluation</div>
-              
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
+                <div>
+                  <h2 className="form-title" style={{ fontSize: "24px", fontWeight: 700, color: "#111827", margin: 0 }}>
+                    Fortnightly Observation Form
+                  </h2>
+                  <div className="form-subtitle" style={{ fontSize: "14px", color: "#6b7280", marginTop: "4px" }}>
+                    Complete your evaluation step by step
+                  </div>
+                </div>
+
+                {/* Progress counter pill */}
+                <div style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "12px",
+                  background: "#f0fdf4",
+                  border: "1px solid #bbf7d0",
+                  padding: "8px 16px",
+                  borderRadius: "20px",
+                }}>
+                  <div style={{ fontSize: "13px", fontWeight: 600, color: "#166534" }}>
+                    Total Answered: <span style={{ fontSize: "16px", fontWeight: 800 }}>{totalAnswered}</span> / 35
+                  </div>
+                  {totalAnswered === 35 && (
+                    <Tag color="success" style={{ margin: 0, borderRadius: "12px" }}>All Completed</Tag>
+                  )}
+                </div>
+              </div>
+
+              {/* Form Metadata Box */}
               {formDetails && (() => {
                 const teacherName = formDetails?.teacherID?.name || formDetails?.userId?.name || "—";
-                const observerName = formDetails?.teacherID ? (formDetails?.userId?.name || "—") : (formDetails?.coordinatorID?.name || "—");
-                
+                const observerName = formDetails?.teacherID
+                  ? formDetails?.userId?.name || "—"
+                  : formDetails?.coordinatorID?.name || "—";
+
                 return (
                   <div style={{
                     marginTop: "16px",
-                    padding: "16px 24px",
+                    padding: "16px 20px",
                     backgroundColor: "#f9fafb",
                     borderRadius: "12px",
                     border: "1px solid #e5e7eb",
                     display: "flex",
                     flexWrap: "wrap",
-                    gap: "24px 32px",
+                    gap: "20px 32px",
                     fontSize: "14px",
                     color: "#4b5563",
-                    boxShadow: "0 1px 2px 0 rgba(0, 0, 0, 0.05)"
+                    boxShadow: "0 1px 2px 0 rgba(0, 0, 0, 0.04)",
                   }}>
                     <div>
                       <span style={{ fontWeight: 600, color: "#374151" }}>Teacher: </span>
@@ -429,11 +546,13 @@ const Details = () => {
                     </div>
                     <div>
                       <span style={{ fontWeight: 600, color: "#374151" }}>Date: </span>
-                      {formDetails?.date ? new Date(formDetails.date).toLocaleDateString("en-IN", {
-                        day: "numeric",
-                        month: "short",
-                        year: "numeric"
-                      }) : "—"}
+                      {formDetails?.date
+                        ? new Date(formDetails.date).toLocaleDateString("en-IN", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                          })
+                        : "—"}
                     </div>
                     <div>
                       <span style={{ fontWeight: 600, color: "#374151" }}>Observer: </span>
@@ -445,164 +564,134 @@ const Details = () => {
             </div>
           </div>
 
+          {/* Interactive Stepper Navigation */}
           <div style={{
             background: "#fff",
-            padding: "20px 24px",
+            padding: "16px 20px",
             borderRadius: "16px",
             marginBottom: "24px",
             border: "1px solid #e5e7eb",
-            boxShadow: "0 1px 3px rgba(0,0,0,0.05)"
+            boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
           }}>
-            <CommonStepper steps={steps} currentStep={currStep} />
-          </div>
-
-          <Form
-            form={form}
-            layout="vertical"
-            onFinish={onFinish}
-            onValuesChange={calculateScore}
-            className="modern-form"
-          >
-            {(() => {
-              const activeQuestions = formDetails?.createdAt < cutoffDate ? questionsOld : questions;
-              const stepQuestions =
-                currStep === 0
-                  ? activeQuestions.slice(0, 12)
-                  : currStep === 1
-                    ? activeQuestions.slice(12, 25)
-                    : currStep === 2
-                      ? activeQuestions.slice(25)
-                      : [];
-
-              if (currStep === 3) {
-                // Review & Final Confirmation Step
-                const formValues = form.getFieldsValue();
-                const countAnswered = (arr) => arr.filter((q) => !!formValues[q.key]).length;
-                const s0Answered = countAnswered(activeQuestions.slice(0, 12));
-                const s1Answered = countAnswered(activeQuestions.slice(12, 25));
-                const s2Answered = countAnswered(activeQuestions.slice(25));
-                const totalAnswered = s0Answered + s1Answered + s2Answered;
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+              gap: "12px",
+            }}>
+              {steps.map((step, idx) => {
+                const isActive = currStep === idx;
+                const answered = stepCounts[idx];
+                const total = step.total;
+                const isComplete = idx < 3 ? answered === total : totalAnswered === 35;
 
                 return (
-                  <div style={{ background: "#fff", padding: "32px", borderRadius: "16px", border: "1px solid #e5e7eb" }}>
-                    <h3 style={{ fontSize: "20px", fontWeight: 700, color: "#1f2937", marginBottom: "8px" }}>
-                      Review & Submit Evaluation
-                    </h3>
-                    <p style={{ color: "#6b7280", marginBottom: "24px" }}>
-                      Please review your responses before final submission. You can click on any section to go back and make changes.
-                    </p>
-
-                    <Row gutter={[20, 20]}>
-                      <Col xs={24} md={8}>
-                        <Card
-                          hoverable
-                          onClick={() => setCurrStep(0)}
-                          style={{ borderRadius: "12px", borderColor: "#e5e7eb" }}
-                        >
-                          <div style={{ fontWeight: 600, color: "#374151", marginBottom: "4px" }}>
-                            1. Displays & Setup
-                          </div>
-                          <div style={{ color: "#059669", fontSize: "15px", fontWeight: 600 }}>
-                            {s0Answered} / 12 Answered
-                          </div>
-                          <Button type="link" style={{ padding: 0, marginTop: "8px" }}>
-                            Review / Edit →
-                          </Button>
-                        </Card>
-                      </Col>
-
-                      <Col xs={24} md={8}>
-                        <Card
-                          hoverable
-                          onClick={() => setCurrStep(1)}
-                          style={{ borderRadius: "12px", borderColor: "#e5e7eb" }}
-                        >
-                          <div style={{ fontWeight: 600, color: "#374151", marginBottom: "4px" }}>
-                            2. Routines & Activities
-                          </div>
-                          <div style={{ color: "#059669", fontSize: "15px", fontWeight: 600 }}>
-                            {s1Answered} / 13 Answered
-                          </div>
-                          <Button type="link" style={{ padding: 0, marginTop: "8px" }}>
-                            Review / Edit →
-                          </Button>
-                        </Card>
-                      </Col>
-
-                      <Col xs={24} md={8}>
-                        <Card
-                          hoverable
-                          onClick={() => setCurrStep(2)}
-                          style={{ borderRadius: "12px", borderColor: "#e5e7eb" }}
-                        >
-                          <div style={{ fontWeight: 600, color: "#374151", marginBottom: "4px" }}>
-                            3. Records & Registers
-                          </div>
-                          <div style={{ color: "#059669", fontSize: "15px", fontWeight: 600 }}>
-                            {s2Answered} / {activeQuestions.slice(25).length} Answered
-                          </div>
-                          <Button type="link" style={{ padding: 0, marginTop: "8px" }}>
-                            Review / Edit →
-                          </Button>
-                        </Card>
-                      </Col>
-                    </Row>
-
-                    <div style={{
-                      marginTop: "24px",
-                      padding: "20px 24px",
-                      backgroundColor: "#f9fafb",
-                      borderRadius: "12px",
+                  <div
+                    key={step.key}
+                    onClick={() => handleStepClick(idx)}
+                    style={{
                       display: "flex",
-                      flexWrap: "wrap",
-                      gap: "24px",
                       alignItems: "center",
-                      justifyContent: "space-between"
+                      gap: "12px",
+                      padding: "12px 14px",
+                      borderRadius: "12px",
+                      cursor: "pointer",
+                      transition: "all 0.2s ease",
+                      border: isActive
+                        ? "2px solid #4A6741"
+                        : "1px solid #e5e7eb",
+                      backgroundColor: isActive
+                        ? "#f4f8f3"
+                        : "#ffffff",
+                    }}
+                  >
+                    <div style={{
+                      width: "32px",
+                      height: "32px",
+                      borderRadius: "50%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: "14px",
+                      fontWeight: 700,
+                      backgroundColor: isActive
+                        ? "#4A6741"
+                        : isComplete
+                          ? "#166534"
+                          : "#e5e7eb",
+                      color: isActive || isComplete ? "#ffffff" : "#6b7280",
+                      flexShrink: 0,
                     }}>
-                      <div>
-                        <div style={{ fontSize: "14px", color: "#6b7280" }}>
-                          {getUserId().access === UserRole[1] ? "Observer Score" : "Self Assessment Score"}
-                        </div>
-                        <div style={{ fontSize: "28px", fontWeight: 800, color: "#111827" }}>
-                          {selfAssessmentScore} <span style={{ fontSize: "16px", color: "#9ca3af", fontWeight: 500 }}>/ {totalCountMein}</span>
-                        </div>
+                      {isComplete ? <CheckOutlined style={{ fontSize: "12px" }} /> : idx + 1}
+                    </div>
+
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div style={{
+                        fontSize: "13px",
+                        fontWeight: isActive ? 700 : 600,
+                        color: isActive ? "#2d4427" : "#374151",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}>
+                        {step.title}
                       </div>
-                      <div>
-                        <div style={{ fontSize: "14px", color: "#6b7280" }}>Total Completed Questions</div>
-                        <div style={{ fontSize: "24px", fontWeight: 700, color: "#059669" }}>
-                          {totalAnswered} / {activeQuestions.length}
-                        </div>
+                      <div style={{ fontSize: "12px", color: isComplete ? "#166534" : "#6b7280", fontWeight: 500 }}>
+                        {idx < 3 ? `${answered} / ${total} answered` : `${totalAnswered} / 35 completed`}
                       </div>
                     </div>
                   </div>
                 );
-              }
+              })}
+            </div>
+          </div>
+
+          {/* Form Content */}
+          <div className="modern-form">
+            {/* Steps 0, 1, 2 Questions */}
+            {[0, 1, 2].map((stepIdx) => {
+              const qList = stepQuestionMap[stepIdx];
+              const isCurrent = currStep === stepIdx;
 
               return (
-                <Row gutter={[24, 0]}>
-                  <Col xs={24} lg={12}>
-                    <div className="form-section">
-                      {currStep === 0 && betaLoading && (
-                        <div className="info-card" style={{ marginBottom: "24px" }}>
-                          <h3 className="section-title">Class Information</h3>
-                          <Row gutter={[16, 16]}>
-                            <Col span={24}>
-                              <Form.Item
-                                label="Class"
-                                name="className"
-                                rules={[{ required: true, message: "Please select a class" }]}
-                              >
+                <div
+                  key={stepIdx}
+                  style={{ display: isCurrent ? "block" : "none" }}
+                >
+                  <Row gutter={[24, 24]}>
+                    <Col xs={24} lg={14}>
+                      <div className="form-section">
+                        {/* Class Info for initiation */}
+                        {stepIdx === 0 && betaLoading && (
+                          <div className="info-card" style={{
+                            background: "#fff",
+                            padding: "20px",
+                            borderRadius: "12px",
+                            border: "1px solid #e5e7eb",
+                            marginBottom: "24px",
+                          }}>
+                            <h3 className="section-title" style={{ fontSize: "16px", fontWeight: 600, marginBottom: "16px" }}>
+                              Class Information
+                            </h3>
+                            <Row gutter={[16, 16]}>
+                              <Col span={24}>
+                                <label style={{ display: "block", marginBottom: "6px", fontWeight: 500 }}>
+                                  Class <span style={{ color: "#ef4444" }}>*</span>
+                                </label>
                                 <Select
                                   showSearch
                                   placeholder="Select a class"
                                   size="large"
-                                  onChange={(value) => SectionSubject(value)}
+                                  style={{ width: "100%" }}
+                                  status={validationErrors.className ? "error" : ""}
+                                  value={classInfo.className || undefined}
+                                  onChange={(value) => {
+                                    SectionSubject(value);
+                                    setValidationErrors((prev) => ({ ...prev, className: false }));
+                                  }}
                                   options={
                                     newData &&
-                                    newData?.length > 0 &&
-                                    newData?.map((item) => ({
+                                    newData.map((item) => ({
                                       key: item?._id,
-                                      id: item?._id,
                                       value: item?._id,
                                       label: item?.className,
                                     }))
@@ -611,174 +700,421 @@ const Details = () => {
                                     option.label.toLowerCase().includes(input.toLowerCase())
                                   }
                                 />
-                              </Form.Item>
-                            </Col>
+                              </Col>
 
-                            <Col span={24}>
-                              <Form.Item
-                                label="Section"
-                                name="section"
-                                rules={[{ required: true, message: "Please select a section" }]}
-                              >
+                              <Col span={24}>
+                                <label style={{ display: "block", marginBottom: "6px", fontWeight: 500 }}>
+                                  Section <span style={{ color: "#ef4444" }}>*</span>
+                                </label>
                                 <Select
                                   showSearch
                                   placeholder="Select a section"
                                   size="large"
+                                  style={{ width: "100%" }}
+                                  status={validationErrors.section ? "error" : ""}
+                                  value={classInfo.section || undefined}
+                                  onChange={(value) => {
+                                    setClassInfo((prev) => ({ ...prev, section: value }));
+                                    setValidationErrors((prev) => ({ ...prev, section: false }));
+                                  }}
                                   options={sectionState?.sections?.map((item) => ({
                                     key: item._id,
-                                    id: item._id,
                                     value: item.name,
                                     label: item.name,
                                   }))}
-                                  filterOption={(input, option) =>
-                                    option.label.toLowerCase().includes(input.toLowerCase())
-                                  }
                                 />
-                              </Form.Item>
-                            </Col>
+                              </Col>
 
-                            <Col xs={24} sm={12}>
-                              <Form.Item
-                                label="Date"
-                                name="date"
-                                rules={[{ required: true, message: "Please select a date" }]}
-                              >
+                              <Col xs={24} sm={12}>
+                                <label style={{ display: "block", marginBottom: "6px", fontWeight: 500 }}>
+                                  Date <span style={{ color: "#ef4444" }}>*</span>
+                                </label>
                                 <DatePicker
                                   className="w-100"
                                   size="large"
                                   format="YYYY-MM-DD"
+                                  style={{ width: "100%" }}
+                                  status={validationErrors.date ? "error" : ""}
+                                  value={classInfo.date}
+                                  onChange={(d) => {
+                                    setClassInfo((prev) => ({ ...prev, date: d }));
+                                    setValidationErrors((prev) => ({ ...prev, date: false }));
+                                  }}
                                   disabledDate={disableFutureDates}
                                 />
-                              </Form.Item>
-                            </Col>
-
-                            {CurrectUserRole === UserRole[2] && (
-                              <Col xs={24} sm={12}>
-                                <Form.Item label="Coordinator" name="coordinatorID">
-                                  <Select
-                                    defaultValue={formDetails?.userId?.name}
-                                    disabled={betaLoading}
-                                    showSearch
-                                    size="large"
-                                    placeholder="Select a coordinator"
-                                    options={ObserverList?.map((item) => ({
-                                      value: item._id,
-                                      label: item.name,
-                                    }))}
-                                    filterOption={(input, option) =>
-                                      option.label.toLowerCase().includes(input.toLowerCase())
-                                    }
-                                  />
-                                </Form.Item>
-                                <Form.Item hidden label="Coordinator" name="isCoordinator">
-                                  <Select
-                                    onChange={(value) => {
-                                      setIsCoordinator(true);
-                                      form.resetFields(["teacherID"]);
-                                    }}
-                                  >
-                                    <Option value={false}>No</Option>
-                                    <Option value={true}>Yes</Option>
-                                  </Select>
-                                </Form.Item>
                               </Col>
-                            )}
-                          </Row>
-                        </div>
-                      )}
-
-                      <div className="questions-section">
-                        <h3 className="section-title">
-                          {steps[currStep]?.title} ({stepQuestions.length} Questions)
-                        </h3>
-                        {stepQuestions.map((field) => (
-                          <div className="question-card" key={field?.key}>
-                            <Form.Item
-                              className="question-item"
-                              name={field?.key}
-                              label={
-                                <span className="question-label">
-                                  {field?.name
-                                    .replace(/([A-Z])/g, " $1")
-                                    .replace(/^./, (str) => str.toUpperCase())}
-                                </span>
-                              }
-                              rules={[{ required: true, message: `Please select an option` }]}
-                            >
-                              <div className="modern-radio-group">
-                                {yesNoNAOptions.map((option) => (
-                                  <label key={option} className="radio-label">
-                                    <input
-                                      type="radio"
-                                      name={field?.key}
-                                      value={option}
-                                      className="radio-input"
-                                    />
-                                    <span className="radio-text">{option}</span>
-                                  </label>
-                                ))}
-                              </div>
-                            </Form.Item>
+                            </Row>
                           </div>
-                        ))}
-                      </div>
-                    </div>
-                  </Col>
+                        )}
 
-                  <Col xs={24} lg={12}>
-                    <div className="sticky-sidebar">
-                      {(GetUserAccess === UserRole[2] && !formDetails?.isCoordinatorComplete) ||
-                      (GetUserAccess === UserRole[1] && !formDetails?.isTeacherComplete) ? (
-                        <div className="empty-state">
-                          <Empty
-                            image={Empty.PRESENTED_IMAGE_SIMPLE}
-                            description="Waiting for teacher response"
-                          />
-                        </div>
-                      ) : null}
+                        {/* Questions for this step */}
+                        <div className="questions-section">
+                          <div style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            marginBottom: "16px",
+                          }}>
+                            <h3 className="section-title" style={{ fontSize: "18px", fontWeight: 700, margin: 0, color: "#1f2937" }}>
+                              {steps[stepIdx].title} ({qList.length} Questions)
+                            </h3>
+                            <div style={{ fontSize: "14px", fontWeight: 600, color: "#4A6741" }}>
+                              {stepCounts[stepIdx]} / {qList.length} Answered
+                            </div>
+                          </div>
 
-                      {GetUserAccess === UserRole[1] && formDetails?.isTeacherComplete && (
-                        <div className="response-section">
-                          <h3 className="section-title">Teacher Responses ({steps[currStep]?.title})</h3>
-                          {stepQuestions.map((item, index) => {
-                            const answer = formDetails?.teacherForm?.[item.key];
+                          {qList.map((field, idx) => {
+                            const isAnswered = !!answers[field.key];
+                            const isError = !!validationErrors[field.key];
+
                             return (
-                              <div className="response-card" key={index + 1}>
-                                <div className="response-question">
-                                  {item?.name
-                                    .replace(/([A-Z])/g, " $1")
-                                    .replace(/^./, (str) => str.toUpperCase())}
+                              <div
+                                id={`question-card-${field.key}`}
+                                className="question-card"
+                                key={field.key}
+                                style={{
+                                  background: "#ffffff",
+                                  padding: "16px 20px",
+                                  borderRadius: "12px",
+                                  marginBottom: "14px",
+                                  border: isError
+                                    ? "1.5px solid #ef4444"
+                                    : isAnswered
+                                      ? "1px solid #d1fae5"
+                                      : "1px solid #e5e7eb",
+                                  backgroundColor: isError
+                                    ? "#fff5f5"
+                                    : "#ffffff",
+                                  transition: "all 0.2s ease",
+                                }}
+                              >
+                                <div style={{
+                                  display: "flex",
+                                  justifyContent: "space-between",
+                                  alignItems: "flex-start",
+                                  gap: "12px",
+                                  marginBottom: "12px",
+                                }}>
+                                  <div style={{ fontSize: "15px", fontWeight: 600, color: "#1f2937", lineHeight: 1.5 }}>
+                                    <span style={{ color: "#6b7280", marginRight: "8px" }}>
+                                      {idx + 1}.
+                                    </span>
+                                    {field.name}
+                                  </div>
+                                  {isAnswered && (
+                                    <CheckCircleFilled style={{ color: "#10b981", fontSize: "16px", marginTop: "2px" }} />
+                                  )}
                                 </div>
-                                <div className={`response-badge badge-${answer?.toLowerCase()}`}>
-                                  {answer || "—"}
-                                </div>
+
+                                <ModernRadioGroup
+                                  options={yesNoNAOptions}
+                                  value={answers[field.key]}
+                                  onChange={(val) => handleAnswerChange(field.key, val)}
+                                />
+
+                                {isError && (
+                                  <div style={{ color: "#ef4444", fontSize: "12px", fontWeight: 500, marginTop: "8px" }}>
+                                    Please select an answer
+                                  </div>
+                                )}
                               </div>
                             );
                           })}
-
-                          <div className="score-card">
-                            <div className="score-label">Teacher Self Assessment</div>
-                            <div className="score-value">
-                              <span className="score-number">
-                                {getSelfAssemnetScrore("teacherForm") || "N/A"}
-                              </span>
-                              <span className="score-divider">/</span>
-                              <span className="score-total">
-                                {getTotalScore("teacherForm")}
-                              </span>
-                            </div>
-                          </div>
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    </Col>
+
+                    {/* Sidebar: Observer View (When observer is observing teacher responses) */}
+                    <Col xs={24} lg={10}>
+                      <div className="sticky-sidebar" style={{ position: "sticky", top: "24px" }}>
+                        {(GetUserAccess === UserRole[2] && !formDetails?.isCoordinatorComplete) ||
+                        (GetUserAccess === UserRole[1] && !formDetails?.isTeacherComplete) ? (
+                          <div className="empty-state" style={{
+                            background: "#fff",
+                            padding: "40px 20px",
+                            borderRadius: "16px",
+                            border: "1px solid #e5e7eb",
+                            textAlign: "center",
+                          }}>
+                            <Empty
+                              image={Empty.PRESENTED_IMAGE_SIMPLE}
+                              description={
+                                GetUserAccess === UserRole[1]
+                                  ? "Waiting for teacher response"
+                                  : "Coordinator observation will appear after review"
+                              }
+                            />
+                          </div>
+                        ) : null}
+
+                        {GetUserAccess === UserRole[1] && formDetails?.isTeacherComplete && (
+                          <div className="response-section" style={{
+                            background: "#fff",
+                            padding: "20px",
+                            borderRadius: "16px",
+                            border: "1px solid #e5e7eb",
+                          }}>
+                            <h3 className="section-title" style={{ fontSize: "16px", fontWeight: 700, marginBottom: "16px" }}>
+                              Teacher Responses ({steps[stepIdx]?.title})
+                            </h3>
+                            {qList.map((item, index) => {
+                              const answer = formDetails?.teacherForm?.[item.key];
+                              return (
+                                <div className="response-card" key={index} style={{
+                                  padding: "12px 0",
+                                  borderBottom: "1px solid #f3f4f6",
+                                }}>
+                                  <div style={{ fontSize: "13px", color: "#6b7280", marginBottom: "6px" }}>
+                                    {item.name}
+                                  </div>
+                                  <Tag
+                                    color={
+                                      answer === "Yes"
+                                        ? "green"
+                                        : answer === "No"
+                                          ? "red"
+                                          : answer === "Sometimes"
+                                            ? "orange"
+                                            : "default"
+                                    }
+                                    style={{ fontWeight: 600 }}
+                                  >
+                                    {answer || "—"}
+                                  </Tag>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    </Col>
+                  </Row>
+                </div>
+              );
+            })}
+
+            {/* Step 3: Review & Submit Step */}
+            <div style={{ display: currStep === 3 ? "block" : "none" }}>
+              <div style={{
+                background: "#fff",
+                padding: "32px",
+                borderRadius: "16px",
+                border: "1px solid #e5e7eb",
+              }}>
+                <h3 style={{ fontSize: "20px", fontWeight: 700, color: "#1f2937", marginBottom: "8px" }}>
+                  Review & Submit Evaluation
+                </h3>
+                <p style={{ color: "#6b7280", marginBottom: "24px" }}>
+                  Please review your responses before final submission. Click on any section to go back and edit answers.
+                </p>
+
+                {/* Status Alert Banner */}
+                {totalAnswered < 35 ? (
+                  <Alert
+                    type="warning"
+                    showIcon
+                    icon={<ExclamationCircleFilled />}
+                    message={
+                      <span>
+                        <strong>Incomplete:</strong> You have answered <strong>{totalAnswered} of 35</strong> questions.
+                        Please complete all categories before final submission.
+                      </span>
+                    }
+                    style={{ marginBottom: "24px", borderRadius: "10px" }}
+                  />
+                ) : (
+                  <Alert
+                    type="success"
+                    showIcon
+                    icon={<CheckCircleFilled />}
+                    message={
+                      <span>
+                        <strong>All Completed:</strong> You have answered all 35 questions! You are ready to submit.
+                      </span>
+                    }
+                    style={{ marginBottom: "24px", borderRadius: "10px" }}
+                  />
+                )}
+
+                {/* Category Cards */}
+                <Row gutter={[20, 20]}>
+                  <Col xs={24} md={8}>
+                    <Card
+                      hoverable
+                      onClick={() => handleStepClick(0)}
+                      style={{
+                        borderRadius: "14px",
+                        border: s0Answered === 12 ? "1.5px solid #bbf7d0" : "1.5px solid #fed7aa",
+                        backgroundColor: s0Answered === 12 ? "#f0fdf4" : "#fffaf0",
+                      }}
+                    >
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                        <div style={{ fontWeight: 700, color: "#374151" }}>1. Displays & Setup</div>
+                        {s0Answered === 12 ? (
+                          <Tag color="success">Complete</Tag>
+                        ) : (
+                          <Tag color="warning">Pending</Tag>
+                        )}
+                      </div>
+                      <div style={{
+                        color: s0Answered === 12 ? "#15803d" : "#c2410c",
+                        fontSize: "18px",
+                        fontWeight: 800,
+                      }}>
+                        {s0Answered} / 12 Answered
+                      </div>
+                      <Button type="link" style={{ padding: 0, marginTop: "10px", fontWeight: 600 }}>
+                        Review / Edit Section →
+                      </Button>
+                    </Card>
+                  </Col>
+
+                  <Col xs={24} md={8}>
+                    <Card
+                      hoverable
+                      onClick={() => handleStepClick(1)}
+                      style={{
+                        borderRadius: "14px",
+                        border: s1Answered === 13 ? "1.5px solid #bbf7d0" : "1.5px solid #fed7aa",
+                        backgroundColor: s1Answered === 13 ? "#f0fdf4" : "#fffaf0",
+                      }}
+                    >
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                        <div style={{ fontWeight: 700, color: "#374151" }}>2. Routines & Activities</div>
+                        {s1Answered === 13 ? (
+                          <Tag color="success">Complete</Tag>
+                        ) : (
+                          <Tag color="warning">Pending</Tag>
+                        )}
+                      </div>
+                      <div style={{
+                        color: s1Answered === 13 ? "#15803d" : "#c2410c",
+                        fontSize: "18px",
+                        fontWeight: 800,
+                      }}>
+                        {s1Answered} / 13 Answered
+                      </div>
+                      <Button type="link" style={{ padding: 0, marginTop: "10px", fontWeight: 600 }}>
+                        Review / Edit Section →
+                      </Button>
+                    </Card>
+                  </Col>
+
+                  <Col xs={24} md={8}>
+                    <Card
+                      hoverable
+                      onClick={() => handleStepClick(2)}
+                      style={{
+                        borderRadius: "14px",
+                        border: s2Answered === 10 ? "1.5px solid #bbf7d0" : "1.5px solid #fed7aa",
+                        backgroundColor: s2Answered === 10 ? "#f0fdf4" : "#fffaf0",
+                      }}
+                    >
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                        <div style={{ fontWeight: 700, color: "#374151" }}>3. Records & Registers</div>
+                        {s2Answered === 10 ? (
+                          <Tag color="success">Complete</Tag>
+                        ) : (
+                          <Tag color="warning">Pending</Tag>
+                        )}
+                      </div>
+                      <div style={{
+                        color: s2Answered === 10 ? "#15803d" : "#c2410c",
+                        fontSize: "18px",
+                        fontWeight: 800,
+                      }}>
+                        {s2Answered} / 10 Answered
+                      </div>
+                      <Button type="link" style={{ padding: 0, marginTop: "10px", fontWeight: 600 }}>
+                        Review / Edit Section →
+                      </Button>
+                    </Card>
                   </Col>
                 </Row>
-              );
-            })()}
 
-            <Form.Item name="selfEvaluationScore" hidden>
-              <InputNumber value={selfAssessmentScore} disabled />
-            </Form.Item>
+                {/* Score Summary Box */}
+                <div style={{
+                  marginTop: "24px",
+                  padding: "20px 24px",
+                  backgroundColor: "#f9fafb",
+                  borderRadius: "14px",
+                  border: "1px solid #e5e7eb",
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: "24px",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}>
+                  <div>
+                    <div style={{ fontSize: "14px", color: "#6b7280" }}>
+                      {GetUserAccess === UserRole[1] ? "Observer Score" : "Self Assessment Score"}
+                    </div>
+                    <div style={{ fontSize: "28px", fontWeight: 800, color: "#111827" }}>
+                      {selfScore} <span style={{ fontSize: "16px", color: "#9ca3af", fontWeight: 500 }}>/ {outOfScore}</span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div style={{ fontSize: "14px", color: "#6b7280" }}>Total Completed Questions</div>
+                    <div style={{ fontSize: "26px", fontWeight: 800, color: totalAnswered === 35 ? "#166534" : "#ea580c" }}>
+                      {totalAnswered} / 35
+                    </div>
+                  </div>
+                </div>
+
+                {/* All Responses Detailed Preview */}
+                <div style={{ marginTop: "32px" }}>
+                  <h4 style={{ fontSize: "16px", fontWeight: 700, color: "#374151", marginBottom: "16px" }}>
+                    Full Response Summary
+                  </h4>
+                  <div style={{
+                    maxHeight: "360px",
+                    overflowY: "auto",
+                    border: "1px solid #e5e7eb",
+                    borderRadius: "12px",
+                    padding: "8px 16px",
+                  }}>
+                    {activeQuestions.map((q, i) => {
+                      const ans = answers[q.key];
+                      return (
+                        <div
+                          key={q.key}
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            padding: "10px 0",
+                            borderBottom: i < activeQuestions.length - 1 ? "1px solid #f3f4f6" : "none",
+                            gap: "16px",
+                          }}
+                        >
+                          <div style={{ fontSize: "14px", color: "#374151" }}>
+                            <span style={{ color: "#9ca3af", marginRight: "8px" }}>{i + 1}.</span>
+                            {q.name}
+                          </div>
+                          <Tag
+                            color={
+                              ans === "Yes"
+                                ? "green"
+                                : ans === "No"
+                                  ? "red"
+                                  : ans === "Sometimes"
+                                    ? "orange"
+                                    : ans === "N/A"
+                                      ? "blue"
+                                      : "default"
+                            }
+                            style={{ fontWeight: 600, minWidth: "70px", textAlign: "center" }}
+                          >
+                            {ans || "Not Answered"}
+                          </Tag>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
 
             {/* Stepper Navigation Footer */}
             <div style={{
@@ -787,15 +1123,16 @@ const Details = () => {
               alignItems: "center",
               marginTop: "32px",
               paddingTop: "24px",
-              borderTop: "1px solid #e5e7eb"
+              borderTop: "1px solid #e5e7eb",
             }}>
               {currStep > 0 ? (
                 <Button
                   size="large"
                   onClick={handleStepBack}
+                  icon={<ArrowLeftOutlined />}
                   style={{ borderRadius: "8px", minWidth: "120px" }}
                 >
-                  ← Back
+                  Back
                 </Button>
               ) : (
                 <div />
@@ -804,17 +1141,15 @@ const Details = () => {
               <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
                 <Button
                   size="large"
-                  onClick={async () => {
-                    const values = form.getFieldsValue();
-                    await saveDraft(values, currStep);
-                    message.success("Draft saved successfully!");
-                  }}
+                  loading={isSavingDraft}
+                  icon={<SaveOutlined />}
+                  onClick={() => saveDraft(answers, currStep, true)}
                   style={{ borderRadius: "8px" }}
                 >
                   Save Draft
                 </Button>
 
-                {currStep < steps.length - 1 ? (
+                {currStep < 3 ? (
                   <Button
                     type="primary"
                     size="large"
@@ -827,19 +1162,20 @@ const Details = () => {
                       fontWeight: 600,
                     }}
                   >
-                    Next →
+                    Next <ArrowRightOutlined />
                   </Button>
                 ) : (
                   <Button
                     type="primary"
-                    htmlType="submit"
                     size="large"
+                    onClick={() => setIsSubmitModalOpen(true)}
                     style={{
                       borderRadius: "8px",
                       minWidth: "160px",
-                      background: "#4A6741",
-                      borderColor: "#4A6741",
-                      fontWeight: 600,
+                      background: "#166534",
+                      borderColor: "#166534",
+                      fontWeight: 700,
+                      boxShadow: "0 2px 4px rgba(22, 101, 52, 0.2)",
                     }}
                   >
                     Submit Evaluation
@@ -847,7 +1183,67 @@ const Details = () => {
                 )}
               </div>
             </div>
-          </Form>
+          </div>
+
+          {/* Submission Confirmation Modal */}
+          <Modal
+            title={
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "17px" }}>
+                {totalAnswered === 35 ? (
+                  <CheckCircleFilled style={{ color: "#166534" }} />
+                ) : (
+                  <ExclamationCircleFilled style={{ color: "#ea580c" }} />
+                )}
+                Confirm Evaluation Submission
+              </div>
+            }
+            open={isSubmitModalOpen}
+            onCancel={() => setIsSubmitModalOpen(false)}
+            footer={[
+              <Button key="back" size="large" onClick={() => setIsSubmitModalOpen(false)}>
+                Cancel
+              </Button>,
+              <Button
+                key="submit"
+                type="primary"
+                size="large"
+                loading={isSubmitting}
+                onClick={handleSubmit}
+                style={{
+                  background: "#166534",
+                  borderColor: "#166534",
+                  fontWeight: 600,
+                }}
+              >
+                Yes, Submit Evaluation
+              </Button>,
+            ]}
+          >
+            <div style={{ padding: "16px 0" }}>
+              {totalAnswered < 35 ? (
+                <div>
+                  <p style={{ color: "#c2410c", fontWeight: 600, marginBottom: "8px" }}>
+                    Warning: You have only answered {totalAnswered} of 35 questions.
+                  </p>
+                  <p style={{ color: "#4b5563" }}>
+                    Submitting now will leave unanswered questions blank. Are you sure you want to proceed with submission?
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  <p style={{ color: "#166534", fontWeight: 600, marginBottom: "8px" }}>
+                    All 35 questions have been completed!
+                  </p>
+                  <p style={{ color: "#4b5563" }}>
+                    Self Assessment Score: <strong>{selfScore} / {outOfScore}</strong>.
+                  </p>
+                  <p style={{ color: "#4b5563" }}>
+                    Once submitted, your evaluation will be finalized and sent to your observer.
+                  </p>
+                </div>
+              )}
+            </div>
+          </Modal>
         </>
       )}
     </div>

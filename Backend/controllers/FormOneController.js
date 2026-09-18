@@ -347,37 +347,67 @@ exports.FormFill = async (req, res) => {
       });
     }
 
+    // Helper to calculate score and valid questions count
+    const computeScores = (formDataObj) => {
+      let score = 0;
+      let outOf = 0;
+      const validOptions = ["Yes", "No", "Sometimes"];
+      if (formDataObj && typeof formDataObj === "object") {
+        Object.entries(formDataObj).forEach(([k, v]) => {
+          if (k !== "_id" && k !== "totalScore" && k !== "OutOf" && k !== "ObservationDates") {
+            if (v === "Yes") score += 1;
+            else if (v === "Sometimes") score += 0.5;
+            if (validOptions.includes(v)) outOf += 1;
+          }
+        });
+      }
+      return { score, outOf };
+    };
+
+    // Deep merge to prevent step drafts from wiping previous step answers
+    const getMergedForm = (existingDoc, incomingData) => {
+      const existing = existingDoc ? (existingDoc.toObject ? existingDoc.toObject() : existingDoc) : {};
+      const merged = { ...existing, ...(incomingData || {}) };
+      delete merged._id;
+      const { score, outOf } = computeScores(merged);
+      merged.totalScore = score;
+      merged.OutOf = outOf;
+      return merged;
+    };
+
     // Create an object to store the updates
     let updateData = {};
     const isDraft = req.body.isDraft !== undefined ? req.body.isDraft : (!isCoordinatorComplete && !isTeacherComplete);
     const currentStep = req.body.currentStep !== undefined ? req.body.currentStep : (data?.currentStep || 0);
 
     if (isCoordinatorComplete) {
+      const mergedObserver = getMergedForm(data?.observerForm, observerForm);
       updateData = {
         isCoordinatorComplete,
         isDraft: false,
-        currentStep,
+        currentStep: 3,
         ObserverSubmissionDate: new Date(),
-        observerForm: observerForm || data?.observerForm,
+        observerForm: mergedObserver,
       };
     } else if (isTeacherComplete) {
+      const mergedTeacher = getMergedForm(data?.teacherForm, teacherForm);
       updateData = {
         isTeacherComplete,
         isDraft: false,
-        currentStep,
+        currentStep: 3,
         TeacherSubmissionDate: new Date(),
-        teacherForm: teacherForm || data?.teacherForm,
+        teacherForm: mergedTeacher,
         className: FindClass?.className || className || data?.className,
         date: date || data?.date,
         section: Section || data?.section,
       };
     } else {
-      // Step-by-step draft persistence
+      // Step-by-step draft persistence with non-destructive merge
       updateData = {
         isDraft: true,
         currentStep,
-        ...(observerForm ? { observerForm } : {}),
-        ...(teacherForm ? { teacherForm } : {}),
+        ...(observerForm ? { observerForm: getMergedForm(data?.observerForm, observerForm) } : {}),
+        ...(teacherForm ? { teacherForm: getMergedForm(data?.teacherForm, teacherForm) } : {}),
         ...(className || FindClass ? { className: FindClass?.className || className } : {}),
         ...(date ? { date } : {}),
         ...(Section ? { section: Section } : {}),

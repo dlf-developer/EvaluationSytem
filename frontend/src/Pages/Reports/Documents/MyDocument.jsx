@@ -34,10 +34,17 @@ const styles = StyleSheet.create({
   newBox: {
     display: "flex",
     flexDirection: "row",
-    justifyContent: "space-around",
+    justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 10,
-    marginTop: 10,
+    marginBottom: 8,
+    marginTop: 8,
+    paddingHorizontal: 6,
+  },
+  newBoxText: {
+    fontFamily: PDF_FONT,
+    fontSize: 10,
+    fontWeight: "bold",
+    color: "#2D2A26",
   },
   headerSection: {
     flexDirection: "row",
@@ -168,8 +175,16 @@ const MyDocument = ({ data }) => {
   const classSection = `${className ?? ""}/${data?.section ?? ""}`;
   const formattedDate = getAllTimes(data?.date)?.formattedDate2 ?? "-";
 
-  const teacherName = data?.teacherID?.name || data?.teacherName || "N/A";
-  const observerName = data?.userId?.name || data?.coordinatorID?.name || "N/A";
+  const isTeacherCreator = !data?.teacherID && data?.isTeacher;
+  const teacherName =
+    data?.teacherID?.name ||
+    (isTeacherCreator ? data?.userId?.name : "") ||
+    data?.teacherName ||
+    "-";
+  const observerName =
+    data?.coordinatorID?.name ||
+    (!isTeacherCreator ? data?.userId?.name : "") ||
+    "-";
   // Split questions into chunks of 20
   const page1Questions = activeQuestions.slice(0, QUESTIONS_PER_PAGE);
   const page2Questions = activeQuestions.slice(QUESTIONS_PER_PAGE);
@@ -186,9 +201,8 @@ const MyDocument = ({ data }) => {
             totalPages={totalPages}
           />
           <View style={styles.newBox}>
-            {" "}
-            <Text>Teacher Name :{teacherName}</Text>
-            <Text>Observer Name :{observerName}</Text>
+            <Text style={styles.newBoxText}>Teacher Name: {teacherName}</Text>
+            <Text style={styles.newBoxText}>Observer Name: {observerName}</Text>
           </View>
           <View style={styles.table}>
             <ColumnHeaders />

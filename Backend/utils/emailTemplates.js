@@ -9,7 +9,7 @@ const APP_URL = (process.env.APP_URL || "http://localhost:3000").replace(/\/$/, 
  * Build a full form URL from a route path.
  * @param {string} route  e.g. "fortnightly-monitor/create/65ab..."
  */
-const formLink = (route) => `${APP_URL}/${(route || "").replace(/^\//, "")}`;
+const formLink = (route) => `${APP_URL}/${(route || "").replace(/^\//, "").replace(/\.+$/, "").trim()}`;
 
 /**
  * Renders a beautiful HTML email.

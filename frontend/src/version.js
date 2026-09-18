@@ -1,6 +1,6 @@
 // Auto-generated during build/deploy
-export const APP_VERSION = "1.0.2";
-export const BUILD_TIME = "8 Sept 2026, 11:03:25 pm";
+export const APP_VERSION = "1.0.4";
+export const BUILD_TIME = "19 Sept 2026, 12:14:25 am";
 
 export const logVersion = () => {
   const env = process.env.REACT_APP_API_URL?.includes("dlws")

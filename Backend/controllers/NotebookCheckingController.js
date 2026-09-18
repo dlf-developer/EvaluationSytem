@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const { createNotification } = require("../config/notify");
 const ClassDetails = require("../models/ClassDetails");
 const Form3 = require("../models/Form3");
@@ -5,6 +6,9 @@ const notification = require("../models/notification");
 const User = require("../models/User");
 const sendEmail = require("../utils/emailService");
 const { formInitiatedEmail, formCompletedEmail, reflectionSubmittedEmail, reminderEmail } = require("../utils/emailTemplates");
+
+// Helper to strip non-hex characters (e.g. trailing period from copied links: "6a9e...bef.")
+const cleanId = (id) => (id ? id.toString().trim().replace(/[^a-f\d]/gi, "") : "");
 
 exports.createForm = async (req, res) => {
   const {
@@ -21,6 +25,8 @@ exports.createForm = async (req, res) => {
     qualityOfOppurtunities,
     qualityOfTeacherFeedback,
     qualityOfLearner,
+    isDraft,
+    currentStep,
   } = req.body;
 
   const userId = req?.user?.id;
@@ -30,86 +36,112 @@ exports.createForm = async (req, res) => {
       "-password -mobile -employeeId -customId"
     );
 
-    // Check if the user has access as "Observer" or "SuperAdmin"
+    // Check if the user has access as "Teacher" or "SuperAdmin"
     if (!user || (user.access !== "Teacher" && user.access !== "SuperAdmin")) {
       return res
         .status(403)
         .json({ message: "You do not have permission to create this form." });
     }
 
-    // Ensure that the NameoftheVisitingTeacher is provided
-    if (!NameofObserver) {
+    const isDraftSave = isDraft === true;
+
+    // Ensure that NameofObserver is provided for final submissions
+    if (!NameofObserver && !isDraftSave) {
       return res.status(400).json({ message: "Name of Observer is required." });
     }
 
-    const classData = await ClassDetails.findOne({ _id: className });
-    if (!classData) {
+    let finalClassName = className;
+    if (className && mongoose.Types.ObjectId.isValid(className) && /^[a-f\d]{24}$/i.test(className)) {
+      const classData = await ClassDetails.findById(className);
+      if (classData) {
+        finalClassName = classData.className;
+      }
+    } else if (className) {
+      const classData = await ClassDetails.findOne({ className });
+      if (classData) {
+        finalClassName = classData.className;
+      }
+    }
+
+    if (!finalClassName && !isDraftSave) {
       return res
         .status(400)
-        .json({ success: false, message: " Class and Section is Required!" });
+        .json({ success: false, message: "Class and Section is Required!" });
     }
 
     const newForm = new Form3({
       grenralDetails: {
-        NameofObserver,
-        DateOfObservation,
-        className: classData?.className,
-        Section,
-        Subject,
+        NameofObserver: NameofObserver || null,
+        DateOfObservation: DateOfObservation || null,
+        className: finalClassName || null,
+        Section: Section || null,
+        Subject: Subject || null,
       },
       NotebooksTeacher: {
-        ClassStrength,
-        NotebooksSubmitted,
-        Absentees,
-        Defaulters,
+        ClassStrength: ClassStrength || null,
+        NotebooksSubmitted: NotebooksSubmitted || null,
+        Absentees: Absentees || null,
+        Defaulters: Defaulters || null,
       },
       createdBy: user?._id,
+      teacherID: user?._id,
       isObserverComplete: false,
       ObserverForm: {},
-      isTeacherComplete: true,
+      isTeacherComplete: isDraftSave ? false : true,
+      isDraft: isDraftSave,
+      currentStep: currentStep !== undefined ? currentStep : (isDraftSave ? 1 : 0),
       TeacherForm: {
-        maintenanceOfNotebooks,
-        qualityOfOppurtunities,
-        qualityOfTeacherFeedback,
-        qualityOfLearner,
+        maintenanceOfNotebooks: maintenanceOfNotebooks || [],
+        qualityOfOppurtunities: qualityOfOppurtunities || [],
+        qualityOfTeacherFeedback: qualityOfTeacherFeedback || [],
+        qualityOfLearner: qualityOfLearner || [],
       },
     });
 
     const savedForm = await newForm.save();
 
-    const notification = await createNotification({
-      title: "You are invited to fill the Notebook Checking",
-      route: `notebook-checking-proforma/create/${savedForm._id}`,
-      reciverId: NameofObserver,
-    });
+    if (!isDraftSave && NameofObserver) {
+      try {
+        await createNotification({
+          title: "You are invited to fill the Notebook Checking",
+          route: `notebook-checking-proforma/create/${savedForm._id}`,
+          reciverId: NameofObserver,
+        });
+      } catch (notifErr) {
+        console.error("Error creating notification in createForm:", notifErr);
+      }
 
-    const recipientEmail = await User.findById(NameofObserver);
-    const route = `notebook-checking-proforma/create/${savedForm._id}`;
-    const emailData = formInitiatedEmail({
-      recipientName: recipientEmail?.name,
-      initiatorName: user.name,
-      formTitle: "Notebook Checking Proforma",
-      formRoute: route,
-      className: classData?.className,
-      section: Section,
-      subject: Subject,
-      date: DateOfObservation,
-    });
-    if (recipientEmail?.email) {
-      await sendEmail(recipientEmail.email, emailData.subject, emailData.html);
+      try {
+        const recipientEmail = await User.findById(NameofObserver);
+        const route = `notebook-checking-proforma/create/${savedForm._id}`;
+        const emailData = formInitiatedEmail({
+          recipientName: recipientEmail?.name,
+          initiatorName: user.name,
+          formTitle: "Notebook Checking Proforma",
+          formRoute: route,
+          className: finalClassName,
+          section: Section,
+          subject: Subject,
+          date: DateOfObservation,
+        });
+        if (recipientEmail?.email) {
+          await sendEmail(recipientEmail.email, emailData.subject, emailData.html);
+        }
+      } catch (emailErr) {
+        console.error("Error sending email in createForm:", emailErr);
+      }
     }
 
     // Send success response
-    res
-      .status(201)
-      .json({
-        message: "Form created successfully",
-        form: savedForm,
-        status: true,
-      });
+    res.status(201).json({
+      message: isDraftSave ? "Draft saved successfully" : "Form created successfully",
+      form: savedForm,
+      status: true,
+      success: true,
+    });
   } catch (Error) {
-    console.log("Error", Error);
-    res.status(500).send(Error);
+    console.error("Error creating notebook form:", Error);
+    res.status(500).json({ message: "Error creating notebook form", error: Error.message });
   }
 };
 exports.createInitiate = async (req, res) => {
@@ -117,16 +149,24 @@ exports.createInitiate = async (req, res) => {
   const userId = req?.user?.id;
 
   try {
-    const mongoose = require("mongoose");
     let finalClassName = className;
-    if (className && mongoose.Types.ObjectId.isValid(className)) {
+    if (className && mongoose.Types.ObjectId.isValid(className) && /^[a-f\d]{24}$/i.test(className)) {
       const classData = await ClassDetails.findById(className);
+      if (classData) finalClassName = classData.className;
+    } else if (className) {
+      const classData = await ClassDetails.findOne({ className });
       if (classData) finalClassName = classData.className;
     }
 
-    if (isTeacher && Array.isArray(teacherIDs) && teacherIDs.length > 0) {
+    const teacherList = Array.isArray(teacherIDs)
+      ? teacherIDs
+      : teacherIDs
+      ? [teacherIDs]
+      : [];
+
+    if (isTeacher && teacherList.length > 0) {
       const teacherForms = await Promise.all(
-        teacherIDs.map(async (teacherId) => {
+        teacherList.map(async (teacherId) => {
           const teacher = await User.findById(teacherId);
 
           if (!teacher?.email) return null;
@@ -158,16 +198,25 @@ exports.createInitiate = async (req, res) => {
             section: Section,
             subject: Subject,
           });
-          await sendEmail(teacher.email, emailData.subject, emailData.html);
+
+          try {
+            await sendEmail(teacher.email, emailData.subject, emailData.html);
+          } catch (emailErr) {
+            console.error("Failed to send initiate email:", emailErr);
+          }
 
           // Create and save the notification
-          await new notification({
-            title: "You are invited to fill the Notebook Form Initiated",
-            route: `notebook-checking-proforma/create/${formData._id}`,
-            reciverId: teacher._id,
-            date: new Date(),
-            status: "unSeen",
-          }).save();
+          try {
+            await new notification({
+              title: "You are invited to fill the Notebook Form Initiated",
+              route: `notebook-checking-proforma/create/${formData._id}`,
+              reciverId: teacher._id,
+              date: new Date(),
+              status: "unSeen",
+            }).save();
+          } catch (notifErr) {
+            console.error("Failed to create initiate notification:", notifErr);
+          }
 
           return formData;
         })
@@ -175,19 +224,23 @@ exports.createInitiate = async (req, res) => {
 
       // Filter out null forms and send response
       const validForms = teacherForms.filter(Boolean);
-      return res.status(200).json({  message: "Form created successfully", form: validForms,status:true});
+      return res.status(200).json({ message: "Form created successfully", form: validForms, status: true });
     } else {
       return res.status(400).json({ error: "Invalid or missing data." });
     }
   } catch (err) {
-    console.error(err);
+    console.error("Error in createInitiate:", err);
     return res.status(500).json({ error: "Internal server error." });
   }
 };
 
 exports.getSignleForm = async (req, res) => {
-  const FormID = req?.params?.id;
+  const FormID = cleanId(req?.params?.id);
   try {
+    if (!FormID || !mongoose.Types.ObjectId.isValid(FormID)) {
+      return res.status(404).json({ message: "Form not found." });
+    }
+
     const Form = await Form3.findById(FormID)
       .populate({
         path: "createdBy",
@@ -202,8 +255,8 @@ exports.getSignleForm = async (req, res) => {
         select: "-password -mobile -employeeId -customId",
       });
 
-    if (!FormID && !Form?._id) {
-      return res.status(403).json({ message: "You do not have permission." });
+    if (!Form?._id) {
+      return res.status(404).json({ message: "Form not found." });
     }
     res.status(200).send(Form);
   } catch (error) {
@@ -295,7 +348,11 @@ exports.getSignleForm = async (req, res) => {
 
 exports.updateObserverFields = async (req, res) => {
     const userId = req.user?.id; // Ensure `req.user` exists via middleware
-    const formId = req.params?.id; // Get form ID from URL parameters
+    const formId = cleanId(req.params?.id); // Get form ID from URL parameters
+
+    if (!formId || !mongoose.Types.ObjectId.isValid(formId)) {
+        return res.status(400).json({ message: "Valid Form ID is required" });
+    }
 
     const {
         ClassStrength,
@@ -308,6 +365,8 @@ exports.updateObserverFields = async (req, res) => {
         qualityOfOppurtunities,
         qualityOfTeacherFeedback,
         qualityOfLearner,
+        isDraft,
+        currentStep,
     } = req.body;
 
     try {
@@ -327,36 +386,34 @@ exports.updateObserverFields = async (req, res) => {
           path: "createdBy",
           select: "name email",
           options: { strictPopulate: false }, // Override strict populate
-      })
+        });
 
         if (!existingForm) {
             return res.status(404).json({ message: "Form not found." });
         }
 
-
         // Extract observer details
         const teacher = existingForm?.teacherID || existingForm?.createdBy; 
-
 
         // Build the payload dynamically to include only provided fields
         const isDraftSave = isDraft === true;
         const payload = {
             NotebooksObserver: {
-                ClassStrength,
-                NotebooksSubmitted,
-                Absentees,
-                Defaulters,
+                ClassStrength: ClassStrength !== undefined ? ClassStrength : existingForm?.NotebooksObserver?.ClassStrength,
+                NotebooksSubmitted: NotebooksSubmitted !== undefined ? NotebooksSubmitted : existingForm?.NotebooksObserver?.NotebooksSubmitted,
+                Absentees: Absentees !== undefined ? Absentees : existingForm?.NotebooksObserver?.Absentees,
+                Defaulters: Defaulters !== undefined ? Defaulters : existingForm?.NotebooksObserver?.Defaulters,
             },
             isObserverComplete: isDraftSave ? false : (isObserverComplete !== undefined ? isObserverComplete : true),
             isDraft: isDraftSave,
             currentStep: currentStep !== undefined ? currentStep : (existingForm.currentStep || 0),
             ObserverForm: {
-                maintenanceOfNotebooks,
-                qualityOfOppurtunities,
-                qualityOfTeacherFeedback,
-                qualityOfLearner,
+                maintenanceOfNotebooks: maintenanceOfNotebooks !== undefined ? maintenanceOfNotebooks : existingForm?.ObserverForm?.maintenanceOfNotebooks,
+                qualityOfOppurtunities: qualityOfOppurtunities !== undefined ? qualityOfOppurtunities : existingForm?.ObserverForm?.qualityOfOppurtunities,
+                qualityOfTeacherFeedback: qualityOfTeacherFeedback !== undefined ? qualityOfTeacherFeedback : existingForm?.ObserverForm?.qualityOfTeacherFeedback,
+                qualityOfLearner: qualityOfLearner !== undefined ? qualityOfLearner : existingForm?.ObserverForm?.qualityOfLearner,
             },
-            observerFeedback,
+            observerFeedback: observerFeedback !== undefined ? observerFeedback : existingForm?.observerFeedback,
             isReflation: false,
         };
 
@@ -375,13 +432,12 @@ exports.updateObserverFields = async (req, res) => {
         const updatedForm = await Form3.findByIdAndUpdate(
             formId,
             { $set: payload },
-            { new: true, runValidators: true } // Return the updated document
+            { new: true } // Return the updated document
         );
 
         if (!updatedForm) {
             return res.status(404).json({ message: "Form not found after update." });
         }
-
 
         // Send email to teacher if completed and not a draft
         if (!isDraftSave && teacher?.email) {
@@ -514,10 +570,10 @@ exports.GetObseverForm = async (req, res) => {
   }
 };
 
-const updatePayload = (existingForm, userId, changes) => {
+const updatePayload = (existingForm, userRole, changes) => {
   const rolePrefix =
-    userId === "Observer" ? "NotebooksObserver" : "NotebooksTeacher";
-  const rolePrefix2 = userId === "Observer" ? "ObserverForm" : "TeacherForm";
+    userRole === "Observer" ? "NotebooksObserver" : "NotebooksTeacher";
+  const rolePrefix2 = userRole === "Observer" ? "ObserverForm" : "TeacherForm";
 
   const fieldMappings = {
     [`${rolePrefix}.ClassStrength`]: changes.ClassStrength,
@@ -543,101 +599,31 @@ const updatePayload = (existingForm, userId, changes) => {
 
   for (const [key, currentValue] of Object.entries(fieldMappings)) {
     if (currentValue !== undefined) {
-      const existingValue = key
-        .split(".")
-        .reduce((acc, part) => acc?.[part], existingForm);
-      const hasChanged =
-        typeof currentValue === "object"
-          ? JSON.stringify(currentValue) !== JSON.stringify(existingValue)
-          : currentValue !== existingValue;
-
-      if (hasChanged) {
-        payload[key] = currentValue;
-      }
+      payload[key] = currentValue;
     }
   }
 
   return payload;
 };
 
-// exports.EditUpdateNotebook = async (req, res) => {
-//     const formId = req.params.id;
-//     const userId = req?.user?.access;
-
-//     if (!formId) {
-//         return res.status(400).json({ message: "Form ID is required" });
-//     }
-
-//     try {
-
-//         const classNameFind = await ClassDetails.findById(req.body.className);
-
-//         if (!req.body.className && !classNameFind) {
-//             res.status(400).json({ message: "Not Found" })
-//         }
-
-//         const changes = {
-//             ClassStrength: req.body.ClassStrength,
-//             NotebooksSubmitted: req.body.NotebooksSubmitted,
-//             Absentees: req.body.Absentees,
-//             Defaulters: req.body.Defaulters,
-//             observerFeedback: req.body.observerFeedback,
-//             isObserverComplete: req.body.isObserverComplete,
-//             maintenanceOfNotebooks: req.body.maintenanceOfNotebooks,
-//             qualityOfOppurtunities: req.body.qualityOfOppurtunities,
-//             qualityOfTeacherFeedback: req.body.qualityOfTeacherFeedback,
-//             qualityOfLearner: req.body.qualityOfLearner,
-//             isTeacherComplete: req.body.isTeacherComplete,
-//             className: classNameFind?.className,
-//             Subject: req.body.Subject,
-//             Section: req.body.Section
-//         };
-
-//         const existingForm = await Form3.findById(formId);
-
-//         if (!existingForm) {
-//             return res.status(404).json({ message: "Form not found", success: false });
-//         }
-
-//         const payload = updatePayload(existingForm, userId, changes);
-
-//         const updatedForm = await Form3.findByIdAndUpdate(formId, { $set: payload }, { new: true });
-
-//         res.status(200).json({
-//             message: "Form updated successfully!",
-//             success: true,
-//             updatedForm,
-//         });
-//     } catch (error) {
-//         console.error("Error updating form:", error);
-//         res.status(500).json({
-//             message: "Error updating the form.",
-//             error: error.message,
-//         });
-//     }
-// };
-
 exports.EditUpdateNotebook = async (req, res) => {
-    const formId = req.params.id;
-    const userId = req?.user?.access;
+    const formId = cleanId(req.params?.id);
+    const userRole = req?.user?.access;
 
-    if (!formId) {
-        return res.status(400).json({ message: "Form ID is required" });
+    if (!formId || !mongoose.Types.ObjectId.isValid(formId)) {
+        return res.status(400).json({ message: "Valid Form ID is required" });
     }
 
     try {
         let finalClassName = undefined;
-        
-        // Use strict 24-char hex check
-        const isObjectId = (val) => /^[a-f\d]{24}$/i.test(val);
 
         if (req.body.className) {
-            if (isObjectId(req.body.className)) {
+            if (mongoose.Types.ObjectId.isValid(req.body.className) && /^[a-f\d]{24}$/i.test(req.body.className)) {
                 const classNameFind = await ClassDetails.findById(req.body.className);
                 if (classNameFind) {
                     finalClassName = classNameFind.className;
                 } else {
-                    return res.status(400).json({ message: "Class not found" });
+                    finalClassName = req.body.className;
                 }
             } else {
                 finalClassName = req.body.className;
@@ -667,17 +653,21 @@ exports.EditUpdateNotebook = async (req, res) => {
             path: 'grenralDetails.NameofObserver',
             select: 'name email',
             options: { strictPopulate: false },
-        })
+        });
+
         if (!existingForm) {
             return res.status(404).json({ message: "Form not found", success: false });
         }
 
-        const payload = updatePayload(existingForm, userId, changes);
-        const updatedForm = await Form3.findByIdAndUpdate(
-            formId,
-            { $set: payload },
-            { new: true }
-        );
+        const payload = updatePayload(existingForm, userRole, changes);
+        let updatedForm = existingForm;
+        if (Object.keys(payload).length > 0) {
+            updatedForm = await Form3.findByIdAndUpdate(
+                formId,
+                { $set: payload },
+                { new: true }
+            );
+        }
 
         if (!updatedForm) {
             return res.status(500).json({ message: "Error updating the form." });
@@ -703,9 +693,11 @@ exports.EditUpdateNotebook = async (req, res) => {
                 formRoute: route,
                 role: "Teacher",
               });
-              sendEmail(observerEmail, emailData.subject, emailData.html).catch(err => {
+              try {
+                await sendEmail(observerEmail, emailData.subject, emailData.html);
+              } catch (err) {
                 console.error("Error sending email:", err);
-              });
+              }
             }
         }
     } catch (error) {
@@ -749,10 +741,14 @@ exports.GetNootbookForms = async (req, res) => {
 
 
 exports.updateTeacherReflationFeedback = async (req, res) => {
-  const { id } = req.params;
+  const id = cleanId(req.params?.id);
   const { reflation } = req.body;
 
   try {
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(404).json({ message: "Form not found" });
+    }
+
     // Populate both createdBy and teacherID — either may identify the teacher
     const form = await Form3.findById(id)
       .populate("createdBy", "name email")
@@ -777,17 +773,19 @@ exports.updateTeacherReflationFeedback = async (req, res) => {
 
     // Send email to observer (non-blocking — reflection is already saved above)
     try {
-      const observer = await User.findById(form.grenralDetails.NameofObserver);
+      if (form?.grenralDetails?.NameofObserver) {
+        const observer = await User.findById(form.grenralDetails.NameofObserver);
 
-      if (observer?.email && teacher?.name) {
-        const route = `notebook-checking-proforma/report/${id}`;
-        const emailData = reflectionSubmittedEmail({
-          recipientName: observer.name,
-          teacherName: teacher.name,
-          formTitle: "Notebook Checking Proforma",
-          formRoute: route,
-        });
-        await sendEmail(observer.email, emailData.subject, emailData.html);
+        if (observer?.email && teacher?.name) {
+          const route = `notebook-checking-proforma/report/${id}`;
+          const emailData = reflectionSubmittedEmail({
+            recipientName: observer.name,
+            teacherName: teacher.name,
+            formTitle: "Notebook Checking Proforma",
+            formRoute: route,
+          });
+          await sendEmail(observer.email, emailData.subject, emailData.html);
+        }
       }
     } catch (emailError) {
       console.error("Failed to send reflection email:", emailError);
@@ -811,10 +809,10 @@ exports.updateTeacherReflationFeedback = async (req, res) => {
 exports.ReminderFormThree = async (req, res) => {
   try {
     const userId = req?.user?.id;
-    const formId = req?.params?.id;
+    const formId = cleanId(req?.params?.id);
 
-    if (!userId || !formId) {
-      return res.status(400).json({ message: "User ID or Form ID is missing" });
+    if (!userId || !formId || !mongoose.Types.ObjectId.isValid(formId)) {
+      return res.status(400).json({ message: "Valid User ID and Form ID are required" });
     }
 
     const [UserDetails, FormDetails] = await Promise.all([
@@ -881,7 +879,11 @@ exports.ReminderFormThree = async (req, res) => {
       formRoute: route,
     });
 
-    await sendEmail(receiverEmail, emailData.subject, emailData.html);
+    try {
+      await sendEmail(receiverEmail, emailData.subject, emailData.html);
+    } catch (emailErr) {
+      console.error("Failed to send reminder email:", emailErr);
+    }
 
     return res.status(200).json({ success: true, message: "Reminder sent successfully." });
 
@@ -892,8 +894,11 @@ exports.ReminderFormThree = async (req, res) => {
 };
 
 exports.deleteFormThree = async (req, res) => {
-  const formId = req.params.id;
+  const formId = cleanId(req.params?.id);
   try {
+    if (!formId || !mongoose.Types.ObjectId.isValid(formId)) {
+      return res.status(400).json({ message: "Valid Form ID is required" });
+    }
     const deletedForm = await Form3.findByIdAndDelete(formId);
     if (!deletedForm) {
       return res.status(404).json({ message: "Form not found." });

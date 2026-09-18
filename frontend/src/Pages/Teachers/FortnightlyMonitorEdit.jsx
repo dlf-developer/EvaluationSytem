@@ -26,6 +26,7 @@ import {
   questionsOld,
   cutoffDate,
 } from "../../Components/normalData";
+import ModernRadioGroup from "../../Components/ModernRadioGroup";
 
 function FortnightlyMonitorEdit({ flag }) {
   const [form] = Form.useForm();
@@ -54,7 +55,14 @@ function FortnightlyMonitorEdit({ flag }) {
 
     dispatch(GetSingleFormsOne(Id))
       .then((response) => {
-        setFormDetails(response?.payload);
+        const data = response?.payload;
+        setFormDetails(data);
+        if (data?.teacherForm) {
+          form.setFieldsValue(data.teacherForm);
+          setTimeout(() => {
+            calculateScore();
+          }, 50);
+        }
         setIsLoading(false);
       })
       .catch(() => {
@@ -232,26 +240,10 @@ function FortnightlyMonitorEdit({ flag }) {
                               },
                             ]}
                           >
-                            <div className="modern-radio-group">
-                              {yesNoNAOptions.map((option) => (
-                                <label key={option} className="radio-label">
-                                  <input
-                                    type="radio"
-                                    name={field?.key}
-                                    value={option}
-                                    className="radio-input"
-                                    onChange={(e) => {
-                                      form.setFieldValue(field?.key, option);
-                                      calculateScore();
-                                    }}
-                                    checked={
-                                      form.getFieldValue(field?.key) === option
-                                    }
-                                  />
-                                  <span className="radio-text">{option}</span>
-                                </label>
-                              ))}
-                            </div>
+                            <ModernRadioGroup
+                              options={yesNoNAOptions}
+                              onCustomChange={calculateScore}
+                            />
                           </Form.Item>
                         </div>
                       );

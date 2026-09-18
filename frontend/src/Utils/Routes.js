@@ -226,7 +226,7 @@ const protects = {
         { path: "/fortnightly-monitor/create", element: <BasicDetailsForm /> },
         { path: "/fortnightly-monitor/create/:id", element: <Details /> },
         { path: "/fortnightly-monitor/initiate/create/:id", element: <Details /> },
-        { path: "/fortnightly-monitor/edit/:id", element: <FortnightlyMonitorEdit /> },
+        { path: "/fortnightly-monitor/edit/:id", element: <OB_FortnightlyMonitorEdit /> },
         { path: "/weekly4form", element: <Weekly /> },
         { path: "/weekly4form/report/:id", element: <Weekly4FormReport /> },
         { path: "/wing-coordinator", element: <WingCoordinator /> },
