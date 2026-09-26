@@ -67,13 +67,21 @@ function OB_WalkthroughEdit() {
   // Set initial values for the form
   useEffect(() => {
     if (formDataList) {
+      let matchedClass = null;
+      const currentClass = formDataList?.grenralDetails?.className;
+      if (currentClass && newData?.length) {
+        matchedClass = newData.find(
+          (c) => c._id === currentClass || c.className === currentClass
+        );
+      }
       form.setFieldsValue({
         NameoftheVisitingTeacher:
+          formDataList?.grenralDetails?.NameoftheVisitingTeacher?._id ||
           formDataList?.grenralDetails?.NameoftheVisitingTeacher?.id,
         DateOfObservation: formDataList?.grenralDetails?.DateOfObservation
           ? moment(formDataList?.grenralDetails?.DateOfObservation)
           : null,
-        className: formDataList?.grenralDetails?.className,
+        className: matchedClass ? matchedClass._id : currentClass,
         Section: formDataList?.grenralDetails?.Section,
         Subject: formDataList?.grenralDetails?.Subject,
         Topic: formDataList?.grenralDetails?.Topic,
@@ -81,7 +89,7 @@ function OB_WalkthroughEdit() {
         // Add other fields as necessary
       });
     }
-  }, [formDataList]);
+  }, [formDataList, newData]);
 
   const yesNoNAOptions = useMemo(() => ["1", "2", "3", "4", "N/A"], []);
 
@@ -328,11 +336,22 @@ function OB_WalkthroughEdit() {
 
   const saveDraft = async (data, targetStep) => {
     try {
+      let resolvedClassName = data.className;
+      if (data.className && newData?.length) {
+        const matched = newData.find(
+          (c) => c._id === data.className || c.className === data.className
+        );
+        if (matched?.className) {
+          resolvedClassName = matched.className;
+        }
+      }
+
       await dispatch(
         EditUpdateClassForm({
           id: FormId,
           data: {
             ...data,
+            className: resolvedClassName,
             isDraft: true,
             currentStep: targetStep !== undefined ? targetStep : currStep,
           },
@@ -370,10 +389,21 @@ function OB_WalkthroughEdit() {
   };
 
   const handleSubmit = async (data) => {
+    let resolvedClassName = data.className;
+    if (data.className && newData?.length) {
+      const matched = newData.find(
+        (c) => c._id === data.className || c.className === data.className
+      );
+      if (matched?.className) {
+        resolvedClassName = matched.className;
+      }
+    }
+
     const payload = {
       id: FormId,
       data: {
         ...data,
+        className: resolvedClassName,
         isDraft: false,
         isFinalSubmit: true,
         isObserverCompleted: true,

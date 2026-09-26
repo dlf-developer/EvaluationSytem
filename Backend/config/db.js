@@ -1,9 +1,14 @@
 const mongoose = require('mongoose');
 const logger = require('../utils/logger');
+const migrateClassNames = require('../utils/migrateClassNames');
 
 // Mongoose connection event listeners for long-term health tracking
 mongoose.connection.on('connected', () => {
   logger.info(`MongoDB connection established to ${process.env.MONGO_URI_NAME || 'Database'}`);
+  // Run self-healing migration to resolve any class ObjectIds to human-readable class names
+  migrateClassNames().catch((err) => {
+    logger.error('Class names auto-migration error on connect:', err);
+  });
 });
 
 mongoose.connection.on('error', (err) => {

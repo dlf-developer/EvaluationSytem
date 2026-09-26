@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const { createNotification } = require('../config/notify');
 const ClassDetails = require('../models/ClassDetails');
 const Form2 = require('../models/Form2');
@@ -5,6 +6,64 @@ const notification = require('../models/notification');
 const User = require('../models/User');
 const sendEmail = require('../utils/emailService');
 const { formInitiatedEmail, formCompletedEmail, reminderEmail } = require('../utils/emailTemplates');
+
+const resolveClassNames = async (forms) => {
+    if (!forms) return forms;
+    const formArray = Array.isArray(forms) ? forms : [forms];
+    if (!formArray.length) return forms;
+    try {
+        const classDetailsList = await ClassDetails.find({}).lean();
+        const classMap = {};
+        classDetailsList.forEach((c) => {
+            if (c?._id) classMap[c._id.toString()] = c.className;
+        });
+
+        formArray.forEach((form) => {
+            const currentClassName = form?.grenralDetails?.className;
+            if (currentClassName && classMap[currentClassName.toString()]) {
+                form.grenralDetails.className = classMap[currentClassName.toString()];
+            }
+        });
+    } catch (err) {
+        console.error("Error resolving class names:", err);
+    }
+    return forms;
+};
+
+const resolveSingleFormClassName = async (form) => {
+    if (!form || !form.grenralDetails?.className) return form;
+    try {
+        const currentClassName = form.grenralDetails.className;
+        if (mongoose.Types.ObjectId.isValid(currentClassName) && /^[a-f\d]{24}$/i.test(currentClassName)) {
+            const classData = await ClassDetails.findById(currentClassName).lean();
+            if (classData?.className) {
+                form.grenralDetails.className = classData.className;
+            }
+        }
+    } catch (err) {
+        console.error("Error resolving single form class name:", err);
+    }
+    return form;
+};
+
+const resolveClassNameFromInput = async (className) => {
+    if (!className) return className;
+    try {
+        if (mongoose.Types.ObjectId.isValid(className) && /^[a-f\d]{24}$/i.test(className)) {
+            const classData = await ClassDetails.findById(className).lean();
+            if (classData?.className) {
+                return classData.className;
+            }
+        }
+        const classDataByName = await ClassDetails.findOne({ className }).lean();
+        if (classDataByName?.className) {
+            return classDataByName.className;
+        }
+    } catch (err) {
+        console.error("Error resolving input class name:", err);
+    }
+    return className;
+};
 
 
 exports.createForm = async (req, res) => {
@@ -43,9 +102,8 @@ exports.createForm = async (req, res) => {
             return res.status(400).json({ message: "Name of the Visiting Teacher is required." });
         }
 
-
-        const classData = await ClassDetails.findById(className);
-        if (!classData) {
+        const resolvedClassName = await resolveClassNameFromInput(className);
+        if (!resolvedClassName) {
             return res.status(400).json({ success: false, message: " Class and Section is Required!" });
         }
 
@@ -58,7 +116,7 @@ exports.createForm = async (req, res) => {
             grenralDetails: {
                 NameoftheVisitingTeacher,
                 DateOfObservation: DateOfObservation || new Date(), // Use current date if not provided
-                className: classData?.className,
+                className: resolvedClassName,
                 Section,
                 Subject,
                 Topic,
@@ -90,7 +148,7 @@ exports.createForm = async (req, res) => {
           initiatorName: user.name,
           formTitle: "Classroom Walkthrough",
           formRoute: route,
-          className: classData?.className,
+          className: resolvedClassName,
           section: Section,
           subject: Subject,
         });
@@ -149,7 +207,10 @@ exports.editWalkthrouForm = async (req, res) => {
         // Dynamically add fields to the UpdateValue object if they are provided in the request body
         if (NameoftheVisitingTeacher) UpdateValue["grenralDetails.NameoftheVisitingTeacher"] = NameoftheVisitingTeacher;
         if (DateOfObservation) UpdateValue["grenralDetails.DateOfObservation"] = DateOfObservation;
-        if (className) UpdateValue["grenralDetails.className"] = className;
+        if (className) {
+            const resolvedClassName = await resolveClassNameFromInput(className);
+            UpdateValue["grenralDetails.className"] = resolvedClassName;
+        }
         if (Section) UpdateValue["grenralDetails.Section"] = Section;
         if (Subject) UpdateValue["grenralDetails.Subject"] = Subject;
         if (Topic) UpdateValue["grenralDetails.Topic"] = Topic;
@@ -175,6 +236,14 @@ exports.editWalkthrouForm = async (req, res) => {
         const updatedForm = await Form2.findByIdAndUpdate(formId, UpdateValue, {
             new: true,
         }).populate('grenralDetails.NameoftheVisitingTeacher', 'name email');
+
+        if (updatedForm?.grenralDetails?.className) {
+            const resolved = await resolveClassNameFromInput(updatedForm.grenralDetails.className);
+            if (resolved !== updatedForm.grenralDetails.className) {
+                Form2.updateOne({ _id: formId }, { $set: { "grenralDetails.className": resolved } }).exec().catch(() => {});
+                updatedForm.grenralDetails.className = resolved;
+            }
+        }
 
         // Notify the teacher ONLY on final completion (not on intermediate draft steps)
         const teacher = updatedForm?.grenralDetails?.NameoftheVisitingTeacher;
@@ -209,7 +278,7 @@ exports.editWalkthrouForm = async (req, res) => {
 exports.getSignleForm = async (req, res) => {
     const FormID = req?.params?.id;
     try {
-        const Form = await Form2.findById(FormID)
+        let Form = await Form2.findById(FormID)
             .populate({
                 path: 'createdBy',
                 select: '-password -mobile -employeeId -customId'
@@ -217,23 +286,27 @@ exports.getSignleForm = async (req, res) => {
             .populate({
                 path: 'grenralDetails.NameoftheVisitingTeacher',
                 select: '-password -mobile -employeeId -customId'
-            });
+            })
+            .lean();
 
-        if (!FormID && !Form?._id) {
+        if (!FormID || !Form?._id) {
             return res.status(403).json({ message: "You do not have permission." });
         }
-        res.status(200).send(Form)
+
+        await resolveSingleFormClassName(Form);
+
+        res.status(200).send(Form);
 
     } catch (error) {
         console.error("Error Getting Classroom Walkthrough:", error);
         res.status(500).json({ message: "Error Getting Classroom Walkthrough.", error });
     }
-}
+};
 
 exports.GetTeahearsForm = async (req, res) => {
     const FormID = req?.params?.id;
     try {
-        const Form = await Form2.find(FormID)
+        let Form = await Form2.find(FormID)
             .populate({
                 path: 'createdBy',
                 select: '-password -mobile -employeeId -customId'
@@ -242,27 +315,28 @@ exports.GetTeahearsForm = async (req, res) => {
                 path: 'grenralDetails.NameoftheVisitingTeacher',
                 select: '-password -mobile -employeeId -customId'
             })
-            .populate({
-                path: 'grenralDetails.className',
-            });
+            .lean();
 
         if (!FormID && !Form?._id) {
             return res.status(403).json({ message: "You do not have permission." });
         }
-        res.status(200).send(Form)
+
+        await resolveClassNames(Form);
+
+        res.status(200).send(Form);
 
     } catch (error) {
         console.error("Error Getting Classroom Walkthrough:", error);
         res.status(500).json({ message: "Error Getting Classroom Walkthrough.", error });
     }
-}
+};
 
 
 exports.GetcreatedBy = async (req, res) => {
     const userId = req?.user?.id;
     const queryFilter = req.sessionDateFilter ? { createdAt: req.sessionDateFilter } : {};
     try {
-        const Form = await Form2.find({ createdBy: userId, ...queryFilter })
+        let Form = await Form2.find({ createdBy: userId, ...queryFilter })
             .sort({ createdAt: -1 })
             .populate({
                 path: 'createdBy',
@@ -272,28 +346,28 @@ exports.GetcreatedBy = async (req, res) => {
                 path: 'grenralDetails.NameoftheVisitingTeacher',
                 select: '-password -mobile -employeeId -customId'
             })
-            .populate({
-                path: 'grenralDetails.className',
-            });
+            .lean();
 
         if (!userId && !userId?.id) {
             return res.status(403).json({ message: "You do not have permission." });
         }
 
-        res.status(200).send(Form)
+        await resolveClassNames(Form);
+
+        res.status(200).send(Form);
 
     } catch (error) {
         console.error("Error Getting Classroom Walkthrough:", error);
         res.status(500).json({ message: "Error Getting Classroom Walkthrough.", error });
     }
-}
+};
 
 
 exports.GetTeacherForm = async (req, res) => {
     const userId = req?.user?.id;
     const queryFilter = req.sessionDateFilter ? { createdAt: req.sessionDateFilter } : {};
     try {
-        const Form = await Form2.find({ "grenralDetails.NameoftheVisitingTeacher": userId, ...queryFilter })
+        let Form = await Form2.find({ "grenralDetails.NameoftheVisitingTeacher": userId, ...queryFilter })
             .sort({ createdAt: -1 })
             .populate({
                 path: 'createdBy',
@@ -303,21 +377,21 @@ exports.GetTeacherForm = async (req, res) => {
                 path: 'grenralDetails.NameoftheVisitingTeacher',
                 select: '-password -mobile -employeeId -customId'
             })
-            .populate({
-                path: 'grenralDetails.className',
-            });
+            .lean();
 
         if (!userId && !userId?.id) {
             return res.status(403).json({ message: "You do not have permission." });
         }
 
-        res.status(200).send(Form)
+        await resolveClassNames(Form);
+
+        res.status(200).send(Form);
 
     } catch (error) {
         console.error("Error Getting Classroom Walkthrough:", error);
         res.status(500).json({ message: "Error Getting Classroom Walkthrough.", error });
     }
-}
+};
 
 exports.TeacherContinueForm = async (req, res) => {
     const userId = req?.user?.id;
@@ -370,7 +444,7 @@ exports.getClassRoomForms = async (req, res) => {
     const userId = req?.user?.id;
     const queryFilter = req.sessionDateFilter ? { createdAt: req.sessionDateFilter } : {};
     try {
-        const GetAllForms = await Form2.find(queryFilter)
+        let GetAllForms = await Form2.find(queryFilter)
             .sort({ createdAt: -1 })
             .populate({
                 path: 'teacherID',
@@ -384,17 +458,21 @@ exports.getClassRoomForms = async (req, res) => {
                 path: 'grenralDetails.NameoftheVisitingTeacher',
                 select: '-password -mobile -employeeId -customId'
             })
+            .lean();
+
         if (!userId) {
             return res.status(403).json({ message: "You do not have permission." });
         }
 
-        res.status(200).send(GetAllForms)
+        await resolveClassNames(GetAllForms);
+
+        res.status(200).send(GetAllForms);
 
     } catch (error) {
-        console.log(error)
-        res.status(500).send({ error: error, message: "somthing went wrong" })
+        console.log(error);
+        res.status(500).send({ error: error, message: "somthing went wrong" });
     }
-}
+};
 
 
 // exports.ReminderFormTwo = async (req, res) => {

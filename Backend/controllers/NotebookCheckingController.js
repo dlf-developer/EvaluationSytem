@@ -726,9 +726,28 @@ exports.GetNootbookForms = async (req, res) => {
       .populate({
         path: "createdBy",
         select: "-password -mobile -employeeId -customId",
-      });
+      })
+      .lean();
+
     if (!userId && !userId?.id) {
       return res.status(403).json({ message: "You do not have permission." });
+    }
+
+    try {
+      const classDetailsList = await ClassDetails.find({}).lean();
+      const classMap = {};
+      classDetailsList.forEach((c) => {
+        if (c?._id) classMap[c._id.toString()] = c.className;
+      });
+
+      GetAllForms.forEach((form) => {
+        const cur = form?.grenralDetails?.className;
+        if (cur && classMap[cur.toString()]) {
+          form.grenralDetails.className = classMap[cur.toString()];
+        }
+      });
+    } catch (e) {
+      console.error("Error resolving class names in Form 3:", e);
     }
 
     res.status(200).send(GetAllForms);

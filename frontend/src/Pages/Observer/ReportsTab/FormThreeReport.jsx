@@ -4,18 +4,55 @@ import { Box, Button, useDisclosure, Modal, ModalOverlay, ModalContent, ModalHea
 import { axiosInstanceToken } from "../../../redux/instence";
 import { getUserId } from "../../../Utils/auth";
 import { getNootbookForms } from "../../../redux/Form/noteBookSlice";
+import { getCreateClassSection } from "../../../redux/userSlice";
 import SmartTable from "../../../Components/SmartTable";
 import { getReportForm3Columns } from "../../../Components/SmartTable/tableColumns";
 
 function FormThreeReport() {
   const dispatch = useDispatch();
   const currentUserRole = getUserId()?.access;
+  const [classes, setClasses] = useState([]);
 
   useEffect(() => {
     dispatch(getNootbookForms());
+    dispatch(getCreateClassSection()).then((res) => {
+      if (res?.payload?.success && Array.isArray(res?.payload?.classDetails)) {
+        setClasses(res.payload.classDetails);
+      }
+    });
   }, [dispatch]);
 
-  const data = useSelector((state) => state?.notebook?.GetForms2 || []);
+  const rawData = useSelector((state) => state?.notebook?.GetForms2 || []);
+
+  const classMap = useMemo(() => {
+    const map = {};
+    classes.forEach((c) => {
+      if (c?._id && c?.className) {
+        map[c._id] = c.className;
+      }
+    });
+    return map;
+  }, [classes]);
+
+  const data = useMemo(() => {
+    if (!Array.isArray(rawData)) return [];
+    return rawData.map((item) => {
+      let currentClass = item?.grenralDetails?.className;
+      if (typeof currentClass === "object" && currentClass !== null) {
+        currentClass = currentClass?.className || currentClass?.name || "";
+      }
+      if (currentClass && classMap[currentClass]) {
+        currentClass = classMap[currentClass];
+      }
+      return {
+        ...item,
+        grenralDetails: {
+          ...item?.grenralDetails,
+          className: currentClass || "N/A",
+        },
+      };
+    });
+  }, [rawData, classMap]);
 
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [deleteId, setDeleteId] = useState(null);

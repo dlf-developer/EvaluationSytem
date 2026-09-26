@@ -32,8 +32,16 @@ exports.createForm = async (req, res) => {
         reciverId = coordinator._id;
       }
 
-      const classData = await ClassDetails.findOne({ _id: className });
-      if (!classData) {
+      let finalClassName = className;
+      if (className && mongoose.Types.ObjectId.isValid(className) && /^[a-f\d]{24}$/i.test(className)) {
+        const classData = await ClassDetails.findById(className);
+        if (classData) finalClassName = classData.className;
+      } else if (className) {
+        const classData = await ClassDetails.findOne({ className });
+        if (classData) finalClassName = classData.className;
+      }
+
+      if (!finalClassName) {
         return res
           .status(400)
           .json({ success: false, message: " Class and Section is Required!" });
@@ -41,7 +49,7 @@ exports.createForm = async (req, res) => {
 
       formData = new Form1({
         userId,
-        className: classData.className,
+        className: finalClassName,
         section,
         date: new Date(date),
         isCoordinator,
@@ -57,9 +65,18 @@ exports.createForm = async (req, res) => {
         reciverId = teacher._id;
       }
 
+      let finalClassName = className;
+      if (className && mongoose.Types.ObjectId.isValid(className) && /^[a-f\d]{24}$/i.test(className)) {
+        const classData = await ClassDetails.findById(className);
+        if (classData) finalClassName = classData.className;
+      } else if (className) {
+        const classData = await ClassDetails.findOne({ className });
+        if (classData) finalClassName = classData.className;
+      }
+
       formData = new Form1({
         userId,
-        className: className,
+        className: finalClassName,
         section,
         date: new Date(date),
         isCoordinator,
@@ -582,9 +599,27 @@ exports.GetFormOneAdmin = async (req, res) => {
       .populate({
         path: "coordinatorID",
         select: "-password -mobile -employeeId -customId",
-      });
+      })
+      .lean();
+
     if (!userId && !userId?.id) {
       return res.status(403).json({ message: "You do not have permission." });
+    }
+
+    try {
+      const classDetailsList = await ClassDetails.find({}).lean();
+      const classMap = {};
+      classDetailsList.forEach((c) => {
+        if (c?._id) classMap[c._id.toString()] = c.className;
+      });
+
+      GetAllForms.forEach((form) => {
+        if (form.className && classMap[form.className.toString()]) {
+          form.className = classMap[form.className.toString()];
+        }
+      });
+    } catch (e) {
+      console.error("Error resolving class names in Form 1:", e);
     }
 
     res.status(200).send(GetAllForms);

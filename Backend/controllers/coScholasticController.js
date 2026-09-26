@@ -333,12 +333,31 @@ exports.getClassRoomForms = async (req, res) => {
             .sort({ createdAt: -1 })
             .populate({ path: 'teacherID', select: '-password -mobile -employeeId -customId' })
             .populate({ path: 'createdBy', select: '-password -mobile -employeeId -customId' })
-            .populate({ path: 'grenralDetails.NameoftheVisitingTeacher', select: '-password -mobile -employeeId -customId' });
+            .populate({ path: 'grenralDetails.NameoftheVisitingTeacher', select: '-password -mobile -employeeId -customId' })
+            .lean();
             
         if (!userId) {
             return res.status(403).json({ message: "You do not have permission." });
         }
-        res.status(200).send(GetAllForms)
+
+        try {
+            const classDetailsList = await ClassDetails.find({}).lean();
+            const classMap = {};
+            classDetailsList.forEach((c) => {
+                if (c?._id) classMap[c._id.toString()] = c.className;
+            });
+
+            GetAllForms.forEach((form) => {
+                const cur = form?.grenralDetails?.className;
+                if (cur && classMap[cur.toString()]) {
+                    form.grenralDetails.className = classMap[cur.toString()];
+                }
+            });
+        } catch (e) {
+            console.error("Error resolving class names in CoScholastic:", e);
+        }
+
+        res.status(200).send(GetAllForms);
     } catch (error) {
         res.status(500).send({ error: error, message: "something went wrong" })
     }

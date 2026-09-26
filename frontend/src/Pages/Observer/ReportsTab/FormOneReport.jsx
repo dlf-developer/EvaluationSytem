@@ -4,6 +4,7 @@ import { Box, Button, useDisclosure, Modal, ModalOverlay, ModalContent, ModalHea
 import { axiosInstanceToken } from "../../../redux/instence";
 import { getUserId } from "../../../Utils/auth";
 import { GetAllFormsForAdmin } from "../../../redux/Form/fortnightlySlice";
+import { getCreateClassSection } from "../../../redux/userSlice";
 import { calculateScore } from "../../../Utils/calculateScore";
 import SmartTable from "../../../Components/SmartTable";
 import { getReportForm1Columns } from "../../../Components/SmartTable/tableColumns";
@@ -11,13 +12,46 @@ import { getReportForm1Columns } from "../../../Components/SmartTable/tableColum
 function FormOneReport() {
   const dispatch = useDispatch();
   const currentUserRole = getUserId()?.access;
+  const [classes, setClasses] = useState([]);
 
   useEffect(() => {
     dispatch(GetAllFormsForAdmin());
+    dispatch(getCreateClassSection()).then((res) => {
+      if (res?.payload?.success && Array.isArray(res?.payload?.classDetails)) {
+        setClasses(res.payload.classDetails);
+      }
+    });
   }, [dispatch]);
 
   const rawData = useSelector((state) => state?.Forms?.getAllAdminForms || []);
-  const data = useMemo(() => calculateScore(rawData), [rawData]);
+
+  const classMap = useMemo(() => {
+    const map = {};
+    classes.forEach((c) => {
+      if (c?._id && c?.className) {
+        map[c._id] = c.className;
+      }
+    });
+    return map;
+  }, [classes]);
+
+  const data = useMemo(() => {
+    const scored = calculateScore(rawData);
+    if (!Array.isArray(scored)) return [];
+    return scored.map((item) => {
+      let currentClass = item?.className;
+      if (typeof currentClass === "object" && currentClass !== null) {
+        currentClass = currentClass?.className || currentClass?.name || "";
+      }
+      if (currentClass && classMap[currentClass]) {
+        currentClass = classMap[currentClass];
+      }
+      return {
+        ...item,
+        className: currentClass || "—",
+      };
+    });
+  }, [rawData, classMap]);
 
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [deleteId, setDeleteId] = useState(null);

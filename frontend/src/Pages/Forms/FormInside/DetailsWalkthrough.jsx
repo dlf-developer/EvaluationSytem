@@ -90,9 +90,19 @@ function DetailsWalkthrough() {
             navigate(`/classroom-walkthrough/report/${FormId}`);
             return;
           }
+          let matchedClass = null;
+          if (grenralDetails?.className && newData?.length) {
+            matchedClass = newData.find(
+              (c) => c._id === grenralDetails.className || c.className === grenralDetails.className
+            );
+          }
+          if (matchedClass) {
+            setSectionState(matchedClass);
+          }
           form.setFieldsValue({
             ...payload,
             ...grenralDetails,
+            className: matchedClass ? matchedClass._id : grenralDetails?.className,
             NameoftheVisitingTeacher: grenralDetails?.NameoftheVisitingTeacher?._id || grenralDetails?.NameoftheVisitingTeacher,
             DateOfObservation: grenralDetails?.DateOfObservation ? moment(grenralDetails.DateOfObservation) : null,
           });
@@ -104,6 +114,19 @@ function DetailsWalkthrough() {
       });
     }
   }, [FormId, dispatch]);
+
+  useEffect(() => {
+    if (newData?.length && formData?.grenralDetails?.className) {
+      const current = formData.grenralDetails.className;
+      const matched = newData.find(
+        (c) => c._id === current || c.className === current
+      );
+      if (matched) {
+        setSectionState(matched);
+        form.setFieldsValue({ className: matched._id });
+      }
+    }
+  }, [newData, formData]);
 
   const yesNoNAOptions = useMemo(() => ["1", "2", "3", "4", "N/A"], []);
 
@@ -188,8 +211,8 @@ function DetailsWalkthrough() {
 
   const SectionSubject = (value) => {
     if (value) {
-      const filtered = newData.filter((d) => d?._id === value);
-      setSectionState(filtered[0]);
+      const filtered = newData.filter((d) => d?._id === value || d?.className === value);
+      setSectionState(filtered[0] || null);
     }
     return [];
   };
@@ -480,8 +503,19 @@ function DetailsWalkthrough() {
       numOfParameters,
     } = calculateScoreFromData(data);
 
+    let resolvedClassName = data.className;
+    if (data.className && newData?.length) {
+      const matched = newData.find(
+        (c) => c._id === data.className || c.className === data.className
+      );
+      if (matched?.className) {
+        resolvedClassName = matched.className;
+      }
+    }
+
     const payloadData = {
       ...data,
+      className: resolvedClassName,
       totalScores: totalScore,
       scoreOutof: getOutOfScore,
       percentageScore,
@@ -579,8 +613,19 @@ function DetailsWalkthrough() {
       numOfParameters,
     } = calculateScoreFromData(data);
 
+    let resolvedClassName = data.className;
+    if (data.className && newData?.length) {
+      const matched = newData.find(
+        (c) => c._id === data.className || c.className === data.className
+      );
+      if (matched?.className) {
+        resolvedClassName = matched.className;
+      }
+    }
+
     const submissionData = {
       ...data,
+      className: resolvedClassName,
       totalScores: totalScore,
       scoreOutof: getOutOfScore,
       percentageScore,

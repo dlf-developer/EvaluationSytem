@@ -1,9 +1,10 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Box, Flex, Heading, Text, Stack, Button } from "@chakra-ui/react";
 import { PlusCircleOutlined } from "@ant-design/icons";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useLocation } from "react-router-dom";
 import { GetAllClassRoomForms } from "../../redux/Form/classroomWalkthroughSlice";
+import { getCreateClassSection } from "../../redux/userSlice";
 import { getUserId } from "../../Utils/auth";
 import { UserRole } from "../../config/config";
 import SmartTable from "../../Components/SmartTable";
@@ -16,24 +17,59 @@ function ClassRoom() {
   const currentPath = location.pathname;
   const Role = getUserId().access;
   const currentUserRole = Role;
+  const [classes, setClasses] = useState([]);
 
   const { isLoading, GetForms } = useSelector((state) => state?.walkThroughForm);
 
   useEffect(() => {
     dispatch(GetAllClassRoomForms());
+    dispatch(getCreateClassSection()).then((res) => {
+      if (res?.payload?.success && Array.isArray(res?.payload?.classDetails)) {
+        setClasses(res.payload.classDetails);
+      }
+    });
   }, [dispatch, Role]);
 
-  const sortedData = useMemo(() => {
+  const classMap = useMemo(() => {
+    const map = {};
+    classes.forEach((c) => {
+      if (c?._id && c?.className) {
+        map[c._id] = c.className;
+      }
+    });
+    return map;
+  }, [classes]);
+
+  const resolvedForms = useMemo(() => {
     if (!Array.isArray(GetForms)) return [];
-    return [...GetForms].sort((a, b) =>
+    return GetForms.map((item) => {
+      let currentClass = item?.grenralDetails?.className;
+      if (typeof currentClass === "object" && currentClass !== null) {
+        currentClass = currentClass?.className || currentClass?.name || "";
+      }
+      if (currentClass && classMap[currentClass]) {
+        currentClass = classMap[currentClass];
+      }
+      return {
+        ...item,
+        grenralDetails: {
+          ...item?.grenralDetails,
+          className: currentClass || "—",
+        },
+      };
+    });
+  }, [GetForms, classMap]);
+
+  const sortedData = useMemo(() => {
+    return [...resolvedForms].sort((a, b) =>
       a.isTeacherCompletes === b.isTeacherCompletes ? 0 : a.isTeacherCompletes ? 1 : -1
     );
-  }, [GetForms]);
+  }, [resolvedForms]);
 
   const columns = useMemo(
-    () => getClassroomColumns({ data: GetForms || [], currentUserRole }),
+    () => getClassroomColumns({ data: resolvedForms, currentUserRole }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [GetForms, currentUserRole]
+    [resolvedForms, currentUserRole]
   );
 
   return (

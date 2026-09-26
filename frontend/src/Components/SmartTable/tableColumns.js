@@ -54,6 +54,14 @@ const StatusBadge = ({
 
 const uniq = (arr) => [...new Set(arr.filter(Boolean))];
 
+const extractClassName = (val) => {
+  if (!val) return "—";
+  if (typeof val === "object") {
+    return val?.className || val?.name || "—";
+  }
+  return val;
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 // 1. FORTNIGHTLY MONITOR — Admin / Observer / Teacher list view
 // ─────────────────────────────────────────────────────────────────────────────
@@ -322,15 +330,19 @@ export const getClassroomColumns = ({
     width: "110px",
     sortable: true,
     sorter: (a, b) =>
-      (a?.grenralDetails?.className || "").localeCompare(
-        b?.grenralDetails?.className || "",
+      extractClassName(a?.grenralDetails?.className).localeCompare(
+        extractClassName(b?.grenralDetails?.className),
       ),
-    render: (val) => <Text fontSize="sm">{val?.className || "—"}</Text>,
+    render: (val) => (
+      <Text fontSize="sm">{extractClassName(val?.className)}</Text>
+    ),
     filterConfig: {
       type: "select",
-      options: uniq(data.map((r) => r?.grenralDetails?.className)),
+      options: uniq(
+        data.map((r) => extractClassName(r?.grenralDetails?.className)),
+      ),
       matchFn: (record, vals) =>
-        vals.includes(record?.grenralDetails?.className || ""),
+        vals.includes(extractClassName(record?.grenralDetails?.className)),
     },
   },
   {
@@ -548,15 +560,19 @@ export const getNotebookColumns = ({
     width: "110px",
     sortable: true,
     sorter: (a, b) =>
-      (a?.grenralDetails?.className || "").localeCompare(
-        b?.grenralDetails?.className || "",
+      extractClassName(a?.grenralDetails?.className).localeCompare(
+        extractClassName(b?.grenralDetails?.className),
       ),
-    render: (val) => <Text fontSize="sm">{val?.className || "—"}</Text>,
+    render: (val) => (
+      <Text fontSize="sm">{extractClassName(val?.className)}</Text>
+    ),
     filterConfig: {
       type: "select",
-      options: uniq(data.map((r) => r?.grenralDetails?.className)),
+      options: uniq(
+        data.map((r) => extractClassName(r?.grenralDetails?.className)),
+      ),
       matchFn: (record, vals) =>
-        vals.includes(record?.grenralDetails?.className || ""),
+        vals.includes(extractClassName(record?.grenralDetails?.className)),
     },
   },
   {
@@ -1468,15 +1484,19 @@ export const getReportForm2Columns = ({
     width: "110px",
     sortable: true,
     sorter: (a, b) =>
-      (a?.grenralDetails?.className || "").localeCompare(
-        b?.grenralDetails?.className || "",
+      extractClassName(a?.grenralDetails?.className).localeCompare(
+        extractClassName(b?.grenralDetails?.className),
       ),
-    render: (val) => <Text fontSize="sm">{val?.className || "N/A"}</Text>,
+    render: (val) => (
+      <Text fontSize="sm">{extractClassName(val?.className)}</Text>
+    ),
     filterConfig: {
       type: "select",
-      options: uniq(data.map((r) => r?.grenralDetails?.className)),
+      options: uniq(
+        data.map((r) => extractClassName(r?.grenralDetails?.className)),
+      ),
       matchFn: (record, vals) =>
-        vals.includes(record?.grenralDetails?.className || ""),
+        vals.includes(extractClassName(record?.grenralDetails?.className)),
     },
   },
   {
@@ -1704,15 +1724,19 @@ export const getReportForm3Columns = ({
     width: "110px",
     sortable: true,
     sorter: (a, b) =>
-      (a?.grenralDetails?.className || "").localeCompare(
-        b?.grenralDetails?.className || "",
+      extractClassName(a?.grenralDetails?.className).localeCompare(
+        extractClassName(b?.grenralDetails?.className),
       ),
-    render: (val) => <Text fontSize="sm">{val?.className || "N/A"}</Text>,
+    render: (val) => (
+      <Text fontSize="sm">{extractClassName(val?.className)}</Text>
+    ),
     filterConfig: {
       type: "select",
-      options: uniq(data.map((r) => r?.grenralDetails?.className)),
+      options: uniq(
+        data.map((r) => extractClassName(r?.grenralDetails?.className)),
+      ),
       matchFn: (record, vals) =>
-        vals.includes(record?.grenralDetails?.className || ""),
+        vals.includes(extractClassName(record?.grenralDetails?.className)),
     },
   },
   {
@@ -2058,15 +2082,19 @@ export const getCoScholasticColumns = ({
     width: "110px",
     sortable: true,
     sorter: (a, b) =>
-      (a?.grenralDetails?.className || "").localeCompare(
-        b?.grenralDetails?.className || "",
+      extractClassName(a?.grenralDetails?.className).localeCompare(
+        extractClassName(b?.grenralDetails?.className),
       ),
-    render: (val) => <Text fontSize="sm">{val?.className || "—"}</Text>,
+    render: (val) => (
+      <Text fontSize="sm">{extractClassName(val?.className)}</Text>
+    ),
     filterConfig: {
       type: "select",
-      options: [...new Set(data.map((r) => r?.grenralDetails?.className).filter(Boolean))],
+      options: uniq(
+        data.map((r) => extractClassName(r?.grenralDetails?.className)),
+      ),
       matchFn: (record, vals) =>
-        vals.includes(record?.grenralDetails?.className || ""),
+        vals.includes(extractClassName(record?.grenralDetails?.className)),
     },
   },
   {
