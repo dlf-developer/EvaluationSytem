@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const User = require("../models/User");
 const sendEmail = require("../utils/emailService");
 const { formInitiatedEmail, formCompletedEmail, reminderEmail } = require("../utils/emailTemplates");
@@ -26,7 +27,7 @@ exports.createForm = async (req, res) => {
 
     // Determine the recipient based on role
     if (isCoordinator && coordinatorID) {
-      const coordinator = await User.findById({ _id: coordinatorID });
+      const coordinator = await User.findById(coordinatorID);
       if (coordinator?.email) {
         recipientEmail = coordinator.email;
         reciverId = coordinator._id;
@@ -59,7 +60,7 @@ exports.createForm = async (req, res) => {
         teacherForm: {}, // Defaults will apply
       });
     } else if (isTeacher && teacherID) {
-      const teacher = await User.findById({ _id: teacherID });
+      const teacher = await User.findById(teacherID);
       if (teacher?.email) {
         recipientEmail = teacher.email;
         reciverId = teacher._id;
@@ -97,14 +98,15 @@ exports.createForm = async (req, res) => {
 
     await formData.save();
 
+    const initiatorName = req?.user?.name || "Teacher";
     const tactivity = new activity({
       userId: userId,
       title: "Fortnightly Monitor",
       className: formData.className,
       section: section,
-      userName: req.user.name,
+      userName: initiatorName,
       form1: {
-        message: `A new Fortnightly Monitor form has been created by ${req.user.name}`,
+        message: `A new Fortnightly Monitor form has been created by ${initiatorName}`,
         router: `/fortnightly-monitor/create/${formData._id}`,
       },
     });
@@ -115,7 +117,7 @@ exports.createForm = async (req, res) => {
       const route = `fortnightly-monitor/create/${formData._id}`;
       const emailData = formInitiatedEmail({
         recipientName: isCoordinator ? (await User.findById(coordinatorID))?.name : (await User.findById(teacherID))?.name,
-        initiatorName: req.user.name,
+        initiatorName: initiatorName,
         formTitle: "Fortnightly Monitor",
         formRoute: route,
         className: formData.className,

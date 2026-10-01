@@ -415,24 +415,27 @@ exports.TeacherContinueForm = async (req, res) => {
             return res.status(404).json({ message: "Form not found." });
         }
 
-        // Update the form fields
-        form.TeacherFeedback = TeacherFeedback || form.TeacherFeedback;
-        form.isTeacherCompletes = isTeacherCompletes ?? form.isTeacherCompletes;
+        // Update the form fields via findByIdAndUpdate to prevent Mongoose VersionError
+        const updateFields = {};
+        if (TeacherFeedback !== undefined) updateFields.TeacherFeedback = TeacherFeedback;
+        if (isTeacherCompletes !== undefined) updateFields.isTeacherCompletes = isTeacherCompletes;
+
+        const updatedForm = await Form2.findByIdAndUpdate(FormID, { $set: updateFields }, { new: true });
 
         const route = `classroom-walkthrough/create/${FormID}`;
-        const emailData = formCompletedEmail({
-          recipientName: form.createdBy.name,
-          completorName: form?.grenralDetails?.NameoftheVisitingTeacher?.name,
-          formTitle: "Classroom Walkthrough",
-          formRoute: route,
-          role: "Teacher",
-        });
-        await sendEmail(form.createdBy.email, emailData.subject, emailData.html);
-        // Save the updated form
-        await form.save();
+        if (form.createdBy?.email) {
+          const emailData = formCompletedEmail({
+            recipientName: form.createdBy?.name || "Coordinator",
+            completorName: form?.grenralDetails?.NameoftheVisitingTeacher?.name || user?.name || "Teacher",
+            formTitle: "Classroom Walkthrough",
+            formRoute: route,
+            role: "Teacher",
+          });
+          sendEmail(form.createdBy.email, emailData.subject, emailData.html).catch(e => console.error("Email error in TeacherContinueForm:", e));
+        }
 
         // Send the response
-        res.status(200).json({ message: "Form Successfully Completed." });
+        res.status(200).json({ message: "Form Successfully Completed.", form: updatedForm });
 
     } catch (error) {
         console.error("Error in TeacherContinueForm:", error);
