@@ -295,10 +295,39 @@ exports.EditUpdate = async (req, res) => {
       return res.status(400).json({ message: "No update data provided" });
     }
 
+    // Helper to calculate score and valid questions count
+    const computeScores = (formDataObj) => {
+      let score = 0;
+      let outOf = 0;
+      const validOptions = ["Yes", "No", "Sometimes"];
+      if (formDataObj && typeof formDataObj === "object") {
+        Object.entries(formDataObj).forEach(([k, v]) => {
+          if (k !== "_id" && k !== "totalScore" && k !== "OutOf" && k !== "ObservationDates") {
+            if (v === "Yes") score += 1;
+            else if (v === "Sometimes") score += 0.5;
+            if (validOptions.includes(v)) outOf += 1;
+          }
+        });
+      }
+      return { score, outOf };
+    };
+
+    let processedObserver = observerForm;
+    if (observerForm && typeof observerForm === "object") {
+      const { score, outOf } = computeScores(observerForm);
+      processedObserver = { ...observerForm, totalScore: score, OutOf: outOf };
+    }
+
+    let processedTeacher = teacherForm;
+    if (teacherForm && typeof teacherForm === "object") {
+      const { score, outOf } = computeScores(teacherForm);
+      processedTeacher = { ...teacherForm, totalScore: score, OutOf: outOf };
+    }
+
     // Find and update the form
     const updateData = {
-      ...(observerForm && { observerForm }),
-      ...(teacherForm && { teacherForm }),
+      ...(processedObserver && { observerForm: processedObserver }),
+      ...(processedTeacher && { teacherForm: processedTeacher }),
     };
 
     const updatedForm = await Form1.findByIdAndUpdate(formId, updateData, {

@@ -1363,15 +1363,18 @@ export const getReportForm1Columns = ({
     width: "140px",
     sortable: true,
     sorter: (a, b) => (a.teacherScore || 0) - (b.teacherScore || 0),
-    render: (val, record) => (
-      <Text
-        fontSize="sm"
-        fontWeight="600"
-        color={val ? "brand.primary" : "gray.400"}
-      >
-        {val ? `${val} / ${record.teacherTotal}` : "N/A"}
-      </Text>
-    ),
+    render: (val, record) => {
+      const hasScore = record.teacherTotal > 0 && val !== undefined && val !== null;
+      return (
+        <Text
+          fontSize="sm"
+          fontWeight="600"
+          color={hasScore ? "brand.primary" : "gray.400"}
+        >
+          {hasScore ? `${val} / ${record.teacherTotal}` : "—"}
+        </Text>
+      );
+    },
   },
   {
     title: "Observer Score",
@@ -1380,15 +1383,18 @@ export const getReportForm1Columns = ({
     width: "145px",
     sortable: true,
     sorter: (a, b) => (a.observerScore || 0) - (b.observerScore || 0),
-    render: (val, record) => (
-      <Text
-        fontSize="sm"
-        fontWeight="600"
-        color={val ? "brand.primary" : "gray.400"}
-      >
-        {val ? `${val} / ${record.observerTotal}` : "N/A"}
-      </Text>
-    ),
+    render: (val, record) => {
+      const hasScore = record.observerTotal > 0 && val !== undefined && val !== null;
+      return (
+        <Text
+          fontSize="sm"
+          fontWeight="600"
+          color={hasScore ? "brand.primary" : "gray.400"}
+        >
+          {hasScore ? `${val} / ${record.observerTotal}` : "—"}
+        </Text>
+      );
+    },
   },
   {
     title: "Action",

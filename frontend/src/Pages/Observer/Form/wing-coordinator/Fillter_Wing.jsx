@@ -43,14 +43,19 @@ function Fillter_Wing({ saveData, data }) {
     useEffect(() => {
         if (data && !didAutoFetch.current) {
             const hasValidRange = Array.isArray(data?.range) && data.range.length === 2 && data?.range[0] && data?.range[1];
+            const parsedRange = hasValidRange
+                ? [dayjs(data.range[0]), dayjs(data.range[1])]
+                : [];
+            const isRangeValid = parsedRange.length === 2 && parsedRange.every((d) => d.isValid());
+
             form.setFieldsValue({
-                range: hasValidRange ? [dayjs(data.range[0]), dayjs(data.range[1])] : [],
+                range: isRangeValid ? parsedRange : [],
                 className: data?.className || [],
                 formTypes: data?.formTypes || ['form1', 'form2', 'form3', 'form4', 'form5'],
                 observers: data?.observers || [],
             });
 
-            if (data?.className?.length > 0 && hasValidRange) {
+            if (data?.className?.length > 0 && isRangeValid) {
                 const payload = {
                     range: data.range,
                     className: data.className,
@@ -69,9 +74,11 @@ function Fillter_Wing({ saveData, data }) {
             message.warning("Please select a valid Date Range before searching.");
             return;
         }
-        const d1 = dayjs(values.range[0]);
-        const d2 = dayjs(values.range[1]);
-        if (!d1.isValid() || !d2.isValid()) {
+        const rawD1 = values.range[0];
+        const rawD2 = values.range[1];
+        const d1 = dayjs.isDayjs(rawD1) ? rawD1 : dayjs(rawD1);
+        const d2 = dayjs.isDayjs(rawD2) ? rawD2 : dayjs(rawD2);
+        if (!d1 || !d2 || typeof d1.isValid !== "function" || typeof d2.isValid !== "function" || !d1.isValid() || !d2.isValid()) {
             message.warning("Invalid Date Range selected.");
             return;
         }
@@ -125,7 +132,9 @@ function Fillter_Wing({ saveData, data }) {
             layout="vertical"
             onFinish={onFinish}
             initialValues={{
-                range: data?.range || [],
+                range: (Array.isArray(data?.range) && data.range.length === 2 && data.range[0] && data.range[1])
+                    ? [dayjs(data.range[0]), dayjs(data.range[1])]
+                    : undefined,
                 className: data?.className || [],
                 formTypes: data?.formTypes || ['form1', 'form2', 'form3', 'form4', 'form5'],
                 observers: data?.observers || [],

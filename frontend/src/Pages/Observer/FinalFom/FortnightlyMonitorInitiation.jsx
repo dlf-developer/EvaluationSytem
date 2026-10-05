@@ -80,8 +80,8 @@ function FortnightlyMonitorInitiation() {
         teacherMessage: `${getUserId()?.name} has Initiated New Fortnightly Monitor Form.`,
         route: "/fortnightly-monitor",
         date: new Date(),
-        reciverId: values?.teacherIDs || "",
-        senderId: getUserId().id,
+        reciverId: values?.teacherIDs || values?.teacherID || [],
+        senderId: getUserId()?.id,
         fromNo: 1,
         data: payload,
       };

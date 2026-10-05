@@ -113,11 +113,14 @@ export const FormOne_Columns = [
     key: "teacherScore",
     width: "160px",
     sorter: (a, b) => a.teacherScore - b.teacherScore,
-    render: (teacherScore, record) => (
-      <span>
-        {teacherScore ? `${teacherScore} / ${record.teacherTotal}` : "N/A"}
-      </span>
-    ),
+    render: (teacherScore, record) => {
+      const hasScore = record.teacherTotal > 0 && teacherScore !== undefined && teacherScore !== null;
+      return (
+        <span>
+          {hasScore ? `${teacherScore} / ${record.teacherTotal}` : "—"}
+        </span>
+      );
+    },
   },
   {
     title: "Observer Score",
@@ -125,11 +128,14 @@ export const FormOne_Columns = [
     key: "observerScore",
     width: "160px",
     sorter: (a, b) => a.observerScore - b.observerScore,
-    render: (observerScore, record) => (
-      <span>
-        {observerScore ? `${observerScore} / ${record.observerTotal}` : "N/A"}
-      </span>
-    ),
+    render: (observerScore, record) => {
+      const hasScore = record.observerTotal > 0 && observerScore !== undefined && observerScore !== null;
+      return (
+        <span>
+          {hasScore ? `${observerScore} / ${record.observerTotal}` : "—"}
+        </span>
+      );
+    },
   },
   {
     title: "Action",

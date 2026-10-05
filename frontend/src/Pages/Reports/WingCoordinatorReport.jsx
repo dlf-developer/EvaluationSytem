@@ -351,7 +351,16 @@ function WingCoordinatorReport() {
               <Box bg="white" borderRadius="2xl" p={5} boxShadow="sm" borderWidth="1px" borderColor="gray.100" mb={6}>
                 <SectionHeading>Monthly Report</SectionHeading>
                 <VStack spacing={3} align="stretch">
-                  {data.monthlyReport.map((item, i) => (
+                  {data.monthlyReport.map((item, i) => {
+                    const fileList = (
+                      Array.isArray(item?.files)
+                        ? item.files
+                        : item?.files && typeof item.files === "object"
+                        ? Object.values(item.files)
+                        : []
+                    ).filter(Boolean);
+
+                    return (
                     <Box key={i} bg="brand.background" p={4} borderRadius="lg" borderWidth="1px" borderColor="gray.100">
                       <Text fontSize="xs" color="gray.500" mb={1}>{item.question}</Text>
                       {item.type === "text" ? (
@@ -395,13 +404,13 @@ function WingCoordinatorReport() {
                         </Box>
                       )}
 
-                      {item.files?.length > 0 && (
+                      {fileList.length > 0 && (
                         <Box mt={4} pt={3} borderTopWidth="1px" borderTopColor="gray.200">
                           <Text fontSize="xs" fontWeight="700" color="gray.600" mb={3}>
                             Attached PDF Documents:
                           </Text>
                           <VStack spacing={4} align="stretch">
-                            {item.files.map((file, fIdx) => {
+                            {fileList.map((file, fIdx) => {
                               const isPdf =
                                 file.type === "application/pdf" ||
                                 file.url?.startsWith("data:application/pdf") ||
@@ -530,7 +539,8 @@ function WingCoordinatorReport() {
                         </Box>
                       )}
                     </Box>
-                  ))}
+                    );
+                  })}
                 </VStack>
               </Box>
             )}

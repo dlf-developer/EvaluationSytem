@@ -260,10 +260,13 @@ exports.getSignleForm = async (req, res) => {
     }
     res.status(200).send(Form);
   } catch (error) {
+    if (error?.name === "CastError") {
+      return res.status(404).json({ message: "Form not found." });
+    }
     console.error("Error Getting NoteBook Checking:", error);
     res
       .status(500)
-      .json({ message: "Error Getting NoteBook Checking.", error });
+      .json({ message: "Error Getting NoteBook Checking.", error: error.message });
   }
 };
 
@@ -367,7 +370,7 @@ exports.updateObserverFields = async (req, res) => {
         qualityOfLearner,
         isDraft,
         currentStep,
-    } = req.body;
+    } = req.body || {};
 
     try {
         // Validate user permissions

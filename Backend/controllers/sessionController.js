@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const UserSession = require('../models/UserSession');
 
 /**
@@ -9,8 +10,8 @@ const setSession = async (req, res) => {
   try {
     const { userId, session } = req.body;
 
-    if (!userId || !session) {
-      return res.status(400).json({ message: 'userId and session are required.' });
+    if (!userId || !mongoose.Types.ObjectId.isValid(userId) || !session) {
+      return res.status(400).json({ message: 'Valid userId and session are required.' });
     }
 
     // Upsert: one record per user; timestamps auto-update on change
@@ -35,6 +36,11 @@ const getSession = async (req, res) => {
   try {
     const { userId } = req.params;
 
+    // If userId is invalid (e.g. security probes like "properties"), return default session safely without triggering CastError
+    if (!userId || !mongoose.Types.ObjectId.isValid(userId) || !/^[a-f\d]{24}$/i.test(userId)) {
+      return res.status(200).json({ session: '2025-2026', data: null });
+    }
+
     const record = await UserSession.findOne({ userId });
 
     if (!record) {
@@ -44,6 +50,9 @@ const getSession = async (req, res) => {
 
     return res.status(200).json({ session: record.session, data: record });
   } catch (error) {
+    if (error?.name === 'CastError') {
+      return res.status(200).json({ session: '2025-2026', data: null });
+    }
     console.error('getSession error:', error);
     return res.status(500).json({ message: 'Internal server error.', error: error.message });
   }

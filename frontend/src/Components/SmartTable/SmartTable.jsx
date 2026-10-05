@@ -21,12 +21,9 @@ import {
   Tooltip,
 } from "@chakra-ui/react";
 import { ChevronLeft, ChevronRight, FilterX, Download } from "lucide-react";
-import { motion } from "framer-motion";
 import * as XLSX from "xlsx";
 import ColumnHeader from "./ColumnHeader";
 import useTableState from "./useTableState";
-
-const MotionTr = motion(Tr);
 
 // ─── Flatten a nested object to a single-level object ──────────────────────
 // e.g. { a: { b: 1 }, c: 2 } → { "a.b": 1, c: 2 }
@@ -300,17 +297,14 @@ const SmartTable = ({
               </Tr>
             ) : (
               displayData.map((record, rowIndex) => (
-                <MotionTr
+                <Tr
                   key={record[rowKey] ?? rowIndex}
                   borderBottom="1px solid"
                   borderColor="gray.50"
                   cursor={onRowClick ? "pointer" : "default"}
                   onClick={() => onRowClick?.(record)}
-                  initial={{ opacity: 0, y: 4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.15, delay: rowIndex * 0.02 }}
                   _hover={{ bg: "#F7F5F0" }}
-                  style={{ transition: "background 0.15s ease" }}
+                  transition="background 0.15s ease"
                 >
                   {columns.map((col) => (
                     <Td
@@ -334,7 +328,7 @@ const SmartTable = ({
                       )}
                     </Td>
                   ))}
-                </MotionTr>
+                </Tr>
               ))
             )}
           </Tbody>

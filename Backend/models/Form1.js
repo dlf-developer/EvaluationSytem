@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 const { Schema } = mongoose;
-const option =['Yes', 'No', 'N/A','0.5']
+const option = ['Yes', 'No', 'Sometimes', 'N/A', '0.5'];
 // Schema for observer and teacher forms
 const formSchema = new Schema({
   classCleanliness: { type: String, enum: option, default: null },

@@ -425,12 +425,12 @@ function Weekly4Form() {
           <Text fontWeight="500" color="gray.700" mb={2}>
             Q3. {QUESTIONS[2]}
           </Text>
-          {formData[2]?.sections && formData[2].sections.length > 0 ? (
+          {Array.isArray(formData[2]?.sections) && formData[2].sections.length > 0 ? (
             <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
-              {formData[2].sections.map((sec, i) => {
+              {formData[2].sections.filter(Boolean).map((sec, i) => {
                 const className =
-                  classList?.find((c) => c._id === sec.classId)?.className ||
-                  sec.classId ||
+                  classList?.find((c) => c?._id === sec?.classId || c?.className === sec?.classId)?.className ||
+                  sec?.classId ||
                   "Class";
                 return (
                   <Box
@@ -442,10 +442,10 @@ function Weekly4Form() {
                     borderColor="gray.200"
                   >
                     <Text fontSize="sm" fontWeight="600">
-                      {className} - Section {sec.section || "N/A"}
+                      {className} - Section {sec?.section || "N/A"}
                     </Text>
-                    <Tag color={sec.answer === "Yes" ? "green" : "orange"} style={{ marginTop: "4px" }}>
-                      {sec.answer || "N/A"}
+                    <Tag color={sec?.answer === "Yes" ? "green" : "orange"} style={{ marginTop: "4px" }}>
+                      {sec?.answer || "N/A"}
                     </Tag>
                   </Box>
                 );
@@ -479,9 +479,9 @@ function Weekly4Form() {
             <Text fontWeight="500" color="gray.700" mb={2}>
               Q4. {QUESTIONS[3]}
             </Text>
-            {formData[3]?.lowStudents && formData[3].lowStudents.length > 0 ? (
+            {Array.isArray(formData[3]?.lowStudents) && formData[3].lowStudents.length > 0 ? (
               <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
-                {formData[3].lowStudents.map((st, i) => (
+                {formData[3].lowStudents.filter(Boolean).map((st, i) => (
                   <Box
                     key={i}
                     p={3}
@@ -491,13 +491,13 @@ function Weekly4Form() {
                     borderColor="gray.200"
                   >
                     <Text fontWeight="600" fontSize="sm">
-                      {st.name || "Student"} ({st.classSection || "Class/Sec"})
+                      {st?.name || "Student"} ({st?.classSection || "Class/Sec"})
                     </Text>
                     <Text fontSize="xs" color="gray.600">
-                      Subject: {st.subject || "N/A"}
+                      Subject: {st?.subject || "N/A"}
                     </Text>
                     <Text fontSize="xs" color="gray.600">
-                      Remarks: {st.remarks || "N/A"}
+                      Remarks: {st?.remarks || "N/A"}
                     </Text>
                   </Box>
                 ))}
@@ -586,12 +586,12 @@ function Weekly4Form() {
                         allowClear
                         showSearch
                         placeholder="Select Teacher(s)"
-                        options={GetTeachersLists?.map((item) => ({
-                          value: item._id,
-                          label: item.name,
+                        options={GetTeachersLists?.filter(Boolean).map((item) => ({
+                          value: item?._id,
+                          label: item?.name || "Teacher",
                         }))}
                         filterOption={(input, option) =>
-                          option.label
+                          (option?.label || "")
                             .toLowerCase()
                             .includes(input.toLowerCase())
                         }
@@ -661,12 +661,12 @@ function Weekly4Form() {
                           value={ObsereverId}
                           placeholder="Select Observer"
                           onChange={(value) => setObsereverId(value)}
-                          options={GetObserverLists?.map((item) => ({
-                            value: item._id,
-                            label: item.name,
+                          options={GetObserverLists?.filter(Boolean).map((item) => ({
+                            value: item?._id,
+                            label: item?.name || "Observer",
                           }))}
                           filterOption={(input, option) =>
-                            option.label
+                            (option?.label || "")
                               .toLowerCase()
                               .includes(input.toLowerCase())
                           }

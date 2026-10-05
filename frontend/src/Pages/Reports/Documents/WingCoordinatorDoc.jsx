@@ -332,6 +332,13 @@ const WingCoordinatorDoc = ({ data }) => {
               const columns = item.columns || [];
               const { sNoWidth, colWidths } = getColumnWidths(columns);
               const rows = item.tableData?.filter(Boolean) || [];
+              const fileList = (
+                Array.isArray(item?.files)
+                  ? item.files
+                  : item?.files && typeof item.files === "object"
+                  ? Object.values(item.files)
+                  : []
+              ).filter(Boolean);
 
               return (
                 <View key={i} style={s.qBox}>
@@ -403,12 +410,12 @@ const WingCoordinatorDoc = ({ data }) => {
                     )
                   )}
 
-                  {item.files?.length > 0 && (
+                  {fileList.length > 0 && (
                     <View style={{ marginTop: 4 }}>
                       <Text style={{ fontSize: 7, fontWeight: "bold", color: C.gray, marginBottom: 2 }}>
                         Attached Files:
                       </Text>
-                      {item.files.map((file, fIdx) => {
+                      {fileList.map((file, fIdx) => {
                         const isImage = file.url?.startsWith("data:image/") || file.type?.startsWith("image/");
                         return (
                           <View key={fIdx} style={{ marginBottom: 4 }}>
@@ -481,7 +488,7 @@ const WingCoordinatorDoc = ({ data }) => {
                   { label: "Observer Score", value: `${item.totalScores} / ${item.scoreOutof}` },
                 ]} />
               </View>
-              {item.ObserverFeedback?.length > 0 && (
+              {Array.isArray(item.ObserverFeedback) && item.ObserverFeedback.length > 0 && (
                 <View>
                   <Text style={s.sectionSubHead}>Observer Feedback</Text>
                   {item.ObserverFeedback.map((f, fi) => (
@@ -492,7 +499,7 @@ const WingCoordinatorDoc = ({ data }) => {
                   ))}
                 </View>
               )}
-              {item.TeacherFeedback?.length > 0 && (
+              {Array.isArray(item.TeacherFeedback) && item.TeacherFeedback.length > 0 && (
                 <View>
                   <Text style={s.sectionSubHead}>Teacher Feedback</Text>
                   {item.TeacherFeedback.map((f, fi) => (

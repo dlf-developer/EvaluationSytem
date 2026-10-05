@@ -1,9 +1,13 @@
+const mongoose = require("mongoose");
 const { createNotification } = require("../config/notify");
 const ClassDetails = require("../models/ClassDetails");
 const User = require("../models/User");
 const Weekly4Form = require("../models/Weekly4Form");
 const sendEmail = require("../utils/emailService");
 const { formInitiatedEmail, formCompletedEmail, reminderEmail } = require("../utils/emailTemplates");
+
+// Helper to strip non-hex characters (e.g. trailing period from copied links)
+const cleanId = (id) => (id ? id.toString().trim().replace(/[^a-f\d]/gi, "") : "");
 
 // Create a new Weekly4Form
 exports.createWeekly4Form = async (req, res) => {
@@ -227,7 +231,11 @@ exports.getAllWeekly4Forms = async (req, res) => {
 // Get a single Weekly4Form by ID
 exports.getWeekly4FormById = async (req, res) => {
   try {
-    const form = await Weekly4Form.findById(req.params.id).populate(
+    const formId = cleanId(req.params.id);
+    if (!formId || !mongoose.Types.ObjectId.isValid(formId)) {
+      return res.status(404).json({ success: false, message: "Form not found" });
+    }
+    const form = await Weekly4Form.findById(formId).populate(
       "isInitiated.Observer",
     );
     if (!form) {
@@ -237,6 +245,9 @@ exports.getWeekly4FormById = async (req, res) => {
     }
     res.status(200).json({ success: true, form });
   } catch (error) {
+    if (error?.name === "CastError") {
+      return res.status(404).json({ success: false, message: "Form not found" });
+    }
     res
       .status(500)
       .json({
@@ -356,8 +367,13 @@ exports.updateWeekly4Form = async (req, res) => {
       Payload.currentStep = currentStep;
     }
 
+    const formId = cleanId(req.params.id);
+    if (!formId || !mongoose.Types.ObjectId.isValid(formId)) {
+      return res.status(404).json({ message: "Form not found" });
+    }
+
     const updatedForm = await Weekly4Form.findByIdAndUpdate(
-      req.params.id,
+      formId,
       Payload,
       { new: true, runValidators: true },
     ).populate("isInitiated.Observer", "name email");
@@ -368,7 +384,7 @@ exports.updateWeekly4Form = async (req, res) => {
 
     // Send HTML email to the observer about the teacher's submission ONLY if not a draft
     if (!isDraftSave && Payload.isCompleted && updatedForm.isInitiated?.Observer?.email) {
-      const route = `weekly4form/create/${req.params.id}`;
+      const route = `weekly4form/create/${formId}`;
       const emailData = formCompletedEmail({
         recipientName: updatedForm.isInitiated?.Observer?.name || "Observer",
         completorName: req.user?.name || "Teacher",
@@ -381,6 +397,9 @@ exports.updateWeekly4Form = async (req, res) => {
 
     res.status(200).json(updatedForm);
   } catch (error) {
+    if (error?.name === "CastError") {
+      return res.status(404).json({ message: "Form not found" });
+    }
     res.status(400).json({ error: error.message });
   }
 };
@@ -388,7 +407,11 @@ exports.updateWeekly4Form = async (req, res) => {
 // Delete a Weekly4Form by ID
 exports.deleteWeekly4Form = async (req, res) => {
   try {
-    const deletedForm = await Weekly4Form.findByIdAndDelete(req.params.id);
+    const formId = cleanId(req.params.id);
+    if (!formId || !mongoose.Types.ObjectId.isValid(formId)) {
+      return res.status(404).json({ message: "Form not found" });
+    }
+    const deletedForm = await Weekly4Form.findByIdAndDelete(formId);
 
     if (!deletedForm) {
       return res.status(404).json({ message: "Form not found" });
@@ -396,6 +419,9 @@ exports.deleteWeekly4Form = async (req, res) => {
 
     res.status(200).json({ message: "Form deleted successfully" });
   } catch (error) {
+    if (error?.name === "CastError") {
+      return res.status(404).json({ message: "Form not found" });
+    }
     res.status(500).json({ error: error.message });
   }
 };

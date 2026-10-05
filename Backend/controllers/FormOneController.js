@@ -153,7 +153,6 @@ exports.FormInitiation = async (req, res) => {
   const userIdName = req?.user?.name;
   let FormData;
   try {
-    const mongoose = require("mongoose");
     let finalClassName = className;
     if (className && mongoose.Types.ObjectId.isValid(className)) {
       const classData = await ClassDetails.findById(className);
@@ -347,9 +346,8 @@ exports.FormFill = async (req, res) => {
       Section,
     } = req.body;
 
-    const mongoose = require("mongoose");
     let FindClass = null;
-    if (mongoose.Types.ObjectId.isValid(className)) {
+    if (className && mongoose.Types.ObjectId.isValid(className)) {
       FindClass = await ClassDetails.findById(className);
     }
 
@@ -401,6 +399,11 @@ exports.FormFill = async (req, res) => {
 
     if (isCoordinatorComplete) {
       const mergedObserver = getMergedForm(data?.observerForm, observerForm);
+      if (!mergedObserver.OutOf || mergedObserver.OutOf === 0) {
+        return res.status(400).json({
+          message: "Cannot mark observer evaluation complete without answered questions.",
+        });
+      }
       updateData = {
         isCoordinatorComplete,
         isDraft: false,
@@ -410,10 +413,15 @@ exports.FormFill = async (req, res) => {
       };
     } else if (isTeacherComplete) {
       const mergedTeacher = getMergedForm(data?.teacherForm, teacherForm);
+      if (!mergedTeacher.OutOf || mergedTeacher.OutOf === 0) {
+        return res.status(400).json({
+          message: "Cannot mark teacher evaluation complete without answered questions.",
+        });
+      }
       updateData = {
         isTeacherComplete,
         isDraft: false,
-        currentStep: 3,
+        currentStep: 0, // Reset to 0 for observer who evaluates next
         TeacherSubmissionDate: new Date(),
         teacherForm: mergedTeacher,
         className: FindClass?.className || className || data?.className,

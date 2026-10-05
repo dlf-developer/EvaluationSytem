@@ -49,6 +49,8 @@ const Details = () => {
   const [currStep, setCurrStep] = useState(0);
   const [answers, setAnswers] = useState({});
   const [validationErrors, setValidationErrors] = useState({});
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [lastSavedTime, setLastSavedTime] = useState(null);
   const [classInfo, setClassInfo] = useState({
     className: "",
     section: "",
@@ -132,6 +134,7 @@ const Details = () => {
             ? loadedForm.observerForm
             : loadedForm.teacherForm;
 
+          let initialAnswersCount = 0;
           if (userAnswers && typeof userAnswers === "object") {
             const initialAnswers = {};
             Object.entries(userAnswers).forEach(([k, v]) => {
@@ -146,8 +149,27 @@ const Details = () => {
                 initialAnswers[k] = v;
               }
             });
+            initialAnswersCount = Object.keys(initialAnswers).length;
             setAnswers(initialAnswers);
           }
+
+          // Restore any newer local draft answers if available
+          try {
+            const DRAFT_KEY = `fortnightly_monitor_draft_${Id}_${GetUserAccess}`;
+            const rawDraft = localStorage.getItem(DRAFT_KEY);
+            if (rawDraft) {
+              const parsed = JSON.parse(rawDraft);
+              if (parsed?.answers && typeof parsed.answers === "object" && Object.keys(parsed.answers).length > 0) {
+                setAnswers((prev) => ({
+                  ...prev,
+                  ...parsed.answers,
+                }));
+                if (parsed.savedAt) {
+                  setLastSavedTime(new Date(parsed.savedAt));
+                }
+              }
+            }
+          } catch (_) {}
 
           setClassInfo({
             className: loadedForm.className || "",
@@ -157,7 +179,16 @@ const Details = () => {
               loadedForm.coordinatorID?._id || loadedForm.coordinatorID || "",
           });
 
-          if (
+          // Determine starting step:
+          // Observers evaluating a completed teacher form must not inherit currentStep=3 from the teacher.
+          // They should start at Step 0 unless they already have draft responses.
+          if (isObserver && !loadedForm.isCoordinatorComplete) {
+            if (initialAnswersCount > 0 && loadedForm.currentStep !== undefined && loadedForm.currentStep !== null) {
+              setCurrStep(Math.min(loadedForm.currentStep, 3));
+            } else {
+              setCurrStep(0);
+            }
+          } else if (
             loadedForm.currentStep !== undefined &&
             loadedForm.currentStep !== null &&
             loadedForm.currentStep >= 0 &&
@@ -191,21 +222,52 @@ const Details = () => {
             message.info("Form is already submitted!");
             navigate(`/fortnightly-monitor/report/${Id}`);
           }
+          setIsInitialized(true);
         }
       })
       .catch((err) => {
         console.error("Error loading form:", err);
         message.error("Error fetching form details.");
         setIsLoading(false);
+        setIsInitialized(true);
       });
   }, [Id, navigate]);
 
   // Answer handler
   const handleAnswerChange = (questionKey, value) => {
-    setAnswers((prev) => ({
-      ...prev,
-      [questionKey]: value,
-    }));
+    setAnswers((prev) => {
+      const updated = {
+        ...prev,
+        [questionKey]: value,
+      };
+      if (Id && GetUserAccess) {
+        try {
+          const DRAFT_KEY = `fortnightly_monitor_draft_${Id}_${GetUserAccess}`;
+          localStorage.setItem(
+            DRAFT_KEY,
+            JSON.stringify({
+              answers: updated,
+              currStep,
+              classInfo: {
+                className: classInfo.className,
+                section: classInfo.section,
+                date: classInfo.date
+                  ? classInfo.date.toISOString
+                    ? classInfo.date.toISOString()
+                    : classInfo.date
+                  : null,
+              },
+              savedAt: new Date().toISOString(),
+            })
+          );
+          setLastSavedTime(new Date());
+        } catch (e) {
+          console.warn("Direct draft save failed:", e);
+        }
+      }
+      return updated;
+    });
+
     // Clear validation error when answered
     if (validationErrors[questionKey]) {
       setValidationErrors((prev) => {
@@ -274,6 +336,7 @@ const Details = () => {
     setIsSavingDraft(true);
     try {
       await dispatch(GetSingleFormComplete(payload));
+      setLastSavedTime(new Date());
       if (showMessage) {
         message.success("Draft saved successfully!");
       }
@@ -286,6 +349,45 @@ const Details = () => {
       setIsSavingDraft(false);
     }
   };
+
+  // Auto-save effect: immediate localStorage cache + debounced backend persistence
+  useEffect(() => {
+    if (!isInitialized || !Id || !GetUserAccess) return;
+    const DRAFT_KEY = `fortnightly_monitor_draft_${Id}_${GetUserAccess}`;
+
+    if (Object.keys(answers).length > 0) {
+      try {
+        localStorage.setItem(
+          DRAFT_KEY,
+          JSON.stringify({
+            answers,
+            currStep,
+            classInfo: {
+              className: classInfo.className,
+              section: classInfo.section,
+              date: classInfo.date
+                ? classInfo.date.toISOString
+                  ? classInfo.date.toISOString()
+                  : classInfo.date
+                : null,
+            },
+            savedAt: new Date().toISOString(),
+          })
+        );
+        setLastSavedTime(new Date());
+      } catch (err) {
+        console.warn("Failed to cache draft locally:", err);
+      }
+    }
+
+    const timer = setTimeout(() => {
+      if (Object.keys(answers).length > 0) {
+        saveDraft(answers, currStep, false);
+      }
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, [answers, classInfo, currStep, isInitialized, Id, GetUserAccess]);
 
   // Validate current step questions
   const validateStep = (stepIndex) => {
@@ -359,6 +461,13 @@ const Details = () => {
       return;
     }
 
+    if (totalAnswered < activeQuestions.length) {
+      message.error(
+        `Please complete all questions (${totalAnswered}/${activeQuestions.length} answered) before final submission.`
+      );
+      return;
+    }
+
     const isObserver = GetUserAccess === UserRole[1];
     let payload = {
       id: Id,
@@ -399,6 +508,9 @@ const Details = () => {
 
       if (res.payload?.message || res.payload?.form) {
         message.success("Form submitted successfully!");
+        try {
+          localStorage.removeItem(`fortnightly_monitor_draft_${Id}_${GetUserAccess}`);
+        } catch (_) {}
         setIsSubmitModalOpen(false);
 
         // Activity Record
@@ -909,14 +1021,14 @@ const Details = () => {
                 </p>
 
                 {/* Status Alert Banner */}
-                {totalAnswered < 35 ? (
+                {totalAnswered < activeQuestions.length ? (
                   <Alert
                     type="warning"
                     showIcon
                     icon={<ExclamationCircleFilled />}
                     message={
                       <span>
-                        <strong>Incomplete:</strong> You have answered <strong>{totalAnswered} of 35</strong> questions.
+                        <strong>Incomplete:</strong> You have answered <strong>{totalAnswered} of {activeQuestions.length}</strong> questions.
                         Please complete all categories before final submission.
                       </span>
                     }
@@ -929,7 +1041,7 @@ const Details = () => {
                     icon={<CheckCircleFilled />}
                     message={
                       <span>
-                        <strong>All Completed:</strong> You have answered all 35 questions! You are ready to submit.
+                        <strong>All Completed:</strong> You have answered all {activeQuestions.length} questions! You are ready to submit.
                       </span>
                     }
                     style={{ marginBottom: "24px", borderRadius: "10px" }}
@@ -1056,8 +1168,8 @@ const Details = () => {
 
                   <div>
                     <div style={{ fontSize: "14px", color: "#6b7280" }}>Total Completed Questions</div>
-                    <div style={{ fontSize: "26px", fontWeight: 800, color: totalAnswered === 35 ? "#166534" : "#ea580c" }}>
-                      {totalAnswered} / 35
+                    <div style={{ fontSize: "26px", fontWeight: 800, color: totalAnswered === activeQuestions.length ? "#166534" : "#ea580c" }}>
+                      {totalAnswered} / {activeQuestions.length}
                     </div>
                   </div>
                 </div>
@@ -1139,6 +1251,25 @@ const Details = () => {
               )}
 
               <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+                {lastSavedTime && (
+                  <span
+                    style={{
+                      fontSize: "12px",
+                      color: "#15803d",
+                      background: "#f0fdf4",
+                      padding: "4px 10px",
+                      borderRadius: "9999px",
+                      border: "1px solid #bbf7d0",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      fontWeight: 500,
+                    }}
+                  >
+                    <CheckCircleFilled style={{ color: "#16a34a", fontSize: "13px" }} />
+                    Draft Auto-Saved
+                  </span>
+                )}
                 <Button
                   size="large"
                   loading={isSavingDraft}
@@ -1189,7 +1320,7 @@ const Details = () => {
           <Modal
             title={
               <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "17px" }}>
-                {totalAnswered === 35 ? (
+                {totalAnswered === activeQuestions.length ? (
                   <CheckCircleFilled style={{ color: "#166534" }} />
                 ) : (
                   <ExclamationCircleFilled style={{ color: "#ea580c" }} />
@@ -1199,46 +1330,78 @@ const Details = () => {
             }
             open={isSubmitModalOpen}
             onCancel={() => setIsSubmitModalOpen(false)}
-            footer={[
-              <Button key="back" size="large" onClick={() => setIsSubmitModalOpen(false)}>
-                Cancel
-              </Button>,
-              <Button
-                key="submit"
-                type="primary"
-                size="large"
-                loading={isSubmitting}
-                onClick={handleSubmit}
-                style={{
-                  background: "#166534",
-                  borderColor: "#166534",
-                  fontWeight: 600,
-                }}
-              >
-                Yes, Submit Evaluation
-              </Button>,
-            ]}
+            footer={
+              totalAnswered < activeQuestions.length
+                ? [
+                    <Button key="back" size="large" onClick={() => setIsSubmitModalOpen(false)}>
+                      Close
+                    </Button>,
+                    <Button
+                      key="goto"
+                      type="primary"
+                      size="large"
+                      onClick={() => {
+                        setIsSubmitModalOpen(false);
+                        const firstIncompleteStep = [
+                          s0Answered < step0Questions.length,
+                          s1Answered < step1Questions.length,
+                          s2Answered < step2Questions.length,
+                        ].findIndex(Boolean);
+                        if (firstIncompleteStep !== -1) {
+                          setCurrStep(firstIncompleteStep);
+                          window.scrollTo({ top: 0, behavior: "smooth" });
+                        }
+                      }}
+                      style={{
+                        background: "#166534",
+                        borderColor: "#166534",
+                        fontWeight: 600,
+                      }}
+                    >
+                      Complete Unanswered Questions
+                    </Button>,
+                  ]
+                : [
+                    <Button key="back" size="large" onClick={() => setIsSubmitModalOpen(false)}>
+                      Cancel
+                    </Button>,
+                    <Button
+                      key="submit"
+                      type="primary"
+                      size="large"
+                      loading={isSubmitting}
+                      onClick={handleSubmit}
+                      style={{
+                        background: "#166534",
+                        borderColor: "#166534",
+                        fontWeight: 600,
+                      }}
+                    >
+                      Yes, Submit Evaluation
+                    </Button>,
+                  ]
+            }
           >
             <div style={{ padding: "16px 0" }}>
-              {totalAnswered < 35 ? (
+              {totalAnswered < activeQuestions.length ? (
                 <div>
                   <p style={{ color: "#c2410c", fontWeight: 600, marginBottom: "8px" }}>
-                    Warning: You have only answered {totalAnswered} of 35 questions.
+                    Incomplete: You have only answered {totalAnswered} of {activeQuestions.length} questions.
                   </p>
                   <p style={{ color: "#4b5563" }}>
-                    Submitting now will leave unanswered questions blank. Are you sure you want to proceed with submission?
+                    All questions must be answered before you can submit the evaluation. Please complete the remaining questions.
                   </p>
                 </div>
               ) : (
                 <div>
                   <p style={{ color: "#166534", fontWeight: 600, marginBottom: "8px" }}>
-                    All 35 questions have been completed!
+                    All {activeQuestions.length} questions have been completed!
                   </p>
                   <p style={{ color: "#4b5563" }}>
-                    Self Assessment Score: <strong>{selfScore} / {outOfScore}</strong>.
+                    {GetUserAccess === UserRole[1] ? "Observer Score" : "Self Assessment Score"}: <strong>{selfScore} / {outOfScore}</strong>.
                   </p>
                   <p style={{ color: "#4b5563" }}>
-                    Once submitted, your evaluation will be finalized and sent to your observer.
+                    Once submitted, your evaluation will be finalized and marked complete.
                   </p>
                 </div>
               )}

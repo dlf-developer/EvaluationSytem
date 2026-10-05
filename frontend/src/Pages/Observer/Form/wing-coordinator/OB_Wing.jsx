@@ -1,6 +1,5 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Form, Checkbox, message, Input, Table, Upload } from "antd";
 import Fillter_Wing from "./Fillter_Wing";
 import { getAllTimes } from "../../../../Utils/auth";
 import {
@@ -22,6 +21,7 @@ import {
   VStack,
   HStack,
   Progress,
+  useToast,
 } from "@chakra-ui/react";
 import {
   CheckCircleOutlined,
@@ -32,10 +32,7 @@ import {
   ArrowLeftOutlined,
   ReloadOutlined,
   SyncOutlined,
-  InboxOutlined,
 } from "@ant-design/icons";
-
-const { Dragger } = Upload;
 
 const FORM_TITLES = [
   { key: "form1", label: "Fortnightly Monitor", color: "green" },
@@ -158,150 +155,177 @@ const ScorePill = ({ label, value }) =>
     </HStack>
   ) : null;
 
-// ── File Upload Component (Drag & Drop + Select File - PDF Only) ───────────────
-const FileUploadField = ({ index, form, handleInputBlur }) => {
-  const [fileList, setFileList] = useState([]);
+// ── File Upload Component (Custom React + Tailwind CSS - Drag & Drop PDF) ─────
+const FileUploadField = ({ files = [], onChange }) => {
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef(null);
+  const toast = useToast();
 
-  useEffect(() => {
-    const currentFiles = form.getFieldValue(["monthlyReport", index, "files"]) || [];
-    if (Array.isArray(currentFiles)) {
-      setFileList(currentFiles);
-    }
-  }, [form, index]);
+  const processFiles = async (selectedFiles) => {
+    const pdfFiles = Array.from(selectedFiles).filter((file) => {
+      const isPdf =
+        file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+      if (!isPdf) {
+        toast({
+          title: `${file.name} is not a PDF`,
+          description: "Only PDF files are allowed.",
+          status: "error",
+          duration: 3000,
+          isClosable: true,
+        });
+      }
+      return isPdf;
+    });
 
-  const beforeUpload = (file) => {
-    const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
-    if (!isPdf) {
-      message.error(`${file.name} is not a PDF file. Only PDF files are allowed.`);
-      return Upload.LIST_IGNORE;
-    }
-    return true;
-  };
+    if (pdfFiles.length === 0) return;
 
-  const handleCustomUpload = async ({ file, onSuccess }) => {
     try {
-      const base64 = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = (error) => reject(error);
+      const convertedFiles = await Promise.all(
+        pdfFiles.map(async (file) => {
+          const base64 = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = (error) => reject(error);
+          });
+
+          return {
+            uid: file.uid || Date.now().toString() + Math.random().toString(36).substring(2, 5),
+            name: file.name,
+            status: "done",
+            url: base64,
+            type: "application/pdf",
+            size: file.size,
+          };
+        })
+      );
+
+      onChange([...files, ...convertedFiles]);
+    } catch {
+      toast({
+        title: "Upload Failed",
+        description: "Failed to read uploaded file.",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
       });
-
-      const newFileObj = {
-        uid: file.uid || Date.now().toString() + Math.random().toString(36).substring(2, 5),
-        name: file.name,
-        status: "done",
-        url: base64,
-        type: "application/pdf",
-        size: file.size,
-      };
-
-      const updatedList = [...fileList, newFileObj];
-      setFileList(updatedList);
-      form.setFieldValue(["monthlyReport", index, "files"], updatedList);
-      onSuccess("ok");
-      handleInputBlur();
-    } catch (err) {
-      message.error("Failed to upload file");
     }
   };
 
-  const handleRemove = (file) => {
-    const updatedList = fileList.filter((f) => f.uid !== file.uid);
-    setFileList(updatedList);
-    form.setFieldValue(["monthlyReport", index, "files"], updatedList);
-    handleInputBlur();
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      processFiles(e.dataTransfer.files);
+    }
+  };
+
+  const handleRemove = (uid) => {
+    onChange(files.filter((f) => f.uid !== uid));
   };
 
   return (
-    <Box mt={3} p={3} bg="gray.50" borderRadius="lg" borderWidth="1px" borderColor="gray.200">
-      <Text fontSize="xs" fontWeight="600" color="gray.700" mb={2}>
-        Upload PDF Attachments (Drag & drop or select PDF file):
-      </Text>
-      <Dragger
-        accept=".pdf,application/pdf"
-        beforeUpload={beforeUpload}
-        customRequest={handleCustomUpload}
-        fileList={fileList}
-        onRemove={handleRemove}
-        multiple
-        showUploadList={true}
-        style={{
-          padding: "16px",
-          background: "#ffffff",
-          borderColor: "#CBD5E1",
-          borderRadius: "8px",
-        }}
-      >
-        <p className="ant-upload-drag-icon">
-          <InboxOutlined style={{ fontSize: "28px", color: "#4A6741" }} />
-        </p>
-        <p className="ant-upload-text" style={{ fontSize: "13px", fontWeight: "600", color: "#334155" }}>
-          Click or drag PDF files to this area to upload
-        </p>
-        <p className="ant-upload-hint" style={{ fontSize: "11px", color: "#64748B" }}>
-          Supports PDF documents only (.pdf)
-        </p>
-      </Dragger>
+    <div className="mt-4 p-4 bg-slate-50 border border-slate-200 rounded-xl">
+      <div className="text-xs font-semibold text-slate-700 mb-2">
+        Upload PDF Attachments (Drag & drop or select PDF files):
+      </div>
 
-      {fileList.length > 0 && (
-        <VStack spacing={3} mt={4} align="stretch">
-          <Text fontSize="xs" fontWeight="700" color="gray.600">
-            PDF Document Previews:
-          </Text>
-          {fileList.map((file, fIdx) => (
-            <Box
+      <div
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        onClick={() => fileInputRef.current?.click()}
+        className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all duration-200 bg-white ${
+          isDragging
+            ? "border-emerald-500 bg-emerald-50/50 scale-[1.01]"
+            : "border-slate-300 hover:border-emerald-600 hover:bg-slate-50/60"
+        }`}
+      >
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".pdf,application/pdf"
+          multiple
+          className="hidden"
+          onChange={(e) => {
+            if (e.target.files) processFiles(e.target.files);
+            e.target.value = "";
+          }}
+        />
+        <div className="flex flex-col items-center justify-center space-y-1.5">
+          <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 mb-1">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+              />
+            </svg>
+          </div>
+          <div className="text-sm font-semibold text-slate-700">
+            Click or drag PDF files to this area to upload
+          </div>
+          <div className="text-xs text-slate-400">
+            Supports PDF documents only (.pdf)
+          </div>
+        </div>
+      </div>
+
+      {files.length > 0 && (
+        <div className="mt-4 space-y-3">
+          <div className="text-xs font-bold text-slate-600">
+            PDF Document Previews ({files.length}):
+          </div>
+          {files.map((file, fIdx) => (
+            <div
               key={file.uid || fIdx}
-              borderWidth="1px"
-              borderColor="gray.200"
-              borderRadius="lg"
-              bg="white"
-              overflow="hidden"
-              boxShadow="xs"
+              className="border border-slate-200 rounded-lg bg-white overflow-hidden shadow-sm"
             >
-              <Flex
-                justify="space-between"
-                align="center"
-                px={3}
-                py={2}
-                bg="gray.100"
-                borderBottomWidth="1px"
-                borderBottomColor="gray.200"
-              >
-                <Text fontSize="xs" fontWeight="600" color="gray.700" isTruncated>
+              <div className="flex items-center justify-between px-3 py-2 bg-slate-100 border-b border-slate-200">
+                <span className="text-xs font-medium text-slate-700 truncate max-w-md">
                   📄 {file.name}
-                </Text>
-                <HStack spacing={2}>
-                  <Button
-                    size="xs"
-                    colorScheme="red"
-                    variant="ghost"
-                    onClick={() => handleRemove(file)}
-                  >
-                    Remove
-                  </Button>
-                </HStack>
-              </Flex>
+                </span>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRemove(file.uid);
+                  }}
+                  className="text-xs font-medium text-red-600 hover:text-red-700 hover:bg-red-50 px-2 py-1 rounded transition-colors"
+                >
+                  Remove
+                </button>
+              </div>
               {file.url && (
-                <Box h="450px" w="100%" bg="gray.50">
+                <div className="h-[400px] w-full bg-slate-50">
                   <iframe
                     src={file.url}
                     title={file.name}
                     width="100%"
                     height="100%"
-                    style={{ border: "none" }}
+                    className="border-none"
                   />
-                </Box>
+                </div>
               )}
-            </Box>
+            </div>
           ))}
-        </VStack>
+        </div>
       )}
-
-      <Form.Item name={["monthlyReport", index, "files"]} hidden>
-        <Input />
-      </Form.Item>
-    </Box>
+    </div>
   );
 };
 
@@ -366,66 +390,23 @@ function OB_Wing() {
   const [syncing, setSyncing] = useState({});
   const [syncingAll, setSyncingAll] = useState(false);
 
-  // ── Sync a single form type ──────────────────────────────────────────────
-  const handleSync = async (formKey) => {
-    setSyncing((prev) => ({ ...prev, [formKey]: true }));
-    try {
-      const res = await dispatch(syncWingForm(id)).unwrap();
-      if (res?.success) {
-        const fresh = res.data;
-        // Update selectedItems: replace any stored item with the freshest version
-        setSelectedItems((prev) => {
-          const freshArr = fresh[formKey] || [];
-          const updatedSelected = (prev[formKey] || []).map((sel) => {
-            const match = freshArr.find((f) => f._id === (sel._id || sel));
-            return match || sel;
-          });
-          return { ...prev, [formKey]: updatedSelected };
-        });
-        // Also refresh currForm so the filter list updates
-        setCurrForm(fresh);
-        message.success({ content: `✅ ${FORM_TITLES.find(f => f.key === formKey)?.label} synced!`, duration: 2 });
-      } else {
-        message.error("Sync failed. Please try again.");
-      }
-    } catch {
-      message.error("Sync failed. Please try again.");
-    } finally {
-      setSyncing((prev) => ({ ...prev, [formKey]: false }));
-    }
-  };
-
-  // ── Sync all form types at once ──────────────────────────────────────────
-  const handleSyncAll = async () => {
-    setSyncingAll(true);
-    try {
-      const res = await dispatch(syncWingForm(id)).unwrap();
-      if (res?.success) {
-        const fresh = res.data;
-        setSelectedItems((prev) => {
-          const updated = {};
-          ["form1","form2","form3","form4","form5"].forEach((key) => {
-            const freshArr = fresh[key] || [];
-            updated[key] = (prev[key] || []).map((sel) => {
-              const match = freshArr.find((f) => f._id === (sel._id || sel));
-              return match || sel;
-            });
-          });
-          return updated;
-        });
-        setCurrForm(fresh);
-        message.success({ content: "✅ All reports synced with latest data!", duration: 3 });
-      } else {
-        message.error("Sync failed. Please try again.");
-      }
-    } catch {
-      message.error("Sync failed. Please try again.");
-    } finally {
-      setSyncingAll(false);
-    }
-  };
-
-  const [form] = Form.useForm();
+  // Custom React form state
+  const [formName, setFormName] = useState("");
+  const [monthlyReport, setMonthlyReport] = useState(() =>
+    inputsWing.map((inp) => ({
+      question: inp.question,
+      type: inp.type,
+      columns: inp.columns,
+      allowFileUpload: inp.allowFileUpload,
+      answer: "",
+      tableData: [{}],
+      files: [],
+    }))
+  );
+  const [validationErrors, setValidationErrors] = useState({});
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [lastSavedTime, setLastSavedTime] = useState(null);
+  const toast = useToast();
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const dispatch = useDispatch();
@@ -441,6 +422,192 @@ function OB_Wing() {
     form5: [],
   });
 
+  const updateReportItem = (index, patch) => {
+    setMonthlyReport((prev) =>
+      prev.map((item, i) => (i === index ? { ...item, ...patch } : item))
+    );
+    if (validationErrors[`question_${index}`] && patch.answer?.trim()) {
+      setValidationErrors((prev) => ({ ...prev, [`question_${index}`]: null }));
+    }
+  };
+
+  const hasAnyReportContent = (name, report) => {
+    if (name && name.trim().length > 0) return true;
+    if (!Array.isArray(report)) return false;
+    return report.some((item) => {
+      if (item.answer && item.answer.trim().length > 0) return true;
+      if (Array.isArray(item.files) && item.files.length > 0) return true;
+      if (Array.isArray(item.tableData)) {
+        return item.tableData.some((row) =>
+          Object.values(row || {}).some(
+            (v) => v !== "" && v !== null && v !== undefined && v !== false
+          )
+        );
+      }
+      return false;
+    });
+  };
+
+  const handleAutoSave = (customReport, customFormName) => {
+    try {
+      const rep = customReport !== undefined ? customReport : monthlyReport;
+      const name = customFormName !== undefined ? customFormName : formName;
+      if (hasAnyReportContent(name, rep)) {
+        const draftData = {
+          formName: name,
+          monthlyReport: rep,
+          lastSaved: new Date().toISOString(),
+        };
+        localStorage.setItem(DRAFT_KEY, JSON.stringify(draftData));
+        setLastSavedTime(new Date());
+      }
+    } catch (err) {
+      console.warn("Auto-save to localStorage failed", err);
+    }
+  };
+
+  // Debounced auto-save effect on state change
+  useEffect(() => {
+    if (!isInitialized) return;
+    const timer = setTimeout(() => {
+      handleAutoSave();
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [formName, monthlyReport, isInitialized]);
+
+  const addTableRow = (index) => {
+    setMonthlyReport((prev) => {
+      const updated = prev.map((item, i) =>
+        i === index
+          ? { ...item, tableData: [...(item.tableData || []), {}] }
+          : item
+      );
+      handleAutoSave(updated);
+      return updated;
+    });
+  };
+
+  const removeTableRow = (index, rowIndex) => {
+    setMonthlyReport((prev) => {
+      const updated = prev.map((item, i) =>
+        i === index
+          ? {
+              ...item,
+              tableData: (item.tableData || []).filter((_, rIdx) => rIdx !== rowIndex),
+            }
+          : item
+      );
+      handleAutoSave(updated);
+      return updated;
+    });
+  };
+
+  const updateTableCell = (index, rowIndex, cellKey, value) => {
+    setMonthlyReport((prev) =>
+      prev.map((item, i) => {
+        if (i !== index) return item;
+        const currentRows = item.tableData || [{}];
+        const updatedRows = currentRows.map((row, rIdx) =>
+          rIdx === rowIndex ? { ...row, [cellKey]: value } : row
+        );
+        return { ...item, tableData: updatedRows };
+      })
+    );
+  };
+
+  // ── Sync a single form type ──────────────────────────────────────────────
+  const handleSync = async (formKey) => {
+    setSyncing((prev) => ({ ...prev, [formKey]: true }));
+    try {
+      const res = await dispatch(syncWingForm(id)).unwrap();
+      if (res?.success) {
+        const fresh = res.data;
+        setSelectedItems((prev) => {
+          const freshArr = fresh[formKey] || [];
+          const updatedSelected = (prev[formKey] || []).map((sel) => {
+            const match = freshArr.find((f) => f._id === (sel._id || sel));
+            return match || sel;
+          });
+          return { ...prev, [formKey]: updatedSelected };
+        });
+        setCurrForm(fresh);
+        toast({
+          title: "Synced",
+          description: `✅ ${FORM_TITLES.find((f) => f.key === formKey)?.label} synced!`,
+          status: "success",
+          duration: 2000,
+          isClosable: true,
+        });
+      } else {
+        toast({
+          title: "Sync failed",
+          description: "Please try again.",
+          status: "error",
+          duration: 3000,
+          isClosable: true,
+        });
+      }
+    } catch {
+      toast({
+        title: "Sync failed",
+        description: "Please try again.",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+    } finally {
+      setSyncing((prev) => ({ ...prev, [formKey]: false }));
+    }
+  };
+
+  // ── Sync all form types at once ──────────────────────────────────────────
+  const handleSyncAll = async () => {
+    setSyncingAll(true);
+    try {
+      const res = await dispatch(syncWingForm(id)).unwrap();
+      if (res?.success) {
+        const fresh = res.data;
+        setSelectedItems((prev) => {
+          const updated = {};
+          ["form1", "form2", "form3", "form4", "form5"].forEach((key) => {
+            const freshArr = fresh[key] || [];
+            updated[key] = (prev[key] || []).map((sel) => {
+              const match = freshArr.find((f) => f._id === (sel._id || sel));
+              return match || sel;
+            });
+          });
+          return updated;
+        });
+        setCurrForm(fresh);
+        toast({
+          title: "Synced",
+          description: "✅ All reports synced with latest data!",
+          status: "success",
+          duration: 3000,
+          isClosable: true,
+        });
+      } else {
+        toast({
+          title: "Sync failed",
+          description: "Please try again.",
+          status: "error",
+          duration: 3000,
+          isClosable: true,
+        });
+      }
+    } catch {
+      toast({
+        title: "Sync failed",
+        description: "Please try again.",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+    } finally {
+      setSyncingAll(false);
+    }
+  };
+
   // ── Load existing form ──
   useEffect(() => {
     const load = async () => {
@@ -452,7 +619,13 @@ function OB_Wing() {
           setCurrForm(res.payload.data);
         }
       } else {
-        message.error("Could not load form. Please try again.");
+        toast({
+          title: "Error loading form",
+          description: "Could not load form. Please try again.",
+          status: "error",
+          duration: 3000,
+          isClosable: true,
+        });
       }
     };
     load();
@@ -460,8 +633,28 @@ function OB_Wing() {
 
   useEffect(() => {
     if (currForm) {
-      // 1. Restore server data first
-      form.setFieldsValue(currForm);
+      setFormName(currForm.formName || "");
+      const serverReport = Array.isArray(currForm.monthlyReport) ? currForm.monthlyReport : [];
+      let initialReport = inputsWing.map((inp, idx) => {
+        const existing = serverReport[idx];
+        return {
+          question: inp.question,
+          type: inp.type,
+          columns: inp.columns,
+          allowFileUpload: inp.allowFileUpload,
+          answer: existing?.answer || "",
+          tableData:
+            Array.isArray(existing?.tableData) && existing.tableData.length > 0
+              ? existing.tableData
+              : [{}],
+          files: Array.isArray(existing?.files)
+            ? existing.files
+            : existing?.files && typeof existing.files === "object"
+            ? Object.values(existing.files)
+            : [],
+        };
+      });
+
       setSelectedItems({
         form1: currForm?.form1 || [],
         form2: currForm?.form2 || [],
@@ -469,53 +662,51 @@ function OB_Wing() {
         form4: currForm?.form4 || [],
         form5: currForm?.form5 || [],
       });
+
       // 2. If localStorage has a more-recent draft, overlay the monthlyReport
       try {
         const raw = localStorage.getItem(DRAFT_KEY);
         if (raw) {
           const draft = JSON.parse(raw);
-          const fieldsToSet = {};
-          if (draft?.monthlyReport?.length) {
-            fieldsToSet.monthlyReport = draft.monthlyReport;
-          }
           if (draft?.formName) {
-            fieldsToSet.formName = draft.formName;
+            setFormName(draft.formName);
           }
-          if (Object.keys(fieldsToSet).length > 0) {
-            form.setFieldsValue(fieldsToSet);
-            message.info({
-              content: "📋 Draft restored from your last session.",
-              key: "draft-restore",
-              duration: 3,
+          if (Array.isArray(draft?.monthlyReport) && draft.monthlyReport.length > 0) {
+            initialReport = inputsWing.map((inp, idx) => {
+              const draftItem = draft.monthlyReport[idx] || initialReport[idx];
+              return {
+                question: inp.question,
+                type: inp.type,
+                columns: inp.columns,
+                allowFileUpload: inp.allowFileUpload,
+                answer: draftItem?.answer ?? initialReport[idx]?.answer ?? "",
+                tableData:
+                  Array.isArray(draftItem?.tableData) && draftItem.tableData.length > 0
+                    ? draftItem.tableData
+                    : initialReport[idx]?.tableData || [{}],
+                files: Array.isArray(draftItem?.files)
+                  ? draftItem.files
+                  : initialReport[idx]?.files || [],
+              };
+            });
+            if (draft?.lastSaved) {
+              setLastSavedTime(new Date(draft.lastSaved));
+            }
+            toast({
+              title: "Draft Restored",
+              description: "📋 Draft restored from your last session.",
+              status: "info",
+              duration: 3000,
+              isClosable: true,
             });
           }
         }
       } catch (_) {}
+
+      setMonthlyReport(initialReport);
+      setIsInitialized(true);
     }
   }, [currForm]);
-
-  // ── Auto-save to localStorage on blur (focus-out) ──────────────────────────
-  const handleInputBlur = () => {
-    try {
-      const values = form.getFieldsValue();
-      const rawReport = values.monthlyReport || [];
-      const monthlyReport = rawReport.map((item, i) => ({
-        ...item,
-        question: inputsWing[i].question,
-        type: inputsWing[i].type,
-      }));
-      const draftData = {};
-      if (monthlyReport && monthlyReport.length > 0) {
-        draftData.monthlyReport = monthlyReport;
-      }
-      if (values.formName) {
-        draftData.formName = values.formName;
-      }
-      if (Object.keys(draftData).length > 0) {
-        localStorage.setItem(DRAFT_KEY, JSON.stringify(draftData));
-      }
-    } catch (_) {}
-  };
 
   const handleSelect = (checked, item, type) => {
     setSelectedItems((prev) => ({
@@ -527,23 +718,12 @@ function OB_Wing() {
   };
 
   const handleSave = async (silent = false) => {
-    // If it's a DOM event (e.g. click), silent won't be a boolean. Ensure it's strictly a boolean.
     const isSilent = silent === true;
     if (!isSilent) setSaving(true);
     try {
-      const values = form.getFieldsValue();
-      const rawReport = values.monthlyReport || [];
-      const monthlyReport = rawReport.map((item, i) => ({
-        ...item,
-        question: inputsWing[i].question,
-        type: inputsWing[i].type,
-        columns: inputsWing[i].columns,
-      }));
-
       const { className, range } = formData || {};
       const { form1, form2, form3, form4, form5 } = selectedItems;
       const checkdata = {
-        ...values,
         monthlyReport,
         className,
         range,
@@ -552,13 +732,30 @@ function OB_Wing() {
         form3,
         form4,
         form5,
-        formName: values.formName,
+        formName,
+        isDraft: true,
       };
       const res = await dispatch(updateWingForm({ id, checkdata })).unwrap();
       if (res?.success) {
-        if (!isSilent) message.success("Saved successfully");
+        setLastSavedTime(new Date());
+        if (!isSilent) {
+          toast({
+            title: "Saved successfully",
+            status: "success",
+            duration: 3000,
+            isClosable: true,
+          });
+        }
       } else {
-        if (!isSilent) message.error("Save failed. Please try again.");
+        if (!isSilent) {
+          toast({
+            title: "Save failed",
+            description: "Please try again.",
+            status: "error",
+            duration: 3000,
+            isClosable: true,
+          });
+        }
       }
     } finally {
       if (!isSilent) setSaving(false);
@@ -568,19 +765,9 @@ function OB_Wing() {
   const handlePublish = async () => {
     setPublishing(true);
     try {
-      const values = form.getFieldsValue();
-      const rawReport = values.monthlyReport || [];
-      const monthlyReport = rawReport.map((item, i) => ({
-        ...item,
-        question: inputsWing[i].question,
-        type: inputsWing[i].type,
-        columns: inputsWing[i].columns,
-      }));
-
       const { className, range } = formData || {};
       const { form1, form2, form3, form4, form5 } = selectedItems;
       const checkdata = {
-        ...values,
         className,
         range,
         form1,
@@ -591,15 +778,20 @@ function OB_Wing() {
         isDraft: false,
         isComplete: true,
         monthlyReport,
-        formName: values.formName,
+        formName,
       };
       const res = await dispatch(WingPublished({ id, checkdata })).unwrap();
       if (res?.success) {
-        // Clear the localStorage draft on successful publish
         try {
           localStorage.removeItem(DRAFT_KEY);
         } catch (_) {}
-        message.success("Form published successfully!");
+        toast({
+          title: "Published successfully",
+          description: "Form published successfully!",
+          status: "success",
+          duration: 3000,
+          isClosable: true,
+        });
         navigate("/wing-coordinator");
       }
     } finally {
@@ -607,253 +799,234 @@ function OB_Wing() {
     }
   };
 
-  // ── Monthly Report Section ──────────────────────────────────────────────────
+  const validateStepOne = () => {
+    const errors = {};
+    if (!formName || !formName.trim()) {
+      errors.formName = "Please enter a form name!";
+    }
+    inputsWing.forEach((item, i) => {
+      if (item.type === "text") {
+        const ans = monthlyReport[i]?.answer;
+        if (!ans || !ans.trim()) {
+          errors[`question_${i}`] = "Please enter a response";
+        }
+      }
+    });
+
+    setValidationErrors(errors);
+    if (Object.keys(errors).length > 0) {
+      toast({
+        title: "Required Fields Missing",
+        description: "Please fill in all required fields before proceeding.",
+        status: "warning",
+        duration: 3000,
+        isClosable: true,
+        position: "top-right",
+      });
+      return false;
+    }
+    return true;
+  };
+
+  // ── Monthly Report Section (Custom React + Tailwind CSS) ───────────────────
   const renderMonthlyReport = () => (
-    <Box>
-      <Box mb={6}>
-        <Heading size="md" color="brand.text" mb={1}>
-          Monthly Report
-        </Heading>
-        <Text fontSize="sm" color="gray.500">
+    <div>
+      <div className="mb-6">
+        <h2 className="text-xl font-bold text-slate-800 mb-1">Monthly Report</h2>
+        <p className="text-sm text-slate-500">
           Fill in each activity for this wing's monthly summary.
-        </Text>
-      </Box>
+        </p>
+      </div>
 
       {/* Form Name field */}
-      <Box
-        bg="gray.50"
-        borderRadius="xl"
-        borderWidth="1px"
-        borderColor="gray.100"
-        p={5}
-        mb={6}
-        boxShadow="sm"
-      >
-        <Form.Item
-          name="formName"
-          label={
-            <Text fontWeight="600" fontSize="sm" color="brand.text">
-              Form Name
-            </Text>
-          }
-          rules={[{ required: true, message: "Please enter a form name!" }]}
-          style={{ marginBottom: 0 }}
-        >
-          <Input.TextArea
-            placeholder="Enter a name for this report…"
-            onBlur={handleInputBlur}
-            autoSize={{ minRows: 1 }}
-            style={{
-              borderRadius: 8,
-              borderColor: "#E2E8F0",
-              fontSize: 14,
-              resize: "none",
-              overflowX: "hidden",
-              overflowY: "hidden",
-              transition: "height 0.15s ease",
-            }}
-          />
-        </Form.Item>
-      </Box>
+      <div className="bg-slate-50 rounded-xl border border-slate-200 p-5 mb-6 shadow-sm">
+        <label className="block text-sm font-semibold text-slate-800 mb-2">
+          Form Name <span className="text-red-500">*</span>
+        </label>
+        <input
+          type="text"
+          value={formName}
+          onChange={(e) => {
+            setFormName(e.target.value);
+            if (validationErrors.formName) {
+              setValidationErrors((prev) => ({ ...prev, formName: null }));
+            }
+          }}
+          onBlur={handleAutoSave}
+          placeholder="Enter a name for this report…"
+          className={`w-full px-4 py-2.5 text-sm bg-white border rounded-lg focus:outline-none focus:ring-2 transition-all shadow-sm ${
+            validationErrors.formName
+              ? "border-red-400 focus:ring-red-400"
+              : "border-slate-300 focus:ring-emerald-500 focus:border-transparent"
+          }`}
+        />
+        {validationErrors.formName && (
+          <p className="text-xs text-red-500 mt-1.5">{validationErrors.formName}</p>
+        )}
+      </div>
 
-      <VStack spacing={4} align="stretch">
-        {inputsWing.map((item, index) => (
-          <Box
-            key={index}
-            bg="white"
-            borderRadius="xl"
-            borderWidth="1px"
-            borderColor="gray.100"
-            p={5}
-            boxShadow="sm"
-            _hover={{ boxShadow: "md", borderColor: "brand.mid" }}
-            transition="all 0.15s"
-          >
-            <Flex align="flex-start" gap={4}>
-              <Flex
-                minW={8}
-                h={8}
-                borderRadius="lg"
-                bg="brand.background"
-                color="brand.primary"
-                align="center"
-                justify="center"
-                fontSize="13px"
-                fontWeight="700"
-                flexShrink={0}
-              >
-                {index + 1}
-              </Flex>
-              <Box flex={1} overflowX="hidden">
-                <Text
-                  fontSize="sm"
-                  fontWeight="500"
-                  color="brand.text"
-                  mb={3}
-                  textTransform="capitalize"
-                >
-                  {item.question}
-                </Text>
-                {/* Hidden question field */}
-                <Form.Item
-                  name={["monthlyReport", index, "question"]}
-                  initialValue={item.question}
-                  hidden
-                >
-                  <Input />
-                </Form.Item>
+      <div className="space-y-4">
+        {inputsWing.map((item, index) => {
+          const reportItem = monthlyReport[index] || {};
+          const tableRows = reportItem.tableData || [{}];
 
-                {item.type === "text" ? (
-                  <Form.Item
-                    name={["monthlyReport", index, "answer"]}
-                    rules={[{ required: true, message: "Please enter a response" }]}
-                    style={{ marginBottom: 12 }}
-                  >
-                    <Input.TextArea
-                      placeholder="Enter your response…"
-                      onBlur={handleInputBlur}
-                      autoSize={{ minRows: 1 }}
-                      style={{
-                        borderRadius: 8,
-                        borderColor: "#E2E8F0",
-                        fontSize: 14,
-                        padding: "8px 12px",
-                        resize: "none",
-                        overflowX: "hidden",
-                        overflowY: "hidden",
-                        transition: "height 0.15s ease",
+          return (
+            <div
+              key={index}
+              className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm hover:shadow-md hover:border-emerald-300 transition-all duration-150"
+            >
+              <div className="flex items-start gap-4">
+                <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center text-xs font-bold shrink-0">
+                  {index + 1}
+                </div>
+                <div className="flex-1 overflow-hidden">
+                  <h4 className="text-sm font-semibold text-slate-800 mb-3 capitalize">
+                    {item.question}
+                  </h4>
+
+                  {item.type === "text" ? (
+                    <div>
+                      <textarea
+                        value={reportItem.answer || ""}
+                        onChange={(e) => updateReportItem(index, { answer: e.target.value })}
+                        onBlur={handleAutoSave}
+                        placeholder="Enter your response…"
+                        rows={2}
+                        className={`w-full px-3.5 py-2.5 text-sm bg-white border rounded-lg focus:outline-none focus:ring-2 transition-all shadow-sm resize-y ${
+                          validationErrors[`question_${index}`]
+                            ? "border-red-400 focus:ring-red-400"
+                            : "border-slate-300 focus:ring-emerald-500 focus:border-transparent"
+                        }`}
+                      />
+                      {validationErrors[`question_${index}`] && (
+                        <p className="text-xs text-red-500 mt-1">
+                          {validationErrors[`question_${index}`]}
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="mb-4 p-4 bg-slate-50 rounded-xl border border-slate-200 overflow-x-auto">
+                      <div className="min-w-max">
+                        {/* Table Headers */}
+                        <div className="flex items-center gap-2 mb-2 px-1">
+                          <div className="w-[45px] text-center text-xs font-bold text-slate-500">
+                            S.No.
+                          </div>
+                          {(item.columns || []).map((col, colIdx) => {
+                            const isCheckbox = col === "Ticket Raised" || col === "Resolved?";
+                            return (
+                              <div
+                                key={colIdx}
+                                className={`text-xs font-bold text-slate-500 ${
+                                  isCheckbox ? "w-[100px] text-center" : "w-[180px] text-left"
+                                }`}
+                              >
+                                {col}
+                              </div>
+                            );
+                          })}
+                          <div className="w-8" />
+                        </div>
+
+                        {/* Table Rows */}
+                        {tableRows.map((row, rowIndex) => (
+                          <div key={rowIndex} className="flex items-center gap-2 mb-2">
+                            <div className="w-[45px] h-8 flex items-center justify-center text-xs font-semibold text-slate-600 bg-slate-200/70 rounded-md shrink-0">
+                              {rowIndex + 1}
+                            </div>
+
+                            {(item.columns || []).map((col, colIdx) => {
+                              const isCheckbox = col === "Ticket Raised" || col === "Resolved?";
+                              const isDate = col.toLowerCase().includes("date");
+                              const cellKey = `col_${colIdx}`;
+                              const cellVal = row[cellKey];
+
+                              if (isCheckbox) {
+                                return (
+                                  <div key={colIdx} className="w-[100px] flex justify-center">
+                                    <input
+                                      type="checkbox"
+                                      checked={!!cellVal}
+                                      onChange={(e) => {
+                                        updateTableCell(index, rowIndex, cellKey, e.target.checked);
+                                      }}
+                                      onBlur={handleAutoSave}
+                                      className="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer"
+                                    />
+                                  </div>
+                                );
+                              }
+
+                              if (isDate) {
+                                return (
+                                  <div key={colIdx} className="w-[180px]">
+                                    <input
+                                      type="date"
+                                      value={cellVal || ""}
+                                      onChange={(e) => {
+                                        updateTableCell(index, rowIndex, cellKey, e.target.value);
+                                      }}
+                                      onBlur={handleAutoSave}
+                                      className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-emerald-500 shadow-sm"
+                                    />
+                                  </div>
+                                );
+                              }
+
+                              return (
+                                <div key={colIdx} className="w-[180px]">
+                                  <textarea
+                                    value={cellVal || ""}
+                                    onChange={(e) => {
+                                      updateTableCell(index, rowIndex, cellKey, e.target.value);
+                                    }}
+                                    onBlur={handleAutoSave}
+                                    placeholder={col}
+                                    rows={1}
+                                    className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-emerald-500 shadow-sm resize-none"
+                                  />
+                                </div>
+                              );
+                            })}
+
+                            <button
+                              type="button"
+                              onClick={() => removeTableRow(index, rowIndex)}
+                              className="w-8 h-8 flex items-center justify-center text-xs text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
+                              title="Remove row"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ))}
+
+                        <button
+                          type="button"
+                          onClick={() => addTableRow(index)}
+                          className="w-full mt-2 py-2 text-xs font-semibold text-emerald-700 hover:text-emerald-800 bg-white hover:bg-emerald-50 border border-dashed border-emerald-500 rounded-lg transition-colors flex items-center justify-center gap-1"
+                        >
+                          + Add Row
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {item.allowFileUpload && (
+                    <FileUploadField
+                      files={reportItem.files || []}
+                      onChange={(updatedFiles) => {
+                        updateReportItem(index, { files: updatedFiles });
+                        handleAutoSave();
                       }}
                     />
-                  </Form.Item>
-                ) : (
-                  <Box mb={4} p={4} bg="gray.50" borderRadius="lg" borderWidth="1px" borderColor="gray.200" overflowX="auto">
-                    <Form.List name={["monthlyReport", index, "tableData"]} initialValue={[{}]}>
-                      {(fields, { add, remove }) => (
-                        <Box minW="max-content">
-                          {fields.length > 0 && (
-                            <Flex mb={2} gap={2} px={1} align="center">
-                              <Text
-                                fontSize="xs"
-                                fontWeight="600"
-                                color="gray.500"
-                                w="45px"
-                                minW="45px"
-                                textAlign="center"
-                              >
-                                S.No.
-                              </Text>
-                              {item.columns.map((col, i) => {
-                                const isCheckbox = col === "Ticket Raised" || col === "Resolved?";
-                                return (
-                                  <Text
-                                    key={i}
-                                    flex={isCheckbox ? "0 0 100px" : 1}
-                                    minW={isCheckbox ? "100px" : "150px"}
-                                    textAlign={isCheckbox ? "center" : "left"}
-                                    fontSize="xs"
-                                    fontWeight="600"
-                                    color="gray.500"
-                                  >
-                                    {col}
-                                  </Text>
-                                );
-                              })}
-                              <Box w="32px" />
-                            </Flex>
-                          )}
-                          {fields.map(({ key, name, ...restField }, rowIndex) => (
-                            <Flex key={key} gap={2} mb={2} align="center">
-                              <Flex
-                                w="45px"
-                                minW="45px"
-                                h="32px"
-                                align="center"
-                                justify="center"
-                                fontSize="xs"
-                                fontWeight="600"
-                                color="gray.600"
-                                bg="gray.100"
-                                borderRadius="md"
-                                flexShrink={0}
-                              >
-                                {rowIndex + 1}
-                              </Flex>
-                              {item.columns.map((col, i) => {
-                                const isCheckbox = col === "Ticket Raised" || col === "Resolved?";
-                                return (
-                                  <Form.Item
-                                    {...restField}
-                                    key={i}
-                                    name={[name, `col_${i}`]}
-                                    valuePropName={isCheckbox ? "checked" : "value"}
-                                    rules={isCheckbox ? [] : [{ required: true, message: "Required" }]}
-                                    style={{
-                                      marginBottom: 0,
-                                      flex: isCheckbox ? "0 0 100px" : 1,
-                                      minWidth: isCheckbox ? "100px" : "150px",
-                                      display: "flex",
-                                      justifyContent: isCheckbox ? "center" : "flex-start",
-                                    }}
-                                  >
-                                    {isCheckbox ? (
-                                      <Checkbox
-                                        onChange={handleInputBlur}
-                                        style={{ accentColor: "#4A6741" }}
-                                      />
-                                    ) : col.toLowerCase().includes('date') ? (
-                                      <Input
-                                        type="date"
-                                        placeholder={col}
-                                        onBlur={handleInputBlur}
-                                        style={{ fontSize: 13 }}
-                                      />
-                                    ) : (
-                                      <Input.TextArea
-                                        placeholder={col}
-                                        onBlur={handleInputBlur}
-                                        autoSize={{ minRows: 1 }}
-                                        style={{
-                                          fontSize: 13,
-                                          resize: "none",
-                                          overflowX: "hidden",
-                                          overflowY: "hidden",
-                                          transition: "height 0.15s ease",
-                                        }}
-                                      />
-                                    )}
-                                  </Form.Item>
-                                );
-                              })}
-                              <Button type="button" size="sm" colorScheme="red" variant="ghost" onClick={() => { remove(name); handleInputBlur(); }}>
-                                ✕
-                              </Button>
-                            </Flex>
-                          ))}
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => add()}
-                            width="100%"
-                            mt={2}
-                            style={{ borderColor: "#4A6741", color: "#4A6741", borderStyle: "dashed" }}
-                          >
-                            + Add Row
-                          </Button>
-                        </Box>
-                      )}
-                    </Form.List>
-                  </Box>
-                )}
-
-                {item.allowFileUpload && (
-                  <FileUploadField index={index} form={form} handleInputBlur={handleInputBlur} />
-                )}
-              </Box>
-            </Flex>
-          </Box>
-        ))}
-      </VStack>
-    </Box>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 
   // ── Form Selection Handlers ──────────────────────────────────────────────────
@@ -981,13 +1154,14 @@ function OB_Wing() {
       >
         <Flex align="flex-start" gap={3}>
           <Box pt="2px">
-            <Checkbox
+            <input
+              type="checkbox"
               checked={isChecked}
               onChange={(e) => {
                 e.stopPropagation();
                 handleSelect(e.target.checked, item, type);
               }}
-              style={{ accentColor: "#4A6741" }}
+              className="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer"
             />
           </Box>
           <Box flex={1}>
@@ -1314,7 +1488,7 @@ function OB_Wing() {
             Monthly Report
           </Text>
           <VStack spacing={2} align="stretch">
-            {(form.getFieldValue("monthlyReport") || []).map((item, i) =>
+            {(monthlyReport || []).map((item, i) =>
               item?.question ? (
                 <Box key={i}>
                   <Text fontSize="xs" color="gray.500" fontWeight="500">
@@ -1333,31 +1507,50 @@ function OB_Wing() {
                       )}
                     </Text>
                   ) : (
-                    <Box mt={2} overflowX="auto">
+                    <div className="mt-2 overflow-x-auto">
                       {item.tableData?.length > 0 ? (
-                        <Table
-                          size="small"
-                          pagination={false}
-                          dataSource={item.tableData}
-                          rowKey={(_, idx) => idx}
-                          columns={(inputsWing[i]?.columns || []).map((col, cIdx) => ({
-                            title: col,
-                            dataIndex: `col_${cIdx}`,
-                            key: `col_${cIdx}`,
-                            render: (val) => {
-                              if (typeof val === "boolean") {
-                                return val ? "✔️" : "—";
-                              }
-                              return val || "—";
-                            }
-                          }))}
-                        />
+                        <table className="min-w-full divide-y divide-slate-200 border border-slate-200 rounded-lg overflow-hidden text-xs">
+                          <thead className="bg-slate-50">
+                            <tr>
+                              <th className="px-3 py-2 text-left font-semibold text-slate-500 w-12">
+                                S.No.
+                              </th>
+                              {(inputsWing[i]?.columns || []).map((col, cIdx) => (
+                                <th
+                                  key={cIdx}
+                                  className="px-3 py-2 text-left font-semibold text-slate-500"
+                                >
+                                  {col}
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-slate-100">
+                            {item.tableData.map((row, rIdx) => (
+                              <tr key={rIdx} className="hover:bg-slate-50/50">
+                                <td className="px-3 py-2 text-slate-500 font-medium">
+                                  {rIdx + 1}
+                                </td>
+                                {(inputsWing[i]?.columns || []).map((col, cIdx) => {
+                                  const val = row[`col_${cIdx}`];
+                                  return (
+                                    <td key={cIdx} className="px-3 py-2 text-slate-700">
+                                      {typeof val === "boolean"
+                                        ? val
+                                          ? "✔️"
+                                          : "—"
+                                        : val || "—"}
+                                    </td>
+                                  );
+                                })}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
                       ) : (
-                        <Text as="span" color="gray.400" fontStyle="italic" fontSize="sm">
-                          No table data
-                        </Text>
+                        <span className="text-slate-400 italic text-sm">No table data</span>
                       )}
-                    </Box>
+                    </div>
                   )}
                 </Box>
               ) : null,
@@ -1401,6 +1594,14 @@ function OB_Wing() {
           >
             Sync All
           </Button>
+          {lastSavedTime && (
+            <HStack spacing={1.5} px={3} py={1} bg="green.50" border="1px solid" borderColor="green.200" borderRadius="full">
+              <Box as="span" w={2} h={2} borderRadius="full" bg="green.500" />
+              <Text fontSize="xs" fontWeight="500" color="green.700">
+                Draft Auto-Saved
+              </Text>
+            </HStack>
+          )}
           <Button
             variant="outline"
             size="sm"
@@ -1446,17 +1647,15 @@ function OB_Wing() {
         p={{ base: 5, md: 8 }}
         display={loading ? "none" : "block"}
       >
-        <Form form={form} layout="vertical">
-          <Box display={currStep === 1 ? "block" : "none"}>
-            {renderMonthlyReport()}
-          </Box>
-          <Box display={currStep === 2 ? "block" : "none"}>
-            {renderFormSelection()}
-          </Box>
-          <Box display={currStep === 3 ? "block" : "none"}>
-            {renderReview()}
-          </Box>
-        </Form>
+        <Box display={currStep === 1 ? "block" : "none"}>
+          {renderMonthlyReport()}
+        </Box>
+        <Box display={currStep === 2 ? "block" : "none"}>
+          {renderFormSelection()}
+        </Box>
+        <Box display={currStep === 3 ? "block" : "none"}>
+          {renderReview()}
+        </Box>
       </Box>
 
       {/* ── Action Footer ── */}
@@ -1475,6 +1674,7 @@ function OB_Wing() {
           color="gray.500"
           _hover={{ color: "brand.text", bg: "gray.50" }}
           onClick={() => {
+            handleAutoSave();
             handleSave(true); // Auto-save draft silently
             navigate("/wing-coordinator");
           }}
@@ -1492,7 +1692,11 @@ function OB_Wing() {
               color="gray.600"
               _hover={{ bg: "gray.50" }}
               leftIcon={<ArrowLeftOutlined />}
-              onClick={() => setCurrStep((s) => s - 1)}
+              onClick={() => {
+                handleAutoSave();
+                setCurrStep((s) => s - 1);
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
             >
               Previous
             </Button>
@@ -1507,13 +1711,12 @@ function OB_Wing() {
               _hover={{ bg: "brand.secondary", transform: "translateY(-1px)" }}
               rightIcon={<ArrowRightOutlined />}
               onClick={() => {
-                form
-                  .validateFields(["formName", ["monthlyReport"]])
-                  .then(() => {
-                    handleSave(true); // Auto-save when moving to next step
-                    setCurrStep(2);
-                  })
-                  .catch(() => {});
+                if (validateStepOne()) {
+                  handleAutoSave();
+                  handleSave(true); // Auto-save when moving to next step
+                  setCurrStep(2);
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }
               }}
               transition="all 0.15s"
             >
@@ -1530,8 +1733,10 @@ function OB_Wing() {
               _hover={{ bg: "brand.secondary", transform: "translateY(-1px)" }}
               rightIcon={<ArrowRightOutlined />}
               onClick={() => {
+                handleAutoSave();
                 handleSave(true);
                 setCurrStep(3);
+                window.scrollTo({ top: 0, behavior: "smooth" });
               }}
               transition="all 0.15s"
             >
