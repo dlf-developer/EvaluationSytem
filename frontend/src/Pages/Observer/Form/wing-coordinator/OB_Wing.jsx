@@ -42,6 +42,12 @@ const FORM_TITLES = [
   { key: "form4", label: "Learning Progress Checklist", color: "orange" },
 ];
 
+const sanitizeTableData = (raw) => {
+  if (!Array.isArray(raw) || raw.length === 0) return [{}];
+  const cleaned = raw.map((r) => (r && typeof r === "object" ? r : {}));
+  return cleaned.length > 0 ? cleaned : [{}];
+};
+
 // ── Score helpers ─────────────────────────────────────────────────────────────
 const getTotalScore = (items, type, formType) => {
   if (formType === "form1") {
@@ -479,7 +485,7 @@ function OB_Wing() {
     setMonthlyReport((prev) => {
       const updated = prev.map((item, i) =>
         i === index
-          ? { ...item, tableData: [...(item.tableData || []), {}] }
+          ? { ...item, tableData: [...sanitizeTableData(item.tableData), {}] }
           : item
       );
       handleAutoSave(updated);
@@ -489,14 +495,15 @@ function OB_Wing() {
 
   const removeTableRow = (index, rowIndex) => {
     setMonthlyReport((prev) => {
-      const updated = prev.map((item, i) =>
-        i === index
-          ? {
-              ...item,
-              tableData: (item.tableData || []).filter((_, rIdx) => rIdx !== rowIndex),
-            }
-          : item
-      );
+      const updated = prev.map((item, i) => {
+        if (i !== index) return item;
+        const currentRows = sanitizeTableData(item.tableData);
+        const filtered = currentRows.filter((_, rIdx) => rIdx !== rowIndex);
+        return {
+          ...item,
+          tableData: filtered.length > 0 ? filtered : [{}],
+        };
+      });
       handleAutoSave(updated);
       return updated;
     });
@@ -506,9 +513,9 @@ function OB_Wing() {
     setMonthlyReport((prev) =>
       prev.map((item, i) => {
         if (i !== index) return item;
-        const currentRows = item.tableData || [{}];
+        const currentRows = sanitizeTableData(item.tableData);
         const updatedRows = currentRows.map((row, rIdx) =>
-          rIdx === rowIndex ? { ...row, [cellKey]: value } : row
+          rIdx === rowIndex ? { ...(row || {}), [cellKey]: value } : (row || {})
         );
         return { ...item, tableData: updatedRows };
       })
@@ -643,10 +650,7 @@ function OB_Wing() {
           columns: inp.columns,
           allowFileUpload: inp.allowFileUpload,
           answer: existing?.answer || "",
-          tableData:
-            Array.isArray(existing?.tableData) && existing.tableData.length > 0
-              ? existing.tableData
-              : [{}],
+          tableData: sanitizeTableData(existing?.tableData),
           files: Array.isArray(existing?.files)
             ? existing.files
             : existing?.files && typeof existing.files === "object"
@@ -680,10 +684,9 @@ function OB_Wing() {
                 columns: inp.columns,
                 allowFileUpload: inp.allowFileUpload,
                 answer: draftItem?.answer ?? initialReport[idx]?.answer ?? "",
-                tableData:
-                  Array.isArray(draftItem?.tableData) && draftItem.tableData.length > 0
-                    ? draftItem.tableData
-                    : initialReport[idx]?.tableData || [{}],
+                tableData: sanitizeTableData(
+                  draftItem?.tableData || initialReport[idx]?.tableData
+                ),
                 files: Array.isArray(draftItem?.files)
                   ? draftItem.files
                   : initialReport[idx]?.files || [],
@@ -868,7 +871,7 @@ function OB_Wing() {
       <div className="space-y-4">
         {inputsWing.map((item, index) => {
           const reportItem = monthlyReport[index] || {};
-          const tableRows = reportItem.tableData || [{}];
+          const tableRows = sanitizeTableData(reportItem.tableData);
 
           return (
             <div
@@ -929,7 +932,9 @@ function OB_Wing() {
                         </div>
 
                         {/* Table Rows */}
-                        {tableRows.map((row, rowIndex) => (
+                        {tableRows.map((row, rowIndex) => {
+                          const safeRow = row && typeof row === "object" ? row : {};
+                          return (
                           <div key={rowIndex} className="flex items-center gap-2 mb-2">
                             <div className="w-[45px] h-8 flex items-center justify-center text-xs font-semibold text-slate-600 bg-slate-200/70 rounded-md shrink-0">
                               {rowIndex + 1}
@@ -939,7 +944,7 @@ function OB_Wing() {
                               const isCheckbox = col === "Ticket Raised" || col === "Resolved?";
                               const isDate = col.toLowerCase().includes("date");
                               const cellKey = `col_${colIdx}`;
-                              const cellVal = row[cellKey];
+                              const cellVal = safeRow[cellKey];
 
                               if (isCheckbox) {
                                 return (
@@ -998,7 +1003,7 @@ function OB_Wing() {
                               ✕
                             </button>
                           </div>
-                        ))}
+                        );})}
 
                         <button
                           type="button"
@@ -1508,7 +1513,7 @@ function OB_Wing() {
                     </Text>
                   ) : (
                     <div className="mt-2 overflow-x-auto">
-                      {item.tableData?.length > 0 ? (
+                      {Array.isArray(item.tableData) && item.tableData.length > 0 ? (
                         <table className="min-w-full divide-y divide-slate-200 border border-slate-200 rounded-lg overflow-hidden text-xs">
                           <thead className="bg-slate-50">
                             <tr>
@@ -1526,25 +1531,28 @@ function OB_Wing() {
                             </tr>
                           </thead>
                           <tbody className="bg-white divide-y divide-slate-100">
-                            {item.tableData.map((row, rIdx) => (
-                              <tr key={rIdx} className="hover:bg-slate-50/50">
-                                <td className="px-3 py-2 text-slate-500 font-medium">
-                                  {rIdx + 1}
-                                </td>
-                                {(inputsWing[i]?.columns || []).map((col, cIdx) => {
-                                  const val = row[`col_${cIdx}`];
-                                  return (
-                                    <td key={cIdx} className="px-3 py-2 text-slate-700">
-                                      {typeof val === "boolean"
-                                        ? val
-                                          ? "✔️"
-                                          : "—"
-                                        : val || "—"}
-                                    </td>
-                                  );
-                                })}
-                              </tr>
-                            ))}
+                            {sanitizeTableData(item.tableData).map((row, rIdx) => {
+                              const safeRow = row && typeof row === "object" ? row : {};
+                              return (
+                                <tr key={rIdx} className="hover:bg-slate-50/50">
+                                  <td className="px-3 py-2 text-slate-500 font-medium">
+                                    {rIdx + 1}
+                                  </td>
+                                  {(inputsWing[i]?.columns || []).map((col, cIdx) => {
+                                    const val = safeRow[`col_${cIdx}`];
+                                    return (
+                                      <td key={cIdx} className="px-3 py-2 text-slate-700">
+                                        {typeof val === "boolean"
+                                          ? val
+                                            ? "✔️"
+                                            : "—"
+                                          : val || "—"}
+                                      </td>
+                                    );
+                                  })}
+                                </tr>
+                              );
+                            })}
                           </tbody>
                         </table>
                       ) : (
