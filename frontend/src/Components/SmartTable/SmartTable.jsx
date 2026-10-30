@@ -230,7 +230,7 @@ const SmartTable = ({
                 <Th
                   key={col.key}
                   w={col.width || "auto"}
-                  minW={col.minWidth || "90px"}
+                  minW={col.minWidth || col.width || "90px"}
                   maxW={col.maxWidth || "none"}
                   px={4}
                   py={3}
@@ -314,10 +314,12 @@ const SmartTable = ({
                       fontSize="sm"
                       color="brand.text"
                       verticalAlign="middle"
-                      maxW={col.maxWidth || col.width || "none"}
+                      w={col.width || "auto"}
+                      minW={col.minWidth || col.width || "auto"}
+                      maxW={col.maxWidth || "none"}
                       whiteSpace={col.noWrap !== false ? "nowrap" : "normal"}
-                      overflow="hidden"
-                      textOverflow="ellipsis"
+                      overflow={col.overflow || (col.render ? "visible" : "hidden")}
+                      textOverflow={col.textOverflow || "ellipsis"}
                     >
                       {col.render ? (
                         col.render(record[col.dataIndex], record, rowIndex)

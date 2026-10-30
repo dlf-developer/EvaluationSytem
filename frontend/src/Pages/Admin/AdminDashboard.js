@@ -4,7 +4,7 @@ import {
   FileOutlined,
   CheckCircleOutlined,
 } from "@ant-design/icons";
-import { Button, Space, Spin, Table } from "antd";
+import { Button, Space, Spin, Table, Tag } from "antd";
 import React, { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Link } from "react-router-dom";
@@ -43,7 +43,31 @@ function AdminDashboard() {
         title: "Access",
         dataIndex: "access",
         key: "access",
-        render: (text) => <a>{text}</a>,
+        render: (text, record) => {
+          const isDual =
+            record?.isDualRole === true ||
+            record?.isDualRole === "true" ||
+            (Array.isArray(record?.roles) &&
+              record.roles.includes("Observer") &&
+              record.roles.includes("Teacher"));
+          if (text === "Superadmin") return <Tag color="purple">Superadmin</Tag>;
+          if (isDual) return <Tag color="cyan">OT</Tag>;
+          if (text === "Teacher") return <Tag color="green">T</Tag>;
+          return <Tag color="blue">O</Tag>;
+        },
+      },
+      {
+        title: "Status",
+        dataIndex: "isActive",
+        key: "isActive",
+        render: (val) => {
+          const active = val !== false;
+          return (
+            <Tag color={active ? "success" : "error"}>
+              {active ? "Active" : "Inactive"}
+            </Tag>
+          );
+        },
       },
       {
         title: "Custom Id",

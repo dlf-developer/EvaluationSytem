@@ -56,6 +56,9 @@ const createUser = async (req, res) => {
       email,
       mobile,
       access,
+      isDualRole: Boolean(req.body.isDualRole),
+      roles: Boolean(req.body.isDualRole) ? ['Observer', 'Teacher'] : [access],
+      isActive: req.body.isActive !== undefined ? Boolean(req.body.isActive) : true,
       designation,
       coordinator,
       hod,
@@ -118,7 +121,12 @@ const GetAllTeachers = async (req, res) => {
   try {
     const users = await User.find(
       {
-        access: "Teacher",
+        isActive: { $ne: false },
+        $or: [
+          { access: "Teacher" },
+          { isDualRole: true },
+          { roles: "Teacher" },
+        ],
       },
       "-password",
     ).sort({ createdAt: -1 });
@@ -132,7 +140,11 @@ const GetAllObserver = async (req, res) => {
   try {
     const users = await User.find(
       {
-        access: "Observer",
+        isActive: { $ne: false },
+        $or: [
+          { access: "Observer" },
+          { roles: "Observer" },
+        ],
       },
       "-password",
     ).sort({ createdAt: -1 });
@@ -161,6 +173,20 @@ const updateUserById = async (req, res) => {
   try {
     const { userId } = req.params;
     const updateData = req.body;
+
+    if (updateData.isActive !== undefined) {
+      updateData.isActive = Boolean(updateData.isActive);
+    }
+
+    if (updateData.isDualRole !== undefined) {
+      updateData.isDualRole = Boolean(updateData.isDualRole);
+      const targetUser = await User.findById(userId);
+      const baseAccess = updateData.access || targetUser?.access || "Observer";
+      updateData.roles = updateData.isDualRole
+        ? ["Observer", "Teacher"]
+        : [baseAccess];
+    }
+
     const updatedUser = await User.findByIdAndUpdate(userId, updateData, {
       new: true,
       runValidators: true,

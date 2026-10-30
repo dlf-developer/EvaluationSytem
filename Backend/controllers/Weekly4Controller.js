@@ -128,11 +128,13 @@ const getClassNamesForFormData = async (FormData) => {
   return FormData; // Return updated FormData with classNames
 };
 
-// Helper function to handle initiated forms (with multiple teacher IDs)
 const handleInitiatedForms = async (teacherIds, Payload, res) => {
   try {
     const dataPush = await Promise.all(
       teacherIds.map(async (teacherId) => {
+        if (Payload?.isInitiated?.Observer && String(teacherId) === String(Payload.isInitiated.Observer)) {
+          return null;
+        }
         Payload.teacherId = teacherId;
         const teachName = await User.findById(teacherId);
         const ObserverName = await User.findById(
@@ -203,13 +205,24 @@ const createNonInitiatedForm = async (Payload, res) => {
 // Get all Weekly4Forms
 exports.getAllWeekly4Forms = async (req, res) => {
   const userId = req.user.id;
+  const activeRole = req.query.role || req.user?.activeRole || req.header('x-active-role') || req.user?.access;
   try {
     const queryFilter = req.sessionDateFilter
       ? { createdAt: req.sessionDateFilter }
       : {};
+
+    let roleQuery = {};
+    if (activeRole === "Teacher") {
+      roleQuery = { teacherId: userId };
+    } else if (activeRole === "Observer") {
+      roleQuery = { $or: [{ "isInitiated.Observer": userId }, { coordinatorID: userId }] };
+    } else if (req.user?.access !== "Superadmin") {
+      roleQuery = { $or: [{ teacherId: userId }, { "isInitiated.Observer": userId }, { coordinatorID: userId }] };
+    }
+
     // Fetch all Weekly4Forms
     const forms = await Weekly4Form.find({
-      $or: [{ teacherId: userId }, { "isInitiated.Observer": userId }],
+      ...roleQuery,
       ...queryFilter,
     })
       .sort({ createdAt: -1 })

@@ -62,6 +62,83 @@ const extractClassName = (val) => {
   return val;
 };
 
+export const UserRoleBadge = ({ user }) => {
+  if (!user || typeof user !== "object") return null;
+  const isDual =
+    user?.isDualRole === true ||
+    user?.isDualRole === "true" ||
+    user?.access === "OT" ||
+    user?.role === "OT" ||
+    (Array.isArray(user?.roles) &&
+      user.roles.includes("Observer") &&
+      user.roles.includes("Teacher"));
+  if (isDual) {
+    return (
+      <Tag
+        size="sm"
+        colorScheme="teal"
+        variant="solid"
+        fontSize="10px"
+        fontWeight="bold"
+        px={1.5}
+        py={0}
+        borderRadius="md"
+        title="Observer & Teacher (Dual Role)"
+        flexShrink={0}
+        whiteSpace="nowrap"
+        display="inline-flex"
+        alignItems="center"
+      >
+        OT
+      </Tag>
+    );
+  }
+  const access = user?.access || user?.role || user?.roleName;
+  if (access === "Teacher") {
+    return (
+      <Tag
+        size="sm"
+        colorScheme="green"
+        variant="subtle"
+        fontSize="10px"
+        fontWeight="bold"
+        px={1.5}
+        py={0}
+        borderRadius="md"
+        title="Teacher"
+        flexShrink={0}
+        whiteSpace="nowrap"
+        display="inline-flex"
+        alignItems="center"
+      >
+        T
+      </Tag>
+    );
+  }
+  if (access === "Observer") {
+    return (
+      <Tag
+        size="sm"
+        colorScheme="blue"
+        variant="subtle"
+        fontSize="10px"
+        fontWeight="bold"
+        px={1.5}
+        py={0}
+        borderRadius="md"
+        title="Observer"
+        flexShrink={0}
+        whiteSpace="nowrap"
+        display="inline-flex"
+        alignItems="center"
+      >
+        O
+      </Tag>
+    );
+  }
+  return null;
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 // 1. FORTNIGHTLY MONITOR — Admin / Observer / Teacher list view
 // ─────────────────────────────────────────────────────────────────────────────
@@ -74,17 +151,24 @@ export const getFortnightlyColumns = ({
     title: "Teacher",
     key: "teacherName",
     dataIndex: "teacherID",
-    width: "160px",
+    width: "250px",
+    minWidth: "220px",
     sortable: true,
     sorter: (a, b) =>
       (a?.teacherID?.name || a?.userId?.name || "").localeCompare(
         b?.teacherID?.name || b?.userId?.name || "",
       ),
-    render: (val, record) => (
-      <Text fontWeight="500" fontSize="sm">
-        {val?.name || record?.userId?.name || "—"}
-      </Text>
-    ),
+    render: (val, record) => {
+      const userObj = val || record?.userId;
+      return (
+        <Flex align="center" gap={1.5} wrap="nowrap">
+          <Text fontWeight="500" fontSize="sm" whiteSpace="nowrap">
+            {userObj?.name || "—"}
+          </Text>
+          <UserRoleBadge user={userObj} />
+        </Flex>
+      );
+    },
     filterConfig: {
       type: "select",
       options: uniq(data.map((r) => r?.teacherID?.name || r?.userId?.name)),
@@ -96,17 +180,24 @@ export const getFortnightlyColumns = ({
     title: "Observer",
     key: "observerName",
     dataIndex: "coordinatorID",
-    width: "160px",
+    width: "250px",
+    minWidth: "220px",
     sortable: true,
     sorter: (a, b) =>
       (a?.coordinatorID?.name || a?.userId?.name || "").localeCompare(
         b?.coordinatorID?.name || b?.userId?.name || "",
       ),
-    render: (val, record) => (
-      <Text fontSize="sm" color="gray.600">
-        {val?.name || record?.userId?.name || "—"}
-      </Text>
-    ),
+    render: (val, record) => {
+      const userObj = val || record?.userId;
+      return (
+        <Flex align="center" gap={1.5} wrap="nowrap">
+          <Text fontSize="sm" color="gray.600" whiteSpace="nowrap">
+            {userObj?.name || "—"}
+          </Text>
+          <UserRoleBadge user={userObj} />
+        </Flex>
+      );
+    },
     filterConfig: {
       type: "select",
       options: uniq(data.map((r) => r?.coordinatorID?.name || r?.userId?.name)),
@@ -285,7 +376,8 @@ export const getClassroomColumns = ({
     title: currentUserRole === UserRole[2] ? "Observer Name" : "Teacher Name",
     key: "personName",
     dataIndex: "grenralDetails",
-    width: "160px",
+    width: "250px",
+    minWidth: "220px",
     sortable: true,
     sorter: (a, b) => {
       const aName =
@@ -298,13 +390,20 @@ export const getClassroomColumns = ({
           : b?.grenralDetails?.NameoftheVisitingTeacher?.name || "";
       return aName.localeCompare(bName);
     },
-    render: (val, record) => (
-      <Text fontWeight="500" fontSize="sm">
-        {currentUserRole === UserRole[2]
-          ? record?.createdBy?.name
-          : val?.NameoftheVisitingTeacher?.name || "—"}
-      </Text>
-    ),
+    render: (val, record) => {
+      const userObj =
+        currentUserRole === UserRole[2]
+          ? record?.createdBy
+          : val?.NameoftheVisitingTeacher;
+      return (
+        <Flex align="center" gap={1.5} wrap="nowrap">
+          <Text fontWeight="500" fontSize="sm" whiteSpace="nowrap">
+            {userObj?.name || (typeof userObj === "string" ? userObj : "—")}
+          </Text>
+          <UserRoleBadge user={userObj} />
+        </Flex>
+      );
+    },
     filterConfig: {
       type: "select",
       options: uniq(
@@ -515,7 +614,8 @@ export const getNotebookColumns = ({
     title: currentUserRole === UserRole[1] ? "Teacher Name" : "Observer Name",
     key: "personName",
     dataIndex: "grenralDetails",
-    width: "160px",
+    width: "250px",
+    minWidth: "220px",
     sortable: true,
     sorter: (a, b) => {
       const aName =
@@ -528,13 +628,20 @@ export const getNotebookColumns = ({
           : b?.grenralDetails?.NameofObserver?.name || "";
       return aName.localeCompare(bName);
     },
-    render: (val, record) => (
-      <Text fontWeight="500" fontSize="sm">
-        {currentUserRole === UserRole[1]
-          ? record?.teacherID?.name || record?.createdBy?.name || "—"
-          : val?.NameofObserver?.name || "—"}
-      </Text>
-    ),
+    render: (val, record) => {
+      const userObj =
+        currentUserRole === UserRole[1]
+          ? record?.teacherID || record?.createdBy
+          : val?.NameofObserver;
+      return (
+        <Flex align="center" gap={1.5} wrap="nowrap">
+          <Text fontWeight="500" fontSize="sm" whiteSpace="nowrap">
+            {userObj?.name || (typeof userObj === "string" ? userObj : "—")}
+          </Text>
+          <UserRoleBadge user={userObj} />
+        </Flex>
+      );
+    },
     filterConfig: {
       type: "select",
       options: uniq(
@@ -824,14 +931,18 @@ export const getWeeklyColumns = ({ data = [], currentUserRole, onDelete }) => [
     title: "Teacher Name",
     key: "teacherName",
     dataIndex: "teacherId",
-    width: "160px",
+    width: "250px",
+    minWidth: "220px",
     sortable: true,
     sorter: (a, b) =>
       (a?.teacherId?.name || "").localeCompare(b?.teacherId?.name || ""),
     render: (val) => (
-      <Text fontWeight="500" fontSize="sm">
-        {val?.name || "N/A"}
-      </Text>
+      <Flex align="center" gap={1.5} wrap="nowrap">
+        <Text fontWeight="500" fontSize="sm" whiteSpace="nowrap">
+          {val?.name || "N/A"}
+        </Text>
+        <UserRoleBadge user={val} />
+      </Flex>
     ),
     filterConfig: {
       type: "select",
@@ -843,16 +954,20 @@ export const getWeeklyColumns = ({ data = [], currentUserRole, onDelete }) => [
     title: "Observer",
     key: "observerName",
     dataIndex: "isInitiated",
-    width: "160px",
+    width: "250px",
+    minWidth: "220px",
     sortable: true,
     sorter: (a, b) =>
       (a?.isInitiated?.Observer?.name || "").localeCompare(
         b?.isInitiated?.Observer?.name || "",
       ),
     render: (val) => (
-      <Text fontSize="sm" color="gray.600">
-        {val?.Observer?.name || "N/A"}
-      </Text>
+      <Flex align="center" gap={1.5} wrap="nowrap">
+        <Text fontSize="sm" color="gray.600" whiteSpace="nowrap">
+          {val?.Observer?.name || "N/A"}
+        </Text>
+        <UserRoleBadge user={val?.Observer} />
+      </Flex>
     ),
     filterConfig: {
       type: "select",
@@ -960,7 +1075,8 @@ export const getUserColumns = ({ onDelete }) => [
     title: "Name",
     key: "name",
     dataIndex: "name",
-    width: "180px",
+    width: "220px",
+    minWidth: "200px",
     sortable: true,
     filterConfig: { type: "text" },
   },
@@ -968,24 +1084,100 @@ export const getUserColumns = ({ onDelete }) => [
     title: "Access",
     key: "access",
     dataIndex: "access",
-    width: "130px",
-    render: (val) => (
-      <Tag
-        colorScheme={
-          val === "Superadmin"
-            ? "purple"
-            : val === "Observer"
-              ? "blue"
-              : "green"
-        }
-        variant="subtle"
-      >
-        {val}
-      </Tag>
-    ),
+    width: "140px",
+    render: (val, record) => {
+      const isDual =
+        record?.isDualRole === true ||
+        record?.isDualRole === "true" ||
+        (Array.isArray(record?.roles) &&
+          record.roles.includes("Observer") &&
+          record.roles.includes("Teacher"));
+      if (val === "Superadmin") {
+        return (
+          <Tag colorScheme="purple" variant="subtle" fontWeight="bold">
+            Superadmin
+          </Tag>
+        );
+      }
+      if (isDual) {
+        return (
+          <Tag
+            colorScheme="teal"
+            variant="solid"
+            fontWeight="bold"
+            title="Observer & Teacher (Dual Role)"
+          >
+            OT
+          </Tag>
+        );
+      }
+      if (val === "Teacher") {
+        return (
+          <Tag
+            colorScheme="green"
+            variant="subtle"
+            fontWeight="bold"
+            title="Teacher"
+          >
+            T
+          </Tag>
+        );
+      }
+      return (
+        <Tag
+          colorScheme="blue"
+          variant="subtle"
+          fontWeight="bold"
+          title="Observer"
+        >
+          O
+        </Tag>
+      );
+    },
     filterConfig: {
       type: "select",
-      options: ["Superadmin", "Observer", "Teacher"],
+      options: ["Superadmin", "Observer", "Teacher", "OT"],
+      matchFn: (record, vals) => {
+        const isDual =
+          record?.isDualRole === true ||
+          record?.isDualRole === "true" ||
+          (Array.isArray(record?.roles) &&
+            record.roles.includes("Observer") &&
+            record.roles.includes("Teacher"));
+        const tag = isDual ? "OT" : record?.access === "Teacher" ? "T" : record?.access === "Observer" ? "O" : record?.access;
+        return (
+          vals.includes(tag) ||
+          vals.includes(record?.access) ||
+          (isDual && vals.includes("OT"))
+        );
+      },
+    },
+  },
+  {
+    title: "Status",
+    key: "isActive",
+    dataIndex: "isActive",
+    width: "120px",
+    sortable: true,
+    render: (val) => {
+      const active = val !== false;
+      return (
+        <Tag
+          colorScheme={active ? "green" : "red"}
+          variant="subtle"
+          fontWeight="bold"
+        >
+          {active ? "Active" : "Inactive"}
+        </Tag>
+      );
+    },
+    filterConfig: {
+      type: "select",
+      options: ["Active", "Inactive"],
+      matchFn: (record, vals) => {
+        const status = record?.isActive !== false ? "Active" : "Inactive";
+        return vals.includes(status);
+      },
     },
   },
   {
@@ -1128,14 +1320,18 @@ export const getWingCoordinatorColumns = ({ data = [], onDuplicate }) => [
     title: "Teacher",
     key: "teacherName",
     dataIndex: "teacherID",
-    width: "160px",
+    width: "250px",
+    minWidth: "220px",
     sortable: true,
     sorter: (a, b) =>
       (a?.teacherID?.name || "").localeCompare(b?.teacherID?.name || ""),
     render: (val) => (
-      <Text fontWeight="500" fontSize="sm">
-        {val?.name || "—"}
-      </Text>
+      <Flex align="center" gap={1.5} wrap="nowrap">
+        <Text fontWeight="500" fontSize="sm" whiteSpace="nowrap">
+          {val?.name || "—"}
+        </Text>
+        <UserRoleBadge user={val} />
+      </Flex>
     ),
     filterConfig: {
       type: "select",
@@ -1250,17 +1446,24 @@ export const getReportForm1Columns = ({
     title: "Observer Name",
     key: "observerName",
     dataIndex: "coordinatorID",
-    width: "160px",
+    width: "250px",
+    minWidth: "220px",
     sortable: true,
     sorter: (a, b) =>
       (a?.coordinatorID?.name || a?.userId?.name || "").localeCompare(
         b?.coordinatorID?.name || b?.userId?.name || "",
       ),
-    render: (val, record) => (
-      <Text fontSize="sm" fontWeight="500">
-        {val?.name || record?.userId?.name || "N/A"}
-      </Text>
-    ),
+    render: (val, record) => {
+      const userObj = val || record?.userId;
+      return (
+        <Flex align="center" gap={1.5} wrap="nowrap">
+          <Text fontSize="sm" fontWeight="500" whiteSpace="nowrap">
+            {userObj?.name || "N/A"}
+          </Text>
+          <UserRoleBadge user={userObj} />
+        </Flex>
+      );
+    },
     filterConfig: {
       type: "select",
       options: uniq(data.map((r) => r?.coordinatorID?.name || r?.userId?.name)),
@@ -1274,15 +1477,22 @@ export const getReportForm1Columns = ({
     title: "Teacher Name",
     key: "teacherName",
     dataIndex: "teacherID",
-    width: "160px",
+    width: "250px",
+    minWidth: "220px",
     sortable: true,
     sorter: (a, b) =>
       (a?.teacherID?.name || a?.userId?.name || "").localeCompare(
         b?.teacherID?.name || b?.userId?.name || "",
       ),
-    render: (val, record) => (
-      <Text fontSize="sm">{val?.name || record?.userId?.name || "N/A"}</Text>
-    ),
+    render: (val, record) => {
+      const userObj = val || record?.userId;
+      return (
+        <Flex align="center" gap={1.5} wrap="nowrap">
+          <Text fontSize="sm" whiteSpace="nowrap">{userObj?.name || "N/A"}</Text>
+          <UserRoleBadge user={userObj} />
+        </Flex>
+      );
+    },
     filterConfig: {
       type: "select",
       options: uniq(data.map((r) => r?.teacherID?.name || r?.userId?.name)),
@@ -1444,14 +1654,18 @@ export const getReportForm2Columns = ({
     title: "Observer Name",
     key: "observerName",
     dataIndex: "createdBy",
-    width: "160px",
+    width: "250px",
+    minWidth: "220px",
     sortable: true,
     sorter: (a, b) =>
       (a?.createdBy?.name || "").localeCompare(b?.createdBy?.name || ""),
     render: (val) => (
-      <Text fontSize="sm" fontWeight="500">
-        {val?.name || "N/A"}
-      </Text>
+      <Flex align="center" gap={1.5} wrap="nowrap">
+        <Text fontSize="sm" fontWeight="500" whiteSpace="nowrap">
+          {val?.name || "N/A"}
+        </Text>
+        <UserRoleBadge user={val} />
+      </Flex>
     ),
     filterConfig: {
       type: "select",
@@ -1463,15 +1677,24 @@ export const getReportForm2Columns = ({
     title: "Teacher Name",
     key: "teacherName",
     dataIndex: "grenralDetails",
-    width: "160px",
+    width: "250px",
+    minWidth: "220px",
     sortable: true,
     sorter: (a, b) =>
       (a?.grenralDetails?.NameoftheVisitingTeacher?.name || "").localeCompare(
         b?.grenralDetails?.NameoftheVisitingTeacher?.name || "",
       ),
-    render: (val) => (
-      <Text fontSize="sm">{val?.NameoftheVisitingTeacher?.name || "N/A"}</Text>
-    ),
+    render: (val) => {
+      const userObj = val?.NameoftheVisitingTeacher;
+      return (
+        <Flex align="center" gap={1.5} wrap="nowrap">
+          <Text fontSize="sm" whiteSpace="nowrap">
+            {userObj?.name || (typeof userObj === "string" ? userObj : "N/A")}
+          </Text>
+          <UserRoleBadge user={userObj} />
+        </Flex>
+      );
+    },
     filterConfig: {
       type: "select",
       options: uniq(
@@ -1673,7 +1896,8 @@ export const getReportForm3Columns = ({
     title: "Observer Name",
     key: "observerName",
     dataIndex: "grenralDetails",
-    width: "160px",
+    width: "250px",
+    minWidth: "220px",
     sortable: true,
     sorter: (a, b) =>
       (
@@ -1683,11 +1907,17 @@ export const getReportForm3Columns = ({
       ).localeCompare(
         b?.grenralDetails?.NameofObserver?.name || b?.createdBy?.name || "",
       ),
-    render: (val, record) => (
-      <Text fontSize="sm" fontWeight="500">
-        {val?.NameofObserver?.name || record?.createdBy?.name || "N/A"}
-      </Text>
-    ),
+    render: (val, record) => {
+      const userObj = val?.NameofObserver || record?.createdBy;
+      return (
+        <Flex align="center" gap={1.5} wrap="nowrap">
+          <Text fontSize="sm" fontWeight="500" whiteSpace="nowrap">
+            {userObj?.name || (typeof userObj === "string" ? userObj : "N/A")}
+          </Text>
+          <UserRoleBadge user={userObj} />
+        </Flex>
+      );
+    },
     filterConfig: {
       type: "select",
       options: uniq(
@@ -1707,15 +1937,22 @@ export const getReportForm3Columns = ({
     title: "Teacher Name",
     key: "teacherName",
     dataIndex: "teacherID",
-    width: "160px",
+    width: "250px",
+    minWidth: "220px",
     sortable: true,
     sorter: (a, b) =>
       (a?.teacherID?.name || a?.createdBy?.name || "").localeCompare(
         b?.teacherID?.name || b?.createdBy?.name || "",
       ),
-    render: (val, record) => (
-      <Text fontSize="sm">{val?.name || record?.createdBy?.name || "N/A"}</Text>
-    ),
+    render: (val, record) => {
+      const userObj = val || record?.createdBy;
+      return (
+        <Flex align="center" gap={1.5} wrap="nowrap">
+          <Text fontSize="sm" whiteSpace="nowrap">{userObj?.name || "N/A"}</Text>
+          <UserRoleBadge user={userObj} />
+        </Flex>
+      );
+    },
     filterConfig: {
       type: "select",
       options: uniq(data.map((r) => r?.teacherID?.name || r?.createdBy?.name)),
@@ -1926,16 +2163,20 @@ export const getReportForm4Columns = ({ data = [], currentUserRole, onDelete }) 
     title: "Observer Name",
     key: "observerName",
     dataIndex: "isInitiated",
-    width: "160px",
+    width: "250px",
+    minWidth: "220px",
     sortable: true,
     sorter: (a, b) =>
       (a?.isInitiated?.Observer?.name || "").localeCompare(
         b?.isInitiated?.Observer?.name || "",
       ),
     render: (val) => (
-      <Text fontSize="sm" fontWeight="500">
-        {val?.Observer?.name || "N/A"}
-      </Text>
+      <Flex align="center" gap={1.5} wrap="nowrap">
+        <Text fontSize="sm" fontWeight="500" whiteSpace="nowrap">
+          {val?.Observer?.name || "N/A"}
+        </Text>
+        <UserRoleBadge user={val?.Observer} />
+      </Flex>
     ),
     filterConfig: {
       type: "select",
@@ -1948,11 +2189,17 @@ export const getReportForm4Columns = ({ data = [], currentUserRole, onDelete }) 
     title: "Teacher Name",
     key: "teacherName",
     dataIndex: "teacherId",
-    width: "160px",
+    width: "250px",
+    minWidth: "220px",
     sortable: true,
     sorter: (a, b) =>
       (a?.teacherId?.name || "").localeCompare(b?.teacherId?.name || ""),
-    render: (val) => <Text fontSize="sm">{val?.name || "N/A"}</Text>,
+    render: (val) => (
+      <Flex align="center" gap={1.5} wrap="nowrap">
+        <Text fontSize="sm" whiteSpace="nowrap">{val?.name || "N/A"}</Text>
+        <UserRoleBadge user={val} />
+      </Flex>
+    ),
     filterConfig: {
       type: "select",
       options: uniq(data.map((r) => r?.teacherId?.name)),
@@ -2038,17 +2285,24 @@ export const getCoScholasticColumns = ({
     title: "Observer Name",
     key: "observerName",
     dataIndex: "createdBy",
-    width: "160px",
+    width: "250px",
+    minWidth: "220px",
     sortable: true,
     sorter: (a, b) =>
       (a?.createdBy?.name || a?.userId?.name || "").localeCompare(
         b?.createdBy?.name || b?.userId?.name || "",
       ),
-    render: (val, record) => (
-      <Text fontWeight="500" fontSize="sm">
-        {val?.name || record?.userId?.name || "—"}
-      </Text>
-    ),
+    render: (val, record) => {
+      const userObj = val || record?.userId;
+      return (
+        <Flex align="center" gap={1.5} wrap="nowrap">
+          <Text fontWeight="500" fontSize="sm" whiteSpace="nowrap">
+            {userObj?.name || "—"}
+          </Text>
+          <UserRoleBadge user={userObj} />
+        </Flex>
+      );
+    },
     filterConfig: {
       type: "select",
       options: [...new Set(data.map((r) => r?.createdBy?.name || r?.userId?.name).filter(Boolean))],
@@ -2060,18 +2314,25 @@ export const getCoScholasticColumns = ({
     title: "Teacher Name",
     key: "teacherName",
     dataIndex: "grenralDetails",
-    width: "160px",
+    width: "250px",
+    minWidth: "220px",
     sortable: true,
     sorter: (a, b) => {
       const aName = a?.grenralDetails?.NameoftheVisitingTeacher?.name || a?.teacherID?.name || (typeof a?.grenralDetails?.NameoftheVisitingTeacher === "string" ? a?.grenralDetails?.NameoftheVisitingTeacher : "");
       const bName = b?.grenralDetails?.NameoftheVisitingTeacher?.name || b?.teacherID?.name || (typeof b?.grenralDetails?.NameoftheVisitingTeacher === "string" ? b?.grenralDetails?.NameoftheVisitingTeacher : "");
       return aName.localeCompare(bName);
     },
-    render: (val, record) => (
-      <Text fontSize="sm" color="gray.700">
-        {val?.NameoftheVisitingTeacher?.name || record?.teacherID?.name || (typeof val?.NameoftheVisitingTeacher === "string" ? val?.NameoftheVisitingTeacher : "—")}
-      </Text>
-    ),
+    render: (val, record) => {
+      const userObj = val?.NameoftheVisitingTeacher || record?.teacherID;
+      return (
+        <Flex align="center" gap={1.5} wrap="nowrap">
+          <Text fontSize="sm" color="gray.700" whiteSpace="nowrap">
+            {userObj?.name || (typeof userObj === "string" ? userObj : "—")}
+          </Text>
+          <UserRoleBadge user={userObj} />
+        </Flex>
+      );
+    },
     filterConfig: {
       type: "select",
       options: [...new Set(data.map((r) => r?.grenralDetails?.NameoftheVisitingTeacher?.name || r?.teacherID?.name || (typeof r?.grenralDetails?.NameoftheVisitingTeacher === "string" ? r?.grenralDetails?.NameoftheVisitingTeacher : null)).filter(Boolean))],

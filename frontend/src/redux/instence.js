@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { baseURL } from '../config/config';
-import { getToken } from '../Utils/auth';
+import { getToken, getActiveRole } from '../Utils/auth';
 import { frontendLogger } from '../Utils/logger';
 
 // Helper to attach logging interceptors to an axios instance
@@ -31,6 +31,26 @@ function attachLoggingInterceptors(instance) {
   return instance;
 }
 
+function attachAuthInterceptors(instance) {
+  instance.interceptors.request.use(
+    (config) => {
+      const currentToken = getToken();
+      if (currentToken) {
+        config.headers = config.headers || {};
+        config.headers['Authorization'] = `Bearer ${currentToken}`;
+      }
+      const activeRole = getActiveRole();
+      if (activeRole) {
+        config.headers = config.headers || {};
+        config.headers['x-active-role'] = activeRole;
+      }
+      return config;
+    },
+    (error) => Promise.reject(error)
+  );
+  return instance;
+}
+
 export const axiosInstance = attachLoggingInterceptors(
   axios.create({
     baseURL: baseURL,
@@ -40,25 +60,25 @@ export const axiosInstance = attachLoggingInterceptors(
   })
 );
 
-const token = getToken();
-
-export const axiosInstanceToken = attachLoggingInterceptors(
-  axios.create({
-    baseURL: baseURL,
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
-  })
+export const axiosInstanceToken = attachAuthInterceptors(
+  attachLoggingInterceptors(
+    axios.create({
+      baseURL: baseURL,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+  )
 );
 
-export const axiosInstanceTokenFormData = attachLoggingInterceptors(
-  axios.create({
-    baseURL: baseURL,
-    headers: {
-      'Content-Type': 'multipart/form-data',
-      'Authorization': `Bearer ${token}`,
-    },
-  })
+export const axiosInstanceTokenFormData = attachAuthInterceptors(
+  attachLoggingInterceptors(
+    axios.create({
+      baseURL: baseURL,
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    })
+  )
 );
 

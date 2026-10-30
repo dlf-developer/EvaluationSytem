@@ -2,7 +2,7 @@ import { Button, Form, message, Select, Spin, Input } from "antd";
 import React, { useEffect, useState } from "react";
 
 import { useDispatch, useSelector } from "react-redux";
-import { getUserId } from "../../Utils/auth";
+import { getUserId, getUserRoleTag } from "../../Utils/auth";
 import { useNavigate } from "react-router-dom";
 import { GetTeacherList, getCreateClassSection } from "../../redux/userSlice";
 import { UserRole } from "../../config/config";
@@ -152,9 +152,9 @@ function NoteBookInisiate() {
                       allowClear
                       showSearch
                       placeholder="Select a Teacher"
-                      options={TeachersList?.map((item) => ({
+                      options={TeachersList?.filter((t) => t._id !== getUserId()?.id && t?.isActive !== false)?.map((item) => ({
                         value: item._id,
-                        label: item.name,
+                        label: `${item.name} [${getUserRoleTag(item)}]`,
                       }))}
                       filterOption={(input, option) =>
                         option.label.toLowerCase().includes(input.toLowerCase())
@@ -305,7 +305,7 @@ function NoteBookInisiate() {
                       placeholder="Select a Coordinator"
                       options={ObserverList?.map((item) => ({
                         value: item._id,
-                        label: item.name,
+                        label: `${item.name} [${getUserRoleTag(item)}]`,
                       }))}
                       filterOption={(input, option) =>
                         option.label.toLowerCase().includes(input.toLowerCase())
@@ -325,9 +325,9 @@ function NoteBookInisiate() {
                     <Select
                       showSearch
                       placeholder="Select a Teacher"
-                      options={TeachersList?.map((item) => ({
+                      options={TeachersList?.filter((t) => t._id !== getUserId()?.id)?.map((item) => ({
                         value: item._id,
-                        label: item.name,
+                        label: `${item.name} [${getUserRoleTag(item)}]`,
                       }))}
                       filterOption={(input, option) =>
                         option.label.toLowerCase().includes(input.toLowerCase())

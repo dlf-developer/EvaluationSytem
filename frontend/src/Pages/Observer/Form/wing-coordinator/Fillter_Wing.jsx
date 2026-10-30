@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { getCreateClassSection, getFilteredData, GetObserverList } from '../../../../redux/userSlice';
 import dayjs from 'dayjs';  // Import Day.js
 import { SearchOutlined, ClearOutlined } from '@ant-design/icons';
+import { getUserRoleTag } from '../../../../Utils/auth';
 const { RangePicker } = DatePicker;
 
 const FORM_TYPE_OPTIONS = [
@@ -113,10 +114,14 @@ function Fillter_Wing({ saveData, data }) {
 
     const observerOpts = [
         { value: 'ALL', label: 'Select All Observers' },
-        ...(GetObserverLists?.map((item) => ({
-            value: item?._id || "",
-            label: item?.name || "",
-        })) || [])
+        ...(GetObserverLists?.filter((item) => item?.isActive !== false)?.map((item) => {
+            const roleTag = getUserRoleTag(item);
+            const tagStr = roleTag ? ` [${roleTag}]` : '';
+            return {
+                value: item?._id || "",
+                label: `${item?.name || ""}${tagStr}`,
+            };
+        }) || [])
     ];
 
     const handleSelectAll = (selectedValues, fieldName, allValuesOptions) => {

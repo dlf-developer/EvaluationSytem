@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { getCreateClassSection, GetObserverList, GetTeacherList } from "../redux/userSlice";
 import { CreateFormOne, GetFormsOne } from "../redux/Form/fortnightlySlice";
-import { getUserId } from "../Utils/auth";
+import { getUserId, getUserRoleTag } from "../Utils/auth";
 import { UserRole } from "../config/config";
 import { CreateActivityApi } from "../redux/Activity/activitySlice";
 
@@ -337,9 +337,9 @@ function BasicDetailsForm() {
                     <Select
                       showSearch
                       placeholder="Select a Coordinator"
-                      options={ObserverList?.filter((item) => item.access === "Observer")?.map((item) => ({
+                      options={ObserverList?.filter((t) => t._id !== getUserId()?.id && t?.isActive !== false)?.map((item) => ({
                         value: item._id,
-                        label: item.name,
+                        label: `${item.name} [${getUserRoleTag(item)}]`,
                       }))}
                       filterOption={(input, option) =>
                         option.label.toLowerCase().includes(input.toLowerCase())
@@ -359,9 +359,9 @@ function BasicDetailsForm() {
                     <Select
                       showSearch
                       placeholder="Select a Teacher"
-                      options={TeachersList?.filter((item) => item.access === "Teacher")?.map((item) => ({
+                      options={TeachersList?.filter((t) => (t.access === "Teacher" || t.isDualRole) && t._id !== getUserId()?.id && t?.isActive !== false)?.map((item) => ({
                         value: item._id,
-                        label: item.name,
+                        label: `${item.name} [${getUserRoleTag(item)}]`,
                       }))}
                       filterOption={(input, option) =>
                         option.label.toLowerCase().includes(input.toLowerCase())

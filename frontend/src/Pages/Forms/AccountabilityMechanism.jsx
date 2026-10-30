@@ -25,6 +25,7 @@ import {
 import { message, Modal } from "antd";
 
 import SmartTable from "../../Components/SmartTable";
+import { UserRoleBadge } from "../../Components/SmartTable/tableColumns";
 
 function AccountabilityMechanism() {
   const navigate = useNavigate();
@@ -123,7 +124,8 @@ function AccountabilityMechanism() {
       title: "OBSERVER",
       dataIndex: "userId",
       key: "userId",
-      width: 180,
+      width: "250px",
+      minWidth: "220px",
       filterConfig: {
         type: "select",
         options: observerFilters,
@@ -131,21 +133,18 @@ function AccountabilityMechanism() {
       },
       render: (user) => {
         const name = user?.name || "—";
-        const isLong = name.length > 20;
-        const displayVal = isLong ? `${name.slice(0, 20)}...` : name;
         return (
-          <Tooltip label={name} placement="topLeft" hasArrow isDisabled={!isLong}>
+          <Flex align="center" gap={1.5} wrap="nowrap">
             <Text
               fontSize="sm"
               fontWeight="500"
               color="gray.600"
-              isTruncated
-              maxW="180px"
-              title={name}
+              whiteSpace="nowrap"
             >
-              {displayVal}
+              {name}
             </Text>
-          </Tooltip>
+            <UserRoleBadge user={user} />
+          </Flex>
         );
       },
     },

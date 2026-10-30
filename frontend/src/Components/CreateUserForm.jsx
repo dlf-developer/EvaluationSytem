@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Form, Input, Select, Row, Col, Button, message } from "antd";
+import { Form, Input, Select, Row, Col, Button, Switch, message } from "antd";
 import { useDispatch } from "react-redux";
 import { CreateUserList, GetUserList } from "../redux/userSlice";
 import Password from "antd/es/input/Password";
@@ -120,10 +120,10 @@ function CreateUserForm({ onOk, onCancel, Payload }) {
         </Col>
       </Row>
       <Row justify="start" gutter={16}>
-      <Col span={12}>
+        <Col span={12}>
           <Form.Item
             name="access"
-            label="Access"
+            label="Access Level"
             rules={[{ required: true, message: "Please select an access level" }]}
           >
             <Select>
@@ -133,7 +133,37 @@ function CreateUserForm({ onOk, onCancel, Payload }) {
             </Select>
           </Form.Item>
         </Col>
-        </Row>
+        <Col span={12}>
+          <Form.Item
+            name="isDualRole"
+            label="Allow Dual Role (OT)"
+            valuePropName="checked"
+            initialValue={false}
+            tooltip="Enable if this user is a senior teacher who can both Observe and be Evaluated as a Teacher"
+          >
+            <Switch
+              checkedChildren="OT Enabled"
+              unCheckedChildren="Disabled"
+            />
+          </Form.Item>
+        </Col>
+      </Row>
+      <Row justify="start" gutter={16}>
+        <Col span={12}>
+          <Form.Item
+            name="isActive"
+            label="Account Status"
+            valuePropName="checked"
+            initialValue={true}
+            tooltip="Active users can log in and participate in evaluations. Inactive users are blocked and hidden."
+          >
+            <Switch
+              checkedChildren="Active"
+              unCheckedChildren="Inactive"
+            />
+          </Form.Item>
+        </Col>
+      </Row>
       <Row justify="end" gutter={16}>
         <Col>
           <Button onClick={onCancel} disabled={isLoading}>

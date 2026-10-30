@@ -11,7 +11,7 @@ import {
 import { useParams, useSearchParams } from "react-router-dom";
 import { Form, Select, Button, Input, Radio, message, Space, Card, Tag, Divider, Spin } from "antd";
 import { Box, Flex, Heading, Text, SimpleGrid } from "@chakra-ui/react";
-import { getUserId } from "../../Utils/auth";
+import { getUserId, getUserRoleTag } from "../../Utils/auth";
 import "./Weekly4Form.css";
 import { UserRole } from "../../config/config";
 import TextArea from "antd/es/input/TextArea";
@@ -586,9 +586,9 @@ function Weekly4Form() {
                         allowClear
                         showSearch
                         placeholder="Select Teacher(s)"
-                        options={GetTeachersLists?.filter(Boolean).map((item) => ({
+                        options={GetTeachersLists?.filter((t) => t?._id !== getUserId()?.id && t?.isActive !== false)?.map((item) => ({
                           value: item?._id,
-                          label: item?.name || "Teacher",
+                          label: `${item?.name || "Teacher"} [${getUserRoleTag(item)}]`,
                         }))}
                         filterOption={(input, option) =>
                           (option?.label || "")
@@ -661,9 +661,9 @@ function Weekly4Form() {
                           value={ObsereverId}
                           placeholder="Select Observer"
                           onChange={(value) => setObsereverId(value)}
-                          options={GetObserverLists?.filter(Boolean).map((item) => ({
+                          options={GetObserverLists?.filter((t) => t?._id !== getUserId()?.id && t?.isActive !== false)?.map((item) => ({
                             value: item?._id,
-                            label: item?.name || "Observer",
+                            label: `${item?.name || "Observer"} [${getUserRoleTag(item)}]`,
                           }))}
                           filterOption={(input, option) =>
                             (option?.label || "")

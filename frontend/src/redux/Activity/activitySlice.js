@@ -20,10 +20,11 @@ export const CreateActivityApi = createAsyncThunk('CreateActivityApi',async (pay
   return response.data;
 })
 
-export const getSingleActivityApi = createAsyncThunk('getSingleActivityApi',async (payload) => {
-  const response = await axiosInstanceToken.get(`activity/get/${payload?.id}?fromNo=${payload?.fromNo}`);
+export const getSingleActivityApi = createAsyncThunk('getSingleActivityApi', async (payload) => {
+  const roleParam = payload?.role ? `&role=${payload.role}` : '';
+  const response = await axiosInstanceToken.get(`activity/get/${payload?.id}?fromNo=${payload?.fromNo}${roleParam}`);
   return response.data;
-})
+});
 
 
 

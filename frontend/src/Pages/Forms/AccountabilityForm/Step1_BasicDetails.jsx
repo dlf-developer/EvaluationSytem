@@ -5,6 +5,7 @@ import { GetTeacherList, calculateTeacherScores } from "../../../redux/userSlice
 import { SyncOutlined } from "@ant-design/icons";
 import { Box, Text } from "@chakra-ui/react";
 import dayjs from "dayjs";
+import { getUserRoleTag } from "../../../Utils/auth";
 
 const { RangePicker } = DatePicker;
 
@@ -21,10 +22,12 @@ function Step1_BasicDetails({ form, formValues, setFormValues, id }) {
     ? GetTeachersLists 
     : GetTeachersLists?.data || [];
 
-  const teacherOptions = teachersArray.map((t) => ({
-    label: t.name,
-    value: t._id,
-  }));
+  const teacherOptions = teachersArray
+    .filter((t) => t?.isActive !== false)
+    .map((t) => ({
+      label: `${t.name} [${getUserRoleTag(t)}]`,
+      value: t._id,
+    }));
 
   const handleCalculate = async () => {
     const fromDate = form.getFieldValue("fromDate");

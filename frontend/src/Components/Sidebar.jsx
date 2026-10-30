@@ -290,7 +290,7 @@ function Sidebar({ collapsed, onCloseDrawer }) {
 
       {/* ── User Actions ─────────────────────────────────────── */}
       <Box px={collapsed ? 0 : 1} pb={2}>
-        <Divider mb={5} borderColor="gray.100" />
+        <Divider mb={4} borderColor="gray.100" />
 
         {!collapsed ? (
           <VStack spacing={3} align="stretch">

@@ -8,6 +8,9 @@ const userSchema = new mongoose.Schema({
     email: { type: String, required: true, unique: true },
     mobile: { type: String },
     access: { type: String, enum: ['Superadmin', 'Observer', 'Teacher'], required: true },
+    isDualRole: { type: Boolean, default: false },
+    roles: { type: [String], default: [] },
+    isActive: { type: Boolean, default: true },
     designation: { type: String },
     coordinator: { type: String},
     hod: { type: String},
@@ -23,6 +26,11 @@ const userSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 userSchema.pre('save', async function (next) {
+    if (this.isDualRole) {
+        this.roles = ['Observer', 'Teacher'];
+    } else if (!this.roles || this.roles.length === 0) {
+        this.roles = [this.access];
+    }
     if (!this.isModified('password')) return next();
     this.password = await bcrypt.hash(this.password, 10);
     next();

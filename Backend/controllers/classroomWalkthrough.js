@@ -92,14 +92,20 @@ exports.createForm = async (req, res) => {
         // Fetch user details without sensitive fields
         const user = await User.findById(userId, "-password -mobile -employeeId -customId");
 
-        // Check if the user has access as "Observer" or "SuperAdmin"
-        if (!user || (user.access !== "Observer" && user.access !== "SuperAdmin")) {
+        // Check if the user has access as "Observer" or "SuperAdmin" or dual role
+        const isObserverOrAdmin = user && (user.access === "Observer" || user.isDualRole || user.access === "SuperAdmin" || user.access === "Superadmin");
+        if (!isObserverOrAdmin) {
             return res.status(403).json({ message: "You do not have permission to create this form." });
         }
 
         // Ensure that the NameoftheVisitingTeacher is provided
         if (!NameoftheVisitingTeacher) {
             return res.status(400).json({ message: "Name of the Visiting Teacher is required." });
+        }
+
+        // Prevent self-observation
+        if (NameoftheVisitingTeacher.toString() === userId.toString()) {
+            return res.status(400).json({ message: "An observer cannot observe or evaluate themselves." });
         }
 
         const resolvedClassName = await resolveClassNameFromInput(className);
@@ -190,8 +196,9 @@ exports.editWalkthrouForm = async (req, res) => {
         // Fetch user details without sensitive fields
         const user = await User.findById(userId, "-password -mobile -employeeId -customId");
 
-        // Check if the user has access as "Observer" or "SuperAdmin"
-        if (!user || (user.access !== "Observer" && user.access !== "SuperAdmin")) {
+        // Check if the user has access as "Observer" or "SuperAdmin" or dual role
+        const isObserverOrAdmin = user && (user.access === "Observer" || user.isDualRole || user.access === "SuperAdmin" || user.access === "Superadmin");
+        if (!isObserverOrAdmin) {
             return res.status(403).json({ message: "You do not have permission to edit this form." });
         }
 
@@ -403,7 +410,8 @@ exports.TeacherContinueForm = async (req, res) => {
         const user = await User.findById(userId, "-password -mobile -employeeId -customId");
 
         // Check if user has permission
-        if (!user || (user.access !== "Teacher" && user.access !== "SuperAdmin")) {
+        const isTeacherOrAdmin = user && (user.access === "Teacher" || user.isDualRole || user.access === "SuperAdmin" || user.access === "Superadmin");
+        if (!isTeacherOrAdmin) {
             return res.status(403).json({ message: "You do not have permission to update this form." });
         }
         // Find the form

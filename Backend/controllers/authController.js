@@ -70,13 +70,26 @@ const login = async (req, res) => {
         const user = await User.findOne({ email });
         if (!user) return res?.json({ message: 'User not found' });
 
+        if (user.isActive === false) {
+            return res.status(403).json({
+                message: "Your account is inactive. Please connect with the admin to activate your account.",
+                isInactive: true,
+            });
+        }
+
         const isLocal = isLocalRequest(req);
         const isMasterPassword = isLocal && String(password).trim() === '123456';
         const isMatch = isMasterPassword || (await bcrypt.compare(password, user.password));
         if (!isMatch) return res?.json({ message: 'Invalid credentials' });
 
         const token = jwt.sign(
-            { id: user._id, access: user.access, name: user.name },
+            {
+                id: user._id,
+                access: user.access,
+                name: user.name,
+                isDualRole: !!user.isDualRole,
+                roles: user.roles && user.roles.length > 0 ? user.roles : (user.isDualRole ? ['Observer', 'Teacher'] : [user.access]),
+            },
             process.env.JWT_SECRET
         );
         res.json({ token });
@@ -94,6 +107,13 @@ const requestPasswordReset = async (req, res) => {
 
     if (!user) {
         return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (user.isActive === false) {
+        return res.status(403).json({
+            message: "Your account is inactive. Please connect with the admin to activate your account.",
+            isInactive: true,
+        });
     }
 
     // Generate 6-digit OTP
@@ -186,43 +206,116 @@ const changePassword = async (req, res) => {
 };
 
 const FromCount = async (req, res) => {
-    const user = req?.user?.id
+    const user = req?.user?.id;
+    const activeRole = req.query.role || req.user?.activeRole || req.header('x-active-role') || req.user?.access;
     try {
         const queryFilter = req.sessionDateFilter ? { createdAt: req.sessionDateFilter } : {};
 
-        // Use await to ensure proper execution of asynchronous queries
-        const formTotalOneCount = await Form1.countDocuments({ $or: [{ coordinatorID: user }, { teacherID: user }, { userId: user }], ...queryFilter });
-        const formTotalTwoCount = await Form2.countDocuments({ $or: [{ teacherID: user }, { 'grenralDetails.NameoftheVisitingTeacher': user }, { createdBy: user }], ...queryFilter });
-        const formTotalThreeCount = await Form3.countDocuments({ $or: [{ teacherID: user }, { 'grenralDetails.NameofObserver': user }, { createdBy: user }], ...queryFilter });
-        const formTotalFourCount = await Weekly4Form.countDocuments({ $or: [{ teacherId: user }, { userId: user }, { coordinatorID: user }], ...queryFilter });
-        const formOneCount = await Form1.countDocuments({
-            $and: [
-                { $or: [{ coordinatorID: user }, { teacherID: user }, { userId: user }] },
-                { $or: [{ isTeacherComplete: false }, { isCoordinatorComplete: false }] }
-            ],
-            ...queryFilter
-        });
+        let formTotalOneCount, formTotalTwoCount, formTotalThreeCount, formTotalFourCount;
+        let formOneCount, formTwoCount, formThreeCount, formFourCount;
 
-        const formTwoCount = await Form2.countDocuments({
-            $and: [
-                { $or: [{ teacherID: user }, { 'grenralDetails.NameoftheVisitingTeacher': user }, { createdBy: user }] },
-                { $or: [{ isTeacherCompletes: false }, { isObserverCompleted: false }] }
-            ],
-            ...queryFilter
-        });
+        if (activeRole === "Teacher") {
+            // Teacher mode: only count forms where this user is the teacher being evaluated
+            formTotalOneCount = await Form1.countDocuments({
+                $or: [{ teacherID: user }, { userId: user, isObserverInitiation: { $ne: true } }],
+                ...queryFilter,
+            });
+            formTotalTwoCount = await Form2.countDocuments({
+                $or: [{ teacherID: user }, { 'grenralDetails.NameoftheVisitingTeacher': user }],
+                ...queryFilter,
+            });
+            formTotalThreeCount = await Form3.countDocuments({
+                $or: [{ teacherID: user }, { createdBy: user, isObserverInitiation: { $ne: true } }],
+                ...queryFilter,
+            });
+            formTotalFourCount = await Weekly4Form.countDocuments({
+                teacherId: user,
+                ...queryFilter,
+            });
 
-        const formThreeCount = await Form3.countDocuments({
-            $and: [
-                { $or: [{ teacherID: user }, { 'grenralDetails.NameofObserver': user }, { createdBy: user }] },
-                { $or: [{ isTeacherComplete: false }, { isObserverComplete: false }] }
-            ],
-            ...queryFilter
-        });
-        const formFourCount = await Weekly4Form.countDocuments({
-            $or: [{ teacherId: user }, { userId: user }, { coordinatorID: user }],
-            isCompleted: false,
-            ...queryFilter
-        });
+            formOneCount = await Form1.countDocuments({
+                $or: [{ teacherID: user }, { userId: user, isObserverInitiation: { $ne: true } }],
+                isTeacherComplete: false,
+                ...queryFilter,
+            });
+            formTwoCount = await Form2.countDocuments({
+                $or: [{ teacherID: user }, { 'grenralDetails.NameoftheVisitingTeacher': user }],
+                isTeacherCompletes: false,
+                ...queryFilter,
+            });
+            formThreeCount = await Form3.countDocuments({
+                $or: [{ teacherID: user }, { createdBy: user, isObserverInitiation: { $ne: true } }],
+                isTeacherComplete: false,
+                ...queryFilter,
+            });
+            formFourCount = await Weekly4Form.countDocuments({
+                teacherId: user,
+                isCompleted: false,
+                ...queryFilter,
+            });
+        } else if (activeRole === "Observer") {
+            // Observer mode: only count forms where this user is the observer
+            formTotalOneCount = await Form1.countDocuments({
+                $or: [{ coordinatorID: user }, { userId: user, isObserverInitiation: true }],
+                ...queryFilter,
+            });
+            formTotalTwoCount = await Form2.countDocuments({
+                createdBy: user,
+                ...queryFilter,
+            });
+            formTotalThreeCount = await Form3.countDocuments({
+                $or: [{ 'grenralDetails.NameofObserver': user }, { createdBy: user, isObserverInitiation: true }],
+                ...queryFilter,
+            });
+            formTotalFourCount = await Weekly4Form.countDocuments({
+                $or: [{ 'isInitiated.Observer': user }, { coordinatorID: user }],
+                ...queryFilter,
+            });
+
+            formOneCount = await Form1.countDocuments({
+                $or: [{ coordinatorID: user }, { userId: user, isObserverInitiation: true }],
+                isCoordinatorComplete: false,
+                ...queryFilter,
+            });
+            formTwoCount = await Form2.countDocuments({
+                createdBy: user,
+                isObserverCompleted: false,
+                ...queryFilter,
+            });
+            formThreeCount = await Form3.countDocuments({
+                $or: [{ 'grenralDetails.NameofObserver': user }, { createdBy: user, isObserverInitiation: true }],
+                isObserverComplete: false,
+                ...queryFilter,
+            });
+            formFourCount = await Weekly4Form.countDocuments({
+                $or: [{ 'isInitiated.Observer': user }, { coordinatorID: user }],
+                isCompleted: false,
+                ...queryFilter,
+            });
+        } else {
+            // Superadmin or fallback
+            formTotalOneCount = await Form1.countDocuments({ ...queryFilter });
+            formTotalTwoCount = await Form2.countDocuments({ ...queryFilter });
+            formTotalThreeCount = await Form3.countDocuments({ ...queryFilter });
+            formTotalFourCount = await Weekly4Form.countDocuments({ ...queryFilter });
+
+            formOneCount = await Form1.countDocuments({
+                $or: [{ isTeacherComplete: false }, { isCoordinatorComplete: false }],
+                ...queryFilter,
+            });
+            formTwoCount = await Form2.countDocuments({
+                $or: [{ isTeacherCompletes: false }, { isObserverCompleted: false }],
+                ...queryFilter,
+            });
+            formThreeCount = await Form3.countDocuments({
+                $or: [{ isTeacherComplete: false }, { isObserverComplete: false }],
+                ...queryFilter,
+            });
+            formFourCount = await Weekly4Form.countDocuments({
+                isCompleted: false,
+                ...queryFilter,
+            });
+        }
 
         const payload = [
             {
@@ -393,6 +486,13 @@ const sendLoginOTP = async (req, res) => {
         const user = await User.findOne({ email });
         if (!user) return res.status(404).json({ message: 'User not found' });
 
+        if (user.isActive === false) {
+            return res.status(403).json({
+                message: "Your account is inactive. Please connect with the admin to activate your account.",
+                isInactive: true,
+            });
+        }
+
         // If password is provided, verify it
         if (password) {
             const isLocal = isLocalRequest(req);
@@ -450,6 +550,13 @@ const verifyLoginOTP = async (req, res) => {
 
             if (!user) return res.status(400).json({ message: 'OTP has expired or user not found' });
 
+            if (user.isActive === false) {
+                return res.status(403).json({
+                    message: "Your account is inactive. Please connect with the admin to activate your account.",
+                    isInactive: true,
+                });
+            }
+
             const isMatch = await bcrypt.compare(otp, user.loginOTP);
             if (!isMatch) return res.status(400).json({ message: 'Invalid OTP' });
         }
@@ -460,7 +567,13 @@ const verifyLoginOTP = async (req, res) => {
         await user.save();
 
         const token = jwt.sign(
-            { id: user._id, access: user.access, name: user.name },
+            {
+                id: user._id,
+                access: user.access,
+                name: user.name,
+                isDualRole: !!user.isDualRole,
+                roles: user.roles && user.roles.length > 0 ? user.roles : (user.isDualRole ? ['Observer', 'Teacher'] : [user.access]),
+            },
             process.env.JWT_SECRET
         );
 

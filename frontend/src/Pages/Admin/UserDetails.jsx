@@ -10,6 +10,7 @@ import {
   Col,
   Button as AntdButton,
   Input,
+  Select as AntdSelect,
   message,
 } from "antd";
 import { UserRole } from "../../config/config";
@@ -26,6 +27,7 @@ import {
   Stack,
   Divider,
   HStack,
+  Tag,
 } from "@chakra-ui/react";
 import {
   ArrowLeftOutlined,
@@ -324,21 +326,40 @@ const UserDetails = () => {
                 {userData.email} | {userData.employeeId}
               </Text>
             </Box>
-            <Badge
-              colorScheme={
-                userData.access === "Superadmin"
-                  ? "purple"
+            <HStack spacing={2}>
+              <Badge
+                colorScheme={userData.isActive !== false ? "green" : "red"}
+                px={3}
+                py={1}
+                borderRadius="full"
+                fontSize="sm"
+              >
+                {userData.isActive !== false ? "Active" : "Inactive"}
+              </Badge>
+              <Badge
+                colorScheme={
+                  userData.access === "Superadmin"
+                    ? "purple"
+                    : userData.isDualRole
+                      ? "teal"
+                      : userData.access === "Teacher"
+                        ? "green"
+                        : "blue"
+                }
+                px={3}
+                py={1}
+                borderRadius="full"
+                fontSize="sm"
+              >
+                {userData.isDualRole
+                  ? "OT (Observer & Teacher)"
                   : userData.access === "Teacher"
-                    ? "green"
-                    : "blue"
-              }
-              px={3}
-              py={1}
-              borderRadius="full"
-              fontSize="sm"
-            >
-              {userData.access}
-            </Badge>
+                    ? "T (Teacher)"
+                    : userData.access === "Observer"
+                      ? "O (Observer)"
+                      : userData.access}
+              </Badge>
+            </HStack>
           </Flex>
 
           <Divider mb={8} />
@@ -402,11 +423,67 @@ const UserDetails = () => {
               )}
             </Descriptions.Item>
             <Descriptions.Item label="Access Level">
-              {renderEditableField(
-                "Access Level",
-                userData.access,
-                "access",
-                {},
+              {editStatus ? (
+                <AntdSelect
+                  value={modifiedData.access || userData.access}
+                  onChange={(val) => handleFieldChange("access", val, {})}
+                  style={{ width: "100%" }}
+                  options={[
+                    { value: "Observer", label: "Observer" },
+                    { value: "Teacher", label: "Teacher" },
+                    { value: "Superadmin", label: "Superadmin" },
+                  ]}
+                />
+              ) : (
+                userData.access || "N/A"
+              )}
+            </Descriptions.Item>
+            <Descriptions.Item label="Dual Role (OT)">
+              {editStatus ? (
+                <AntdSelect
+                  value={
+                    modifiedData.isDualRole !== undefined
+                      ? modifiedData.isDualRole
+                      : Boolean(userData.isDualRole)
+                  }
+                  onChange={(val) => handleFieldChange("isDualRole", val, {})}
+                  style={{ width: "100%" }}
+                  options={[
+                    { value: true, label: "Enabled (OT - Observer & Teacher)" },
+                    { value: false, label: "Disabled (Single Role)" },
+                  ]}
+                />
+              ) : (
+                <Tag
+                  colorScheme={userData.isDualRole ? "teal" : "gray"}
+                  variant={userData.isDualRole ? "solid" : "subtle"}
+                >
+                  {userData.isDualRole ? "OT Enabled" : "Disabled"}
+                </Tag>
+              )}
+            </Descriptions.Item>
+            <Descriptions.Item label="Account Status">
+              {editStatus ? (
+                <AntdSelect
+                  value={
+                    modifiedData.isActive !== undefined
+                      ? modifiedData.isActive
+                      : userData.isActive !== false
+                  }
+                  onChange={(val) => handleFieldChange("isActive", val, {})}
+                  style={{ width: "100%" }}
+                  options={[
+                    { value: true, label: "Active (Allowed to login & appear in system)" },
+                    { value: false, label: "Inactive (Blocked from login & hidden from tables)" },
+                  ]}
+                />
+              ) : (
+                <Tag
+                  colorScheme={userData.isActive !== false ? "green" : "red"}
+                  variant={userData.isActive !== false ? "subtle" : "solid"}
+                >
+                  {userData.isActive !== false ? "Active" : "Inactive"}
+                </Tag>
               )}
             </Descriptions.Item>
             <Descriptions.Item label="Designation">

@@ -21,11 +21,75 @@ export const getToken = () => {
   return null;
 };
 
+export const getUserRoleTag = (user) => {
+  if (!user) return "";
+  const isDual =
+    user.isDualRole === true ||
+    user.isDualRole === "true" ||
+    (Array.isArray(user.roles) &&
+      user.roles.includes("Observer") &&
+      user.roles.includes("Teacher"));
+  if (isDual) return "OT";
+  if (user.access === "Teacher") return "T";
+  if (user.access === "Observer") return "O";
+  if (user.access === "Superadmin") return "Superadmin";
+  return user.access || "";
+};
+
+export const getActiveRole = () => {
+  if (typeof window !== "undefined") {
+    const token = getToken();
+    if (!token) return null;
+    try {
+      const decoded = jwtDecode(token);
+      const isDual =
+        decoded?.isDualRole ||
+        (Array.isArray(decoded?.roles) && decoded.roles.length > 1);
+      const saved = localStorage.getItem("activeRole");
+      if (isDual && saved && ["Observer", "Teacher"].includes(saved)) {
+        return saved;
+      }
+      return decoded?.access || null;
+    } catch (e) {
+      return null;
+    }
+  }
+  return null;
+};
+
+export const switchActiveRole = (newRole) => {
+  if (typeof window !== "undefined") {
+    if (["Observer", "Teacher"].includes(newRole)) {
+      localStorage.setItem("activeRole", newRole);
+      window.location.replace("/dashboard");
+    }
+  }
+};
+
 export const getUserId = () => {
   const token = getToken();
   if (!token) return null;
   try {
-    return jwtDecode(token);
+    const decoded = jwtDecode(token);
+    const isDual =
+      decoded?.isDualRole ||
+      (Array.isArray(decoded?.roles) &&
+        decoded.roles.includes("Observer") &&
+        decoded.roles.includes("Teacher"));
+    decoded.isDualRole = !!isDual;
+    decoded.primaryAccess = decoded.access;
+    if (isDual && typeof window !== "undefined") {
+      const saved = localStorage.getItem("activeRole");
+      if (saved && ["Observer", "Teacher"].includes(saved)) {
+        decoded.access = saved;
+        decoded.activeRole = saved;
+      } else {
+        decoded.activeRole = decoded.access;
+      }
+    } else {
+      decoded.activeRole = decoded.access;
+    }
+    return decoded;
   } catch (e) {
     return null;
   }

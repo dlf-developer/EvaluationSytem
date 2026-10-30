@@ -144,28 +144,34 @@ exports.FormInitiation = async (req, res) => {
   }
 };
 
-// Get Forms for User
+// Get Forms for User (Teacher View)
 exports.getUserForm = async (req, res) => {
   const userId = req?.user?.id;
 
   try {
     const queryFilter = req.sessionDateFilter ? { createdAt: req.sessionDateFilter } : {};
 
-    const initiatedForms = await Form1.find({ userId, ...queryFilter }).sort({ date: -1 }).populate(
-      "teacherID coordinatorID userId",
-    );
-    const assignedForms = await Form1.find({ teacherID: userId, ...queryFilter }).sort({ date: -1 }).populate(
-      "teacherID coordinatorID userId",
-    );
+    // In teacher view, only fetch forms where user is the teacher or teacher-initiated
+    const assignedForms = await Form1.find({ teacherID: userId, ...queryFilter })
+      .sort({ date: -1 })
+      .populate("teacherID coordinatorID userId");
+
+    const selfInitiatedForms = await Form1.find({
+      userId,
+      isObserverInitiation: { $ne: true },
+      ...queryFilter,
+    })
+      .sort({ date: -1 })
+      .populate("teacherID coordinatorID userId");
 
     // Combine both arrays while avoiding duplicates, then re-sort by date desc
     const combinedForms = [
-      ...initiatedForms,
+      ...selfInitiatedForms,
       ...assignedForms.filter(
         (assignedForm) =>
-          !initiatedForms.some(
-            (initiatedForm) =>
-              initiatedForm._id.toString() === assignedForm._id.toString(),
+          !selfInitiatedForms.some(
+            (selfForm) =>
+              selfForm._id.toString() === assignedForm._id.toString(),
           ),
       ),
     ].sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -174,7 +180,7 @@ exports.getUserForm = async (req, res) => {
       .status(200)
       .json({
         Combined: combinedForms,
-        Initiated: initiatedForms,
+        Initiated: selfInitiatedForms,
         Assigned: assignedForms,
       });
   } catch (error) {

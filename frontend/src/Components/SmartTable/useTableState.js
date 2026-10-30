@@ -18,6 +18,23 @@ const useTableState = ({ data = [], columns = [], pageSize: initialPageSize = 10
   const filteredData = useMemo(() => {
     let result = [...data];
 
+    // Unless this is the Super Admin user table, exclude records belonging to inactive users
+    const isUserTable = columns.some((c) => c.key === "employeeId" || c.key === "customId");
+    const isInactive = (u) => u && typeof u === "object" && u.isActive === false;
+
+    if (!isUserTable) {
+      result = result.filter((record) => {
+        if (record?.isActive === false) return false;
+        if (isInactive(record?.teacherID)) return false;
+        if (isInactive(record?.coordinatorID)) return false;
+        if (isInactive(record?.createdBy)) return false;
+        if (isInactive(record?.userId)) return false;
+        if (isInactive(record?.grenralDetails?.NameoftheVisitingTeacher)) return false;
+        if (isInactive(record?.grenralDetails?.NameofObserver)) return false;
+        return true;
+      });
+    }
+
     Object.entries(activeFilters).forEach(([key, filterValue]) => {
       if (filterValue === null || filterValue === undefined) return;
       if (Array.isArray(filterValue) && filterValue.length === 0) return;
@@ -52,7 +69,7 @@ const useTableState = ({ data = [], columns = [], pageSize: initialPageSize = 10
     });
 
     return result;
-  }, [data, activeFilters, getColumnByKey]);
+  }, [data, activeFilters, getColumnByKey, columns]);
 
   // ── Sorting ──────────────────────────────────────────────────
   const sortedData = useMemo(() => {

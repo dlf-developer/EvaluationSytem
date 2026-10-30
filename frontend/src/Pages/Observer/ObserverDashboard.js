@@ -28,18 +28,22 @@ const ObserverDashboard = () => {
     const payload = {
       id: UserId,
       fromNo: 1,
+      role: "Observer",
     };
     const payload2 = {
       id: UserId,
       fromNo: 2,
+      role: "Observer",
     };
     const payload3 = {
       id: UserId,
       fromNo: 3,
+      role: "Observer",
     };
     const payload4 = {
       id: UserId,
       fromNo: 4,
+      role: "Observer",
     };
     setIsLoading(true);
     dispatch(getRecentActivities());

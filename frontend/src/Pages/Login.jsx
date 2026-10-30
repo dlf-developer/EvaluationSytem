@@ -2,7 +2,8 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { SendLoginOTP, VerifyLoginOTP, UserLogin } from "../redux/userSlice";
-import { message } from "antd";
+import { message, Modal } from "antd";
+import { ExclamationCircleFilled } from "@ant-design/icons";
 import {
   Box,
   Button,
@@ -108,6 +109,48 @@ function Login() {
     window.location.replace("/");
   };
 
+  const showInactiveModal = (customMsg) => {
+    Modal.warning({
+      title: "Account Inactive",
+      icon: <ExclamationCircleFilled style={{ color: "#faad14" }} />,
+      centered: true,
+      content: (
+        <div style={{ marginTop: 12 }}>
+          <p style={{ fontSize: "15px", color: "#374151", marginBottom: 8, fontWeight: 500 }}>
+            {customMsg || "Your account is currently inactive."}
+          </p>
+          <p style={{ fontSize: "14px", color: "#6b7280" }}>
+            Please connect with the Admin to activate your account.
+          </p>
+        </div>
+      ),
+      okText: "I Understand",
+      okButtonProps: {
+        style: {
+          backgroundColor: "#4A6741",
+          borderColor: "#4A6741",
+          borderRadius: "6px",
+        },
+      },
+    });
+  };
+
+  const isInactiveError = (errOrRes) => {
+    const isInactive =
+      errOrRes?.isInactive ||
+      errOrRes?.data?.isInactive ||
+      (typeof errOrRes?.message === "string" &&
+        errOrRes.message.toLowerCase().includes("inactive")) ||
+      (typeof errOrRes?.data?.message === "string" &&
+        errOrRes.data.message.toLowerCase().includes("inactive"));
+    if (isInactive) {
+      const msg = errOrRes?.message || errOrRes?.data?.message;
+      showInactiveModal(msg);
+      return true;
+    }
+    return false;
+  };
+
   // Handle Password Login
   const handlePasswordLogin = async () => {
     let emailError = "";
@@ -128,11 +171,15 @@ function Login() {
         localStorage.setItem("token", res.token);
         message.success("Logged in successfully!");
         redirectToTarget();
+      } else if (isInactiveError(res)) {
+        return;
       } else {
         message.error(res?.message || "Login failed");
       }
     } catch (err) {
-      message.error(err?.message || "Invalid credentials");
+      if (!isInactiveError(err)) {
+        message.error(err?.message || "Invalid credentials");
+      }
     } finally {
       setLoading(false);
     }
@@ -160,7 +207,9 @@ function Login() {
       startResendCooldown(60);
       setResendCount(1);
     } catch (err) {
-      message.error(err?.message || "Failed to send OTP");
+      if (!isInactiveError(err)) {
+        message.error(err?.message || "Failed to send OTP");
+      }
     } finally {
       setLoading(false);
     }
@@ -183,11 +232,15 @@ function Login() {
         localStorage.setItem("token", res.token);
         message.success("Logging in...");
         redirectToTarget();
+      } else if (isInactiveError(res)) {
+        return;
       } else {
         message.error(res?.message || "Verification failed");
       }
     } catch (err) {
-      message.error(err?.message || "Invalid OTP");
+      if (!isInactiveError(err)) {
+        message.error(err?.message || "Invalid OTP");
+      }
     } finally {
       setLoading(false);
     }
@@ -211,7 +264,9 @@ function Login() {
       setResendCount(newCount);
       startResendCooldown(newCount >= 2 ? 120 : 60);
     } catch (err) {
-      message.error(err?.message || "Failed to resend OTP");
+      if (!isInactiveError(err)) {
+        message.error(err?.message || "Failed to resend OTP");
+      }
     } finally {
       setLoading(false);
     }

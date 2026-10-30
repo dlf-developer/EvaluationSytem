@@ -33,12 +33,17 @@ exports.createForm = async (req, res) => {
     try {
         const user = await User.findById(userId, "-password -mobile -employeeId -customId");
 
-        if (!user || (user.access !== "Observer" && user.access !== "SuperAdmin")) {
+        const isObserverOrAdmin = user && (user.access === "Observer" || user.isDualRole || user.access === "SuperAdmin" || user.access === "Superadmin");
+        if (!isObserverOrAdmin) {
             return res.status(403).json({ message: "You do not have permission to create this form." });
         }
 
         if (!NameoftheVisitingTeacher) {
             return res.status(400).json({ message: "Name of the Visiting Teacher is required." });
+        }
+
+        if (NameoftheVisitingTeacher.toString() === userId.toString()) {
+            return res.status(400).json({ message: "An observer cannot observe or evaluate themselves." });
         }
 
         let resolvedClassName = className;
@@ -138,7 +143,8 @@ exports.editCoScholasticForm = async (req, res) => {
     try {
         const user = await User.findById(userId, "-password -mobile -employeeId -customId");
 
-        if (!user || (user.access !== "Observer" && user.access !== "SuperAdmin")) {
+        const isObserverOrAdmin = user && (user.access === "Observer" || user.isDualRole || user.access === "SuperAdmin" || user.access === "Superadmin");
+        if (!isObserverOrAdmin) {
             return res.status(403).json({ message: "You do not have permission to edit this form." });
         }
 
@@ -288,7 +294,8 @@ exports.TeacherContinueForm = async (req, res) => {
     try {
         const user = await User.findById(userId, "-password -mobile -employeeId -customId");
 
-        if (!user || (user.access !== "Teacher" && user.access !== "SuperAdmin")) {
+        const isTeacherOrAdmin = user && (user.access === "Teacher" || user.isDualRole || user.access === "SuperAdmin" || user.access === "Superadmin");
+        if (!isTeacherOrAdmin) {
             return res.status(403).json({ message: "You do not have permission to update this form." });
         }
 

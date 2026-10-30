@@ -36,8 +36,9 @@ exports.createForm = async (req, res) => {
       "-password -mobile -employeeId -customId"
     );
 
-    // Check if the user has access as "Teacher" or "SuperAdmin"
-    if (!user || (user.access !== "Teacher" && user.access !== "SuperAdmin")) {
+    // Check if the user has access as "Teacher" or "SuperAdmin" or dual role
+    const isTeacherOrAdmin = user && (user.access === "Teacher" || user.isDualRole || user.access === "SuperAdmin" || user.access === "Superadmin");
+    if (!isTeacherOrAdmin) {
       return res
         .status(403)
         .json({ message: "You do not have permission to create this form." });
@@ -48,6 +49,11 @@ exports.createForm = async (req, res) => {
     // Ensure that NameofObserver is provided for final submissions
     if (!NameofObserver && !isDraftSave) {
       return res.status(400).json({ message: "Name of Observer is required." });
+    }
+
+    // Prevent selecting oneself as observer
+    if (NameofObserver && NameofObserver.toString() === userId.toString()) {
+      return res.status(400).json({ message: "You cannot select yourself as the observer." });
     }
 
     let finalClassName = className;
@@ -167,6 +173,7 @@ exports.createInitiate = async (req, res) => {
     if (isTeacher && teacherList.length > 0) {
       const teacherForms = await Promise.all(
         teacherList.map(async (teacherId) => {
+          if (teacherId.toString() === userId.toString()) return null;
           const teacher = await User.findById(teacherId);
 
           if (!teacher?.email) return null;
@@ -491,21 +498,24 @@ exports.GetcreatedByID = async (req, res) => {
       { path: "grenralDetails.NameofObserver", select: "-password -mobile -employeeId -customId" },
     ];
 
-    // Query 1: forms the teacher created themselves
-    const [Form, Form2] = await Promise.all([
-      Form3.find({ createdBy: userId, ...queryFilter })
+    // Teacher View: forms where user is the teacher, or self-created (NOT observer-initiated)
+    const [assignedForms, selfCreatedForms] = await Promise.all([
+      Form3.find({ teacherID: userId, ...queryFilter })
         .sort({ createdAt: -1 })
         .populate(populateOpts),
 
-      // Query 2: observer-initiated forms assigned to this teacher
-      Form3.find({ teacherID: userId, ...queryFilter })
+      Form3.find({
+        createdBy: userId,
+        isObserverInitiation: { $ne: true },
+        ...queryFilter,
+      })
         .sort({ createdAt: -1 })
         .populate(populateOpts),
     ]);
 
     // Merge all, deduplicate, sort by createdAt desc
     const uniqueForms = Array.from(
-      new Map([...Form, ...Form2].map((item) => [item._id.toString(), item])).values()
+      new Map([...assignedForms, ...selfCreatedForms].map((item) => [item._id.toString(), item])).values()
     ).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
     res.status(200).json(uniqueForms);
@@ -527,49 +537,38 @@ exports.GetObseverForm = async (req, res) => {
 
     const queryFilter = req.sessionDateFilter ? { createdAt: req.sessionDateFilter } : {};
 
-    // Fetch Form data based on observer ID
-    const Form = await Form3.find({ "grenralDetails.NameofObserver": userId, ...queryFilter })
-      .sort({ createdAt: -1 })
-      .populate({
-        path: "createdBy teacherID",
-        select: "-password -mobile -employeeId -customId",
-      })
-      .populate({
-        path: "grenralDetails.NameofObserver",
-        select: "-password -mobile -employeeId -customId",
-      });
+    const populateOpts = [
+      { path: "createdBy teacherID", select: "-password -mobile -employeeId -customId" },
+      { path: "grenralDetails.NameofObserver", select: "-password -mobile -employeeId -customId" },
+    ];
 
-    // Fetch Form2 data based on observer initiation flag
-    const Form2 = await Form3.find({
-      "grenralDetails.NameofObserver": userId,
-      isObserverInitiation: true,
-      ...queryFilter,
-    })
-      .sort({ createdAt: -1 })
-      .populate({
-        path: "createdBy teacherID",
-        select: "-password -mobile -employeeId -customId",
-      })
-      .populate({
-        path: "grenralDetails.NameofObserver",
-        select: "-password -mobile -employeeId -customId",
-      });
+    // Observer View: forms where user is the observer (assigned or observer-initiated)
+    const [observerAssigned, observerInitiated] = await Promise.all([
+      Form3.find({ "grenralDetails.NameofObserver": userId, ...queryFilter })
+        .sort({ createdAt: -1 })
+        .populate(populateOpts),
 
-    // Combine both Form and Form2 data, remove duplicates, then re-sort by createdAt desc
-    const uniqueForms = [...Form, ...Form2]
-      .filter(
-        (form, index, self) =>
-          index === self.findIndex((f) => f._id.toString() === form._id.toString())
-      )
-      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      Form3.find({
+        createdBy: userId,
+        isObserverInitiation: true,
+        ...queryFilter,
+      })
+        .sort({ createdAt: -1 })
+        .populate(populateOpts),
+    ]);
+
+    // Combine both, remove duplicates, then re-sort by createdAt desc
+    const uniqueForms = Array.from(
+      new Map([...observerAssigned, ...observerInitiated].map((item) => [item._id.toString(), item])).values()
+    ).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
     // Send combined data as response
     res.status(200).json(uniqueForms);
   } catch (error) {
-    console.error("Error Getting Classroom Walkthrough:", error);
+    console.error("Error Getting NoteBook:", error);
     res
       .status(500)
-      .json({ message: "Error Getting Classroom Walkthrough.", error });
+      .json({ message: "Error Getting NoteBook.", error });
   }
 };
 

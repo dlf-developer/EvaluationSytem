@@ -1,19 +1,31 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { axiosInstance, axiosInstanceToken } from "./instence";
 
-export const UserLogin = createAsyncThunk("UserLogin", async (payload) => {
-  const response = await axiosInstance.post(`/auth/login`, payload);
-  return response.data;
+export const UserLogin = createAsyncThunk("UserLogin", async (payload, { rejectWithValue }) => {
+  try {
+    const response = await axiosInstance.post(`/auth/login`, payload);
+    return response.data;
+  } catch (error) {
+    return rejectWithValue(error.response?.data || { message: error.message });
+  }
 });
 
-export const SendLoginOTP = createAsyncThunk("SendLoginOTP", async (payload) => {
-  const response = await axiosInstance.post(`/auth/send-login-otp`, payload);
-  return response.data;
+export const SendLoginOTP = createAsyncThunk("SendLoginOTP", async (payload, { rejectWithValue }) => {
+  try {
+    const response = await axiosInstance.post(`/auth/send-login-otp`, payload);
+    return response.data;
+  } catch (error) {
+    return rejectWithValue(error.response?.data || { message: error.message });
+  }
 });
 
-export const VerifyLoginOTP = createAsyncThunk("VerifyLoginOTP", async (payload) => {
-  const response = await axiosInstance.post(`/auth/verify-login-otp`, payload);
-  return response.data;
+export const VerifyLoginOTP = createAsyncThunk("VerifyLoginOTP", async (payload, { rejectWithValue }) => {
+  try {
+    const response = await axiosInstance.post(`/auth/verify-login-otp`, payload);
+    return response.data;
+  } catch (error) {
+    return rejectWithValue(error.response?.data || { message: error.message });
+  }
 });
 
 export const FromDataAuth = createAsyncThunk(

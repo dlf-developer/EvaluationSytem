@@ -7,6 +7,7 @@ import { GetAllFormsForAdmin } from "../../redux/Form/fortnightlySlice";
 import { UserRole } from "../../config/config";
 import { getUserId, getAllTimes } from "../../Utils/auth";
 import SmartTable from "../../Components/SmartTable";
+import { UserRoleBadge } from "../../Components/SmartTable/tableColumns";
 import Reminder from "../../Components/Reminder";
 
 const Fortnightly = () => {
@@ -31,18 +32,25 @@ const Fortnightly = () => {
         title: "Teacher",
         key: "teacherName",
         dataIndex: "teacherID",
-        width: "160px",
+        width: "250px",
+        minWidth: "220px",
         sortable: true,
         sorter: (a, b) => {
           const aName = a?.teacherID?.name || a?.userId?.name || "";
           const bName = b?.teacherID?.name || b?.userId?.name || "";
           return aName.localeCompare(bName);
         },
-        render: (val, record) => (
-          <Text fontWeight="500" fontSize="sm" color="brand.text">
-            {val?.name || record?.userId?.name || "—"}
-          </Text>
-        ),
+        render: (val, record) => {
+          const userObj = val || record?.userId;
+          return (
+            <Flex align="center" gap={1.5} wrap="nowrap">
+              <Text fontWeight="500" fontSize="sm" color="brand.text" whiteSpace="nowrap">
+                {userObj?.name || "—"}
+              </Text>
+              <UserRoleBadge user={userObj} />
+            </Flex>
+          );
+        },
         filterConfig: {
           type: "select",
           options: [
@@ -62,18 +70,25 @@ const Fortnightly = () => {
         title: "Observer",
         key: "observerName",
         dataIndex: "coordinatorID",
-        width: "160px",
+        width: "250px",
+        minWidth: "220px",
         sortable: true,
         sorter: (a, b) => {
           const aName = a?.coordinatorID?.name || a?.userId?.name || "";
           const bName = b?.coordinatorID?.name || b?.userId?.name || "";
           return aName.localeCompare(bName);
         },
-        render: (val, record) => (
-          <Text fontSize="sm" color="gray.600">
-            {val?.name || record?.userId?.name || "—"}
-          </Text>
-        ),
+        render: (val, record) => {
+          const userObj = val || record?.userId;
+          return (
+            <Flex align="center" gap={1.5} wrap="nowrap">
+              <Text fontSize="sm" color="gray.600" whiteSpace="nowrap">
+                {userObj?.name || "—"}
+              </Text>
+              <UserRoleBadge user={userObj} />
+            </Flex>
+          );
+        },
         filterConfig: {
           type: "select",
           options: [

@@ -25,18 +25,22 @@ const TeacherDashboard = () => {
     const payload = {
       id: UserId,
       fromNo: 1,
+      role: "Teacher",
     };
     const payload2 = {
       id: UserId,
       fromNo: 2,
+      role: "Teacher",
     };
     const payload3 = {
       id: UserId,
       fromNo: 3,
+      role: "Teacher",
     };
     const payload4 = {
       id: UserId,
       fromNo: 4,
+      role: "Teacher",
     };
     setIsLoading(true);
     dispatch(getRecentActivities());

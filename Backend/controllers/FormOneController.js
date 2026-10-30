@@ -27,6 +27,9 @@ exports.createForm = async (req, res) => {
 
     // Determine the recipient based on role
     if (isCoordinator && coordinatorID) {
+      if (coordinatorID.toString() === userId.toString()) {
+        return res.status(400).json({ message: "You cannot assign yourself as the coordinator/observer." });
+      }
       const coordinator = await User.findById(coordinatorID);
       if (coordinator?.email) {
         recipientEmail = coordinator.email;
@@ -60,6 +63,9 @@ exports.createForm = async (req, res) => {
         teacherForm: {}, // Defaults will apply
       });
     } else if (isTeacher && teacherID) {
+      if (teacherID.toString() === userId.toString()) {
+        return res.status(400).json({ message: "You cannot assign yourself as the teacher." });
+      }
       const teacher = await User.findById(teacherID);
       if (teacher?.email) {
         recipientEmail = teacher.email;
@@ -162,6 +168,7 @@ exports.FormInitiation = async (req, res) => {
     if (isTeacher && Array.isArray(teacherIDs) && teacherIDs.length > 0) {
       const teacherForms = await Promise.all(
         teacherIDs.map(async (item) => {
+          if (item.toString() === userId.toString()) return null;
           const teacher = await User.findById({ _id: item });
           if (teacher?.email) {
             const formData = new Form1({

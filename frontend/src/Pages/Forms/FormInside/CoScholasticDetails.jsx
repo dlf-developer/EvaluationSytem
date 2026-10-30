@@ -34,7 +34,7 @@ import {
   getCreateClassSection,
   GetTeacherList,
 } from "../../../redux/userSlice";
-import { getUserId } from "../../../Utils/auth";
+import { getUserId, getUserRoleTag } from "../../../Utils/auth";
 import "./DetailsWalkthrough.css";
 import { CreateActivityApi } from "../../../redux/Activity/activitySlice";
 
@@ -326,10 +326,10 @@ function CoScholasticDetails() {
         name: "NameoftheVisitingTeacher",
         label: "Visiting Teacher",
         type: "select",
-        options: GetTeachersLists?.map((item) => ({
+        options: GetTeachersLists?.filter((t) => t?._id !== getUserId()?.id && t?.isActive !== false)?.map((item) => ({
           id: item?._id,
           value: item?._id,
-          name: item?.name,
+          name: `${item?.name} [${getUserRoleTag(item)}]`,
         })),
       },
       { name: "DateOfObservation", label: "Date of Observation", type: "date" },

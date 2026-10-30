@@ -24,7 +24,7 @@ import {
   GetNoteBookForm,
   EditNoteBook,
 } from "../../../redux/Form/noteBookSlice";
-import { getUserId } from "../../../Utils/auth";
+import { getUserId, getUserRoleTag } from "../../../Utils/auth";
 import { UserRole } from "../../../config/config";
 import { CreateActivityApi } from "../../../redux/Activity/activitySlice";
 
@@ -131,10 +131,10 @@ const NoteBookDetails = () => {
         name: "NameofObserver",
         label: "Name of Observer",
         type: "select",
-        options: GetObserverLists?.map((item) => ({
+        options: GetObserverLists?.filter((t) => t?._id !== getUserId()?.id && t?.isActive !== false)?.map((item) => ({
           id: item?._id,
           value: item?._id,
-          name: item?.name,
+          name: `${item?.name} [${getUserRoleTag(item)}]`,
         })),
         list: "Observer",
       },

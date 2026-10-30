@@ -90,15 +90,24 @@ const getRecentActivitiesModal = async (req, res) => {
 };
 
 const getSingleActivitiesModalById = async (req, res) => {
-  const { fromNo } = req?.query || {};
+  const { fromNo, role } = req?.query || {};
+  const activeRole = role || req.user?.activeRole || req.header('x-active-role') || req.user?.access;
   try {
     const id = req.params.id;
     if (!id || !mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ success: false, message: "Invalid ID" });
     }
-    const filter = fromNo
-      ? { $or: [{ reciverId: id, fromNo }, { senderId: id, fromNo }] }
-      : { $or: [{ reciverId: id }, { senderId: id }] };
+
+    let filter = {};
+    if (activeRole === "Teacher") {
+      filter = fromNo ? { reciverId: id, fromNo } : { reciverId: id };
+    } else if (activeRole === "Observer") {
+      filter = fromNo ? { senderId: id, fromNo } : { senderId: id };
+    } else {
+      filter = fromNo
+        ? { $or: [{ reciverId: id, fromNo }, { senderId: id, fromNo }] }
+        : { $or: [{ reciverId: id }, { senderId: id }] };
+    }
 
     const activities = await ActivityTwo.find(filter).populate("reciverId senderId");
     
