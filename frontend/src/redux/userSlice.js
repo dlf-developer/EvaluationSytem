@@ -30,9 +30,13 @@ export const VerifyLoginOTP = createAsyncThunk("VerifyLoginOTP", async (payload,
 
 export const FromDataAuth = createAsyncThunk(
   "FromDataAuth",
-  async (payload) => {
-    const response = await axiosInstanceToken.get(`/auth/form-data`, payload);
-    return response.data;
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await axiosInstanceToken.get(`/auth/form-data`);
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data || { message: error.message });
+    }
   },
 );
 

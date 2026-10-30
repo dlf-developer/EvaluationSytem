@@ -22,69 +22,70 @@ const ObserverDashboard = () => {
   const [FromFour, setFromFour] = useState("");
   const [stats, setStats] = useState([]);
   const [stateLoading, setStateLoading] = useState(false);
-  const UserId = getUserId()?.id;
-
-  useEffect(() => {
-    const payload = {
-      id: UserId,
-      fromNo: 1,
-      role: "Observer",
-    };
-    const payload2 = {
-      id: UserId,
-      fromNo: 2,
-      role: "Observer",
-    };
-    const payload3 = {
-      id: UserId,
-      fromNo: 3,
-      role: "Observer",
-    };
-    const payload4 = {
-      id: UserId,
-      fromNo: 4,
-      role: "Observer",
-    };
-    setIsLoading(true);
-    dispatch(getRecentActivities());
-    dispatch(getSingleActivityApi(payload))
-      .unwrap()
-      .then((res) => {
-        setFromOne(res?.activities);
-        setIsLoading(false);
-      });
-    //
-    //
-    dispatch(getSingleActivityApi(payload2))
-      .unwrap()
-      .then((res) => {
-        setFromTwo(res?.activities);
-        setIsLoading(false);
-      });
-
-    dispatch(getSingleActivityApi(payload3))
-      .unwrap()
-      .then((res) => {
-        setFromThree(res?.activities);
-        setIsLoading(false);
-      });
-    dispatch(getSingleActivityApi(payload4))
-      .unwrap()
-      .then((res) => {
-        setFromFour(res?.activities);
-        setIsLoading(false);
-      });
-    GetDashbardData();
-  }, [dispatch]);
+  const userObj = getUserId();
+  const UserId = userObj?.id || userObj?._id;
 
   const GetDashbardData = async () => {
     setStateLoading(true);
-    const response = await dispatch(FromDataAuth()).unwrap();
-    if (response) {
+    try {
+      const response = await dispatch(FromDataAuth()).unwrap();
+      if (response) {
+        setStats(response);
+      }
+    } catch (err) {
+      console.error("Failed to load dashboard stats:", err);
+    } finally {
       setStateLoading(false);
-      setStats(response);
     }
   };
+
+  useEffect(() => {
+    dispatch(getRecentActivities());
+    if (UserId) {
+      const payload = {
+        id: UserId,
+        fromNo: 1,
+        role: "Observer",
+      };
+      const payload2 = {
+        id: UserId,
+        fromNo: 2,
+        role: "Observer",
+      };
+      const payload3 = {
+        id: UserId,
+        fromNo: 3,
+        role: "Observer",
+      };
+      const payload4 = {
+        id: UserId,
+        fromNo: 4,
+        role: "Observer",
+      };
+      setIsLoading(true);
+      Promise.allSettled([
+        dispatch(getSingleActivityApi(payload))
+          .unwrap()
+          .then((res) => setFromOne(res?.activities || []))
+          .catch(() => {}),
+        dispatch(getSingleActivityApi(payload2))
+          .unwrap()
+          .then((res) => setFromTwo(res?.activities || []))
+          .catch(() => {}),
+        dispatch(getSingleActivityApi(payload3))
+          .unwrap()
+          .then((res) => setFromThree(res?.activities || []))
+          .catch(() => {}),
+        dispatch(getSingleActivityApi(payload4))
+          .unwrap()
+          .then((res) => setFromFour(res?.activities || []))
+          .catch(() => {}),
+      ]).finally(() => {
+        setIsLoading(false);
+      });
+    }
+    GetDashbardData();
+  }, [dispatch, UserId]);
 
   const recentEntrySort = (activities) => {
     if (!activities || activities.length === 0) {

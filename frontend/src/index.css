@@ -112,8 +112,26 @@ color: #0b5ed7 !important;
   color: #595959 !important;
 }
 
-/* Ensure wrapper doesn't dim the icons */
 .ant-table-column-sorter {
   opacity: 1 !important;
   color: #8c8c8c !important;
+}
+
+/* ── Fix Bootstrap p { margin-bottom: 1rem } in tables ── */
+table p,
+.ant-table-cell p,
+.ant-table-cell .chakra-text,
+.chakra-table td p,
+.chakra-table td .chakra-text,
+td p,
+td .chakra-text {
+  margin: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+td .chakra-tag,
+.chakra-table td .chakra-tag,
+.ant-table-cell .chakra-tag {
+  margin: 0 !important;
+  vertical-align: middle !important;
 }

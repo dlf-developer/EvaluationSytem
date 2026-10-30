@@ -7,7 +7,7 @@ import { GetAllFormsForAdmin } from "../../redux/Form/fortnightlySlice";
 import { UserRole } from "../../config/config";
 import { getUserId, getAllTimes } from "../../Utils/auth";
 import SmartTable from "../../Components/SmartTable";
-import { UserRoleBadge } from "../../Components/SmartTable/tableColumns";
+import { UserRoleBadge, UserCell } from "../../Components/SmartTable/tableColumns";
 import Reminder from "../../Components/Reminder";
 
 const Fortnightly = () => {
@@ -42,14 +42,7 @@ const Fortnightly = () => {
         },
         render: (val, record) => {
           const userObj = val || record?.userId;
-          return (
-            <Flex align="center" gap={1.5} wrap="nowrap">
-              <Text fontWeight="500" fontSize="sm" color="brand.text" whiteSpace="nowrap">
-                {userObj?.name || "—"}
-              </Text>
-              <UserRoleBadge user={userObj} />
-            </Flex>
-          );
+          return <UserCell name={userObj?.name} user={userObj} color="brand.text" fontWeight="500" />;
         },
         filterConfig: {
           type: "select",
@@ -80,14 +73,7 @@ const Fortnightly = () => {
         },
         render: (val, record) => {
           const userObj = val || record?.userId;
-          return (
-            <Flex align="center" gap={1.5} wrap="nowrap">
-              <Text fontSize="sm" color="gray.600" whiteSpace="nowrap">
-                {userObj?.name || "—"}
-              </Text>
-              <UserRoleBadge user={userObj} />
-            </Flex>
-          );
+          return <UserCell name={userObj?.name} user={userObj} color="gray.600" />;
         },
         filterConfig: {
           type: "select",

@@ -72,22 +72,33 @@ export const UserRoleBadge = ({ user }) => {
     (Array.isArray(user?.roles) &&
       user.roles.includes("Observer") &&
       user.roles.includes("Teacher"));
+
+  const badgeProps = {
+    size: "sm",
+    fontSize: "10px",
+    fontWeight: "bold",
+    px: 1.5,
+    py: 0,
+    h: "18px",
+    minH: "18px",
+    lineHeight: "18px",
+    borderRadius: "md",
+    flexShrink: 0,
+    whiteSpace: "nowrap",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    m: 0,
+    verticalAlign: "middle",
+  };
+
   if (isDual) {
     return (
       <Tag
-        size="sm"
+        {...badgeProps}
         colorScheme="teal"
         variant="solid"
-        fontSize="10px"
-        fontWeight="bold"
-        px={1.5}
-        py={0}
-        borderRadius="md"
         title="Observer & Teacher (Dual Role)"
-        flexShrink={0}
-        whiteSpace="nowrap"
-        display="inline-flex"
-        alignItems="center"
       >
         OT
       </Tag>
@@ -97,19 +108,10 @@ export const UserRoleBadge = ({ user }) => {
   if (access === "Teacher") {
     return (
       <Tag
-        size="sm"
+        {...badgeProps}
         colorScheme="green"
         variant="subtle"
-        fontSize="10px"
-        fontWeight="bold"
-        px={1.5}
-        py={0}
-        borderRadius="md"
         title="Teacher"
-        flexShrink={0}
-        whiteSpace="nowrap"
-        display="inline-flex"
-        alignItems="center"
       >
         T
       </Tag>
@@ -118,19 +120,10 @@ export const UserRoleBadge = ({ user }) => {
   if (access === "Observer") {
     return (
       <Tag
-        size="sm"
+        {...badgeProps}
         colorScheme="blue"
         variant="subtle"
-        fontSize="10px"
-        fontWeight="bold"
-        px={1.5}
-        py={0}
-        borderRadius="md"
         title="Observer"
-        flexShrink={0}
-        whiteSpace="nowrap"
-        display="inline-flex"
-        alignItems="center"
       >
         O
       </Tag>
@@ -138,6 +131,41 @@ export const UserRoleBadge = ({ user }) => {
   }
   return null;
 };
+
+export const UserCell = ({
+  name,
+  user,
+  fontSize = "sm",
+  fontWeight = "500",
+  color,
+}) => (
+  <Flex
+    align="center"
+    gap={1.5}
+    wrap="nowrap"
+    m={0}
+    p={0}
+    display="inline-flex"
+    verticalAlign="middle"
+    lineHeight="1"
+  >
+    <Text
+      as="span"
+      fontSize={fontSize}
+      fontWeight={fontWeight}
+      color={color}
+      whiteSpace="nowrap"
+      m={0}
+      p={0}
+      lineHeight="1.2"
+      display="inline-block"
+      verticalAlign="middle"
+    >
+      {name || "—"}
+    </Text>
+    <UserRoleBadge user={user} />
+  </Flex>
+);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 1. FORTNIGHTLY MONITOR — Admin / Observer / Teacher list view
@@ -160,14 +188,7 @@ export const getFortnightlyColumns = ({
       ),
     render: (val, record) => {
       const userObj = val || record?.userId;
-      return (
-        <Flex align="center" gap={1.5} wrap="nowrap">
-          <Text fontWeight="500" fontSize="sm" whiteSpace="nowrap">
-            {userObj?.name || "—"}
-          </Text>
-          <UserRoleBadge user={userObj} />
-        </Flex>
-      );
+      return <UserCell name={userObj?.name} user={userObj} fontWeight="500" />;
     },
     filterConfig: {
       type: "select",
@@ -189,14 +210,7 @@ export const getFortnightlyColumns = ({
       ),
     render: (val, record) => {
       const userObj = val || record?.userId;
-      return (
-        <Flex align="center" gap={1.5} wrap="nowrap">
-          <Text fontSize="sm" color="gray.600" whiteSpace="nowrap">
-            {userObj?.name || "—"}
-          </Text>
-          <UserRoleBadge user={userObj} />
-        </Flex>
-      );
+      return <UserCell name={userObj?.name} user={userObj} color="gray.600" />;
     },
     filterConfig: {
       type: "select",
@@ -396,12 +410,11 @@ export const getClassroomColumns = ({
           ? record?.createdBy
           : val?.NameoftheVisitingTeacher;
       return (
-        <Flex align="center" gap={1.5} wrap="nowrap">
-          <Text fontWeight="500" fontSize="sm" whiteSpace="nowrap">
-            {userObj?.name || (typeof userObj === "string" ? userObj : "—")}
-          </Text>
-          <UserRoleBadge user={userObj} />
-        </Flex>
+        <UserCell
+          name={userObj?.name || (typeof userObj === "string" ? userObj : "—")}
+          user={userObj}
+          fontWeight="500"
+        />
       );
     },
     filterConfig: {
@@ -634,12 +647,11 @@ export const getNotebookColumns = ({
           ? record?.teacherID || record?.createdBy
           : val?.NameofObserver;
       return (
-        <Flex align="center" gap={1.5} wrap="nowrap">
-          <Text fontWeight="500" fontSize="sm" whiteSpace="nowrap">
-            {userObj?.name || (typeof userObj === "string" ? userObj : "—")}
-          </Text>
-          <UserRoleBadge user={userObj} />
-        </Flex>
+        <UserCell
+          name={userObj?.name || (typeof userObj === "string" ? userObj : "—")}
+          user={userObj}
+          fontWeight="500"
+        />
       );
     },
     filterConfig: {
@@ -936,14 +948,7 @@ export const getWeeklyColumns = ({ data = [], currentUserRole, onDelete }) => [
     sortable: true,
     sorter: (a, b) =>
       (a?.teacherId?.name || "").localeCompare(b?.teacherId?.name || ""),
-    render: (val) => (
-      <Flex align="center" gap={1.5} wrap="nowrap">
-        <Text fontWeight="500" fontSize="sm" whiteSpace="nowrap">
-          {val?.name || "N/A"}
-        </Text>
-        <UserRoleBadge user={val} />
-      </Flex>
-    ),
+    render: (val) => <UserCell name={val?.name || "N/A"} user={val} fontWeight="500" />,
     filterConfig: {
       type: "select",
       options: uniq(data.map((r) => r?.teacherId?.name)),
@@ -962,12 +967,11 @@ export const getWeeklyColumns = ({ data = [], currentUserRole, onDelete }) => [
         b?.isInitiated?.Observer?.name || "",
       ),
     render: (val) => (
-      <Flex align="center" gap={1.5} wrap="nowrap">
-        <Text fontSize="sm" color="gray.600" whiteSpace="nowrap">
-          {val?.Observer?.name || "N/A"}
-        </Text>
-        <UserRoleBadge user={val?.Observer} />
-      </Flex>
+      <UserCell
+        name={val?.Observer?.name || "N/A"}
+        user={val?.Observer}
+        color="gray.600"
+      />
     ),
     filterConfig: {
       type: "select",
@@ -1325,14 +1329,7 @@ export const getWingCoordinatorColumns = ({ data = [], onDuplicate }) => [
     sortable: true,
     sorter: (a, b) =>
       (a?.teacherID?.name || "").localeCompare(b?.teacherID?.name || ""),
-    render: (val) => (
-      <Flex align="center" gap={1.5} wrap="nowrap">
-        <Text fontWeight="500" fontSize="sm" whiteSpace="nowrap">
-          {val?.name || "—"}
-        </Text>
-        <UserRoleBadge user={val} />
-      </Flex>
-    ),
+    render: (val) => <UserCell name={val?.name || "—"} user={val} fontWeight="500" />,
     filterConfig: {
       type: "select",
       options: uniq(data.map((r) => r?.teacherID?.name)),
@@ -1455,14 +1452,7 @@ export const getReportForm1Columns = ({
       ),
     render: (val, record) => {
       const userObj = val || record?.userId;
-      return (
-        <Flex align="center" gap={1.5} wrap="nowrap">
-          <Text fontSize="sm" fontWeight="500" whiteSpace="nowrap">
-            {userObj?.name || "N/A"}
-          </Text>
-          <UserRoleBadge user={userObj} />
-        </Flex>
-      );
+      return <UserCell name={userObj?.name || "N/A"} user={userObj} fontWeight="500" />;
     },
     filterConfig: {
       type: "select",
@@ -1486,12 +1476,7 @@ export const getReportForm1Columns = ({
       ),
     render: (val, record) => {
       const userObj = val || record?.userId;
-      return (
-        <Flex align="center" gap={1.5} wrap="nowrap">
-          <Text fontSize="sm" whiteSpace="nowrap">{userObj?.name || "N/A"}</Text>
-          <UserRoleBadge user={userObj} />
-        </Flex>
-      );
+      return <UserCell name={userObj?.name || "N/A"} user={userObj} />;
     },
     filterConfig: {
       type: "select",
@@ -1659,14 +1644,7 @@ export const getReportForm2Columns = ({
     sortable: true,
     sorter: (a, b) =>
       (a?.createdBy?.name || "").localeCompare(b?.createdBy?.name || ""),
-    render: (val) => (
-      <Flex align="center" gap={1.5} wrap="nowrap">
-        <Text fontSize="sm" fontWeight="500" whiteSpace="nowrap">
-          {val?.name || "N/A"}
-        </Text>
-        <UserRoleBadge user={val} />
-      </Flex>
-    ),
+    render: (val) => <UserCell name={val?.name || "N/A"} user={val} fontWeight="500" />,
     filterConfig: {
       type: "select",
       options: uniq(data.map((r) => r?.createdBy?.name)),
@@ -1687,12 +1665,10 @@ export const getReportForm2Columns = ({
     render: (val) => {
       const userObj = val?.NameoftheVisitingTeacher;
       return (
-        <Flex align="center" gap={1.5} wrap="nowrap">
-          <Text fontSize="sm" whiteSpace="nowrap">
-            {userObj?.name || (typeof userObj === "string" ? userObj : "N/A")}
-          </Text>
-          <UserRoleBadge user={userObj} />
-        </Flex>
+        <UserCell
+          name={userObj?.name || (typeof userObj === "string" ? userObj : "N/A")}
+          user={userObj}
+        />
       );
     },
     filterConfig: {
@@ -1910,12 +1886,11 @@ export const getReportForm3Columns = ({
     render: (val, record) => {
       const userObj = val?.NameofObserver || record?.createdBy;
       return (
-        <Flex align="center" gap={1.5} wrap="nowrap">
-          <Text fontSize="sm" fontWeight="500" whiteSpace="nowrap">
-            {userObj?.name || (typeof userObj === "string" ? userObj : "N/A")}
-          </Text>
-          <UserRoleBadge user={userObj} />
-        </Flex>
+        <UserCell
+          name={userObj?.name || (typeof userObj === "string" ? userObj : "N/A")}
+          user={userObj}
+          fontWeight="500"
+        />
       );
     },
     filterConfig: {
@@ -1946,12 +1921,7 @@ export const getReportForm3Columns = ({
       ),
     render: (val, record) => {
       const userObj = val || record?.createdBy;
-      return (
-        <Flex align="center" gap={1.5} wrap="nowrap">
-          <Text fontSize="sm" whiteSpace="nowrap">{userObj?.name || "N/A"}</Text>
-          <UserRoleBadge user={userObj} />
-        </Flex>
-      );
+      return <UserCell name={userObj?.name || "N/A"} user={userObj} />;
     },
     filterConfig: {
       type: "select",
@@ -2171,12 +2141,11 @@ export const getReportForm4Columns = ({ data = [], currentUserRole, onDelete }) 
         b?.isInitiated?.Observer?.name || "",
       ),
     render: (val) => (
-      <Flex align="center" gap={1.5} wrap="nowrap">
-        <Text fontSize="sm" fontWeight="500" whiteSpace="nowrap">
-          {val?.Observer?.name || "N/A"}
-        </Text>
-        <UserRoleBadge user={val?.Observer} />
-      </Flex>
+      <UserCell
+        name={val?.Observer?.name || "N/A"}
+        user={val?.Observer}
+        fontWeight="500"
+      />
     ),
     filterConfig: {
       type: "select",
@@ -2194,12 +2163,7 @@ export const getReportForm4Columns = ({ data = [], currentUserRole, onDelete }) 
     sortable: true,
     sorter: (a, b) =>
       (a?.teacherId?.name || "").localeCompare(b?.teacherId?.name || ""),
-    render: (val) => (
-      <Flex align="center" gap={1.5} wrap="nowrap">
-        <Text fontSize="sm" whiteSpace="nowrap">{val?.name || "N/A"}</Text>
-        <UserRoleBadge user={val} />
-      </Flex>
-    ),
+    render: (val) => <UserCell name={val?.name || "N/A"} user={val} />,
     filterConfig: {
       type: "select",
       options: uniq(data.map((r) => r?.teacherId?.name)),
@@ -2294,14 +2258,7 @@ export const getCoScholasticColumns = ({
       ),
     render: (val, record) => {
       const userObj = val || record?.userId;
-      return (
-        <Flex align="center" gap={1.5} wrap="nowrap">
-          <Text fontWeight="500" fontSize="sm" whiteSpace="nowrap">
-            {userObj?.name || "—"}
-          </Text>
-          <UserRoleBadge user={userObj} />
-        </Flex>
-      );
+      return <UserCell name={userObj?.name || "—"} user={userObj} fontWeight="500" />;
     },
     filterConfig: {
       type: "select",
@@ -2325,12 +2282,11 @@ export const getCoScholasticColumns = ({
     render: (val, record) => {
       const userObj = val?.NameoftheVisitingTeacher || record?.teacherID;
       return (
-        <Flex align="center" gap={1.5} wrap="nowrap">
-          <Text fontSize="sm" color="gray.700" whiteSpace="nowrap">
-            {userObj?.name || (typeof userObj === "string" ? userObj : "—")}
-          </Text>
-          <UserRoleBadge user={userObj} />
-        </Flex>
+        <UserCell
+          name={userObj?.name || (typeof userObj === "string" ? userObj : "—")}
+          user={userObj}
+          color="gray.700"
+        />
       );
     },
     filterConfig: {

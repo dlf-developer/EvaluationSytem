@@ -20,11 +20,23 @@ export const CreateActivityApi = createAsyncThunk('CreateActivityApi',async (pay
   return response.data;
 })
 
-export const getSingleActivityApi = createAsyncThunk('getSingleActivityApi', async (payload) => {
-  const roleParam = payload?.role ? `&role=${payload.role}` : '';
-  const response = await axiosInstanceToken.get(`activity/get/${payload?.id}?fromNo=${payload?.fromNo}${roleParam}`);
-  return response.data;
-});
+export const getSingleActivityApi = createAsyncThunk(
+  'getSingleActivityApi',
+  async (payload, { rejectWithValue }) => {
+    try {
+      if (!payload?.id) {
+        return { success: true, activities: [] };
+      }
+      const roleParam = payload?.role ? `&role=${payload.role}` : '';
+      const response = await axiosInstanceToken.get(
+        `activity/get/${payload?.id}?fromNo=${payload?.fromNo || 1}${roleParam}`
+      );
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data || error.message || "Failed to fetch activity");
+    }
+  }
+);
 
 
 

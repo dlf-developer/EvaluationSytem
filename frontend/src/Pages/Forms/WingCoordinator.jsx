@@ -21,7 +21,7 @@ import {
 import { message, Modal } from "antd";
 
 import SmartTable from "../../Components/SmartTable";
-import { UserRoleBadge } from "../../Components/SmartTable/tableColumns";
+import { UserRoleBadge, UserCell } from "../../Components/SmartTable/tableColumns";
 
 function WingCoordinator() {
   const navigate = useNavigate();
@@ -144,22 +144,9 @@ function WingCoordinator() {
         options: observerFilters,
         matchFn: (record, vals) => vals.includes(record?.userId?.name || "")
       },
-      render: (user) => {
-        const name = user?.name || "—";
-        return (
-          <Flex align="center" gap={1.5} wrap="nowrap">
-            <Text
-              fontSize="sm"
-              fontWeight="500"
-              color="gray.600"
-              whiteSpace="nowrap"
-            >
-              {name}
-            </Text>
-            <UserRoleBadge user={user} />
-          </Flex>
-        );
-      },
+      render: (user) => (
+        <UserCell name={user?.name || "—"} user={user} color="gray.600" fontWeight="500" />
+      ),
     },
     {
       title: "CLASSES",

@@ -44,7 +44,7 @@ const app = express();
 app.use(cors({
     origin: '*',
     methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-active-role', 'x-session-id', 'x-requested-with', 'Accept'],
 }));
 
 // Request Logger (Captures every request & response to backend.log & error.log)
