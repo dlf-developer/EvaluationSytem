@@ -23,6 +23,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { BulkUserCreate, DeleteUser, GetUserList } from "../../redux/userSlice";
 import { getAllTimes } from "../../Utils/auth";
 import CreateUserForm from "../../Components/CreateUserForm";
+import EditUserModal from "../../Components/EditUserModal";
 import { Link } from "react-router-dom";
 import { columnsCreate } from "../../Components/Data";
 import SmartTable from "../../Components/SmartTable";
@@ -31,6 +32,8 @@ import { getUserColumns } from "../../Components/SmartTable/tableColumns";
 function Users() {
   const [open, setOpen] = useState(false);
   const [open2, setOpen2] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [excelData, setExcelData] = useState([]);
   const [loadingAction, setLoadingAction] = useState(false);
   const [allUsers, setAllUsers] = useState([]);
@@ -62,8 +65,13 @@ function Users() {
       .finally(() => setLoadingAction(false));
   };
 
+  const handleEditUser = (user) => {
+    setEditingUser(user);
+    setIsEditModalOpen(true);
+  };
+
   const columns = useMemo(
-    () => getUserColumns({ onDelete: DeleteUserRow }),
+    () => getUserColumns({ onEdit: handleEditUser, onDelete: DeleteUserRow }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     []
   );
@@ -164,8 +172,29 @@ function Users() {
         confirmLoading={loadingAction}
         onCancel={() => setOpen(false)}
       >
-        <CreateUserForm onCancel={() => setOpen(false)} />
+        <CreateUserForm
+          onOk={() => {
+            setOpen(false);
+            fetchUsers();
+          }}
+          onCancel={() => setOpen(false)}
+        />
       </Modal>
+
+      {/* Edit User Modal */}
+      <EditUserModal
+        open={isEditModalOpen}
+        user={editingUser}
+        onCancel={() => {
+          setIsEditModalOpen(false);
+          setEditingUser(null);
+        }}
+        onSuccess={() => {
+          setIsEditModalOpen(false);
+          setEditingUser(null);
+          fetchUsers();
+        }}
+      />
 
       {/* Bulk Upload Modal */}
       <Modal

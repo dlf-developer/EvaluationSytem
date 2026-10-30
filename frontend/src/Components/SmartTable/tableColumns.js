@@ -1066,7 +1066,7 @@ export const getWeeklyColumns = ({ data = [], currentUserRole, onDelete }) => [
 // ─────────────────────────────────────────────────────────────────────────────
 // 5. USERS TABLE (Admin)
 // ─────────────────────────────────────────────────────────────────────────────
-export const getUserColumns = ({ onDelete }) => [
+export const getUserColumns = ({ onEdit, onDelete }) => [
   {
     title: "Employee ID",
     key: "employeeId",
@@ -1208,9 +1208,22 @@ export const getUserColumns = ({ onDelete }) => [
     title: "Action",
     key: "action",
     dataIndex: "action",
-    width: "200px",
+    width: "240px",
     render: (_, record) => (
-      <Stack direction="row" spacing={2}>
+      <Stack direction="row" spacing={2} align="center">
+        {onEdit && (
+          <Button
+            size="sm"
+            variant="ghost"
+            colorScheme="blue"
+            color="blue.600"
+            _hover={{ bg: "blue.50" }}
+            leftIcon={<EditOutlined />}
+            onClick={() => onEdit(record)}
+          >
+            Edit
+          </Button>
+        )}
         <Link to={`${record?._id}`}>
           <Button
             size="sm"

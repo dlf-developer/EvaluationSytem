@@ -3,6 +3,7 @@ import {
   UserOutlined,
   FileOutlined,
   CheckCircleOutlined,
+  EditOutlined,
 } from "@ant-design/icons";
 import { Button, Space, Spin, Table, Tag } from "antd";
 import React, { useEffect, useMemo, useState } from "react";
@@ -11,9 +12,12 @@ import { Link } from "react-router-dom";
 import { getAllTimes } from "../../Utils/auth";
 import { GetUserList } from "../../redux/userSlice";
 import { Box, SimpleGrid, Flex, Heading, Text } from "@chakra-ui/react";
+import EditUserModal from "../../Components/EditUserModal";
 
 function AdminDashboard() {
   const [loading, setLoading] = useState(false); // Loader state
+  const [editingUser, setEditingUser] = useState(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const UserLists = useSelector(
     (state) => state?.user?.data?.data || state?.user?.data || [],
   );
@@ -207,19 +211,34 @@ function AdminDashboard() {
               {
                 title: "Action",
                 key: "action",
-                width: "120px",
+                width: "180px",
                 render: (_, record) => (
-                  <Link to={`/users/${record?._id}`}>
+                  <Space size="small">
                     <Button
-                      size="sm"
-                      variant="ghost"
-                      colorScheme="brand"
-                      color="brand.primary"
-                      _hover={{ bg: "brand.background" }}
+                      size="small"
+                      icon={<EditOutlined />}
+                      onClick={() => {
+                        setEditingUser(record);
+                        setIsEditModalOpen(true);
+                      }}
+                      style={{ borderRadius: "6px" }}
                     >
-                      View
+                      Edit
                     </Button>
-                  </Link>
+                    <Link to={`/users/${record?._id}`}>
+                      <Button
+                        size="small"
+                        type="primary"
+                        style={{
+                          borderRadius: "6px",
+                          backgroundColor: "#1a4d2e",
+                          borderColor: "#1a4d2e",
+                        }}
+                      >
+                        View
+                      </Button>
+                    </Link>
+                  </Space>
                 ),
               },
             ]}
@@ -231,6 +250,21 @@ function AdminDashboard() {
           />
         )}
       </Box>
+
+      {/* Edit User Modal */}
+      <EditUserModal
+        open={isEditModalOpen}
+        user={editingUser}
+        onCancel={() => {
+          setIsEditModalOpen(false);
+          setEditingUser(null);
+        }}
+        onSuccess={() => {
+          setIsEditModalOpen(false);
+          setEditingUser(null);
+          dispatch(GetUserList());
+        }}
+      />
     </Box>
   );
 }
