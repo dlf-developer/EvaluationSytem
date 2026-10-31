@@ -8,7 +8,6 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import { ChakraProvider } from "@chakra-ui/react";
 import theme from "./theme";
 import "./index.css";
-import "./output.css";
 import "react-loading-skeleton/dist/skeleton.css";
 import App from "./App";
 import ErrorBoundary from "./Components/ErrorBoundary";
