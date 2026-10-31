@@ -1,8 +1,7 @@
 import React, { useState } from "react";
-import { Form, Input, Select, Row, Col, Button, Switch, message } from "./UI";
+import { Form, Input, Password, Select, Row, Col, Button, Switch, message } from "./UI";
 import { useDispatch } from "react-redux";
 import { CreateUserList, GetUserList } from "../redux/userSlice";
-import Password from "antd/es/input/Password";
 
 const { Option } = Select;
 

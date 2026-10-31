@@ -6,9 +6,8 @@ import {
   TeacherWalkThroughComplete,
 } from "../../redux/Form/classroomWalkthroughSlice";
 import { getAllTimes, getUserId } from "../../Utils/auth";
-import { Button, Form, Input, message, Radio, Spin } from "../../Components/UI";
+import { Button, Form, Input, message, Radio, Spin, TextArea } from "../../Components/UI";
 import { Box, Flex, Heading, Text, VStack, SimpleGrid } from "@chakra-ui/react";
-import TextArea from "antd/es/input/TextArea";
 
 function TeacherWalkthroughshow() {
   const dispatch = useDispatch();

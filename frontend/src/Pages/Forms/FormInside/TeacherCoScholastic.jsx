@@ -6,7 +6,7 @@ import {
   TeacherCoScholasticComplete,
 } from "../../../redux/Form/coScholasticSlice";
 import { getAllTimes, getUserId } from "../../../Utils/auth";
-import { Button, Form, Input, message, Spin } from "../../../Components/UI";
+import { Button, Form, Input, message, Spin, TextArea } from "../../../Components/UI";
 import {
   Box,
   Flex,
@@ -15,7 +15,6 @@ import {
   VStack,
   SimpleGrid,
 } from "@chakra-ui/react";
-import TextArea from "antd/es/input/TextArea";
 import { CreateActivityApi } from "../../../redux/Activity/activitySlice";
 
 function TeacherCoScholastic() {

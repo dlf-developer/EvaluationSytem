@@ -6,7 +6,7 @@ import {
   TeacherWalkThroughComplete,
 } from "../../../redux/Form/classroomWalkthroughSlice";
 import { getAllTimes, getUserId } from "../../../Utils/auth";
-import { Button, Form, Input, message, Radio, Spin } from "../../../Components/UI";
+import { Button, Form, Input, message, Radio, Spin, TextArea } from "../../../Components/UI";
 import {
   Box,
   Flex,
@@ -16,7 +16,6 @@ import {
   SimpleGrid,
   Grid,
 } from "@chakra-ui/react";
-import TextArea from "antd/es/input/TextArea";
 import { CreateActivityApi } from "../../../redux/Activity/activitySlice";
 
 function TeacherWalkthrough() {

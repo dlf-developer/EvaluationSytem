@@ -5,9 +5,8 @@ import {
   GetNoteBookForm,
   ObserverNotebookComplete,
 } from "../../../redux/Form/noteBookSlice";
-import { Button, Form, Input, message, Radio, Spin } from "../../../Components/UI";
+import { Button, Form, Input, message, Radio, Spin, TextArea } from "../../../Components/UI";
 import { Box, Flex, SimpleGrid, Heading, Text, VStack } from "@chakra-ui/react";
-import TextArea from "antd/es/input/TextArea";
 import { getAllTimes, getUserId } from "../../../Utils/auth";
 import { BsEmojiFrown, BsEmojiNeutral, BsEmojiSmile } from "react-icons/bs";
 import "./css/Walkthrough.css";

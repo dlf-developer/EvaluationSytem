@@ -61,6 +61,9 @@ Input.Password = forwardRef(({ size = "middle", className = "", ...props }, ref)
   );
 });
 
+export const TextArea = Input.TextArea;
+export const Password = Input.Password;
+
 export const InputNumber = forwardRef(
   ({ size = "middle", className = "", ...props }, ref) => {
     return (

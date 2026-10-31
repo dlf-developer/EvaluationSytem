@@ -12,6 +12,6 @@ export { Drawer } from "./Drawer";
 export { Table } from "./Table";
 export { message } from "./Toast";
 export { Form, useForm } from "./Form";
-export { Input, InputNumber, Select, Option, Switch, Checkbox, Radio } from "./Inputs";
+export { Input, InputNumber, TextArea, Password, Select, Option, Switch, Checkbox, Radio } from "./Inputs";
 export { Typography, Steps, Collapse, Statistic, Descriptions, Upload } from "./Extras";
 export * as Icons from "./Icons";
