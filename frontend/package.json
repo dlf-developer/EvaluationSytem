@@ -15,6 +15,7 @@
     "axios": "^1.7.7",
     "bootstrap": "^5.3.3",
     "date-fns": "^4.1.0",
+    "dayjs": "^1.11.13",
     "framer-motion": "^12.38.0",
     "i": "^0.3.7",
     "jwt-decode": "^4.0.0",
