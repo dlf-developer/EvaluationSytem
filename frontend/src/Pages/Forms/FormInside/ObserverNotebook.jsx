@@ -33,6 +33,15 @@ function ObserverNotebook() {
     }
   }, [dispatch, FormId]);
 
+  const observerUser = formDataList?.grenralDetails?.NameofObserver;
+  const loggedInUser = getUserId();
+  const canAddComment = Boolean(
+    loggedInUser?.canAddNotebookComment === true ||
+    loggedInUser?.canAddNotebookComment === "true" ||
+    observerUser?.canAddNotebookComment === true ||
+    observerUser?.canAddNotebookComment === "true"
+  );
+
   const yesNoNAOptions = [
     { value: "1", label: "1" },
     { value: "2", label: "2" },
@@ -41,23 +50,29 @@ function ObserverNotebook() {
   ];
 
   const generalDetailsConfig = [
-    { name: "ClassStrength", label: "Class Strength", type: "input" },
-    { name: "NotebooksSubmitted", label: "Notebooks Submitted", type: "input" },
-    { name: "Absentees", label: "Absentees", type: "input" },
-    { name: "Defaulters", label: "Defaulters", type: "input" },
-    // { name: "observerFeedback", label: "Observer Feedback", type: "textarea" },
+    { name: "ClassStrength", label: "Class Strength", type: "input", required: true },
+    { name: "NotebooksSubmitted", label: "Notebooks Submitted", type: "input", required: true },
+    { name: "Absentees", label: "Absentees", type: "input", required: true },
+    { name: "Defaulters", label: "Defaulters", type: "input", required: true },
   ];
 
   const generalDetailsConfig2 = [
-    { name: "observerFeedback", label: "Observer Feedback", type: "textarea" },
+    {
+      name: "observerFeedback",
+      label: "Observer Comments",
+      type: "textarea",
+      required: false,
+      placeholder: "Write your evaluation comments, strengths, and areas of improvement...",
+    },
   ];
-  const renderFormItem = ({ name, label, type }) => {
+
+  const renderFormItem = ({ name, label, type, required = true, placeholder }) => {
     const inputProps = {
       input: (
-        <Input size="large" placeholder={`Enter ${label.toLowerCase()}`} />
+        <Input size="large" placeholder={placeholder || `Enter ${label.toLowerCase()}`} />
       ),
       textarea: (
-        <TextArea size="large" placeholder={`Enter ${label.toLowerCase()}`} />
+        <TextArea size="large" rows={4} placeholder={placeholder || `Enter ${label.toLowerCase()}`} />
       ),
     };
 
@@ -65,16 +80,20 @@ function ObserverNotebook() {
       <Form.Item
         name={name}
         label={
-          <h5 className="text-gray" style={{ fontSize: 20 }}>
+          <span className="text-gray-700 font-semibold text-sm">
             {label}
-          </h5>
+          </span>
         }
-        rules={[
-          {
-            required: true,
-            message: `Please provide a valid ${label.toLowerCase()}!`,
-          },
-        ]}
+        rules={
+          required
+            ? [
+                {
+                  required: true,
+                  message: `Please provide a valid ${label.toLowerCase()}!`,
+                },
+              ]
+            : []
+        }
       >
         {inputProps[type]}
       </Form.Item>
@@ -430,12 +449,14 @@ function ObserverNotebook() {
               "qualityOfLearner",
             )}
 
-            <Box bg="gray.50" p={6} borderRadius="xl" mt={8}>
-              <Heading size="sm" mb={4}>
-                Final Thoughts
-              </Heading>
-              {renderGeneralDetails2()}
-            </Box>
+            {canAddComment && (
+              <Box bg="gray.50" p={6} borderRadius="xl" mt={8} borderWidth="1px" borderColor="gray.200">
+                <Heading size="sm" mb={4} color="#1a4d2e">
+                  Observer Comments
+                </Heading>
+                {renderGeneralDetails2()}
+              </Box>
+            )}
 
             <Flex justify="flex-end" mt={8}>
               <Button

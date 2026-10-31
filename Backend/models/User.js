@@ -7,8 +7,9 @@ const userSchema = new mongoose.Schema({
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true },
     mobile: { type: String },
-    access: { type: String, enum: ['Superadmin', 'Observer', 'Teacher'], required: true },
+    access: { type: String, enum: ['Superadmin', 'Observer', 'Teacher', 'OT'], required: true },
     isDualRole: { type: Boolean, default: false },
+    canAddNotebookComment: { type: Boolean, default: false },
     roles: { type: [String], default: [] },
     isActive: { type: Boolean, default: true },
     designation: { type: String },
@@ -26,7 +27,8 @@ const userSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 userSchema.pre('save', async function (next) {
-    if (this.isDualRole) {
+    if (this.isDualRole || this.access === 'OT') {
+        this.isDualRole = true;
         this.roles = ['Observer', 'Teacher'];
     } else if (!this.roles || this.roles.length === 0) {
         this.roles = [this.access];

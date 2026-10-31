@@ -6,6 +6,7 @@ import React, {
   useRef,
   useEffect,
 } from "react";
+import { HelpCircle } from "lucide-react";
 
 const FormContext = createContext(null);
 
@@ -65,8 +66,16 @@ export class FormStore {
 
   setFieldsValue(newValues) {
     if (newValues && typeof newValues === "object") {
-      this.store = { ...this.store, ...newValues };
-      this.notify();
+      let changed = false;
+      for (const k of Object.keys(newValues)) {
+        if (this.store[k] !== newValues[k]) {
+          this.store[k] = newValues[k];
+          changed = true;
+        }
+      }
+      if (changed) {
+        this.notify();
+      }
     }
   }
 
@@ -144,7 +153,6 @@ export class FormStore {
 
 export function useForm(form) {
   const formRef = useRef(null);
-  const [, forceUpdate] = useState({});
 
   if (!formRef.current) {
     if (form) {
@@ -163,12 +171,6 @@ export function useForm(form) {
     }
   }
 
-  useEffect(() => {
-    if (formRef.current?._store) {
-      return formRef.current._store.subscribe(() => forceUpdate({}));
-    }
-  }, []);
-
   return [formRef.current];
 }
 
@@ -185,12 +187,21 @@ export const Form = ({
 }) => {
   const [internalForm] = useForm(form);
   const activeForm = form || internalForm;
+  const prevInitialValuesRef = useRef();
 
   useEffect(() => {
-    if (initialValues) {
-      activeForm.setFieldsValue(initialValues);
+    if (initialValues && typeof initialValues === "object") {
+      const prev = prevInitialValuesRef.current;
+      const isDifferent =
+        !prev ||
+        Object.keys(initialValues).some((k) => initialValues[k] !== prev[k]) ||
+        Object.keys(prev).some((k) => !(k in initialValues));
+      if (isDifferent) {
+        prevInitialValuesRef.current = { ...initialValues };
+        activeForm.setFieldsValue(initialValues);
+      }
     }
-  }, [initialValues]);
+  }, [initialValues, activeForm]);
 
   const handleSubmit = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
@@ -238,15 +249,18 @@ export const FormItem = ({
   style,
   extra,
   help,
+  tooltip,
   ...props
 }) => {
   const ctx = useContext(FormContext);
   const form = ctx?.form;
   const layout = ctx?.layout || "vertical";
+  const [, forceUpdate] = useState({});
 
   useEffect(() => {
     if (name && form?._store) {
       form._store.registerField(name, rules);
+      return form._store.subscribe(() => forceUpdate({}));
     }
   }, [name, rules, form]);
 
@@ -289,14 +303,37 @@ export const FormItem = ({
 
   return (
     <div
-      className={`mb-3.5 ${isVertical ? "flex flex-col" : "flex flex-row items-center gap-3"} ${className}`}
+      className={`mb-2.5 ${isVertical ? "flex flex-col" : "flex flex-row items-center gap-3"} ${className}`}
       style={style}
       {...props}
     >
       {label && (
-        <label className={`block text-xs font-semibold text-gray-700 tracking-wide mb-1 ${isVertical ? "" : "w-1/3 text-right"}`}>
-          {label}
-          {isRequired && <span className="text-red-500 ml-1">*</span>}
+        <label
+          className={`block text-xs font-semibold text-gray-700 mb-1 leading-tight ${
+            isVertical ? "" : "w-1/3 text-right"
+          }`}
+        >
+          <span>{label}</span>
+          {isRequired && (
+            <span
+              className="text-red-500 font-bold ml-1 text-xs select-none inline align-baseline"
+              style={{
+                fontFamily: "SimSun, sans-serif, system-ui",
+                lineHeight: "1",
+              }}
+              aria-hidden="true"
+            >
+              *
+            </span>
+          )}
+          {tooltip && (
+            <span
+              className="text-gray-400 hover:text-gray-600 cursor-help ml-1.5 inline-block align-middle"
+              title={tooltip}
+            >
+              <HelpCircle className="w-3.5 h-3.5 inline" />
+            </span>
+          )}
         </label>
       )}
       <div className={isVertical ? "w-full" : "w-2/3"}>

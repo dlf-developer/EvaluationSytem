@@ -1,11 +1,11 @@
-import { Button, Col, DatePicker, Form, message, Row, Select, Space } from "../../../../Components/UI"
+import { Button, Col, DatePicker, RangePicker, Form, message, Row, Select, Space } from "../../../../Components/UI"
 import React, { useEffect, useRef, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux';
 import { getCreateClassSection, getFilteredData, GetObserverList } from '../../../../redux/userSlice';
 import dayjs from 'dayjs';  // Import Day.js
 import { SearchOutlined, ClearOutlined } from "../../../../Components/UI/Icons";
 import { getUserRoleTag } from '../../../../Utils/auth';
-const { RangePicker } = DatePicker;
+const SafeRangePicker = RangePicker || DatePicker?.RangePicker;
 
 const FORM_TYPE_OPTIONS = [
     { value: 'form1', label: 'Fortnightly Monitor' },
@@ -155,7 +155,7 @@ function Fillter_Wing({ saveData, data }) {
                             name="range"
                             rules={[{ required: true, message: "Please select a date range" }]}
                         >
-                            <RangePicker size="large" className="w-full" style={{ borderRadius: '8px' }} />
+                            <SafeRangePicker size="large" className="w-full" style={{ borderRadius: '8px' }} />
                         </Form.Item>
                     </Col>
 
@@ -240,7 +240,7 @@ function Fillter_Wing({ saveData, data }) {
                                 htmlType="button"
                                 onClick={() => form.submit()}
                                 icon={<SearchOutlined />}
-                                style={{ borderRadius: '8px', backgroundColor: '#4A6741', borderColor: '#4A6741' }}
+                                style={{ borderRadius: '8px' }}
                             >
                                 Search
                             </Button>

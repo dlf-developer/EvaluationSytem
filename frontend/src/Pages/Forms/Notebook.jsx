@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Box, Flex, Heading, Text, Stack, Button, useDisclosure, Modal, ModalOverlay, ModalContent, ModalHeader, ModalFooter, ModalBody, ModalCloseButton, useToast } from "@chakra-ui/react";
-import { PlusCircleOutlined } from "../../Components/UI/Icons";
+import { PlusCircleOutlined, CommentOutlined } from "../../Components/UI/Icons";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import {
@@ -16,11 +16,42 @@ import { axiosInstanceToken } from "../../redux/instence";
 function Notebook() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const Role = getUserId().access;
+  const Role = getUserId()?.access;
   const currentUserRole = Role;
 
   const CombinedData = useSelector((state) => state?.notebook?.GetForms2 || []);
   const { isLoading } = useSelector((state) => state?.notebook);
+
+  const [canComment, setCanComment] = useState(() => {
+    const user = getUserId();
+    return Boolean(
+      user?.canAddNotebookComment === true ||
+      user?.canAddNotebookComment === "true" ||
+      user?.access === "Superadmin"
+    );
+  });
+
+  useEffect(() => {
+    const user = getUserId();
+    const currentUserId = user?.id || user?._id || user?.userId;
+    if (currentUserId) {
+      axiosInstanceToken
+        .get(`/user/single/${currentUserId}`)
+        .then((res) => {
+          const u = res?.data?.data || res?.data?.user || res?.data;
+          if (u) {
+            setCanComment(
+              Boolean(
+                u.canAddNotebookComment === true ||
+                u.canAddNotebookComment === "true" ||
+                u.access === "Superadmin"
+              )
+            );
+          }
+        })
+        .catch(() => {});
+    }
+  }, []);
 
   useEffect(() => {
     if (Role === UserRole[1]) dispatch(GetobserverForms());
@@ -42,6 +73,60 @@ function Notebook() {
   const [deleteId, setDeleteId] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const toast = useToast();
+
+  // ── Comment Modal State ──
+  const [commentModalOpen, setCommentModalOpen] = useState(false);
+  const [selectedRecord, setSelectedRecord] = useState(null);
+  const [commentText, setCommentText] = useState("");
+  const [isSavingComment, setIsSavingComment] = useState(false);
+
+  const handleCommentClick = (record) => {
+    setSelectedRecord(record);
+    setCommentText(record?.observerComment || record?.observerFeedback || "");
+    setCommentModalOpen(true);
+  };
+
+  const handleSaveComment = async () => {
+    if (!selectedRecord?._id) return;
+    setIsSavingComment(true);
+    try {
+      const response = await axiosInstanceToken.post(
+        `/notebook-checking-proforma/comment/${selectedRecord._id}`,
+        { comment: commentText }
+      );
+      if (response?.data?.success) {
+        toast({
+          title: "Comment Saved",
+          description: "Observer comment updated. It will appear on the report and PDF.",
+          status: "success",
+          duration: 3500,
+          isClosable: true,
+        });
+        setCommentModalOpen(false);
+        setSelectedRecord(null);
+        if (Role === UserRole[1]) dispatch(GetobserverForms());
+        else dispatch(GetcreatedByUser());
+      } else {
+        toast({
+          title: "Error",
+          description: response?.data?.message || "Failed to save comment.",
+          status: "error",
+          duration: 3500,
+          isClosable: true,
+        });
+      }
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: err?.response?.data?.message || "Failed to save comment.",
+        status: "error",
+        duration: 3500,
+        isClosable: true,
+      });
+    } finally {
+      setIsSavingComment(false);
+    }
+  };
 
   const handleDeleteClick = (id) => {
     setDeleteId(id);
@@ -78,9 +163,16 @@ function Notebook() {
   };
 
   const columns = useMemo(
-    () => getNotebookColumns({ data: CombinedData, currentUserRole, onDelete: handleDeleteClick }),
+    () =>
+      getNotebookColumns({
+        data: CombinedData,
+        currentUserRole,
+        onDelete: handleDeleteClick,
+        onComment: handleCommentClick,
+        canComment,
+      }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [CombinedData, currentUserRole]
+    [CombinedData, currentUserRole, canComment]
   );
 
   return (
@@ -134,6 +226,119 @@ function Notebook() {
         pageSize={10}
       />
 
+      {/* ── Observer Comment Modal ── */}
+      <Modal
+        isOpen={commentModalOpen}
+        onClose={() => !isSavingComment && setCommentModalOpen(false)}
+        isCentered
+        size="lg"
+      >
+        <ModalOverlay bg="blackAlpha.400" backdropFilter="blur(3px)" />
+        <ModalContent borderRadius="xl" shadow="xl">
+          <ModalHeader pb={2}>
+            <Flex align="center" gap={2}>
+              <Box p={2} bg="purple.50" color="purple.600" borderRadius="lg">
+                <CommentOutlined />
+              </Box>
+              <Box>
+                <Heading size="sm" color="gray.800">
+                  Observer Comment
+                </Heading>
+                <Text fontSize="xs" color="gray.500" fontWeight="normal">
+                  Notebook Checking Proforma
+                </Text>
+              </Box>
+            </Flex>
+          </ModalHeader>
+          <ModalCloseButton disabled={isSavingComment} />
+
+          <ModalBody py={3}>
+            {selectedRecord && (
+              <Box
+                mb={3}
+                p={3}
+                bg="gray.50"
+                borderRadius="lg"
+                borderWidth="1px"
+                borderColor="gray.200"
+                fontSize="xs"
+              >
+                <Flex justify="space-between" flexWrap="wrap" gap={2}>
+                  <div>
+                    <span className="text-gray-500">Teacher: </span>
+                    <strong className="text-gray-800">
+                      {selectedRecord?.teacherID?.name ||
+                        selectedRecord?.createdBy?.name ||
+                        "N/A"}
+                    </strong>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Class & Sec: </span>
+                    <strong className="text-gray-800">
+                      {selectedRecord?.grenralDetails?.Class ||
+                        selectedRecord?.className ||
+                        "—"}{" "}
+                      -{" "}
+                      {selectedRecord?.grenralDetails?.Section ||
+                        selectedRecord?.Section ||
+                        "—"}
+                    </strong>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Subject: </span>
+                    <strong className="text-gray-800">
+                      {selectedRecord?.grenralDetails?.Subject ||
+                        selectedRecord?.Subject ||
+                        "—"}
+                    </strong>
+                  </div>
+                </Flex>
+              </Box>
+            )}
+
+            <Box>
+              <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                Feedback & Observations
+              </label>
+              <textarea
+                rows={5}
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+                placeholder="Enter official observer remarks, notebook maintenance feedback, or areas of improvement..."
+                className="w-full rounded-xl border border-gray-300 p-3 text-sm focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-200 transition-all placeholder:text-gray-400"
+                disabled={isSavingComment}
+              />
+              <p className="mt-1.5 text-[11px] text-gray-500 flex items-center gap-1">
+                <span>ℹ️</span> This comment is saved in the record, shown on the online report, and included in the exported PDF.
+              </p>
+            </Box>
+          </ModalBody>
+
+          <ModalFooter pt={2}>
+            <Button
+              variant="ghost"
+              mr={3}
+              onClick={() => setCommentModalOpen(false)}
+              disabled={isSavingComment}
+              size="sm"
+            >
+              Cancel
+            </Button>
+            <Button
+              colorScheme="purple"
+              onClick={handleSaveComment}
+              isLoading={isSavingComment}
+              loadingText="Saving..."
+              size="sm"
+              px={5}
+            >
+              Save Comment
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      {/* ── Confirm Delete Modal ── */}
       <Modal isOpen={isOpen} onClose={onClose} isCentered>
         <ModalOverlay />
         <ModalContent>

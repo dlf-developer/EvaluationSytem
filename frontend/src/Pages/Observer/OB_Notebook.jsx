@@ -5,7 +5,7 @@ import { Button, Form, Input, message, Radio, TextArea } from "../../Components/
 import { Box, Flex, Heading, Text, VStack } from "@chakra-ui/react";
 import { BsEmojiFrown, BsEmojiNeutral, BsEmojiSmile } from "react-icons/bs";
 import { EditNoteBook, GetNoteBookForm } from "../../redux/Form/noteBookSlice";
-import { getAllTimes } from "../../Utils/auth";
+import { getAllTimes, getUserId } from "../../Utils/auth";
 
 function OB_Notebook() {
   const dispatch = useDispatch();
@@ -41,6 +41,15 @@ function OB_Notebook() {
     }
   }, [dispatch, FormId]);
 
+  const observerUser = formDataList?.grenralDetails?.NameofObserver;
+  const loggedInUser = getUserId();
+  const canAddComment = Boolean(
+    loggedInUser?.canAddNotebookComment === true ||
+    loggedInUser?.canAddNotebookComment === "true" ||
+    observerUser?.canAddNotebookComment === true ||
+    observerUser?.canAddNotebookComment === "true"
+  );
+
   const yesNoNAOptions = [
     { value: "0", label: <BsEmojiSmile size={25} /> },
     { value: "1", label: <BsEmojiNeutral size={25} /> },
@@ -48,23 +57,23 @@ function OB_Notebook() {
   ];
 
   const generalDetailsConfig = [
-    { name: "ClassStrength", label: "Class Strength", type: "input" },
-    { name: "NotebooksSubmitted", label: "Notebooks Submitted", type: "input" },
-    { name: "Absentees", label: "Absentees", type: "input" },
-    { name: "Defaulters", label: "Defaulters", type: "input" },
+    { name: "ClassStrength", label: "Class Strength", type: "input", required: true },
+    { name: "NotebooksSubmitted", label: "Notebooks Submitted", type: "input", required: true },
+    { name: "Absentees", label: "Absentees", type: "input", required: true },
+    { name: "Defaulters", label: "Defaulters", type: "input", required: true },
   ];
 
   const generalDetailsConfig2 = [
-    { name: "observerFeedback", label: "Observer Feedback", type: "textarea" },
+    { name: "observerFeedback", label: "Observer Comments", type: "textarea", required: false },
   ];
 
-  const renderFormItem = ({ name, label, type }) => {
+  const renderFormItem = ({ name, label, type, required = true }) => {
     const inputProps = {
       input: (
         <Input size="large" placeholder={`Enter ${label.toLowerCase()}`} />
       ),
       textarea: (
-        <TextArea size="large" placeholder={`Enter ${label.toLowerCase()}`} />
+        <TextArea size="large" rows={4} placeholder="Write your evaluation comments, strengths, and areas of improvement..." />
       ),
     };
 
@@ -76,12 +85,16 @@ function OB_Notebook() {
             {label}
           </Text>
         }
-        rules={[
-          {
-            required: true,
-            message: `Please provide a valid ${label.toLowerCase()}!`,
-          },
-        ]}
+        rules={
+          required
+            ? [
+                {
+                  required: true,
+                  message: `Please provide a valid ${label.toLowerCase()}!`,
+                },
+              ]
+            : []
+        }
         style={{ marginBottom: "20px" }}
       >
         {inputProps[type]}
@@ -286,20 +299,22 @@ function OB_Notebook() {
               "qualityOfLearner",
             )}
           </Box>
-          <Box
-            bg="white"
-            p={8}
-            borderRadius="2xl"
-            boxShadow="sm"
-            borderWidth="1px"
-            borderColor="gray.100"
-            mb={8}
-          >
-            <Heading size="md" color="gray.700" mb={6}>
-              Observer Feedback
-            </Heading>
-            {renderGeneralDetails2()}
-          </Box>
+          {canAddComment && (
+            <Box
+              bg="white"
+              p={8}
+              borderRadius="2xl"
+              boxShadow="sm"
+              borderWidth="1px"
+              borderColor="gray.100"
+              mb={8}
+            >
+              <Heading size="md" color="gray.700" mb={6}>
+                Observer Comments
+              </Heading>
+              {renderGeneralDetails2()}
+            </Box>
+          )}
           <Flex justify="flex-end" mb={10}>
             <Button
               size="large"

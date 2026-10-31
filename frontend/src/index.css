@@ -60,34 +60,129 @@ color: #4f6f52 !important;
   color: #9c9c9c;
 }
 
-.btn-primary{
-  background-color: #1a4d2e !important;
-  border-color: #1a4d2e !important;
+.btn-primary {
+  background: linear-gradient(180deg, #225934 0%, #174528 100%) !important;
+  border-color: #133c23 !important;
   color: #fff !important;
-  --bs-btn-bg:#1a4d2e !important;
-  --bs-btn-hover-bg:#4f6f52 !important;
-  --bs-btn-hover-border-color:#4f6f52 !important;
+  font-weight: 600 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 1px 2px rgba(23, 69, 40, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.16) !important;
+  transition: all 0.15s ease-in-out !important;
+  --bs-btn-bg: #1a4d2e !important;
+  --bs-btn-hover-bg: #235d38 !important;
+  --bs-btn-hover-border-color: #1a4d2e !important;
 }
+
 .btn-primary:hover,
-.btn-primary:focus,
-.btn-primary:active {
-  background-color: #4f6f52 !important;
-  border-color: #4f6f52 !important;
+.btn-primary:focus {
+  background: linear-gradient(180deg, #28683e 0%, #1c5230 100%) !important;
+  border-color: #174528 !important;
   color: #fff !important;
+  box-shadow: 0 2px 6px rgba(23, 69, 40, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+  transform: translateY(-0.5px);
+}
+
+.btn-primary:active {
+  background: #143821 !important;
+  border-color: #0f2b19 !important;
+  color: #fff !important;
+  transform: scale(0.985) !important;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2) !important;
 }
 
 .btn-outline-primary {
   color: #1a4d2e !important;
   border-color: #1a4d2e !important;
   background-color: transparent !important;
+  border-radius: 8px !important;
+  font-weight: 500 !important;
+  transition: all 0.15s ease-in-out !important;
 }
 
 .btn-outline-primary:hover,
-.btn-outline-primary:focus,
-.btn-outline-primary:active {
+.btn-outline-primary:focus {
   background-color: #1a4d2e !important;
   border-color: #1a4d2e !important;
   color: #fff !important;
+  box-shadow: 0 1px 3px rgba(26, 77, 46, 0.25) !important;
+}
+
+.btn-outline-primary:active {
+  transform: scale(0.985) !important;
+}
+
+/* ── Global Form Label & Asterisk Typography Reset ── */
+label {
+  display: block !important;
+  margin-bottom: 3px !important;
+  line-height: 1.25 !important;
+}
+
+label p,
+label .chakra-text {
+  margin: 0 !important;
+  margin-bottom: 0 !important;
+  display: inline !important;
+  line-height: inherit !important;
+  font-size: inherit !important;
+  font-weight: inherit !important;
+}
+
+label .text-red-500,
+label span.text-red-500,
+.ant-form-item-required::after {
+  display: inline !important;
+  vertical-align: baseline !important;
+  transform: none !important;
+  color: #ef4444 !important;
+  font-weight: 700 !important;
+  font-size: 13px !important;
+  line-height: 1 !important;
+  margin-left: 2px !important;
+  font-family: SimSun, sans-serif, system-ui !important;
+}
+
+/* ── Switch Defensive Reset ── */
+button[role="switch"] {
+  border: 0 !important;
+  border-radius: 9999px !important;
+  outline: none !important;
+  box-shadow: none !important;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+}
+
+button[role="switch"]:focus,
+button[role="switch"]:focus-visible,
+button[role="switch"]:focus-within {
+  outline: none !important;
+  box-shadow: none !important;
+  border: 0 !important;
+}
+
+/* ── Global Button Border Radius & Polish ── */
+button:not([role="switch"]),
+.btn,
+.btn-primary,
+.btn-outline-primary,
+.chakra-button {
+  border-radius: 10px !important;
+  font-weight: 500 !important;
+  transition: all 0.15s ease-in-out !important;
+}
+
+button:not([role="switch"]):hover,
+.btn:hover,
+.btn-primary:hover,
+.chakra-button:hover {
+  transform: translateY(-1px);
+}
+
+button:not([role="switch"]):active,
+.btn:active,
+.btn-primary:active,
+.chakra-button:active {
+  transform: scale(0.985);
 }
 
 .btn:hover{
@@ -166,4 +261,93 @@ td .chakra-tag,
 .ant-table-cell .chakra-tag {
   margin: 0 !important;
   vertical-align: middle !important;
+}
+
+/* ── Ant Design-Compatible 24-Column Responsive Grid System ── */
+.grid-col {
+  position: relative;
+  width: 100%;
+  min-height: 1px;
+  box-sizing: border-box;
+}
+
+/* Base spans (xs / default) */
+.col-1 { flex: 0 0 4.166667%; max-width: 4.166667%; }
+.col-2 { flex: 0 0 8.333333%; max-width: 8.333333%; }
+.col-3 { flex: 0 0 12.5%; max-width: 12.5%; }
+.col-4 { flex: 0 0 16.666667%; max-width: 16.666667%; }
+.col-5 { flex: 0 0 20.833333%; max-width: 20.833333%; }
+.col-6 { flex: 0 0 25%; max-width: 25%; }
+.col-7 { flex: 0 0 29.166667%; max-width: 29.166667%; }
+.col-8 { flex: 0 0 33.333333%; max-width: 33.333333%; }
+.col-9 { flex: 0 0 37.5%; max-width: 37.5%; }
+.col-10 { flex: 0 0 41.666667%; max-width: 41.666667%; }
+.col-11 { flex: 0 0 45.833333%; max-width: 45.833333%; }
+.col-12 { flex: 0 0 50%; max-width: 50%; }
+.col-13 { flex: 0 0 54.166667%; max-width: 54.166667%; }
+.col-14 { flex: 0 0 58.333333%; max-width: 58.333333%; }
+.col-15 { flex: 0 0 62.5%; max-width: 62.5%; }
+.col-16 { flex: 0 0 66.666667%; max-width: 66.666667%; }
+.col-17 { flex: 0 0 70.833333%; max-width: 70.833333%; }
+.col-18 { flex: 0 0 75%; max-width: 75%; }
+.col-19 { flex: 0 0 79.166667%; max-width: 79.166667%; }
+.col-20 { flex: 0 0 83.333333%; max-width: 83.333333%; }
+.col-21 { flex: 0 0 87.5%; max-width: 87.5%; }
+.col-22 { flex: 0 0 91.666667%; max-width: 91.666667%; }
+.col-23 { flex: 0 0 95.833333%; max-width: 95.833333%; }
+.col-24 { flex: 0 0 100%; max-width: 100%; }
+
+@media (min-width: 576px) {
+  .col-sm-1 { flex: 0 0 4.166667%; max-width: 4.166667%; }
+  .col-sm-2 { flex: 0 0 8.333333%; max-width: 8.333333%; }
+  .col-sm-3 { flex: 0 0 12.5%; max-width: 12.5%; }
+  .col-sm-4 { flex: 0 0 16.666667%; max-width: 16.666667%; }
+  .col-sm-6 { flex: 0 0 25%; max-width: 25%; }
+  .col-sm-8 { flex: 0 0 33.333333%; max-width: 33.333333%; }
+  .col-sm-12 { flex: 0 0 50%; max-width: 50%; }
+  .col-sm-16 { flex: 0 0 66.666667%; max-width: 66.666667%; }
+  .col-sm-18 { flex: 0 0 75%; max-width: 75%; }
+  .col-sm-24 { flex: 0 0 100%; max-width: 100%; }
+}
+
+@media (min-width: 768px) {
+  .col-md-1 { flex: 0 0 4.166667%; max-width: 4.166667%; }
+  .col-md-2 { flex: 0 0 8.333333%; max-width: 8.333333%; }
+  .col-md-3 { flex: 0 0 12.5%; max-width: 12.5%; }
+  .col-md-4 { flex: 0 0 16.666667%; max-width: 16.666667%; }
+  .col-md-6 { flex: 0 0 25%; max-width: 25%; }
+  .col-md-8 { flex: 0 0 33.333333%; max-width: 33.333333%; }
+  .col-md-10 { flex: 0 0 41.666667%; max-width: 41.666667%; }
+  .col-md-12 { flex: 0 0 50%; max-width: 50%; }
+  .col-md-14 { flex: 0 0 58.333333%; max-width: 58.333333%; }
+  .col-md-16 { flex: 0 0 66.666667%; max-width: 66.666667%; }
+  .col-md-18 { flex: 0 0 75%; max-width: 75%; }
+  .col-md-20 { flex: 0 0 83.333333%; max-width: 83.333333%; }
+  .col-md-24 { flex: 0 0 100%; max-width: 100%; }
+}
+
+@media (min-width: 992px) {
+  .col-lg-1 { flex: 0 0 4.166667%; max-width: 4.166667%; }
+  .col-lg-2 { flex: 0 0 8.333333%; max-width: 8.333333%; }
+  .col-lg-3 { flex: 0 0 12.5%; max-width: 12.5%; }
+  .col-lg-4 { flex: 0 0 16.666667%; max-width: 16.666667%; }
+  .col-lg-5 { flex: 0 0 20.833333%; max-width: 20.833333%; }
+  .col-lg-6 { flex: 0 0 25%; max-width: 25%; }
+  .col-lg-8 { flex: 0 0 33.333333%; max-width: 33.333333%; }
+  .col-lg-10 { flex: 0 0 41.666667%; max-width: 41.666667%; }
+  .col-lg-12 { flex: 0 0 50%; max-width: 50%; }
+  .col-lg-14 { flex: 0 0 58.333333%; max-width: 58.333333%; }
+  .col-lg-16 { flex: 0 0 66.666667%; max-width: 66.666667%; }
+  .col-lg-18 { flex: 0 0 75%; max-width: 75%; }
+  .col-lg-20 { flex: 0 0 83.333333%; max-width: 83.333333%; }
+  .col-lg-24 { flex: 0 0 100%; max-width: 100%; }
+}
+
+@media (min-width: 1200px) {
+  .col-xl-4 { flex: 0 0 16.666667%; max-width: 16.666667%; }
+  .col-xl-5 { flex: 0 0 20.833333%; max-width: 20.833333%; }
+  .col-xl-6 { flex: 0 0 25%; max-width: 25%; }
+  .col-xl-8 { flex: 0 0 33.333333%; max-width: 33.333333%; }
+  .col-xl-12 { flex: 0 0 50%; max-width: 50%; }
+  .col-xl-24 { flex: 0 0 100%; max-width: 100%; }
 }

@@ -370,6 +370,7 @@ exports.updateObserverFields = async (req, res) => {
         Absentees,
         Defaulters,
         observerFeedback,
+        observerComment,
         isObserverComplete,
         maintenanceOfNotebooks,
         qualityOfOppurtunities,
@@ -423,7 +424,8 @@ exports.updateObserverFields = async (req, res) => {
                 qualityOfTeacherFeedback: qualityOfTeacherFeedback !== undefined ? qualityOfTeacherFeedback : existingForm?.ObserverForm?.qualityOfTeacherFeedback,
                 qualityOfLearner: qualityOfLearner !== undefined ? qualityOfLearner : existingForm?.ObserverForm?.qualityOfLearner,
             },
-            observerFeedback: observerFeedback !== undefined ? observerFeedback : existingForm?.observerFeedback,
+            observerFeedback: observerFeedback !== undefined ? observerFeedback : (observerComment !== undefined ? observerComment : existingForm?.observerFeedback),
+            observerComment: observerComment !== undefined ? observerComment : (observerFeedback !== undefined ? observerFeedback : existingForm?.observerComment),
             isReflation: false,
         };
 
@@ -637,7 +639,8 @@ exports.EditUpdateNotebook = async (req, res) => {
             NotebooksSubmitted: req.body.NotebooksSubmitted,
             Absentees: req.body.Absentees,
             Defaulters: req.body.Defaulters,
-            observerFeedback: req.body.observerFeedback,
+            observerFeedback: req.body.observerFeedback !== undefined ? req.body.observerFeedback : req.body.observerComment,
+            observerComment: req.body.observerComment !== undefined ? req.body.observerComment : req.body.observerFeedback,
             isObserverComplete: req.body.isObserverComplete,
             maintenanceOfNotebooks: req.body.maintenanceOfNotebooks,
             qualityOfOppurtunities: req.body.qualityOfOppurtunities,
@@ -928,5 +931,59 @@ exports.deleteFormThree = async (req, res) => {
   } catch (error) {
     console.error("Error deleting form:", error);
     res.status(500).json({ message: "Error deleting form.", error: error.message });
+  }
+};
+
+exports.addObserverComment = async (req, res) => {
+  const formId = cleanId(req.params?.id);
+  const userId = req.user?.id;
+  const comment = req.body?.comment ?? req.body?.observerComment ?? req.body?.observerFeedback;
+
+  try {
+    if (!formId || !mongoose.Types.ObjectId.isValid(formId)) {
+      return res.status(400).json({ success: false, message: "Valid Form ID is required" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(401).json({ success: false, message: "User not found" });
+    }
+
+    const isAllowed =
+      user.canAddNotebookComment === true ||
+      user.canAddNotebookComment === "true" ||
+      user.access === "Superadmin";
+
+    if (!isAllowed) {
+      return res.status(403).json({
+        success: false,
+        message: "You are not authorized to add comments on Notebook Checking.",
+      });
+    }
+
+    const cleanComment = typeof comment === "string" ? comment.trim() : "";
+    const updatedForm = await Form3.findByIdAndUpdate(
+      formId,
+      {
+        $set: {
+          observerComment: cleanComment,
+          observerFeedback: cleanComment,
+        },
+      },
+      { new: true }
+    );
+
+    if (!updatedForm) {
+      return res.status(404).json({ success: false, message: "Notebook Checking form not found." });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Observer comment saved successfully.",
+      data: updatedForm,
+    });
+  } catch (error) {
+    console.error("Error saving notebook comment:", error);
+    return res.status(500).json({ success: false, message: "Failed to save comment", error: error.message });
   }
 };

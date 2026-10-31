@@ -226,7 +226,7 @@ function NoteBookDoc({ data }) {
                         <Text style={styles.subTitle}>OBSERVER'S COMMENTS</Text>
                         <View style={{ borderWidth: 1, padding: 10, minHeight: 60, borderColor: '#000' }}>
                             <Text style={{ fontSize: 10, lineHeight: 1.5, fontFamily: PDF_FONT }}>
-                                {data?.observerFeedback || "No feedback provided."}
+                                {data?.observerFeedback || data?.observerComment || "No feedback provided."}
                             </Text>
                         </View>
                     </View>

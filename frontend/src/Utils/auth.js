@@ -21,15 +21,41 @@ export const getToken = () => {
   return null;
 };
 
-export const getUserRoleTag = (user) => {
-  if (!user) return "";
-  const isDual =
+export const isDualRoleUser = (user) => {
+  if (!user) return false;
+  return (
     user.isDualRole === true ||
     user.isDualRole === "true" ||
+    user.access === "OT" ||
     (Array.isArray(user.roles) &&
       user.roles.includes("Observer") &&
-      user.roles.includes("Teacher"));
-  if (isDual) return "OT";
+      user.roles.includes("Teacher"))
+  );
+};
+
+export const isTeacherEligible = (user) => {
+  if (!user || user.isActive === false) return false;
+  return (
+    user.access === "Teacher" ||
+    user.access === "OT" ||
+    isDualRoleUser(user) ||
+    (Array.isArray(user.roles) && user.roles.includes("Teacher"))
+  );
+};
+
+export const isObserverEligible = (user) => {
+  if (!user || user.isActive === false) return false;
+  return (
+    user.access === "Observer" ||
+    user.access === "OT" ||
+    isDualRoleUser(user) ||
+    (Array.isArray(user.roles) && user.roles.includes("Observer"))
+  );
+};
+
+export const getUserRoleTag = (user) => {
+  if (!user) return "";
+  if (isDualRoleUser(user)) return "OT";
   if (user.access === "Teacher") return "T";
   if (user.access === "Observer") return "O";
   if (user.access === "Superadmin") return "Superadmin";
@@ -71,6 +97,11 @@ export const getUserId = () => {
   if (!token) return null;
   try {
     const decoded = jwtDecode(token);
+    decoded.id = decoded.id || decoded._id || decoded.userId;
+    decoded.canAddNotebookComment = Boolean(
+      decoded.canAddNotebookComment === true ||
+      decoded.canAddNotebookComment === "true"
+    );
     const isDual =
       decoded?.isDualRole ||
       (Array.isArray(decoded?.roles) &&

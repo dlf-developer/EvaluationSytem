@@ -7,16 +7,16 @@ export { Select, Option };
 export const Input = forwardRef(
   ({ size = "middle", className = "", error, ...props }, ref) => {
     const sizeClasses = {
-      small: "py-1 px-2.5 text-xs",
-      middle: "py-2 px-3.5 text-sm",
-      large: "py-2.5 px-4 text-base",
+      small: "h-8 py-1 px-2.5 text-xs",
+      middle: "h-9 py-1.5 px-3 text-sm",
+      large: "h-10 py-2 px-3.5 text-sm",
     };
 
     return (
       <input
         ref={ref}
-        className={`w-full rounded-lg border bg-white text-gray-900 shadow-sm transition-all placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed ${
-          error ? "border-red-500 focus:border-red-500" : "border-gray-300 focus:border-brand-500 hover:border-brand-500"
+        className={`w-full rounded-lg border bg-white text-gray-900 shadow-xs transition-all placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1a4d2e]/15 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed ${
+          error ? "border-red-500 focus:border-red-500" : "border-gray-300 focus:border-[#1a4d2e] hover:border-gray-400"
         } ${sizeClasses[size] || sizeClasses.middle} ${className}`}
         {...props}
       />
@@ -79,26 +79,94 @@ export const InputNumber = forwardRef(
 );
 
 export const Switch = forwardRef(
-  ({ checked = false, onChange, disabled = false, className = "", ...props }, ref) => {
+  (
+    {
+      checked = false,
+      onChange,
+      disabled = false,
+      checkedChildren,
+      unCheckedChildren,
+      className = "",
+      size = "middle",
+      ...props
+    },
+    ref
+  ) => {
+    const isSmall = size === "small";
+    const labelText = checked ? checkedChildren : unCheckedChildren;
+
+    const trackWidth = isSmall ? 32 : 44;
+    const trackHeight = isSmall ? 18 : 24;
+    const knobSize = isSmall ? 14 : 20;
+    const padding = 2;
+    const translateX = trackWidth - knobSize - padding * 2; // exactly 20px for middle, 14px for small
+
     return (
-      <button
-        ref={ref}
-        type="button"
-        role="switch"
-        aria-checked={checked}
-        disabled={disabled}
-        onClick={() => onChange?.(!checked)}
-        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:cursor-not-allowed disabled:opacity-50 ${
-          checked ? "bg-brand-800" : "bg-gray-200"
+      <div
+        className={`inline-flex items-center gap-2 select-none ${
+          disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
         } ${className}`}
-        {...props}
+        onClick={() => !disabled && onChange?.(!checked)}
       >
-        <span
-          className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-            checked ? "translate-x-5" : "translate-x-0"
+        <button
+          ref={ref}
+          type="button"
+          role="switch"
+          aria-checked={checked}
+          disabled={disabled}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (!disabled) onChange?.(!checked);
+          }}
+          className={`relative inline-flex items-center shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out focus:outline-none disabled:cursor-not-allowed ${
+            isSmall ? "w-8 h-[18px]" : "w-11 h-6"
           }`}
-        />
-      </button>
+          style={{
+            width: `${trackWidth}px`,
+            height: `${trackHeight}px`,
+            minWidth: `${trackWidth}px`,
+            minHeight: `${trackHeight}px`,
+            padding: `${padding}px`,
+            borderRadius: "9999px",
+            backgroundColor: checked ? "#1a4d2e" : "#e5e7eb",
+            border: "0",
+            outline: "none",
+            boxShadow: checked
+              ? "0 0 0 1px rgba(26,77,46,0.15)"
+              : "inset 0 0 0 1px rgba(0,0,0,0.06)",
+            boxSizing: "border-box",
+            lineHeight: 0,
+            appearance: "none",
+            WebkitAppearance: "none",
+          }}
+          {...props}
+        >
+          <span
+            className="pointer-events-none inline-block rounded-full bg-white transition-transform duration-200 ease-in-out"
+            style={{
+              width: `${knobSize}px`,
+              height: `${knobSize}px`,
+              minWidth: `${knobSize}px`,
+              minHeight: `${knobSize}px`,
+              borderRadius: "9999px",
+              backgroundColor: "#ffffff",
+              boxShadow:
+                "0 1px 3px 0 rgba(0, 0, 0, 0.2), 0 1px 2px -1px rgba(0, 0, 0, 0.1)",
+              transform: checked ? `translateX(${translateX}px)` : "translateX(0px)",
+              flexShrink: 0,
+            }}
+          />
+        </button>
+        {labelText && (
+          <span
+            className={`text-xs font-semibold tracking-tight transition-colors ${
+              checked ? "text-[#1a4d2e]" : "text-gray-500"
+            }`}
+          >
+            {labelText}
+          </span>
+        )}
+      </div>
     );
   }
 );

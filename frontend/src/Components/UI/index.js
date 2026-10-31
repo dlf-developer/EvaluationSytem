@@ -7,7 +7,7 @@ export { Alert } from "./Alert";
 export { Empty } from "./Empty";
 export { Space } from "./Space";
 export { Row, Col, Divider } from "./Grid";
-export { DatePicker } from "./DatePicker";
+export { DatePicker, RangePicker } from "./DatePicker";
 export { Drawer } from "./Drawer";
 export { Table } from "./Table";
 export { message } from "./Toast";

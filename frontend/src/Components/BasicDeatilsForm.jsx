@@ -359,7 +359,7 @@ function BasicDetailsForm() {
                     <Select
                       showSearch
                       placeholder="Select a Teacher"
-                      options={TeachersList?.filter((t) => (t.access === "Teacher" || t.isDualRole) && t._id !== getUserId()?.id && t?.isActive !== false)?.map((item) => ({
+                      options={TeachersList?.filter((t) => (t.access === "Teacher" || t.access === "OT" || t.isDualRole || (Array.isArray(t.roles) && t.roles.includes("Teacher"))) && t._id !== getUserId()?.id && t?.isActive !== false)?.map((item) => ({
                         value: item._id,
                         label: `${item.name} [${getUserRoleTag(item)}]`,
                       }))}

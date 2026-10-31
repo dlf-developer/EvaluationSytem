@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { getUserId, getUserRoleTag } from "../../Utils/auth";
 import { useNavigate } from "react-router-dom";
-import { GetTeacherList, getCreateClassSection } from "../../redux/userSlice";
+import { GetTeacherList, GetObserverList, getCreateClassSection } from "../../redux/userSlice";
 import { UserRole } from "../../config/config";
 import { createInitiate } from "../../redux/Form/noteBookSlice";
 import { CreateActivityApi } from "../../redux/Activity/activitySlice";
@@ -34,6 +34,7 @@ function NoteBookInisiate() {
 
   useEffect(() => {
     dispatch(GetTeacherList());
+    dispatch(GetObserverList());
     dispatch(getCreateClassSection()).then((res) => {
       if (res?.payload?.success) {
         const sorted = res?.payload?.classDetails.sort(
@@ -119,22 +120,22 @@ function NoteBookInisiate() {
     >
       <Box
         w="full"
-        maxW="480px"
+        maxW="450px"
         bg="white"
-        borderRadius="xl"
-        boxShadow="md"
+        borderRadius="2xl"
+        boxShadow="sm"
         borderWidth="1px"
         borderColor="gray.200"
-        p={{ base: 5, md: 6 }}
+        p={{ base: 4, md: 5 }}
       >
-        <VStack spacing={1} mb={5} align="center" textAlign="center">
-          <Heading size="md" color="#1a4d2e">
+        <div className="text-center mb-3">
+          <h2 className="text-lg font-bold text-[#1a4d2e] tracking-tight leading-snug">
             Initiate Monitoring
-          </Heading>
-          <Text fontSize="sm" color="gray.500">
+          </h2>
+          <p className="text-xs text-gray-500 mt-0.5 leading-normal">
             Configure roles and targets for the Notebook Checking
-          </Text>
-        </VStack>
+          </p>
+        </div>
         <Spin spinning={loading}>
           <Form
             form={form}
@@ -145,12 +146,12 @@ function NoteBookInisiate() {
               isTeacher: false,
             }}
           >
-            <Flex direction="column" gap={4}>
-              {CurrectUserRole === UserRole[1] && (
+            <Flex direction="column" gap={0}>
+              {(CurrectUserRole === UserRole[1] || CurrectUserRole === "OT") && (
                 <>
                   <Form.Item
-                    className="w-100 mb-0"
-                    label={<Text fontWeight="500">Teacher ID</Text>}
+                    className="w-100"
+                    label="Teacher ID"
                     name="teacherIDs"
                     rules={[
                       { required: true, message: "Please select a Teacher!" },
@@ -173,7 +174,7 @@ function NoteBookInisiate() {
 
                   <Form.Item
                     className="w-100"
-                    label={<Text fontWeight="500">Class (Optional)</Text>}
+                    label="Class (Optional)"
                     name="className"
                   >
                     <Select
@@ -197,7 +198,7 @@ function NoteBookInisiate() {
 
                   <Form.Item
                     className="w-100"
-                    label={<Text fontWeight="500">Section (Optional)</Text>}
+                    label="Section (Optional)"
                     name="Section"
                   >
                     <Select
@@ -218,7 +219,7 @@ function NoteBookInisiate() {
 
                   <Form.Item
                     className="w-100"
-                    label={<Text fontWeight="500">Subject (Optional)</Text>}
+                    label="Subject (Optional)"
                     name="Subject"
                   >
                     <Select
@@ -259,12 +260,12 @@ function NoteBookInisiate() {
             </Flex>
 
             {CurrectUserRole === UserRole[0] && (
-              <Flex direction="column" gap={4}>
-                <Flex gap={4} width="100%">
+              <Flex direction="column" gap={1}>
+                <Flex gap={3} width="100%">
                   <Form.Item
-                    className="w-100 mb-0"
+                    className="w-100"
                     style={{ flex: 1 }}
-                    label={<Text fontWeight="500">Coordinator</Text>}
+                    label="Coordinator"
                     name="isCoordinator"
                   >
                     <Select
@@ -300,7 +301,7 @@ function NoteBookInisiate() {
 
                 {isCoordinator && (
                   <Form.Item
-                    label={<Text fontWeight="500">Coordinator ID</Text>}
+                    label="Coordinator ID"
                     name="coordinatorID"
                     rules={[
                       {
@@ -312,7 +313,7 @@ function NoteBookInisiate() {
                     <Select
                       showSearch
                       placeholder="Select a Coordinator"
-                      options={ObserverList?.map((item) => ({
+                      options={ObserverList?.filter((item) => item?.isActive !== false)?.map((item) => ({
                         value: item._id,
                         label: `${item.name} [${getUserRoleTag(item)}]`,
                       }))}
@@ -325,7 +326,7 @@ function NoteBookInisiate() {
 
                 {isTeacher && (
                   <Form.Item
-                    label={<Text fontWeight="500">Teacher ID</Text>}
+                    label="Teacher ID"
                     name="teacherID"
                     rules={[
                       { required: true, message: "Please select a Teacher!" },
@@ -351,16 +352,9 @@ function NoteBookInisiate() {
               type="primary"
               htmlType="submit"
               disabled={loading}
-              size="middle"
+              size="large"
               block
-              className="w-full mt-4 font-semibold shadow-sm"
-              style={{
-                backgroundColor: "#1a4d2e",
-                borderColor: "#1a4d2e",
-                color: "#ffffff",
-                borderRadius: "8px",
-                minHeight: "40px",
-              }}
+              className="w-full mt-2 font-semibold shadow-xs"
             >
               {loading ? "Initiating Form..." : "Initiate Form"}
             </Button>

@@ -14,7 +14,7 @@
 import React from "react";
 import { Box, Text, Flex, Tag, Stack, Button } from "@chakra-ui/react";
 import { Link } from "react-router-dom";
-import { DeleteFilled, EditOutlined } from "../UI/Icons";
+import { DeleteFilled, EditOutlined, CommentOutlined } from "../UI/Icons";
 import { getAllTimes } from "../../Utils/auth";
 import { UserRole } from "../../config/config";
 import Reminder from "../Reminder";
@@ -622,6 +622,8 @@ export const getNotebookColumns = ({
   data = [],
   currentUserRole,
   onDelete,
+  onComment,
+  canComment = false,
 }) => [
   {
     title: currentUserRole === UserRole[1] ? "Teacher Name" : "Observer Name",
@@ -913,9 +915,38 @@ export const getNotebookColumns = ({
         return <Reminder id={record?._id} type="form3" size="sm" />;
       };
 
+      const hasComment = Boolean(record?.observerComment || record?.observerFeedback);
+      const recordObserver = record?.grenralDetails?.NameofObserver;
+      const recordCreator = record?.createdBy;
+      const isRecordObserverAllowed = Boolean(
+        recordObserver?.canAddNotebookComment === true ||
+        recordObserver?.canAddNotebookComment === "true" ||
+        recordCreator?.canAddNotebookComment === true ||
+        recordCreator?.canAddNotebookComment === "true"
+      );
+      const isAllowedToComment = Boolean(
+        canComment ||
+        isRecordObserverAllowed ||
+        (typeof canComment === "function" && canComment(record))
+      );
+
       return (
         <Flex gap={2} align="center" flexWrap="nowrap">
           {renderAction()}
+          {isAllowedToComment && onComment && (
+            <Button
+              size="sm"
+              variant={hasComment ? "solid" : "outline"}
+              colorScheme="purple"
+              fontWeight="medium"
+              flexShrink={0}
+              onClick={() => onComment(record)}
+              title={hasComment ? "Edit Observer Comment" : "Add Observer Comment"}
+              leftIcon={<CommentOutlined />}
+            >
+              {hasComment ? "Edit Comment" : "Comment"}
+            </Button>
+          )}
           {currentUserRole === UserRole[1] && onDelete && (
             <Button
               size="sm"

@@ -432,7 +432,7 @@ function NotebookPDF() {
               borderColor="blue.200"
             >
               <Heading size="sm" color="gray.800" mb={3}>
-                Observer Feedback
+                Observer Comments
               </Heading>
               <Text
                 color="gray.700"
@@ -441,8 +441,9 @@ function NotebookPDF() {
                 borderRadius="md"
                 borderWidth="1px"
                 borderColor="gray.200"
+                whiteSpace="pre-wrap"
               >
-                {formDataList?.observerFeedback || "No feedback"}
+                {formDataList?.observerFeedback || formDataList?.observerComment || "No comments provided."}
               </Text>
             </Box>
           </SimpleGrid>

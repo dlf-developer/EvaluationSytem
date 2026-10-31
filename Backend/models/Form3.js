@@ -37,6 +37,7 @@ const NotebookCheckingProforma = new Schema({
     isTeacherComplete:{type:Boolean, default:false},
     TeacherForm:questionForm,
     observerFeedback:{type:String, default:null},
+    observerComment:{type:String, default:null},
     isReflation:{type:Boolean, default:false},
     teacherReflationFeedback:{type:String, default:null},
     isDraft: { type: Boolean, default: true },

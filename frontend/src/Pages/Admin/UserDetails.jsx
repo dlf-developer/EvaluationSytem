@@ -438,30 +438,59 @@ const UserDetails = () => {
                 userData.access || "N/A"
               )}
             </Descriptions.Item>
-            <Descriptions.Item label="Dual Role (OT)">
-              {editStatus ? (
-                <AntdSelect
-                  value={
-                    modifiedData.isDualRole !== undefined
-                      ? modifiedData.isDualRole
-                      : Boolean(userData.isDualRole)
-                  }
-                  onChange={(val) => handleFieldChange("isDualRole", val, {})}
-                  style={{ width: "100%" }}
-                  options={[
-                    { value: true, label: "Enabled (OT - Observer & Teacher)" },
-                    { value: false, label: "Disabled (Single Role)" },
-                  ]}
-                />
-              ) : (
-                <Tag
-                  colorScheme={userData.isDualRole ? "teal" : "gray"}
-                  variant={userData.isDualRole ? "solid" : "subtle"}
-                >
-                  {userData.isDualRole ? "OT Enabled" : "Disabled"}
-                </Tag>
-              )}
-            </Descriptions.Item>
+            {((modifiedData.access !== undefined ? modifiedData.access : userData.access) === "Observer" ||
+              (modifiedData.access !== undefined ? modifiedData.access : userData.access) === "OT") && (
+              <>
+                <Descriptions.Item label="Dual Role (OT)">
+                  {editStatus ? (
+                    <AntdSelect
+                      value={
+                        modifiedData.isDualRole !== undefined
+                          ? modifiedData.isDualRole
+                          : Boolean(userData.isDualRole)
+                      }
+                      onChange={(val) => handleFieldChange("isDualRole", val, {})}
+                      style={{ width: "100%" }}
+                      options={[
+                        { value: true, label: "Enabled (OT - Observer & Teacher)" },
+                        { value: false, label: "Disabled (Single Role)" },
+                      ]}
+                    />
+                  ) : (
+                    <Tag
+                      colorScheme={userData.isDualRole ? "teal" : "gray"}
+                      variant={userData.isDualRole ? "solid" : "subtle"}
+                    >
+                      {userData.isDualRole ? "OT Enabled" : "Disabled"}
+                    </Tag>
+                  )}
+                </Descriptions.Item>
+                <Descriptions.Item label="Notebook Comment Access">
+                  {editStatus ? (
+                    <AntdSelect
+                      value={
+                        modifiedData.canAddNotebookComment !== undefined
+                          ? modifiedData.canAddNotebookComment
+                          : Boolean(userData.canAddNotebookComment)
+                      }
+                      onChange={(val) => handleFieldChange("canAddNotebookComment", val, {})}
+                      style={{ width: "100%" }}
+                      options={[
+                        { value: true, label: "Enabled (Can add comments in Notebook Checking)" },
+                        { value: false, label: "Disabled" },
+                      ]}
+                    />
+                  ) : (
+                    <Tag
+                      colorScheme={userData.canAddNotebookComment ? "purple" : "gray"}
+                      variant={userData.canAddNotebookComment ? "solid" : "subtle"}
+                    >
+                      {userData.canAddNotebookComment ? "Allowed" : "Not Allowed"}
+                    </Tag>
+                  )}
+                </Descriptions.Item>
+              </>
+            )}
             <Descriptions.Item label="Account Status">
               {editStatus ? (
                 <AntdSelect

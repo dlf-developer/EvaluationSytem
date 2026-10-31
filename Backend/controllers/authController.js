@@ -88,6 +88,7 @@ const login = async (req, res) => {
                 access: user.access,
                 name: user.name,
                 isDualRole: !!user.isDualRole,
+                canAddNotebookComment: !!user.canAddNotebookComment,
                 roles: user.roles && user.roles.length > 0 ? user.roles : (user.isDualRole ? ['Observer', 'Teacher'] : [user.access]),
             },
             process.env.JWT_SECRET
@@ -572,6 +573,7 @@ const verifyLoginOTP = async (req, res) => {
                 access: user.access,
                 name: user.name,
                 isDualRole: !!user.isDualRole,
+                canAddNotebookComment: !!user.canAddNotebookComment,
                 roles: user.roles && user.roles.length > 0 ? user.roles : (user.isDualRole ? ['Observer', 'Teacher'] : [user.access]),
             },
             process.env.JWT_SECRET

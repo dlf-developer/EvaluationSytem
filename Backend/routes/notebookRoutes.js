@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middleware/authMiddleware');
 const sessionMiddleware = require('../middleware/sessionMiddleware');
-const { createForm, getSignleForm, updateObserverFields, GetcreatedByID, GetObseverForm, EditUpdateNotebook, createInitiate, GetNootbookForms, updateTeacherReflationFeedback, ReminderFormThree, deleteFormThree } = require('../controllers/NotebookCheckingController');
+const { createForm, getSignleForm, updateObserverFields, GetcreatedByID, GetObseverForm, EditUpdateNotebook, createInitiate, GetNootbookForms, updateTeacherReflationFeedback, ReminderFormThree, deleteFormThree, addObserverComment } = require('../controllers/NotebookCheckingController');
 
 
 router.post('/create', authMiddleware, createForm);
@@ -16,6 +16,7 @@ router.get('/get-all', authMiddleware, sessionMiddleware, GetNootbookForms);
 router.put('/teacher/reflation/:id', updateTeacherReflationFeedback);
 router.post('/reminder/:id', authMiddleware, ReminderFormThree);
 router.delete('/delete/:id', authMiddleware, deleteFormThree);
+router.post('/comment/:id', authMiddleware, addObserverComment);
 
 
 module.exports = router;

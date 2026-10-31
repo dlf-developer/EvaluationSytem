@@ -57,21 +57,28 @@ export const Col = ({
   style,
   ...props
 }) => {
-  const getWidthPercent = (val) => {
-    if (!val) return null;
-    return `${(val / 24) * 100}%`;
-  };
+  const classes = ["grid-col"];
 
-  const defaultWidth = getWidthPercent(span) || "100%";
+  if (span) {
+    classes.push(`col-${span}`);
+  } else if (xs) {
+    classes.push(`col-${xs}`);
+  } else if (sm || md || lg || xl) {
+    classes.push("col-24");
+  }
+
+  if (sm) classes.push(`col-sm-${sm}`);
+  if (md) classes.push(`col-md-${md}`);
+  if (lg) classes.push(`col-lg-${lg}`);
+  if (xl) classes.push(`col-xl-${xl}`);
+
+  // When no column spans or breakpoints are provided, auto-size
+  const isAuto = !span && !xs && !sm && !md && !lg && !xl;
 
   return (
     <div
-      className={`box-border ${className}`}
-      style={{
-        flex: `0 0 ${defaultWidth}`,
-        maxWidth: defaultWidth,
-        ...style,
-      }}
+      className={`${classes.join(" ")} ${isAuto ? "flex-1 max-w-full" : ""} ${className}`}
+      style={style}
       {...props}
     >
       {children}

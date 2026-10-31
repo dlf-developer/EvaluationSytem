@@ -549,9 +549,24 @@ const userSlice = createSlice({
       })
       .addCase(GetTeacherList.fulfilled, (state, action) => {
         state.loading = false;
-        state.GetTeachersLists = action.payload;
+        let teachers = Array.isArray(action.payload) ? [...action.payload] : [];
+        if (Array.isArray(state.GetObserverLists)) {
+          state.GetObserverLists.forEach((obs) => {
+            const isDual =
+              obs?.isDualRole === true ||
+              obs?.isDualRole === "true" ||
+              obs?.access === "OT" ||
+              (Array.isArray(obs?.roles) &&
+                obs.roles.includes("Observer") &&
+                obs.roles.includes("Teacher"));
+            if (isDual && !teachers.some((t) => t._id === obs._id)) {
+              teachers.push(obs);
+            }
+          });
+        }
+        state.GetTeachersLists = teachers;
         try {
-          sessionStorage.setItem("cached_teachers_list", JSON.stringify(action.payload));
+          sessionStorage.setItem("cached_teachers_list", JSON.stringify(teachers));
         } catch (e) {}
       })
       .addCase(GetTeacherList.rejected, (state, action) => {
@@ -560,15 +575,30 @@ const userSlice = createSlice({
       })
       //GetObserverList
 
-      .addCase(GetObserverList.pending, (state, action) => {
+      .addCase(GetObserverList.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
       .addCase(GetObserverList.fulfilled, (state, action) => {
         state.loading = false;
-        state.GetObserverLists = action.payload;
+        let observers = Array.isArray(action.payload) ? [...action.payload] : [];
+        if (Array.isArray(state.GetTeachersLists)) {
+          state.GetTeachersLists.forEach((tch) => {
+            const isDual =
+              tch?.isDualRole === true ||
+              tch?.isDualRole === "true" ||
+              tch?.access === "OT" ||
+              (Array.isArray(tch?.roles) &&
+                tch.roles.includes("Observer") &&
+                tch.roles.includes("Teacher"));
+            if (isDual && !observers.some((o) => o._id === tch._id)) {
+              observers.push(tch);
+            }
+          });
+        }
+        state.GetObserverLists = observers;
         try {
-          sessionStorage.setItem("cached_observers_list", JSON.stringify(action.payload));
+          sessionStorage.setItem("cached_observers_list", JSON.stringify(observers));
         } catch (e) {}
       })
       .addCase(GetObserverList.rejected, (state, action) => {

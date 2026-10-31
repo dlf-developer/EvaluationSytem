@@ -56,8 +56,9 @@ const createUser = async (req, res) => {
       email,
       mobile,
       access,
-      isDualRole: Boolean(req.body.isDualRole),
-      roles: Boolean(req.body.isDualRole) ? ['Observer', 'Teacher'] : [access],
+      isDualRole: Boolean(req.body.isDualRole || access === "OT"),
+      canAddNotebookComment: Boolean(req.body.canAddNotebookComment),
+      roles: Boolean(req.body.isDualRole || access === "OT") ? ['Observer', 'Teacher'] : [access],
       isActive: req.body.isActive !== undefined ? Boolean(req.body.isActive) : true,
       designation,
       coordinator,
@@ -124,7 +125,9 @@ const GetAllTeachers = async (req, res) => {
         isActive: { $ne: false },
         $or: [
           { access: "Teacher" },
+          { access: "OT" },
           { isDualRole: true },
+          { isDualRole: "true" },
           { roles: "Teacher" },
         ],
       },
@@ -143,6 +146,9 @@ const GetAllObserver = async (req, res) => {
         isActive: { $ne: false },
         $or: [
           { access: "Observer" },
+          { access: "OT" },
+          { isDualRole: true },
+          { isDualRole: "true" },
           { roles: "Observer" },
         ],
       },
@@ -178,7 +184,14 @@ const updateUserById = async (req, res) => {
       updateData.isActive = Boolean(updateData.isActive);
     }
 
-    if (updateData.isDualRole !== undefined) {
+    if (updateData.canAddNotebookComment !== undefined) {
+      updateData.canAddNotebookComment = Boolean(updateData.canAddNotebookComment);
+    }
+
+    if (updateData.isDualRole !== undefined || updateData.access === "OT") {
+      if (updateData.access === "OT") {
+        updateData.isDualRole = true;
+      }
       updateData.isDualRole = Boolean(updateData.isDualRole);
       const targetUser = await User.findById(userId);
       const baseAccess = updateData.access || targetUser?.access || "Observer";

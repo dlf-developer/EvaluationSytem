@@ -118,7 +118,7 @@ function WingCoordinator() {
         const isLong = val.length > 24;
         const displayVal = isLong ? `${val.slice(0, 24)}...` : val;
         return (
-          <Tooltip label={val} placement="topLeft" hasArrow isDisabled={!isLong}>
+          <Tooltip label={val} placement="top-start" hasArrow isDisabled={!isLong}>
             <Text
               fontSize="sm"
               fontWeight="600"

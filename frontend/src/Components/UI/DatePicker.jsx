@@ -1,6 +1,20 @@
 import React from "react";
 import { Calendar as CalendarIcon } from "lucide-react";
 
+const formatToString = (val) => {
+  if (!val) return "";
+  if (typeof val === "string") {
+    return val.split("T")[0];
+  }
+  if (val._isAMomentObject || (val && typeof val.format === "function")) {
+    return val.format("YYYY-MM-DD");
+  }
+  if (val instanceof Date && !isNaN(val)) {
+    return val.toISOString().split("T")[0];
+  }
+  return "";
+};
+
 export const DatePicker = ({
   value,
   onChange,
@@ -13,21 +27,6 @@ export const DatePicker = ({
   size = "middle",
   ...props
 }) => {
-  // Convert incoming value (moment, dayjs, Date, or string) to YYYY-MM-DD
-  const formatToString = (val) => {
-    if (!val) return "";
-    if (typeof val === "string") {
-      return val.split("T")[0];
-    }
-    if (val._isAMomentObject || (val && typeof val.format === "function")) {
-      return val.format("YYYY-MM-DD");
-    }
-    if (val instanceof Date && !isNaN(val)) {
-      return val.toISOString().split("T")[0];
-    }
-    return "";
-  };
-
   const stringVal = formatToString(value);
 
   const handleChange = (e) => {
@@ -42,9 +41,9 @@ export const DatePicker = ({
   };
 
   const sizeClasses = {
-    small: "py-1 px-2 text-xs",
-    middle: "py-2 px-3 text-sm",
-    large: "py-2.5 px-4 text-base",
+    small: "h-7.5 py-1 px-2 text-xs",
+    middle: "h-9 py-1.5 px-3 text-sm",
+    large: "h-10 py-2 px-3.5 text-base",
   };
 
   return (
@@ -55,7 +54,7 @@ export const DatePicker = ({
         value={stringVal}
         onChange={handleChange}
         placeholder={placeholder}
-        className={`w-full rounded-lg border border-gray-300 bg-white text-gray-800 shadow-sm transition-colors hover:border-brand-500 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed ${
+        className={`w-full rounded-lg border border-gray-300 bg-white text-gray-800 shadow-2xs transition-colors hover:border-[#1a4d2e] focus:border-[#1a4d2e] focus:outline-none focus:ring-2 focus:ring-[#1a4d2e]/15 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed ${
           sizeClasses[size] || sizeClasses.middle
         }`}
         {...props}
@@ -65,5 +64,63 @@ export const DatePicker = ({
   );
 };
 
-export default DatePicker;
+export const RangePicker = ({
+  value,
+  onChange,
+  disabled = false,
+  className = "",
+  style,
+  size = "middle",
+  placeholder = ["Start date", "End date"],
+  ...props
+}) => {
+  const startVal = Array.isArray(value) ? formatToString(value[0]) : "";
+  const endVal = Array.isArray(value) ? formatToString(value[1]) : "";
 
+  const handleStartChange = (e) => {
+    const newStart = e.target.value;
+    onChange?.([newStart, endVal], [newStart, endVal]);
+  };
+
+  const handleEndChange = (e) => {
+    const newEnd = e.target.value;
+    onChange?.([startVal, newEnd], [startVal, newEnd]);
+  };
+
+  const sizeClasses = {
+    small: "h-7.5 py-1 px-2 text-xs",
+    middle: "h-9 py-1 px-2.5 text-sm",
+    large: "h-10 py-1.5 px-3 text-sm",
+  };
+
+  return (
+    <div
+      className={`inline-flex items-center gap-1.5 w-full rounded-lg border border-gray-300 bg-white px-2.5 shadow-2xs hover:border-[#1a4d2e] focus-within:border-[#1a4d2e] focus-within:ring-2 focus-within:ring-[#1a4d2e]/15 transition-all ${
+        sizeClasses[size] || sizeClasses.middle
+      } ${disabled ? "bg-gray-100 opacity-60 cursor-not-allowed" : ""} ${className}`}
+      style={style}
+      {...props}
+    >
+      <CalendarIcon className="w-4 h-4 text-gray-400 shrink-0" />
+      <input
+        type="date"
+        disabled={disabled}
+        value={startVal}
+        onChange={handleStartChange}
+        className="w-full bg-transparent text-gray-800 focus:outline-none text-xs md:text-sm"
+      />
+      <span className="text-gray-400 text-xs shrink-0 select-none font-medium">→</span>
+      <input
+        type="date"
+        disabled={disabled}
+        value={endVal}
+        onChange={handleEndChange}
+        className="w-full bg-transparent text-gray-800 focus:outline-none text-xs md:text-sm"
+      />
+    </div>
+  );
+};
+
+DatePicker.RangePicker = RangePicker;
+
+export default DatePicker;
