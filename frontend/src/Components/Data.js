@@ -9,7 +9,6 @@ import {
   SignatureOutlined,
   UserAddOutlined,
   UserOutlined,
-  UserSwitchOutlined,
 } from "@ant-design/icons";
 import { getAllTimes, getUserId } from "../Utils/auth";
 import { UserRole } from "../config/config";
