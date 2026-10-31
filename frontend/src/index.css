@@ -351,3 +351,110 @@ td .chakra-tag,
   .col-xl-12 { flex: 0 0 50%; max-width: 50%; }
   .col-xl-24 { flex: 0 0 100%; max-width: 100%; }
 }
+
+body.cute-malkin-theme {
+  --color-brand-primary: #ec4899;
+  --color-brand-hover: #db2777;
+  --color-brand-light: #fdf2f8;
+  --color-brand-dark: #9d174d;
+  --chakra-colors-brand-primary: #ec4899;
+  --chakra-colors-brand-secondary: #db2777;
+  --chakra-colors-brand-background: #fff5f7;
+  --chakra-colors-brand-text: #4a154b;
+  --chakra-colors-brand-textMuted: #831843;
+  background: linear-gradient(135deg, #fff5f7 0%, #ffeef3 50%, #fff0f5 100%) !important;
+  color: #4a154b !important;
+  transition: background 0.4s ease, color 0.4s ease;
+}
+
+body.cute-malkin-theme #root {
+  background: transparent !important;
+}
+
+/* Navbars & Topbars */
+body.cute-malkin-theme nav,
+body.cute-malkin-theme header {
+  background: rgba(255, 255, 255, 0.94) !important;
+  border-bottom: 1px solid rgba(251, 207, 232, 0.9) !important;
+  box-shadow: 0 4px 20px -2px rgba(244, 114, 182, 0.12) !important;
+}
+
+/* Sidebars */
+body.cute-malkin-theme aside,
+body.cute-malkin-theme .sidebar-container {
+  background: linear-gradient(180deg, #fff5f7 0%, #ffeef2 100%) !important;
+  border-right: 1px solid #fbcfe8 !important;
+}
+
+body.cute-malkin-theme a.active,
+body.cute-malkin-theme .nav-link.active,
+body.cute-malkin-theme [data-active="true"] {
+  background: linear-gradient(135deg, #fbcfe8 0%, #f472b6 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 14px rgba(244, 114, 182, 0.35) !important;
+  border-radius: 9999px !important;
+}
+
+/* Buttons */
+body.cute-malkin-theme .btn-primary,
+body.cute-malkin-theme button.chakra-button[data-variant="solid"],
+body.cute-malkin-theme button.chakra-button[bg="brand.primary"],
+body.cute-malkin-theme button[type="submit"] {
+  background: linear-gradient(135deg, #f472b6 0%, #ec4899 50%, #db2777 100%) !important;
+  border-color: #db2777 !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 16px rgba(244, 114, 182, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+  border-radius: 12px !important;
+}
+
+body.cute-malkin-theme .btn-primary:hover,
+body.cute-malkin-theme button.chakra-button[data-variant="solid"]:hover {
+  background: linear-gradient(135deg, #f687b3 0%, #f43f5e 100%) !important;
+  transform: translateY(-1px) scale(1.01) !important;
+  box-shadow: 0 6px 20px rgba(244, 114, 182, 0.5) !important;
+}
+
+body.cute-malkin-theme .btn-outline-primary,
+body.cute-malkin-theme button.chakra-button[data-variant="outline"] {
+  border-color: #f472b6 !important;
+  color: #db2777 !important;
+  background: #fff0f5 !important;
+}
+
+/* Tables & Cards */
+body.cute-malkin-theme table th,
+body.cute-malkin-theme .smart-table th {
+  background: #fdf2f8 !important;
+  color: #831843 !important;
+  border-bottom: 2px solid #fbcfe8 !important;
+}
+
+body.cute-malkin-theme table tr:hover td {
+  background: #fff1f5 !important;
+}
+
+/* Switch & Controls */
+body.cute-malkin-theme button[role="switch"][aria-checked="true"] {
+  background-color: #ec4899 !important;
+}
+
+/* Cute Soft Borders & Shadows */
+body.cute-malkin-theme .rounded-xl,
+body.cute-malkin-theme .rounded-2xl {
+  border-color: rgba(251, 207, 232, 0.75) !important;
+  box-shadow: 0 8px 24px -4px rgba(244, 114, 182, 0.15) !important;
+}
+
+body.cute-malkin-theme .text-gray-900,
+body.cute-malkin-theme .text-gray-800 {
+  color: #4a154b !important;
+}
+
+body.cute-malkin-theme .text-[#1a4d2e] {
+  color: #db2777 !important;
+}
+
+body.cute-malkin-theme .bg-[#1a4d2e] {
+  background: linear-gradient(135deg, #f472b6 0%, #db2777 100%) !important;
+}
+

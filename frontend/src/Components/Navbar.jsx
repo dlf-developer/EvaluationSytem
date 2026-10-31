@@ -6,12 +6,24 @@ import { BellFilled, MenuOutlined, SwapOutlined } from "./UI/Icons";
 import { useNavigate } from 'react-router-dom';
 import { Tag } from '@chakra-ui/react';
 import Sidebar from './Sidebar';
+import { isCuteMalkinThemeActive } from '../Utils/cuteMalkinTheme';
 
 function Navbar() {
   const user = getUserId();
   const role = user?.access;
   const isDualRole = user?.isDualRole;
   const userNotification = useSelector((state) => state.user.Notification);
+  const [isCute, setIsCute] = useState(() => isCuteMalkinThemeActive());
+
+  useEffect(() => {
+    const handleThemeChange = (e) => {
+      setIsCute(Boolean(e.detail?.active));
+    };
+    window.addEventListener("cute-theme-changed", handleThemeChange);
+    return () => {
+      window.removeEventListener("cute-theme-changed", handleThemeChange);
+    };
+  }, []);
 
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
@@ -58,6 +70,18 @@ function Navbar() {
         <div className="d-flex align-items-center gap-2">
           <p className="fs-5 mb-0 d-md-flex align-items-center gap-2 d-none">
             <span>👋 Hi, <span className="fw-bold">{user?.name}</span></span>
+            {isCute && (
+              <Tag
+                colorScheme="pink"
+                variant="solid"
+                fontWeight="bold"
+                size="sm"
+                borderRadius="full"
+                boxShadow="0 2px 8px rgba(244,114,182,0.5)"
+              >
+                👑 Malkin 💖
+              </Tag>
+            )}
             {isDualRole ? (
               <Tag colorScheme="teal" variant="solid" fontWeight="bold" size="sm">
                 OT ({role} Mode)

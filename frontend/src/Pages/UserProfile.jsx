@@ -11,6 +11,13 @@ import {
   Text,
   Avatar as ChakraAvatar,
 } from "@chakra-ui/react";
+import {
+  isMalkinAccount,
+  SECRET_MALKIN_PIN,
+  isCuteMalkinThemeActive,
+  setCuteMalkinTheme,
+} from "../Utils/cuteMalkinTheme";
+import WelcomeMalkinModal from "../Components/WelcomeMalkinModal";
 
 const UserProfile = () => {
   const [userData, setUserData] = useState(null);
@@ -18,16 +25,23 @@ const UserProfile = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [form] = Form.useForm();
 
+  // Cute Malkin Theme States
+  const [pinInput, setPinInput] = useState("");
+  const [isCuteActive, setIsCuteActive] = useState(() => isCuteMalkinThemeActive());
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
+
   const dispatch = useDispatch();
-  const userId = getUserId().id;
+  const userId = getUserId()?.id;
 
   // Fetch user data
   useEffect(() => {
     const fetchUserData = async () => {
       try {
         setLoading(true);
-        const response = await dispatch(GetSignleUser(userId));
-        setUserData(response.payload); // Assuming `payload` contains user data
+        if (userId) {
+          const response = await dispatch(GetSignleUser(userId));
+          setUserData(response.payload);
+        }
       } catch (error) {
         message.error("Failed to fetch user data.");
         console.error("Error:", error);
@@ -39,6 +53,54 @@ const UserProfile = () => {
     fetchUserData();
   }, [dispatch, userId]);
 
+  // Listen to global theme changes
+  useEffect(() => {
+    const handleThemeChange = (e) => {
+      setIsCuteActive(Boolean(e.detail?.active));
+    };
+    window.addEventListener("cute-theme-changed", handleThemeChange);
+    return () => {
+      window.removeEventListener("cute-theme-changed", handleThemeChange);
+    };
+  }, []);
+
+  // Determine if the current profile belongs to the specified account
+  const currentEmail = (
+    userData?.email ||
+    getUserId()?.email ||
+    (typeof window !== "undefined" ? localStorage.getItem("userEmail") : "") ||
+    ""
+  ).toLowerCase().trim();
+
+  const isTargetUser = isMalkinAccount(currentEmail);
+
+  // Handle PIN verification
+  const handleActivateTheme = (inputVal) => {
+    const clean = (inputVal !== undefined ? inputVal : pinInput).trim();
+    if (clean === SECRET_MALKIN_PIN) {
+      setCuteMalkinTheme(true);
+      setIsCuteActive(true);
+      setShowWelcomeModal(true);
+      setPinInput("");
+      message.success("Theme unlocked! Welcome Malkin 👑💖");
+    } else {
+      message.error("Incorrect PIN. Access restricted.");
+    }
+  };
+
+  const handlePinChange = (val) => {
+    setPinInput(val);
+    if (val.trim() === SECRET_MALKIN_PIN) {
+      handleActivateTheme(val);
+    }
+  };
+
+  const handleDeactivateTheme = () => {
+    setCuteMalkinTheme(false);
+    setIsCuteActive(false);
+    message.info("Standard theme restored.");
+  };
+
   // Enable edit mode
   const handleEdit = () => {
     setIsEditing(true);
@@ -48,16 +110,15 @@ const UserProfile = () => {
   // Save updated profile
   const handleSave = async () => {
     try {
-      const currentValues = await form.validateFields(); // Get the current form values
+      const currentValues = await form.validateFields();
       const updatedData = Object.keys(currentValues).reduce((acc, key) => {
         if (currentValues[key] !== userData[key]) {
-          acc[key] = currentValues[key]; // Include only updated fields
+          acc[key] = currentValues[key];
         }
         return acc;
       }, {});
 
       if (Object.keys(updatedData).length > 0) {
-        // Ideally, call an API or dispatch an action to update the user profile
         const id = userId;
         await dispatch(UpdateUser({ id, ...updatedData }));
         setUserData((prevData) => ({ ...prevData, ...updatedData }));
@@ -66,7 +127,7 @@ const UserProfile = () => {
         message.info("No changes made to the profile.");
       }
 
-      setIsEditing(false); // Exit edit mode
+      setIsEditing(false);
     } catch (error) {
       message.error("Please fix the errors in the form.");
     }
@@ -85,7 +146,7 @@ const UserProfile = () => {
         h="100vh"
         align="center"
         justify="center"
-        bg="brand.background"
+        bg={isCuteActive ? "#fff0f5" : "brand.background"}
       >
         <Spin size="large" />
       </Flex>
@@ -93,12 +154,16 @@ const UserProfile = () => {
   }
 
   return (
-    <Box bg="brand.background" minH="100vh" pb={12}>
+    <Box bg={isCuteActive ? "#fff0f5" : "brand.background"} minH="100vh" pb={12} transition="background 0.3s">
       {/* Premium Cover Header */}
       <Box
         h={{ base: "200px", md: "280px" }}
         w="100%"
-        bgGradient="linear(to-r, brand.primary, brand.secondary)"
+        bgGradient={
+          isCuteActive
+            ? "linear(to-r, #f472b6, #db2777)"
+            : "linear(to-r, brand.primary, brand.secondary)"
+        }
         position="relative"
         overflow="hidden"
       >
@@ -139,6 +204,8 @@ const UserProfile = () => {
           rounded="2xl"
           shadow={{ base: "lg", md: "2xl" }}
           overflow="hidden"
+          borderWidth={isCuteActive ? "1.5px" : "1px"}
+          borderColor={isCuteActive ? "pink.200" : "gray.100"}
         >
           {/* Header Section */}
           <Flex
@@ -147,8 +214,8 @@ const UserProfile = () => {
             justify="space-between"
             p={{ base: 6, md: 10 }}
             borderBottomWidth="1px"
-            borderColor="gray.100"
-            bg="white"
+            borderColor={isCuteActive ? "pink.100" : "gray.100"}
+            bg={isCuteActive ? "linear-gradient(180deg, #ffffff 0%, #fff9fa 100%)" : "white"}
           >
             <Flex
               align="center"
@@ -163,19 +230,30 @@ const UserProfile = () => {
                 showBorder
                 borderColor="white"
                 borderWidth="4px"
-                boxShadow="xl"
+                boxShadow={isCuteActive ? "0 10px 25px -5px rgba(244, 114, 182, 0.4)" : "xl"}
                 mt={{ base: "-40px", sm: 0 }}
-                bg="brand.secondary"
+                bg={isCuteActive ? "pink.400" : "brand.secondary"}
                 color="white"
                 w={{ base: "120px", md: "150px" }}
                 h={{ base: "120px", md: "150px" }}
               />
               <Box pb={{ sm: 2 }}>
-                <Heading size="xl" fontWeight="bold" color="gray.800" mb={1}>
-                  {userData?.name || "User Name"}
-                </Heading>
-                <Text color="brand.primary" fontWeight="semibold" fontSize="lg">
-                  {userData?.designation || "Staff Member"}
+                <Flex align="center" gap={2} justify={{ base: "center", sm: "flex-start" }}>
+                  <Heading size="xl" fontWeight="bold" color="gray.800" mb={1}>
+                    {userData?.name || "User Name"}
+                  </Heading>
+                  {isCuteActive && isTargetUser && (
+                    <span className="text-xl select-none" title="Malkin 👑">👑💖</span>
+                  )}
+                </Flex>
+                <Text
+                  color={isCuteActive ? "pink.600" : "brand.primary"}
+                  fontWeight="semibold"
+                  fontSize="lg"
+                >
+                  {isCuteActive && isTargetUser
+                    ? "Malkin • SoftGirl CEO ✨"
+                    : userData?.designation || "Staff Member"}
                 </Text>
               </Box>
             </Flex>
@@ -189,8 +267,11 @@ const UserProfile = () => {
                     onClick={handleSave}
                     size="large"
                     style={{
-                      borderRadius: "8px",
-                      boxShadow: "0 4px 14px 0 rgba(0,118,255,0.39)",
+                      borderRadius: "10px",
+                      background: isCuteActive
+                        ? "linear-gradient(135deg, #f472b6 0%, #db2777 100%)"
+                        : undefined,
+                      borderColor: isCuteActive ? "#db2777" : undefined,
                     }}
                   >
                     Save Changes
@@ -198,7 +279,7 @@ const UserProfile = () => {
                   <Button
                     onClick={handleCancel}
                     size="large"
-                    style={{ borderRadius: "8px" }}
+                    style={{ borderRadius: "10px" }}
                   >
                     Cancel
                   </Button>
@@ -210,9 +291,10 @@ const UserProfile = () => {
                   onClick={handleEdit}
                   size="large"
                   style={{
-                    borderRadius: "8px",
-                    borderColor: "var(--chakra-colors-brand-primary)",
-                    color: "var(--chakra-colors-brand-primary)",
+                    borderRadius: "10px",
+                    borderColor: isCuteActive ? "#f472b6" : "var(--chakra-colors-brand-primary)",
+                    color: isCuteActive ? "#db2777" : "var(--chakra-colors-brand-primary)",
+                    background: isCuteActive ? "#fff0f5" : undefined,
                   }}
                 >
                   Edit Profile
@@ -222,8 +304,8 @@ const UserProfile = () => {
           </Flex>
 
           {/* Form Section */}
-          <Box p={{ base: 6, md: 10 }} bg="gray.50">
-            <Heading size="md" mb={8} color="gray.700" fontWeight="bold">
+          <Box p={{ base: 6, md: 10 }} bg={isCuteActive ? "#fff9fb" : "gray.50"}>
+            <Heading size="md" mb={8} color={isCuteActive ? "pink.900" : "gray.700"} fontWeight="bold">
               Personal Information
             </Heading>
             <Form
@@ -294,7 +376,7 @@ const UserProfile = () => {
                   >
                     <Input
                       style={{ borderRadius: "8px", padding: "10px 14px" }}
-                      placeholder="Enter your phone frequency"
+                      placeholder="Enter your phone number"
                     />
                   </Form.Item>
                 </Col>
@@ -316,11 +398,62 @@ const UserProfile = () => {
                     />
                   </Form.Item>
                 </Col>
+
+                {/* Normal-looking PIN input field (Exclusively for nishachauhan@dlps.co.in) */}
+                {isTargetUser && (
+                  <Col xs={24} sm={12}>
+                    <Form.Item
+                      label={
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
+                          <span style={{ fontWeight: 500, color: "#4a5568" }}>
+                            PIN
+                          </span>
+                          {isCuteActive && (
+                            <button
+                              type="button"
+                              onClick={handleDeactivateTheme}
+                              style={{
+                                background: "none",
+                                border: "none",
+                                color: "#9ca3af",
+                                fontSize: "11px",
+                                cursor: "pointer",
+                                textDecoration: "underline",
+                                padding: 0,
+                              }}
+                            >
+                              Reset theme
+                            </button>
+                          )}
+                        </div>
+                      }
+                    >
+                      <Input
+                        placeholder="Enter PIN"
+                        value={pinInput}
+                        maxLength={6}
+                        disabled={false}
+                        onChange={(e) => handlePinChange(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleActivateTheme(e.target.value);
+                        }}
+                        style={{ borderRadius: "8px", padding: "10px 14px" }}
+                        autoComplete="off"
+                      />
+                    </Form.Item>
+                  </Col>
+                )}
               </Row>
             </Form>
           </Box>
         </Box>
       </Box>
+
+      {/* Pop-up Celebration Modal: "welcome malkin" */}
+      <WelcomeMalkinModal
+        open={showWelcomeModal}
+        onClose={() => setShowWelcomeModal(false)}
+      />
     </Box>
   );
 };

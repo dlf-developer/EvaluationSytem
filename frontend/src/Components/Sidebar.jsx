@@ -1,6 +1,7 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { Menu } from "./Data";
 import { getUserId } from "../Utils/auth";
+import { isCuteMalkinThemeActive } from "../Utils/cuteMalkinTheme";
 import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -55,6 +56,17 @@ function Sidebar({ collapsed, onCloseDrawer }) {
 
   const menuItems = useMemo(() => Menu[Role] || [], [Role]);
   const { session, changeSession, loading } = useSessionPicker();
+  const [isCute, setIsCute] = useState(() => isCuteMalkinThemeActive());
+
+  useEffect(() => {
+    const handleThemeChange = (e) => {
+      setIsCute(Boolean(e.detail?.active));
+    };
+    window.addEventListener("cute-theme-changed", handleThemeChange);
+    return () => {
+      window.removeEventListener("cute-theme-changed", handleThemeChange);
+    };
+  }, []);
 
   const handleLogout = () => {
     localStorage.clear();
@@ -87,25 +99,40 @@ function Sidebar({ collapsed, onCloseDrawer }) {
           <Box
             flexShrink={0}
             p={2}
-            bg="brand.primary"
+            bg={isCute ? "pink.400" : "brand.primary"}
             borderRadius="lg"
             display="flex"
             alignItems="center"
             justifyContent="center"
+            boxShadow={isCute ? "0 4px 12px rgba(244, 114, 182, 0.4)" : undefined}
           >
-            <Layers size={18} color="white" />
+            {isCute ? <span className="text-sm">💖</span> : <Layers size={18} color="white" />}
           </Box>
           {!collapsed && (
-            <Heading
-              size="md"
-              color="gray.800"
-              letterSpacing="tight"
-              fontWeight="800"
-              fontSize="lg"
-              lineHeight="1"
-            >
-              SchoolPortal
-            </Heading>
+            <Box>
+              <Heading
+                size="md"
+                color={isCute ? "pink.800" : "gray.800"}
+                letterSpacing="tight"
+                fontWeight="800"
+                fontSize={isCute ? "md" : "lg"}
+                lineHeight="1"
+              >
+                {isCute ? "SoftGirl CEO 💖" : "SchoolPortal"}
+              </Heading>
+              {isCute && (
+                <Text
+                  fontSize="9px"
+                  fontWeight="bold"
+                  color="pink.400"
+                  letterSpacing="wider"
+                  textTransform="uppercase"
+                  mt={1}
+                >
+                  Soft Life Suite ✨
+                </Text>
+              )}
+            </Box>
           )}
         </Flex>
 

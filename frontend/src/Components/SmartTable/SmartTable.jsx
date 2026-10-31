@@ -1,4 +1,4 @@
-import React, { useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Box,
   Table,
@@ -20,10 +20,19 @@ import {
   IconButton,
   Tooltip,
 } from "@chakra-ui/react";
-import { ChevronLeft, ChevronRight, FilterX, Download } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  FilterX,
+  Download,
+  Sparkles,
+  SlidersHorizontal,
+} from "lucide-react";
 import * as XLSX from "xlsx";
 import ColumnHeader from "./ColumnHeader";
 import useTableState from "./useTableState";
+import { isCuteMalkinThemeActive } from "../../Utils/cuteMalkinTheme";
+import CustomExcelExportModal from "./CustomExcelExportModal";
 
 // ─── Flatten a nested object to a single-level object ──────────────────────
 // e.g. { a: { b: 1 }, c: 2 } → { "a.b": 1, c: 2 }
@@ -76,6 +85,20 @@ const SmartTable = ({
   } = useTableState({ data, columns, pageSize: initialPageSize });
 
   const totalPages = Math.ceil(totalFiltered / pageSize);
+
+  // ── Cute theme & Custom Excel Export state ────────────────────
+  const [isCuteActive, setIsCuteActive] = useState(() => isCuteMalkinThemeActive());
+  const [isCustomExportOpen, setIsCustomExportOpen] = useState(false);
+
+  useEffect(() => {
+    const handleThemeChange = (e) => {
+      setIsCuteActive(Boolean(e.detail?.active));
+    };
+    window.addEventListener("cute-theme-changed", handleThemeChange);
+    return () => {
+      window.removeEventListener("cute-theme-changed", handleThemeChange);
+    };
+  }, []);
 
   // ── Download handler ──────────────────────────────────────────
   const handleDownload = useCallback(() => {
@@ -207,6 +230,50 @@ const SmartTable = ({
                   isDisabled={totalFiltered === 0}
                 >
                   Export .xlsx
+                </Button>
+              </Tooltip>
+            )}
+
+            {/* ── Custom Excel / Nisha's Special Button ──────────── */}
+            {downloadable && (
+              <Tooltip
+                label={
+                  isCuteActive
+                    ? "Malkin's Special: Choose custom fields & separate scores 💕"
+                    : `Choose custom fields & separate scores for ${
+                        title ? title.split("—")[0].trim() : downloadFileName
+                      }`
+                }
+                placement="top"
+                hasArrow
+              >
+                <Button
+                  size="sm"
+                  leftIcon={
+                    <Icon
+                      as={isCuteActive ? Sparkles : SlidersHorizontal}
+                      boxSize="14px"
+                    />
+                  }
+                  variant="outline"
+                  borderColor={isCuteActive ? "pink.300" : "purple.200"}
+                  color={isCuteActive ? "pink.700" : "purple.700"}
+                  bg={isCuteActive ? "pink.50" : "purple.50"}
+                  _hover={{
+                    bg: isCuteActive ? "pink.100" : "purple.100",
+                    borderColor: isCuteActive ? "pink.400" : "purple.300",
+                    transform: "translateY(-1px)",
+                    boxShadow: "sm",
+                  }}
+                  _active={{ transform: "translateY(0)" }}
+                  transition="all 0.15s ease"
+                  borderRadius="lg"
+                  fontWeight="600"
+                  fontSize="xs"
+                  onClick={() => setIsCustomExportOpen(true)}
+                  isDisabled={totalFiltered === 0}
+                >
+                  {isCuteActive ? "Malkin's Special 🌸" : "Custom Export"}
                 </Button>
               </Tooltip>
             )}
@@ -428,6 +495,17 @@ const SmartTable = ({
           </HStack>
         </Flex>
       )}
+
+      {/* ── Custom Excel Export Modal (Nisha's Special) ── */}
+      <CustomExcelExportModal
+        isOpen={isCustomExportOpen}
+        onClose={() => setIsCustomExportOpen(false)}
+        data={allFilteredData ?? data}
+        columns={columns}
+        downloadFileName={downloadFileName}
+        tableTitle={title}
+        isCuteActive={isCuteActive}
+      />
     </Box>
   );
 };

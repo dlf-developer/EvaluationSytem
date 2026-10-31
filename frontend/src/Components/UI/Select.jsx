@@ -91,7 +91,9 @@ export const Select = forwardRef(
       return normalizedOptions.filter((opt) => selectedValues.includes(opt.value));
     }, [normalizedOptions, selectedValues]);
 
-    // Close on click outside
+    const isSearchable = showSearch ?? normalizedOptions.length > 5;
+
+    // Close on click outside & focus search
     useEffect(() => {
       const handleOutsideClick = (event) => {
         if (containerRef.current && !containerRef.current.contains(event.target)) {
@@ -100,14 +102,20 @@ export const Select = forwardRef(
       };
       if (isOpen) {
         document.addEventListener("mousedown", handleOutsideClick);
-        if (showSearch || normalizedOptions.length > 5) {
-          searchInputRef.current?.focus();
+        if (isSearchable) {
+          const timer = setTimeout(() => {
+            searchInputRef.current?.focus();
+          }, 40);
+          return () => {
+            clearTimeout(timer);
+            document.removeEventListener("mousedown", handleOutsideClick);
+          };
         }
       }
       return () => {
         document.removeEventListener("mousedown", handleOutsideClick);
       };
-    }, [isOpen, showSearch, normalizedOptions.length]);
+    }, [isOpen, isSearchable]);
 
     // Handle Option Selection
     const handleSelect = (optVal, optDisabled) => {
@@ -142,12 +150,10 @@ export const Select = forwardRef(
     };
 
     const sizeClasses = {
-      small: "min-h-[30px] py-1 px-2.5 text-xs",
-      middle: "min-h-[36px] py-1.5 px-3 text-sm",
-      large: "min-h-[40px] py-2 px-3.5 text-sm",
+      small: "min-h-[32px] py-1 px-2.5 text-xs",
+      middle: "min-h-[38px] py-1.5 px-3 text-sm",
+      large: "min-h-[42px] py-2 px-3.5 text-sm",
     };
-
-    const isSearchable = showSearch ?? normalizedOptions.length > 5;
 
     return (
       <div
@@ -224,12 +230,15 @@ export const Select = forwardRef(
 
         {/* Dropdown Popover */}
         {isOpen && (
-          <div className="absolute left-0 top-full mt-1 w-full min-w-[180px] bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+          <div className="absolute left-0 top-full mt-1.5 w-full min-w-[200px] bg-white rounded-xl shadow-xl border border-gray-200/90 overflow-hidden z-[1050]">
             {/* Search Input when applicable */}
             {isSearchable && (
-              <div className="px-2.5 pt-1.5 pb-1 border-b border-gray-100">
-                <div className="relative">
-                  <Search className="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <div
+                className="p-2 border-b border-gray-100 bg-white"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center w-full px-2.5 py-1.5 bg-gray-50/90 border border-gray-200 rounded-lg transition-all focus-within:bg-white focus-within:border-[#1a4d2e] focus-within:ring-2 focus-within:ring-[#1a4d2e]/15">
+                  <Search className="w-4 h-4 text-gray-400 shrink-0 mr-2" />
                   <input
                     ref={searchInputRef}
                     type="text"
@@ -238,15 +247,33 @@ export const Select = forwardRef(
                       setSearchTerm(e.target.value);
                       onSearch?.(e.target.value);
                     }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Escape") {
+                        setIsOpen(false);
+                      }
+                    }}
                     placeholder="Search options..."
-                    className="w-full pl-8 pr-2.5 py-1 text-xs bg-gray-50 border border-gray-200 rounded-md text-gray-800 placeholder:text-gray-400 focus:outline-none focus:bg-white focus:border-[#1a4d2e]"
+                    className="w-full text-sm bg-transparent border-0 p-0 text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-0 leading-normal"
                   />
+                  {searchTerm && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSearchTerm("");
+                        searchInputRef.current?.focus();
+                      }}
+                      className="text-gray-400 hover:text-gray-600 ml-1 p-0.5 rounded-full hover:bg-gray-200/60 transition-colors shrink-0"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
               </div>
             )}
 
             {/* Options List */}
-            <div className="max-h-56 overflow-y-auto py-0.5">
+            <div className="max-h-60 overflow-y-auto p-1.5 space-y-0.5">
               {displayedOptions.length > 0 ? (
                 displayedOptions.map((opt, idx) => {
                   const isSelected = selectedValues.includes(opt.value);
@@ -254,7 +281,7 @@ export const Select = forwardRef(
                     <div
                       key={opt.value ?? idx}
                       onClick={() => handleSelect(opt.value, opt.disabled)}
-                      className={`flex items-center justify-between px-3 py-1.5 text-sm cursor-pointer transition-colors ${
+                      className={`flex items-center justify-between px-2.5 py-2 rounded-lg text-sm cursor-pointer transition-colors select-none ${
                         opt.disabled
                           ? "opacity-40 cursor-not-allowed bg-gray-50 text-gray-400"
                           : isSelected
@@ -264,18 +291,25 @@ export const Select = forwardRef(
                     >
                       <span className="truncate">{opt.label}</span>
                       {isSelected && (
-                        <Check className="w-3.5 h-3.5 text-[#1a4d2e] shrink-0 ml-2" />
+                        <Check className="w-4 h-4 text-[#1a4d2e] shrink-0 ml-2" />
                       )}
                     </div>
                   );
                 })
               ) : (
-                <div className="py-3 text-center text-xs text-gray-400 font-medium">
-                  {loading ? "Loading..." : "No options found"}
+                <div className="py-6 text-center text-xs text-gray-400 font-medium">
+                  {loading ? (
+                    <div className="flex items-center justify-center gap-2 text-gray-500">
+                      <Loader2 className="w-4 h-4 animate-spin text-[#1a4d2e]" />
+                      <span>Loading options...</span>
+                    </div>
+                  ) : (
+                    "No options found"
+                  )}
                 </div>
               )}
               {filteredOptions.length > DISPLAY_LIMIT && (
-                <div className="px-3 py-1 text-[11px] text-gray-400 text-center bg-gray-50 border-t border-gray-100">
+                <div className="px-3 py-1.5 text-[11px] text-gray-400 text-center bg-gray-50/80 rounded-md border border-gray-100 mt-1">
                   Showing {DISPLAY_LIMIT} of {filteredOptions.length} — type to filter
                 </div>
               )}

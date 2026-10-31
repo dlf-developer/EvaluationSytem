@@ -85,6 +85,7 @@ const login = async (req, res) => {
         const token = jwt.sign(
             {
                 id: user._id,
+                email: user.email,
                 access: user.access,
                 name: user.name,
                 isDualRole: !!user.isDualRole,
@@ -570,6 +571,7 @@ const verifyLoginOTP = async (req, res) => {
         const token = jwt.sign(
             {
                 id: user._id,
+                email: user.email,
                 access: user.access,
                 name: user.name,
                 isDualRole: !!user.isDualRole,

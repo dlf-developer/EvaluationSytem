@@ -98,6 +98,7 @@ export const getUserId = () => {
   try {
     const decoded = jwtDecode(token);
     decoded.id = decoded.id || decoded._id || decoded.userId;
+    decoded.email = decoded.email || (typeof window !== "undefined" ? localStorage.getItem("userEmail") : "");
     decoded.canAddNotebookComment = Boolean(
       decoded.canAddNotebookComment === true ||
       decoded.canAddNotebookComment === "true"
