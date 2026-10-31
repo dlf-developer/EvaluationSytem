@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { Form, Input, DatePicker, Select, Button, message, Alert } from "antd";
+import { Form, Input, DatePicker, Select, Button, message, Alert } from "../../../Components/UI";
 import { useDispatch, useSelector } from "react-redux";
 import { GetTeacherList, calculateTeacherScores } from "../../../redux/userSlice";
-import { SyncOutlined } from "@ant-design/icons";
+import { SyncOutlined } from "../../../Components/UI/Icons";
 import { Box, Text } from "@chakra-ui/react";
 import dayjs from "dayjs";
 import { getUserRoleTag } from "../../../Utils/auth";

@@ -9,13 +9,12 @@ import {
   Button,
   Switch,
   message,
-  Divider,
-} from "antd";
+} from "./UI";
 import { useDispatch } from "react-redux";
 import { UpdateUser } from "../redux/userSlice";
 import { UserRoleBadge } from "./SmartTable/tableColumns";
-import { Box, Flex, Text, Tag } from "@chakra-ui/react";
-import { EditOutlined, SaveOutlined } from "@ant-design/icons";
+import { Box, Flex, Text, Tag, Divider } from "@chakra-ui/react";
+import { EditOutlined, SaveOutlined } from "./UI/Icons";
 
 const { Option } = Select;
 

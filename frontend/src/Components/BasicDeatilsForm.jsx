@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Form, Input, Button, DatePicker, Select, message, Spin } from "antd";
+import { Form, Input, Button, DatePicker, Select, message, Spin } from "./UI";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { getCreateClassSection, GetObserverList, GetTeacherList } from "../redux/userSlice";
@@ -372,7 +372,20 @@ function BasicDetailsForm() {
               </>
             )}
 
-            <Button type="primary" htmlType="submit" disabled={loading}>
+            <Button
+              type="primary"
+              htmlType="submit"
+              disabled={loading}
+              block
+              className="w-full mt-4 font-semibold shadow-sm"
+              style={{
+                backgroundColor: "#1a4d2e",
+                borderColor: "#1a4d2e",
+                color: "#ffffff",
+                borderRadius: "8px",
+                minHeight: "40px",
+              }}
+            >
               {loading ? "Creating Form..." : "Create Form"}
             </Button>
           </Form>

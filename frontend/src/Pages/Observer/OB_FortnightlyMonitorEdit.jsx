@@ -8,7 +8,7 @@ import {
   message,
   Radio,
   Spin,
-} from "antd";
+} from "../../Components/UI";
 import { Box, Flex, SimpleGrid, Heading, Text, Badge } from "@chakra-ui/react";
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";

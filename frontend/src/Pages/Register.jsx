@@ -19,7 +19,7 @@ import {
   LockOutlined,
   UserOutlined,
   MailOutlined,
-} from "@ant-design/icons";
+} from "../Components/UI/Icons";
 
 function Register() {
   const [name, setName] = useState("");

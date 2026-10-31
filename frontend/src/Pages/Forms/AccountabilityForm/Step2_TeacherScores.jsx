@@ -1,7 +1,7 @@
 import React, { useState } from "react";
-import { Form, InputNumber, Collapse, Row, Col, Card, Statistic, Empty, Alert, Badge } from "antd";
+import { Form, InputNumber, Collapse, Row, Col, Card, Statistic, Empty, Alert, Badge } from "../../../Components/UI";
 import { Box } from "@chakra-ui/react";
-import { BookOutlined, SignatureOutlined } from "@ant-design/icons";
+import { BookOutlined, SignatureOutlined } from "../../../Components/UI/Icons";
 
 const { Panel } = Collapse;
 

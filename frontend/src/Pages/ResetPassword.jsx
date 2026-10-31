@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
-import { message } from "antd";
+import { message } from "../Components/UI";
 import {
   Box,
   Button,
@@ -17,7 +17,7 @@ import {
   Text,
   VStack,
 } from "@chakra-ui/react";
-import { LockOutlined, CheckCircleOutlined, EyeOutlined, EyeInvisibleOutlined } from "@ant-design/icons";
+import { LockOutlined, CheckCircleOutlined, EyeOutlined, EyeInvisibleOutlined } from "../Components/UI/Icons";
 import { axiosInstance } from "../redux/instence";
 
 function ResetPassword() {

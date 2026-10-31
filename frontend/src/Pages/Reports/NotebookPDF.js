@@ -1,8 +1,8 @@
 import React, { useEffect, useCallback, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useParams } from "react-router-dom";
-import { Button, Spin, Table, Tag } from "antd";
-import { DownloadOutlined } from "@ant-design/icons";
+import { Button, Spin, Table, Tag } from "../../Components/UI";
+import { DownloadOutlined } from "../../Components/UI/Icons";
 import {
   Box,
   Flex,

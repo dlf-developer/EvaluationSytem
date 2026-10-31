@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { getUserId, getAllTimes } from "../../Utils/auth";
-import { Table } from "antd";
+import { Table } from "../../Components/UI";
 import { UserRole } from "../../config/config";
-import { PlusOutlined, DeleteFilled, CopyOutlined } from "@ant-design/icons";
+import { PlusOutlined, DeleteFilled, CopyOutlined } from "../../Components/UI/Icons";
 import { Link, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { createWingForm, GetWingFrom, deleteWingForm, duplicateWingForm } from "../../redux/userSlice";
@@ -18,7 +18,7 @@ import {
   Text,
   Tooltip,
 } from "@chakra-ui/react";
-import { message, Modal } from "antd";
+import { message, Modal } from "../../Components/UI";
 
 import SmartTable from "../../Components/SmartTable";
 import { UserRoleBadge, UserCell } from "../../Components/SmartTable/tableColumns";

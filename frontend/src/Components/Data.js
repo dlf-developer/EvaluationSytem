@@ -1,4 +1,4 @@
-import { Button, Space, Tag } from "antd";
+import { Button, Space, Tag } from "./UI";
 import { Link } from "react-router-dom";
 import {
   AppstoreAddOutlined,
@@ -9,7 +9,7 @@ import {
   SignatureOutlined,
   UserAddOutlined,
   UserOutlined,
-} from "@ant-design/icons";
+} from "./UI/Icons";
 import { getAllTimes, getUserId } from "../Utils/auth";
 import { UserRole } from "../config/config";
 import React, { useState, useEffect } from "react";
@@ -861,7 +861,6 @@ export const Formcolumns3 = [
         )}
       </Space>
     ),
-    width: '160px',
   },
 ];
 

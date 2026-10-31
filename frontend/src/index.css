@@ -1,5 +1,9 @@
 @import url('https://fonts.googleapis.com/css2?family=Host+Grotesk:ital,wght@0,300..800;1,300..800&display=swap');
 
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 
 .host-grotesk-1 {
   font-family: "Host Grotesk", sans-serif; 
@@ -27,8 +31,15 @@ code {
 }
 
 
+:root {
+  --color-brand-primary: #1a4d2e;
+  --color-brand-hover: #4f6f52;
+  --color-brand-light: #f4f8f4;
+  --color-brand-dark: #133821;
+}
+
 .IndexColor:hover{
-color: #0b5ed7 !important;
+color: #4f6f52 !important;
 }
 
 .IndexColor.btn-primary{
@@ -36,7 +47,7 @@ color: #0b5ed7 !important;
 }
 .Bg-Temp
 {
-  background-color: #6ca5f9fb;
+  background-color: #1a4d2e;
 }
 .Grid-Columns{
   display: grid;
@@ -49,18 +60,39 @@ color: #0b5ed7 !important;
   color: #9c9c9c;
 }
 
-:where(.css-dev-only-do-not-override-ipyc9m).ant-btn-variant-solid
-{
-  background: #1a4d2e !important;
-}
 .btn-primary{
+  background-color: #1a4d2e !important;
+  border-color: #1a4d2e !important;
+  color: #fff !important;
   --bs-btn-bg:#1a4d2e !important;
   --bs-btn-hover-bg:#4f6f52 !important;
   --bs-btn-hover-border-color:#4f6f52 !important;
 }
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-primary:active {
+  background-color: #4f6f52 !important;
+  border-color: #4f6f52 !important;
+  color: #fff !important;
+}
+
+.btn-outline-primary {
+  color: #1a4d2e !important;
+  border-color: #1a4d2e !important;
+  background-color: transparent !important;
+}
+
+.btn-outline-primary:hover,
+.btn-outline-primary:focus,
+.btn-outline-primary:active {
+  background-color: #1a4d2e !important;
+  border-color: #1a4d2e !important;
+  color: #fff !important;
+}
+
 .btn:hover{
   background-color: var(--bs-btn-hover-bg);
-    border-color: var(--bs-btn-hover-border-color);
+  border-color: var(--bs-btn-hover-border-color);
 }
 
 @media (max-width:786px) {

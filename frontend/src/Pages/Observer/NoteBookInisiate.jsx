@@ -1,4 +1,4 @@
-import { Button, Form, message, Select, Spin, Input } from "antd";
+import { Button, Form, message, Select, Spin, Input } from "../../Components/UI";
 import React, { useEffect, useState } from "react";
 
 import { useDispatch, useSelector } from "react-redux";
@@ -22,18 +22,27 @@ function NoteBookInisiate() {
 
   const TeachersList = useSelector((state) => state.user.GetTeachersLists);
   const ObserverList = useSelector((state) => state.user.GetObserverLists);
-  const [newData, setNewData] = useState([]);
+  const [newData, setNewData] = useState(() => {
+    try {
+      const stored = sessionStorage.getItem("cached_class_sections");
+      return stored ? JSON.parse(stored) : [];
+    } catch (e) {
+      return [];
+    }
+  });
   const [sectionState, setSectionState] = useState(null);
 
   useEffect(() => {
     dispatch(GetTeacherList());
     dispatch(getCreateClassSection()).then((res) => {
       if (res?.payload?.success) {
-        setNewData(
-          res?.payload?.classDetails.sort(
-            (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
-          ),
+        const sorted = res?.payload?.classDetails.sort(
+          (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
         );
+        setNewData(sorted);
+        try {
+          sessionStorage.setItem("cached_class_sections", JSON.stringify(sorted));
+        } catch (e) {}
       }
     });
     if (CurrectUserRole === UserRole[2]) {
@@ -101,7 +110,7 @@ function NoteBookInisiate() {
   };
   return (
     <Box
-      p={{ base: 4, md: 8 }}
+      p={{ base: 3, md: 6 }}
       minH="calc(100vh - 72px)"
       display="flex"
       alignItems="center"
@@ -110,19 +119,19 @@ function NoteBookInisiate() {
     >
       <Box
         w="full"
-        maxW="500px"
+        maxW="480px"
         bg="white"
-        borderRadius="2xl"
-        boxShadow="xl"
+        borderRadius="xl"
+        boxShadow="md"
         borderWidth="1px"
-        borderColor="gray.100"
-        p={{ base: 6, md: 8 }}
+        borderColor="gray.200"
+        p={{ base: 5, md: 6 }}
       >
-        <VStack spacing={2} mb={8} align="center" textAlign="center">
-          <Heading size="lg" color="brand.primary">
+        <VStack spacing={1} mb={5} align="center" textAlign="center">
+          <Heading size="md" color="#1a4d2e">
             Initiate Monitoring
           </Heading>
-          <Text color="gray.500">
+          <Text fontSize="sm" color="gray.500">
             Configure roles and targets for the Notebook Checking
           </Text>
         </VStack>
@@ -342,9 +351,16 @@ function NoteBookInisiate() {
               type="primary"
               htmlType="submit"
               disabled={loading}
-              size="large"
+              size="middle"
               block
-              style={{ borderRadius: "8px", marginTop: "16px" }}
+              className="w-full mt-4 font-semibold shadow-sm"
+              style={{
+                backgroundColor: "#1a4d2e",
+                borderColor: "#1a4d2e",
+                color: "#ffffff",
+                borderRadius: "8px",
+                minHeight: "40px",
+              }}
             >
               {loading ? "Initiating Form..." : "Initiate Form"}
             </Button>

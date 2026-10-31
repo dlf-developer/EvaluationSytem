@@ -3,8 +3,8 @@ import ReactPDF, { PDFViewer } from "@react-pdf/renderer";
 import { useDispatch } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
 import { getSingleAccountability } from "../../redux/userSlice";
-import { Spin } from "antd";
-import { DownloadOutlined, ArrowLeftOutlined } from "@ant-design/icons";
+import { Spin } from "../../Components/UI";
+import { DownloadOutlined, ArrowLeftOutlined } from "../../Components/UI/Icons";
 import {
   Box, Flex, Heading, Text, Image, HStack,
   SimpleGrid, Button, Divider, Table as ChakraTable, Thead, Tbody, Tr, Th, Td

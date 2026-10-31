@@ -20,8 +20,8 @@ import {
   Radio,
   Spin,
   Space,
-} from "antd";
-import { SaveOutlined } from "@ant-design/icons";
+} from "../../../Components/UI";
+import { SaveOutlined } from "../../../Components/UI/Icons";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
 import moment from "moment";

@@ -4,7 +4,6 @@ import reportWebVitals from "./reportWebVitals";
 import { Provider } from "react-redux";
 import store from "./redux/store";
 import { BrowserRouter } from "react-router-dom";
-import { ConfigProvider } from "antd";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { ChakraProvider } from "@chakra-ui/react";
 import theme from "./theme";
@@ -29,26 +28,7 @@ root.render(
       <Provider store={store}>
         <BrowserRouter>
           <ChakraProvider theme={theme} resetCSS={false}>
-            <ConfigProvider
-              theme={{
-                components: {
-                  Modal: {
-                    titleFontSize: 25,
-                  },
-                  Input: {
-                    activeBorderColor: "#1677ff",
-                    hoverBorderColor: "#4f6f52",
-                    activeShadow: "#4f6f52",
-                  },
-                  Button: {
-                    // colorPrimary: "linear-gradient(135deg, #6253e1, #04befe)",
-                    border: "none",
-                  },
-                },
-              }}
-            >
-              <App />
-            </ConfigProvider>
+            <App />
           </ChakraProvider>
         </BrowserRouter>
       </Provider>

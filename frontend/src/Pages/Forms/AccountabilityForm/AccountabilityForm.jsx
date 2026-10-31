@@ -1,14 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
-import { Form, message, Steps, Alert } from "antd";
+import { Form, message, Steps, Alert } from "../../../Components/UI";
 import {
   getSingleAccountability,
   updateAccountabilityForm,
   publishAccountabilityForm,
 } from "../../../redux/userSlice";
 import { Box, Flex, HStack, Heading, Text, Button, Spinner } from "@chakra-ui/react";
-import { SaveOutlined, SendOutlined } from "@ant-design/icons";
+import { SaveOutlined, SendOutlined } from "../../../Components/UI/Icons";
 
 import Step1BasicDetails from "./Step1_BasicDetails";
 import Step2TeacherScores from "./Step2_TeacherScores";

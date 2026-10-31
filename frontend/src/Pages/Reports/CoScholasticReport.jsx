@@ -4,7 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { GetCoScholasticForm } from "../../redux/Form/coScholasticSlice";
 import { getAllTimes, getUserId } from "../../Utils/auth";
 import { Box, Flex, Heading, Text, VStack, SimpleGrid } from "@chakra-ui/react";
-import { Spin } from "antd";
+import { Spin } from "../../Components/UI";
 
 function CoScholasticReport() {
   const dispatch = useDispatch();

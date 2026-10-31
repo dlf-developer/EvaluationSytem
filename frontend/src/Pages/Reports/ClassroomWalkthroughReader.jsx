@@ -5,8 +5,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import { GetWalkThroughForm } from "../../redux/Form/classroomWalkthroughSlice";
 import MyDocument from "./Documents/MyDocument";
 import WalkthroughDoc from "./Documents/WalkthroughDoc";
-import { DownloadOutlined } from "@ant-design/icons";
-import { Button, Spin } from "antd";
+import { DownloadOutlined } from "../../Components/UI/Icons";
+import { Button, Spin } from "../../Components/UI";
 import { Box, Flex, Heading } from "@chakra-ui/react";
 import TeacherWalkthroughshow from "./TeacherWalkthroughshow";
 

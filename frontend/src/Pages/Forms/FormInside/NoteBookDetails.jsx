@@ -9,7 +9,7 @@ import {
   Radio,
   Select,
   Spin,
-} from "antd";
+} from "../../../Components/UI";
 import { Box, Flex, SimpleGrid, Heading, Text, VStack } from "@chakra-ui/react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";

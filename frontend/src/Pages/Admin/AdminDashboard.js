@@ -4,8 +4,8 @@ import {
   FileOutlined,
   CheckCircleOutlined,
   EditOutlined,
-} from "@ant-design/icons";
-import { Button, Space, Spin, Table, Tag } from "antd";
+} from "../../Components/UI/Icons";
+import { Button, Space, Spin, Table, Tag } from "../../Components/UI";
 import React, { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Link } from "react-router-dom";

@@ -32,7 +32,7 @@ import {
   ArrowLeftOutlined,
   ReloadOutlined,
   SyncOutlined,
-} from "@ant-design/icons";
+} from "../../../../Components/UI/Icons";
 
 const FORM_TITLES = [
   { key: "form1", label: "Fortnightly Monitor", color: "green" },

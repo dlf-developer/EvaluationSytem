@@ -1,5 +1,5 @@
 import React from 'react';
-import { Steps } from 'antd';
+import { Steps } from "./UI";
 
 const CommonStepper = ({ currentStep, current, steps = [], direction }) => {
   const activeStep = currentStep !== undefined ? currentStep : (current !== undefined ? current : 0);

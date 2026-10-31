@@ -1,5 +1,5 @@
 import React from "react";
-import { Table, Spin } from "antd";
+import { Table, Spin } from "./UI";
 
 const DynamicTable = ({
   columns,

@@ -14,7 +14,7 @@
 import React from "react";
 import { Box, Text, Flex, Tag, Stack, Button } from "@chakra-ui/react";
 import { Link } from "react-router-dom";
-import { DeleteFilled, EditOutlined } from "@ant-design/icons";
+import { DeleteFilled, EditOutlined } from "../UI/Icons";
 import { getAllTimes } from "../../Utils/auth";
 import { UserRole } from "../../config/config";
 import Reminder from "../Reminder";

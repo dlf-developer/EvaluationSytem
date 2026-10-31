@@ -1,11 +1,11 @@
 import React, { useEffect, useState, useMemo } from "react";
-import { Form, Input, Button, message, Spin, Modal } from "antd";
+import { Form, Input, Button, message, Spin, Modal } from "../../Components/UI";
 import {
   DeleteFilled,
   EditOutlined,
   MinusCircleOutlined,
   PlusOutlined,
-} from "@ant-design/icons";
+} from "../../Components/UI/Icons";
 import {
   CReateClassSection,
   deleteCreateClassSection,
@@ -302,8 +302,8 @@ function ClassSectionPage() {
                   width: "100%",
                   height: "44px",
                   borderRadius: "12px",
-                  background: "#2b6cb0",
-                  borderColor: "#2b6cb0",
+                  background: "#1a4d2e",
+                  borderColor: "#1a4d2e",
                   fontWeight: "600",
                 }}
               >
@@ -496,7 +496,7 @@ function ClassSectionPage() {
               onClick={() => editForm.submit()}
               loading={isUpdating}
               size="large"
-              style={{ background: "#2b6cb0", borderColor: "#2b6cb0" }}
+              style={{ background: "#1a4d2e", borderColor: "#1a4d2e" }}
             >
               Save Changes
             </Button>

@@ -1,4 +1,4 @@
-import { SyncOutlined } from '@ant-design/icons'
+import { SyncOutlined } from "./UI/Icons"
 import React from 'react'
 
 function UnderConstraction() {

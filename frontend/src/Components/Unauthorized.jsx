@@ -1,7 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Box, Flex, Heading, Text, Button, VStack, Icon } from "@chakra-ui/react";
-import { LockOutlined, ArrowLeftOutlined } from "@ant-design/icons";
+import { LockOutlined, ArrowLeftOutlined } from "./UI/Icons";
 
 const Unauthorized = () => {
   const navigate = useNavigate();

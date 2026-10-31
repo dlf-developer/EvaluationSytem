@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
-import { Button, Form, Input, message, Radio, Select } from "antd";
+import { Button, Form, Input, message, Radio, Select } from "../../Components/UI";
 import {
   Box,
   Flex,

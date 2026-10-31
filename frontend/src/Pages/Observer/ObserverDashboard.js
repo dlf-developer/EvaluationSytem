@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
 import { Activity } from "lucide-react";
-import { Typography } from "antd";
+import { Typography } from "../../Components/UI";
 import {
   getRecentActivities,
   getSingleActivityApi,

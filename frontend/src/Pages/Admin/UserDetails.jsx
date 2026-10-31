@@ -12,7 +12,7 @@ import {
   Input,
   Select as AntdSelect,
   message,
-} from "antd";
+} from "../../Components/UI";
 import { UserRole } from "../../config/config";
 import {
   Box,
@@ -34,7 +34,7 @@ import {
   EditOutlined,
   SaveOutlined,
   CloseOutlined,
-} from "@ant-design/icons";
+} from "../../Components/UI/Icons";
 
 const UserDetails = () => {
   const [userData, setUserData] = useState(null);

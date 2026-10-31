@@ -6,7 +6,7 @@ import {
   TeacherWalkThroughComplete,
 } from "../../../redux/Form/classroomWalkthroughSlice";
 import { getAllTimes, getUserId } from "../../../Utils/auth";
-import { Button, Form, Input, message, Radio, Spin } from "antd";
+import { Button, Form, Input, message, Radio, Spin } from "../../../Components/UI";
 import {
   Box,
   Flex,

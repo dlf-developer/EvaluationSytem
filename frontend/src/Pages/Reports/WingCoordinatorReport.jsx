@@ -4,8 +4,8 @@ import { useDispatch } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { GetSingleWingFrom } from "../../redux/userSlice";
-import { Spin, Tag, Table } from "antd";
-import { DownloadOutlined, ArrowLeftOutlined, CalendarOutlined, FileTextOutlined } from "@ant-design/icons";
+import { Spin, Tag, Table } from "../../Components/UI";
+import { DownloadOutlined, ArrowLeftOutlined, CalendarOutlined, FileTextOutlined } from "../../Components/UI/Icons";
 import {
   Box, Flex, Heading, Text, Image, VStack, HStack,
   Badge, Divider, SimpleGrid, Button, Tabs, TabList,

@@ -1,4 +1,4 @@
-import { Typography } from "antd";
+import { Typography } from "./UI";
 import React from "react";
 import { Link } from "react-router-dom";
 const { Title, Text } = Typography;

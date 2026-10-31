@@ -12,7 +12,7 @@ import {
   Alert,
   Modal,
   Tag,
-} from "antd";
+} from "../../../Components/UI";
 import {
   CheckCircleFilled,
   ExclamationCircleFilled,
@@ -20,7 +20,7 @@ import {
   ArrowRightOutlined,
   SaveOutlined,
   CheckOutlined,
-} from "@ant-design/icons";
+} from "../../../Components/UI/Icons";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   GetSingleFormComplete,

@@ -7,7 +7,7 @@ import {
   Radio,
   Select,
   Spin,
-} from "antd";
+} from "../../Components/UI";
 import { Box, Flex, Heading, Text, VStack } from "@chakra-ui/react";
 import CommonStepper from "../../Components/CommonStepper";
 import { useEffect, useMemo, useState } from "react";

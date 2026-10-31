@@ -1,5 +1,5 @@
 import React from "react";
-import { Form, Input, Row, Col, Table, Divider, Typography, Tag, Alert, Collapse, Empty } from "antd";
+import { Form, Input, Row, Col, Table, Divider, Typography, Tag, Alert, Collapse, Empty } from "../../../Components/UI";
 import { Box } from "@chakra-ui/react";
 
 const { TextArea } = Input;

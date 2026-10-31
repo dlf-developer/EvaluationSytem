@@ -9,13 +9,13 @@ import {
   getAllWeeklyFromById,
 } from "../../redux/userSlice";
 import { useParams, useSearchParams } from "react-router-dom";
-import { Form, Select, Button, Input, Radio, message, Space, Card, Tag, Divider, Spin } from "antd";
+import { Form, Select, Button, Input, Radio, message, Space, Card, Tag, Divider, Spin } from "../../Components/UI";
 import { Box, Flex, Heading, Text, SimpleGrid } from "@chakra-ui/react";
 import { getUserId, getUserRoleTag } from "../../Utils/auth";
 import "./Weekly4Form.css";
 import { UserRole } from "../../config/config";
 import TextArea from "antd/es/input/TextArea";
-import { MinusCircleOutlined, PlusOutlined, EditOutlined, SaveOutlined } from "@ant-design/icons";
+import { MinusCircleOutlined, PlusOutlined, EditOutlined, SaveOutlined } from "../../Components/UI/Icons";
 import { CreateActivityApi } from "../../redux/Activity/activitySlice";
 import CommonStepper from "../../Components/CommonStepper";
 

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Form, InputNumber, Collapse, Row, Col, Empty, Badge, Switch, Select } from "antd";
+import { Form, InputNumber, Collapse, Row, Col, Empty, Badge, Switch, Select } from "../../../Components/UI";
 import { Box, Text, Flex, HStack } from "@chakra-ui/react";
 
 const { Panel } = Collapse;

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { Form, Input, Button, message, Spin, Row, Col } from "antd";
-import { UserOutlined, EditOutlined, SaveOutlined } from "@ant-design/icons";
+import { Form, Input, Button, message, Spin, Row, Col } from "../Components/UI";
+import { UserOutlined, EditOutlined, SaveOutlined } from "../Components/UI/Icons";
 import { useDispatch } from "react-redux";
 import { GetSignleUser, UpdateUser } from "../redux/userSlice";
 import { getUserId } from "../Utils/auth";

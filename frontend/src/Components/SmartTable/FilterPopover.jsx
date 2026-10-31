@@ -21,7 +21,7 @@ import {
   RadioGroup,
   Stack,
 } from "@chakra-ui/react";
-import { DatePicker } from "antd";
+import { DatePicker } from "../UI";
 import { Search } from "lucide-react";
 import dayjs from "dayjs";
 

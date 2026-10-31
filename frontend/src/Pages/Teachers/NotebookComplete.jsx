@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useParams } from "react-router-dom";
-import { Button, message, Spin, Table, Tag } from "antd";
+import { Button, message, Spin, Table, Tag } from "../../Components/UI";
 import {
   Box,
   Flex,

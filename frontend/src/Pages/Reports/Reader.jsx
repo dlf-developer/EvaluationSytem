@@ -4,8 +4,8 @@ import MyDocument from "./Documents/MyDocument";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
 import { GetSingleFormsOne } from "../../redux/Form/fortnightlySlice";
-import { Button, Spin, Table, Tag } from "antd";
-import { DownloadOutlined } from "@ant-design/icons";
+import { Button, Spin, Table, Tag } from "../../Components/UI";
+import { DownloadOutlined } from "../../Components/UI/Icons";
 import { Box, Flex, Heading, Image } from "@chakra-ui/react";
 import { LOGO_BASE64, BANNER_BASE64 } from "./logoAssets";
 import {

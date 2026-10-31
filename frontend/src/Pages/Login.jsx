@@ -2,8 +2,8 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { SendLoginOTP, VerifyLoginOTP, UserLogin } from "../redux/userSlice";
-import { message, Modal } from "antd";
-import { ExclamationCircleFilled } from "@ant-design/icons";
+import { message, Modal } from "../Components/UI";
+import { ExclamationCircleFilled } from "../Components/UI/Icons";
 import {
   Box,
   Button,

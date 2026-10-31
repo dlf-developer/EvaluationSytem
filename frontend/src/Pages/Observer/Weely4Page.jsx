@@ -1,13 +1,13 @@
 import React, { useEffect, useMemo } from "react";
 import { Box, Flex, Heading, Text, Stack, Button } from "@chakra-ui/react";
-import { PlusCircleOutlined } from "@ant-design/icons";
+import { PlusCircleOutlined } from "../../Components/UI/Icons";
 import { Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { getAllWeeklyFrom, deleteWeekly4Form } from "../../redux/userSlice";
 import { UserRole } from "../../config/config";
 import { getUserId } from "../../Utils/auth";
 import SmartTable from "../../Components/SmartTable";
-import { message, Modal } from "antd";
+import { message, Modal } from "../../Components/UI";
 import { getWeeklyColumns } from "../../Components/SmartTable/tableColumns";
 
 function Weely4Page() {

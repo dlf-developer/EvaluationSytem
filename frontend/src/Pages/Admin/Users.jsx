@@ -7,7 +7,7 @@ import {
   Upload,
   Spin,
   Table,
-} from "antd";
+} from "../../Components/UI";
 import {
   UploadOutlined,
   PlusCircleOutlined,
@@ -16,7 +16,7 @@ import {
   DownloadOutlined,
   DeleteFilled,
   FilterOutlined,
-} from "@ant-design/icons";
+} from "../../Components/UI/Icons";
 import { Box, Flex, Heading, Text, HStack, Stack, Tag } from "@chakra-ui/react";
 import * as XLSX from "xlsx";
 import { useDispatch, useSelector } from "react-redux";

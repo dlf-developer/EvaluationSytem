@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { Table, Checkbox, DatePicker, Button, Form, Steps } from "antd";
+import { Table, Checkbox, DatePicker, Button, Form, Steps } from "../../../Components/UI";
 import { useDispatch, useSelector } from "react-redux";
 import { GetObserverFormsOne } from "../../../redux/Form/fortnightlySlice";
 import { getAllTimes } from "../../../Utils/auth";

@@ -19,7 +19,7 @@ import {
   Input,
   Radio,
   Spin,
-} from "antd";
+} from "../../../Components/UI";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
 import {

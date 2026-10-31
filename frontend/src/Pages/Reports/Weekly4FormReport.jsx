@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
 import { getAllWeeklyFromById } from "../../redux/userSlice";
-import { message, Table, Tag } from "antd";
+import { message, Table, Tag } from "../../Components/UI";
 import { Box, Flex, Heading, Text, VStack, SimpleGrid } from "@chakra-ui/react";
 
 function Weekly4FormReport() {

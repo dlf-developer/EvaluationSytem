@@ -6,7 +6,7 @@ import {
   TeacherCoScholasticComplete,
 } from "../../../redux/Form/coScholasticSlice";
 import { getAllTimes, getUserId } from "../../../Utils/auth";
-import { Button, Form, Input, message, Spin } from "antd";
+import { Button, Form, Input, message, Spin } from "../../../Components/UI";
 import {
   Box,
   Flex,

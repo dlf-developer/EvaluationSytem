@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { message } from "antd";
+import { message } from "../Components/UI";
 import {
   Box,
   Button,
@@ -20,7 +20,7 @@ import {
   Text,
   VStack,
 } from "@chakra-ui/react";
-import { AntDesignOutlined, UserOutlined, LockOutlined, KeyOutlined } from "@ant-design/icons";
+import { AntDesignOutlined, UserOutlined, LockOutlined, KeyOutlined } from "../Components/UI/Icons";
 import { HiOutlineEye, HiOutlineEyeOff } from "react-icons/hi";
 import { axiosInstance } from "../redux/instence";
 

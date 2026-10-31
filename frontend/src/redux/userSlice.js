@@ -435,13 +435,25 @@ export const calculateTeacherScores = createAsyncThunk(
   }
 );
 
+let cachedTeachers = null;
+try {
+  const stored = sessionStorage.getItem("cached_teachers_list");
+  if (stored) cachedTeachers = JSON.parse(stored);
+} catch (e) {}
+
+let cachedObservers = null;
+try {
+  const stored = sessionStorage.getItem("cached_observers_list");
+  if (stored) cachedObservers = JSON.parse(stored);
+} catch (e) {}
+
 const userSlice = createSlice({
   name: "Users",
   initialState: {
     Notification: null,
     GetUsers: null,
-    GetTeachersLists: null,
-    GetObserverLists: null,
+    GetTeachersLists: cachedTeachers,
+    GetObserverLists: cachedObservers,
     getAllWeeklyFroms: null,
     loading: false,
     error: null,
@@ -538,6 +550,9 @@ const userSlice = createSlice({
       .addCase(GetTeacherList.fulfilled, (state, action) => {
         state.loading = false;
         state.GetTeachersLists = action.payload;
+        try {
+          sessionStorage.setItem("cached_teachers_list", JSON.stringify(action.payload));
+        } catch (e) {}
       })
       .addCase(GetTeacherList.rejected, (state, action) => {
         state.loading = false;
@@ -552,6 +567,9 @@ const userSlice = createSlice({
       .addCase(GetObserverList.fulfilled, (state, action) => {
         state.loading = false;
         state.GetObserverLists = action.payload;
+        try {
+          sessionStorage.setItem("cached_observers_list", JSON.stringify(action.payload));
+        } catch (e) {}
       })
       .addCase(GetObserverList.rejected, (state, action) => {
         state.loading = false;
