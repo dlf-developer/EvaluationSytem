@@ -4,7 +4,6 @@ import {
   AppstoreAddOutlined,
   BookFilled,
   DatabaseFilled,
-  FormatPainterFilled,
   FormOutlined,
   PieChartOutlined,
   SignatureOutlined,
