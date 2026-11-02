@@ -23,6 +23,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { BulkUserCreate, DeleteUser, GetUserList } from "../../redux/userSlice";
 import { getAllTimes } from "../../Utils/auth";
 import CreateUserForm from "../../Components/CreateUserForm";
+import { recordFileDownloadAudit } from "../../Utils/auditLogger";
 import EditUserModal from "../../Components/EditUserModal";
 import { Link } from "react-router-dom";
 import { columnsCreate } from "../../Components/Data";
@@ -224,7 +225,18 @@ function Users() {
             size="small"
           />
         </Box>
-        <Link to="/assets/Template.xlsx" target="_blank" download>
+        <Link
+          to="/assets/Template.xlsx"
+          target="_blank"
+          download
+          onClick={() => {
+            recordFileDownloadAudit({
+              fileName: "Template.xlsx",
+              fileType: "Excel Template (.xlsx)",
+              module: "User Management (Bulk Import Template)",
+            });
+          }}
+        >
           <Button type="link" icon={<DownloadOutlined />}>Download Excel Template</Button>
         </Link>
       </Modal>

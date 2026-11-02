@@ -14,6 +14,7 @@ import {
 import { LOGO_BASE64, BANNER_BASE64 } from "./logoAssets";
 import WingCoordinatorDoc from "./Documents/WingCoordinatorDoc";
 import { getAllTimes, getUserId } from "../../Utils/auth";
+import { recordFileDownloadAudit, recordViewAudit } from "../../Utils/auditLogger";
 
 // ── score helpers ─────────────────────────────────────────────────────────────
 const form1Score = (form) => {
@@ -238,7 +239,14 @@ function WingCoordinatorReport() {
   useEffect(() => {
     const load = async () => {
       const res = await dispatch(GetSingleWingFrom(id));
-      if (res?.payload?.success) setData(res.payload.data);
+      if (res?.payload?.success) {
+        setData(res.payload.data);
+        recordViewAudit({
+          module: "Wing Coordinator Report",
+          targetId: id,
+          details: `Viewed Wing Coordinator Report (ID: ${id})`,
+        });
+      }
       setLoading(false);
     };
     load();
@@ -251,9 +259,17 @@ function WingCoordinatorReport() {
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `Wing-Coordinator-Report-${id}.pdf`;
+      const pdfName = `Wing-Coordinator-Report-${id}.pdf`;
+      link.download = pdfName;
       link.click();
       URL.revokeObjectURL(url);
+
+      recordFileDownloadAudit({
+        fileName: pdfName,
+        fileType: "PDF",
+        module: "Wing Coordinator Report",
+        extraDetails: `Report ID: ${id}`,
+      });
     } finally {
       setDownloading(false);
     }
@@ -446,8 +462,14 @@ function WingCoordinatorReport() {
                                           onClick={() => {
                                             const link = document.createElement("a");
                                             link.href = file.url;
-                                            link.download = file.name || `document_${fIdx + 1}.pdf`;
+                                            const dlName = file.name || `document_${fIdx + 1}.pdf`;
+                                            link.download = dlName;
                                             link.click();
+                                            recordFileDownloadAudit({
+                                              fileName: dlName,
+                                              fileType: "Attachment PDF",
+                                              module: "Wing Coordinator Report (Attachment)",
+                                            });
                                           }}
                                         >
                                           Download PDF
@@ -526,8 +548,14 @@ function WingCoordinatorReport() {
                                     if (file.url) {
                                       const link = document.createElement("a");
                                       link.href = file.url;
-                                      link.download = file.name || `attachment_${fIdx + 1}`;
+                                      const dlName = file.name || `attachment_${fIdx + 1}`;
+                                      link.download = dlName;
                                       link.click();
+                                      recordFileDownloadAudit({
+                                        fileName: dlName,
+                                        fileType: "Attachment File",
+                                        module: "Wing Coordinator Report (Attachment)",
+                                      });
                                     }
                                   }}
                                 >

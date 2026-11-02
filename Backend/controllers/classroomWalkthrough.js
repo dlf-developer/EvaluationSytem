@@ -6,6 +6,7 @@ const notification = require('../models/notification');
 const User = require('../models/User');
 const sendEmail = require('../utils/emailService');
 const { formInitiatedEmail, formCompletedEmail, reminderEmail } = require('../utils/emailTemplates');
+const { recordAuditLog, calculateDiff } = require('../utils/auditLogger');
 
 const resolveClassNames = async (forms) => {
     if (!forms) return forms;
@@ -63,6 +64,192 @@ const resolveClassNameFromInput = async (className) => {
         console.error("Error resolving input class name:", err);
     }
     return className;
+};
+
+// ── Shared Helper for Server-Side Filtering, Pagination (limit/skip) & Count ───
+const buildClassroomQueryAndPaginate = async (req, baseCondition = {}) => {
+  const queryFilter = { ...baseCondition };
+
+  // 1. Session date filter
+  if (req.sessionDateFilter) {
+    queryFilter.createdAt = req.sessionDateFilter;
+  }
+
+  // 2. Class filter
+  if (req.query.className) {
+    const classNames = req.query.className
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (classNames.length > 0) {
+      const matchingClasses = await ClassDetails.find(
+        { className: { $in: classNames } },
+        "_id"
+      ).lean();
+      const matchingIds = matchingClasses.map((c) => c._id.toString());
+      queryFilter["grenralDetails.className"] = {
+        $in: [...classNames, ...matchingIds],
+      };
+    }
+  }
+
+  // 3. Section filter
+  if (req.query.section) {
+    const sections = req.query.section
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (sections.length > 0) {
+      queryFilter["grenralDetails.Section"] = { $in: sections };
+    }
+  }
+
+  // 4. Subject filter
+  if (req.query.subject) {
+    const subjects = req.query.subject
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (subjects.length > 0) {
+      queryFilter["grenralDetails.Subject"] = { $in: subjects };
+    }
+  }
+
+  // 5. Date of Observation
+  if (req.query.date || req.query.observationDate) {
+    const d = new Date(req.query.date || req.query.observationDate);
+    if (!isNaN(d.getTime())) {
+      const startOfDay = new Date(d);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(d);
+      endOfDay.setHours(23, 59, 59, 999);
+      queryFilter["grenralDetails.DateOfObservation"] = {
+        $gte: startOfDay,
+        $lte: endOfDay,
+      };
+    }
+  }
+
+  // 6. Boolean completion filters
+  if (
+    req.query.isTeacherCompletes !== undefined &&
+    req.query.isTeacherCompletes !== null &&
+    req.query.isTeacherCompletes !== ""
+  ) {
+    queryFilter.isTeacherCompletes = String(req.query.isTeacherCompletes) === "true";
+  }
+  if (
+    req.query.isObserverCompleted !== undefined &&
+    req.query.isObserverCompleted !== null &&
+    req.query.isObserverCompleted !== ""
+  ) {
+    queryFilter.isObserverCompleted = String(req.query.isObserverCompleted) === "true";
+  }
+
+  // 7. Search by person name
+  const search = req.query.search || req.query.searchName || req.query.personName;
+  if (search) {
+    const searchTerms = search
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (searchTerms.length > 0) {
+      const userConditions = searchTerms.map((term) => ({
+        name: { $regex: term, $options: "i" },
+      }));
+      const matchedUsers = await User.find(
+        { $or: userConditions },
+        "_id"
+      ).lean();
+      const matchedIds = matchedUsers.map((u) => u._id);
+
+      const searchOr = [
+        { teacherID: { $in: matchedIds } },
+        { createdBy: { $in: matchedIds } },
+        { "grenralDetails.NameoftheVisitingTeacher": { $in: matchedIds } },
+      ];
+
+      if (queryFilter.$or) {
+        queryFilter.$and = [
+          { $or: queryFilter.$or },
+          { $or: searchOr },
+        ];
+        delete queryFilter.$or;
+      } else {
+        queryFilter.$or = searchOr;
+      }
+    }
+  }
+
+  // 8. Pagination params (limit & skip)
+  const hasPagination =
+    req.query.page !== undefined ||
+    req.query.limit !== undefined ||
+    req.query.skip !== undefined;
+
+  const isAll =
+    !hasPagination ||
+    req.query.limit === "all" ||
+    req.query.all === "true" ||
+    parseInt(req.query.limit, 10) >= 99999;
+  const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+  const limit = isAll ? 0 : Math.max(1, parseInt(req.query.limit, 10) || 10);
+  const skip = isAll
+    ? 0
+    : req.query.skip !== undefined
+    ? Math.max(0, parseInt(req.query.skip, 10))
+    : (page - 1) * limit;
+
+  const totalCount = await Form2.countDocuments(queryFilter);
+
+  let dbQuery = Form2.find(queryFilter)
+    .sort({ createdAt: -1 })
+    .populate({
+      path: "teacherID",
+      select: "-password -mobile -employeeId -customId",
+    })
+    .populate({
+      path: "createdBy",
+      select: "-password -mobile -employeeId -customId",
+    })
+    .populate({
+      path: "grenralDetails.NameoftheVisitingTeacher",
+      select: "-password -mobile -employeeId -customId",
+    });
+
+  if (!isAll && limit > 0) {
+    dbQuery = dbQuery.skip(skip).limit(limit);
+  }
+
+  const forms = await dbQuery.lean();
+  await resolveClassNames(forms);
+
+  // Distinct filter options
+  let filterOptions = { classes: [], sections: [] };
+  try {
+    const allClasses = await ClassDetails.find({}, "className").lean();
+    const distinctSections = await Form2.distinct("grenralDetails.Section", {
+      "grenralDetails.Section": { $ne: null },
+    });
+    filterOptions = {
+      classes: allClasses.map((c) => c.className).filter(Boolean),
+      sections: distinctSections.filter(Boolean),
+    };
+  } catch (e) {
+    // ignore
+  }
+
+  return {
+    data: forms,
+    pagination: {
+      total: totalCount,
+      page: isAll ? 1 : page,
+      limit: isAll ? totalCount : limit,
+      skip: isAll ? 0 : skip,
+      totalPages: isAll ? 1 : Math.ceil(totalCount / (limit || 1)),
+    },
+    filterOptions,
+  };
 };
 
 
@@ -139,6 +326,14 @@ exports.createForm = async (req, res) => {
         });
         // Save the form to the database
         const savedForm = await newForm.save();
+
+        recordAuditLog({
+            req,
+            action: 'CREATE',
+            module: 'Classroom Walkthrough',
+            targetId: savedForm._id,
+            details: `Created Classroom Walkthrough form for ${recipientUser?.name || 'Teacher'} (Class: ${resolvedClassName || ''} Section: ${Section || ''})`,
+        });
         const notification = await createNotification({
             title: 'You are invited to fill the Classroom Walkthrough',
             route: `classroom-walkthrough/create/${savedForm._id}`,
@@ -240,9 +435,20 @@ exports.editWalkthrouForm = async (req, res) => {
         if (req.body.isObserverCompleted !== undefined) UpdateValue.isObserverCompleted = req.body.isObserverCompleted;
 
         // Update the form
+        const existingForm = await Form2.findById(formId);
+        const formDiff = calculateDiff(existingForm, UpdateValue);
         const updatedForm = await Form2.findByIdAndUpdate(formId, UpdateValue, {
             new: true,
         }).populate('grenralDetails.NameoftheVisitingTeacher', 'name email');
+
+        recordAuditLog({
+            req,
+            action: 'UPDATE',
+            module: 'Classroom Walkthrough',
+            targetId: formId,
+            details: `Updated Classroom Walkthrough form (ID: ${formId})`,
+            changes: formDiff,
+        });
 
         if (updatedForm?.grenralDetails?.className) {
             const resolved = await resolveClassNameFromInput(updatedForm.grenralDetails.className);
@@ -341,59 +547,28 @@ exports.GetTeahearsForm = async (req, res) => {
 
 exports.GetcreatedBy = async (req, res) => {
     const userId = req?.user?.id;
-    const queryFilter = req.sessionDateFilter ? { createdAt: req.sessionDateFilter } : {};
+    if (!userId) {
+        return res.status(403).json({ message: "You do not have permission." });
+    }
     try {
-        let Form = await Form2.find({ createdBy: userId, ...queryFilter })
-            .sort({ createdAt: -1 })
-            .populate({
-                path: 'createdBy',
-                select: '-password -mobile -employeeId -customId'
-            })
-            .populate({
-                path: 'grenralDetails.NameoftheVisitingTeacher',
-                select: '-password -mobile -employeeId -customId'
-            })
-            .lean();
-
-        if (!userId && !userId?.id) {
-            return res.status(403).json({ message: "You do not have permission." });
-        }
-
-        await resolveClassNames(Form);
-
-        res.status(200).send(Form);
-
+        const result = await buildClassroomQueryAndPaginate(req, { createdBy: userId });
+        res.status(200).json({ success: true, ...result });
     } catch (error) {
         console.error("Error Getting Classroom Walkthrough:", error);
         res.status(500).json({ message: "Error Getting Classroom Walkthrough.", error });
     }
 };
 
-
 exports.GetTeacherForm = async (req, res) => {
     const userId = req?.user?.id;
-    const queryFilter = req.sessionDateFilter ? { createdAt: req.sessionDateFilter } : {};
+    if (!userId) {
+        return res.status(403).json({ message: "You do not have permission." });
+    }
     try {
-        let Form = await Form2.find({ "grenralDetails.NameoftheVisitingTeacher": userId, ...queryFilter })
-            .sort({ createdAt: -1 })
-            .populate({
-                path: 'createdBy',
-                select: '-password -mobile -employeeId -customId'
-            })
-            .populate({
-                path: 'grenralDetails.NameoftheVisitingTeacher',
-                select: '-password -mobile -employeeId -customId'
-            })
-            .lean();
-
-        if (!userId && !userId?.id) {
-            return res.status(403).json({ message: "You do not have permission." });
-        }
-
-        await resolveClassNames(Form);
-
-        res.status(200).send(Form);
-
+        const result = await buildClassroomQueryAndPaginate(req, {
+            "grenralDetails.NameoftheVisitingTeacher": userId,
+        });
+        res.status(200).json({ success: true, ...result });
     } catch (error) {
         console.error("Error Getting Classroom Walkthrough:", error);
         res.status(500).json({ message: "Error Getting Classroom Walkthrough.", error });
@@ -453,35 +628,15 @@ exports.TeacherContinueForm = async (req, res) => {
 
 exports.getClassRoomForms = async (req, res) => {
     const userId = req?.user?.id;
-    const queryFilter = req.sessionDateFilter ? { createdAt: req.sessionDateFilter } : {};
+    if (!userId) {
+        return res.status(403).json({ message: "You do not have permission." });
+    }
     try {
-        let GetAllForms = await Form2.find(queryFilter)
-            .sort({ createdAt: -1 })
-            .populate({
-                path: 'teacherID',
-                select: '-password -mobile -employeeId -customId'
-            })
-            .populate({
-                path: 'createdBy',
-                select: '-password -mobile -employeeId -customId'
-            })
-            .populate({
-                path: 'grenralDetails.NameoftheVisitingTeacher',
-                select: '-password -mobile -employeeId -customId'
-            })
-            .lean();
-
-        if (!userId) {
-            return res.status(403).json({ message: "You do not have permission." });
-        }
-
-        await resolveClassNames(GetAllForms);
-
-        res.status(200).send(GetAllForms);
-
+        const result = await buildClassroomQueryAndPaginate(req, {});
+        res.status(200).json({ success: true, ...result });
     } catch (error) {
-        console.log(error);
-        res.status(500).send({ error: error, message: "somthing went wrong" });
+        console.error("Error Getting Classroom Walkthrough:", error);
+        res.status(500).json({ error: error, message: "somthing went wrong" });
     }
 };
 
@@ -598,6 +753,19 @@ exports.ReminderFormTwo = async (req, res) => {
           formRoute: route,
         });
         await sendEmail(receiverEmail, emailData.subject, emailData.html);
+
+        recordAuditLog({
+            req,
+            action: 'REMINDER',
+            module: 'Classroom Walkthrough',
+            targetId: String(FormDetails?._id),
+            details: `Sent reminder to ${receiverName} (${receiverEmail}) from ${sender}`,
+            changes: [
+                { field: 'receiverEmail', oldValue: null, newValue: receiverEmail },
+                { field: 'formRoute', oldValue: null, newValue: route },
+            ],
+        });
+
         return res.status(200).json({ success: true, message: "Reminder sent successfully." });
 
     } catch (error) {
@@ -613,6 +781,13 @@ exports.deleteFormTwo = async (req, res) => {
         if (!deletedForm) {
             return res.status(404).json({ message: "Form not found." });
         }
+        recordAuditLog({
+            req,
+            action: 'DELETE',
+            module: 'Classroom Walkthrough',
+            targetId: formId,
+            details: `Deleted Classroom Walkthrough form (ID: ${formId})`,
+        });
         res.status(200).json({ message: "Form deleted successfully.", success: true });
     } catch (error) {
         console.error("Error deleting form:", error);

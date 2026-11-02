@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const logger = require('../utils/logger');
 const { getDiagnostics } = require('../utils/processMonitor');
+const { recordAuditLog } = require('../utils/auditLogger');
 
 /**
  * Helper to get file size in human-readable format
@@ -112,6 +113,15 @@ const downloadLog = async (req, res) => {
     const filename = path.basename(targetPath);
     res.setHeader('Content-Type', 'text/plain');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+
+    recordAuditLog({
+      req,
+      action: 'DOWNLOAD',
+      module: 'Server System Logs',
+      targetId: filename,
+      details: `Downloaded server log file: ${filename} (${type})`,
+      changes: [{ field: 'logType', oldValue: null, newValue: type }],
+    });
 
     const fileStream = fs.createReadStream(targetPath);
     return fileStream.pipe(res);

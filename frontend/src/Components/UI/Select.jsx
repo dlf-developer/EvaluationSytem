@@ -24,6 +24,9 @@ export const Select = forwardRef(
       loading = false,
       onSearch,
       filterOption,
+      placement = "bottom", // "bottom" or "top"
+      dropdownClassName = "",
+      dropdownStyle,
       ...props
     },
     ref
@@ -88,7 +91,9 @@ export const Select = forwardRef(
 
     // Find current selected options objects
     const selectedOptionsList = useMemo(() => {
-      return normalizedOptions.filter((opt) => selectedValues.includes(opt.value));
+      return normalizedOptions.filter((opt) =>
+        selectedValues.some((v) => String(v) === String(opt.value))
+      );
     }, [normalizedOptions, selectedValues]);
 
     const isSearchable = showSearch ?? normalizedOptions.length > 5;
@@ -150,7 +155,7 @@ export const Select = forwardRef(
     };
 
     const sizeClasses = {
-      small: "min-h-[32px] py-1 px-2.5 text-xs",
+      small: "min-h-[30px] h-[30px] py-0 px-2.5 text-xs font-semibold",
       middle: "min-h-[38px] py-1.5 px-3 text-sm",
       large: "min-h-[42px] py-2 px-3.5 text-sm",
     };
@@ -230,7 +235,12 @@ export const Select = forwardRef(
 
         {/* Dropdown Popover */}
         {isOpen && (
-          <div className="absolute left-0 top-full mt-1.5 w-full min-w-[200px] bg-white rounded-xl shadow-xl border border-gray-200/90 overflow-hidden z-[1050]">
+          <div
+            className={`absolute left-0 ${
+              placement === "top" ? "bottom-full mb-1.5" : "top-full mt-1.5"
+            } w-full min-w-full bg-white rounded-xl shadow-xl border border-gray-200/90 overflow-hidden z-[1050] ${dropdownClassName}`}
+            style={dropdownStyle}
+          >
             {/* Search Input when applicable */}
             {isSearchable && (
               <div
@@ -276,7 +286,9 @@ export const Select = forwardRef(
             <div className="max-h-60 overflow-y-auto p-1.5 space-y-0.5">
               {displayedOptions.length > 0 ? (
                 displayedOptions.map((opt, idx) => {
-                  const isSelected = selectedValues.includes(opt.value);
+                  const isSelected = selectedValues.some(
+                    (v) => String(v) === String(opt.value)
+                  );
                   return (
                     <div
                       key={opt.value ?? idx}

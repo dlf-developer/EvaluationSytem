@@ -12,6 +12,7 @@ import {
 import { LOGO_BASE64, BANNER_BASE64 } from "./logoAssets";
 import AccountabilityDoc from "./Documents/AccountabilityDoc";
 import { getAllTimes } from "../../Utils/auth";
+import { recordFileDownloadAudit, recordViewAudit } from "../../Utils/auditLogger";
 
 // ── inline components ─────────────────────────────────────────────────────────
 const MetaCard = ({ label, value }) => (
@@ -39,7 +40,14 @@ function AccountabilityReport() {
   useEffect(() => {
     const load = async () => {
       const res = await dispatch(getSingleAccountability(id));
-      if (res?.payload?.success) setData(res.payload.data);
+      if (res?.payload?.success) {
+        setData(res.payload.data);
+        recordViewAudit({
+          module: "Accountability Mechanism Report",
+          targetId: id,
+          details: `Viewed Accountability Mechanism Report (ID: ${id})`,
+        });
+      }
       setLoading(false);
     };
     load();
@@ -52,9 +60,17 @@ function AccountabilityReport() {
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `Accountability-Report-${id}.pdf`;
+      const pdfName = `Accountability-Report-${id}.pdf`;
+      link.download = pdfName;
       link.click();
       URL.revokeObjectURL(url);
+
+      recordFileDownloadAudit({
+        fileName: pdfName,
+        fileType: "PDF",
+        module: "Accountability Mechanism Report",
+        extraDetails: `Report ID: ${id}`,
+      });
     } finally {
       setDownloading(false);
     }

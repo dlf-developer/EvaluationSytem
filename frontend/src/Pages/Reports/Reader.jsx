@@ -13,6 +13,7 @@ import {
   questionsOld,
   cutoffDate,
 } from "../../Components/normalData";
+import { recordFileDownloadAudit } from "../../Utils/auditLogger";
 
 function Reader() {
   const Id = useParams().id;
@@ -30,11 +31,19 @@ function Reader() {
     // Trigger download
     const link = document.createElement("a");
     link.href = url;
-    link.download = `Report-Fortnightly-Monitor-${Id}.pdf`;
+    const pdfName = `Report-Fortnightly-Monitor-${Id}.pdf`;
+    link.download = pdfName;
     link.click();
 
     // Clean up the object URL
     URL.revokeObjectURL(url);
+
+    recordFileDownloadAudit({
+      fileName: pdfName,
+      fileType: "PDF",
+      module: "Fortnightly Monitor",
+      extraDetails: `Form ID: ${Id}`,
+    });
   };
 
   useEffect(() => {

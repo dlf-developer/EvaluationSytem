@@ -191,8 +191,8 @@ export const UpdateFromObserver = createAsyncThunk(
 
 export const getAllWeeklyFrom = createAsyncThunk(
   "getAllWeeklyFrom",
-  async () => {
-    const response = await axiosInstanceToken.get(`/weekly4Forms`);
+  async (params = {}) => {
+    const response = await axiosInstanceToken.get(`/weekly4Forms`, { params });
     return response.data;
   },
 );
@@ -215,8 +215,8 @@ export const getAllWeeklyFromById = createAsyncThunk(
 
 export const getAllWeeklyFromAll = createAsyncThunk(
   "getAllWeeklyFromAll",
-  async (payload) => {
-    const response = await axiosInstanceToken.get(`/weekly4Form/get/all`);
+  async (params = {}) => {
+    const response = await axiosInstanceToken.get(`/weekly4Form/get/all`, { params });
     return response.data;
   },
 );
@@ -455,6 +455,7 @@ const userSlice = createSlice({
     GetTeachersLists: cachedTeachers,
     GetObserverLists: cachedObservers,
     getAllWeeklyFroms: null,
+    weeklyPagination: { total: 0, page: 1, limit: 10, totalPages: 1 },
     loading: false,
     error: null,
     signupSuccess: false,
@@ -613,7 +614,25 @@ const userSlice = createSlice({
       })
       .addCase(getAllWeeklyFrom.fulfilled, (state, action) => {
         state.loading = false;
-        state.getAllWeeklyFroms = action.payload;
+        if (Array.isArray(action.payload)) {
+          state.getAllWeeklyFroms = action.payload;
+          state.weeklyPagination = {
+            total: action.payload.length,
+            page: 1,
+            limit: action.payload.length || 10,
+            totalPages: Math.ceil((action.payload.length || 1) / 10),
+          };
+        } else {
+          state.getAllWeeklyFroms = Array.isArray(action.payload?.data)
+            ? action.payload.data
+            : [];
+          state.weeklyPagination = action.payload?.pagination || {
+            total: state.getAllWeeklyFroms.length,
+            page: 1,
+            limit: 10,
+            totalPages: Math.ceil((state.getAllWeeklyFroms.length || 1) / 10),
+          };
+        }
       })
       .addCase(getAllWeeklyFrom.rejected, (state, action) => {
         state.loading = false;
@@ -626,7 +645,25 @@ const userSlice = createSlice({
       })
       .addCase(getAllWeeklyFromAll.fulfilled, (state, action) => {
         state.loading = false;
-        state.getAllWeeklyFroms = action.payload;
+        if (Array.isArray(action.payload)) {
+          state.getAllWeeklyFroms = action.payload;
+          state.weeklyPagination = {
+            total: action.payload.length,
+            page: 1,
+            limit: action.payload.length || 10,
+            totalPages: Math.ceil((action.payload.length || 1) / 10),
+          };
+        } else {
+          state.getAllWeeklyFroms = Array.isArray(action.payload?.data)
+            ? action.payload.data
+            : [];
+          state.weeklyPagination = action.payload?.pagination || {
+            total: state.getAllWeeklyFroms.length,
+            page: 1,
+            limit: 10,
+            totalPages: Math.ceil((state.getAllWeeklyFroms.length || 1) / 10),
+          };
+        }
       })
       .addCase(getAllWeeklyFromAll.rejected, (state, action) => {
         state.loading = false;

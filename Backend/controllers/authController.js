@@ -8,6 +8,7 @@ const Form2 = require('../models/Form2');
 const Form3 = require('../models/Form3');
 const Weekly4Form = require('../models/Weekly4Form');
 const CoScholastic = require('../models/CoScholastic');
+const { recordAuditLog, getClientIp } = require('../utils/auditLogger');
 
 const createOTPTemplate = (otp, duration, title) => `
 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eaeaea; border-radius: 10px; background-color: #f9f9f9;">
@@ -94,6 +95,21 @@ const login = async (req, res) => {
             },
             process.env.JWT_SECRET
         );
+
+        // Record Audit Log on successful login
+        const clientIp = getClientIp(req);
+        recordAuditLog({
+            req,
+            user: user._id,
+            userName: user.name,
+            userEmail: user.email,
+            userRole: user.access,
+            action: 'LOGIN',
+            module: 'Authentication',
+            details: `User ${user.name} (${user.email}) logged in successfully as ${user.access}`,
+            ipAddress: clientIp,
+        });
+
         res.json({ token });
     } catch (error) {
         res.status(500).json({ message: 'Server error' });

@@ -1,6 +1,18 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Box, Button, useDisclosure, Modal, ModalOverlay, ModalContent, ModalHeader, ModalFooter, ModalBody, ModalCloseButton, useToast } from "@chakra-ui/react";
+import {
+  Box,
+  Button,
+  useDisclosure,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalFooter,
+  ModalBody,
+  ModalCloseButton,
+  useToast,
+} from "@chakra-ui/react";
 import { axiosInstanceToken } from "../../../redux/instence";
 import { getUserId } from "../../../Utils/auth";
 import { GetAllCoScholasticForms } from "../../../redux/Form/coScholasticSlice";
@@ -13,8 +25,17 @@ function FormFiveReport() {
   const currentUserRole = getUserId()?.access;
   const [classes, setClasses] = useState([]);
 
+  const { isLoading, GetForms, pagination, filterOptions } = useSelector(
+    (state) => state?.coScholastic
+  );
+
+  // ── Server-Side Pagination & Filtering State ──────────────────
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [serverFilters, setServerFilters] = useState({});
+  const lastFetchedParamsRef = useRef("");
+
   useEffect(() => {
-    dispatch(GetAllCoScholasticForms());
     dispatch(getCreateClassSection()).then((res) => {
       if (res?.payload?.success && Array.isArray(res?.payload?.classDetails)) {
         setClasses(res.payload.classDetails);
@@ -22,7 +43,132 @@ function FormFiveReport() {
     });
   }, [dispatch]);
 
-  const rawData = useSelector((state) => state?.coScholastic?.GetForms || []);
+  const fetchCoScholasticData = useCallback(
+    (currentPage = page, currentLimit = pageSize, activeFilters = serverFilters) => {
+      const params = {
+        page: currentPage,
+        limit: currentLimit,
+        skip: (currentPage - 1) * currentLimit,
+      };
+
+      if (activeFilters.className) {
+        params.className = Array.isArray(activeFilters.className)
+          ? activeFilters.className.join(",")
+          : activeFilters.className;
+      }
+      if (activeFilters.section) {
+        params.section = Array.isArray(activeFilters.section)
+          ? activeFilters.section.join(",")
+          : activeFilters.section;
+      }
+      if (activeFilters.subject) {
+        params.subject = Array.isArray(activeFilters.subject)
+          ? activeFilters.subject.join(",")
+          : activeFilters.subject;
+      }
+      if (activeFilters.personName) {
+        params.searchName = Array.isArray(activeFilters.personName)
+          ? activeFilters.personName.join(",")
+          : activeFilters.personName;
+      }
+      if (activeFilters.observationDate) {
+        params.date = activeFilters.observationDate;
+      }
+      if (
+        activeFilters.isTeacherCompletes !== undefined &&
+        activeFilters.isTeacherCompletes !== null &&
+        activeFilters.isTeacherCompletes !== ""
+      ) {
+        params.isTeacherCompletes = activeFilters.isTeacherCompletes;
+      }
+      if (
+        activeFilters.isObserverCompleted !== undefined &&
+        activeFilters.isObserverCompleted !== null &&
+        activeFilters.isObserverCompleted !== ""
+      ) {
+        params.isObserverCompleted = activeFilters.isObserverCompleted;
+      }
+
+      const paramKey = JSON.stringify(params);
+      if (lastFetchedParamsRef.current === paramKey) return;
+      lastFetchedParamsRef.current = paramKey;
+
+      dispatch(GetAllCoScholasticForms(params));
+    },
+    [dispatch, page, pageSize, serverFilters]
+  );
+
+  useEffect(() => {
+    fetchCoScholasticData(page, pageSize, serverFilters);
+  }, [fetchCoScholasticData, page, pageSize, serverFilters]);
+
+  const handlePageChange = useCallback(
+    (newPage, newSize) => {
+      const nextLimit = newSize || pageSize;
+      setPage(newPage);
+      if (newSize && newSize !== pageSize) {
+        setPageSize(newSize);
+      }
+      fetchCoScholasticData(newPage, nextLimit, serverFilters);
+    },
+    [fetchCoScholasticData, pageSize, serverFilters]
+  );
+
+  const handleFilterChange = useCallback(
+    (newFilters) => {
+      setServerFilters(newFilters);
+      setPage(1);
+      fetchCoScholasticData(1, pageSize, newFilters);
+    },
+    [fetchCoScholasticData, pageSize]
+  );
+
+  const handleFetchAllForExport = useCallback(async () => {
+    const params = { limit: "all" };
+    if (serverFilters.className) {
+      params.className = Array.isArray(serverFilters.className)
+        ? serverFilters.className.join(",")
+        : serverFilters.className;
+    }
+    if (serverFilters.section) {
+      params.section = Array.isArray(serverFilters.section)
+        ? serverFilters.section.join(",")
+        : serverFilters.section;
+    }
+    if (serverFilters.subject) {
+      params.subject = Array.isArray(serverFilters.subject)
+        ? serverFilters.subject.join(",")
+        : serverFilters.subject;
+    }
+    if (serverFilters.personName) {
+      params.searchName = Array.isArray(serverFilters.personName)
+        ? serverFilters.personName.join(",")
+        : serverFilters.personName;
+    }
+    if (serverFilters.observationDate) {
+      params.date = serverFilters.observationDate;
+    }
+    if (
+      serverFilters.isTeacherCompletes !== undefined &&
+      serverFilters.isTeacherCompletes !== null &&
+      serverFilters.isTeacherCompletes !== ""
+    ) {
+      params.isTeacherCompletes = serverFilters.isTeacherCompletes;
+    }
+    if (
+      serverFilters.isObserverCompleted !== undefined &&
+      serverFilters.isObserverCompleted !== null &&
+      serverFilters.isObserverCompleted !== ""
+    ) {
+      params.isObserverCompleted = serverFilters.isObserverCompleted;
+    }
+
+    const response = await axiosInstanceToken.get(`/co-scholastic/`, { params });
+    const result = response.data;
+    if (Array.isArray(result)) return result;
+    if (Array.isArray(result?.data)) return result.data;
+    return [];
+  }, [serverFilters]);
 
   const classMap = useMemo(() => {
     const map = {};
@@ -35,8 +181,8 @@ function FormFiveReport() {
   }, [classes]);
 
   const data = useMemo(() => {
-    if (!Array.isArray(rawData)) return [];
-    return rawData.map((item) => {
+    if (!Array.isArray(GetForms)) return [];
+    return GetForms.map((item) => {
       let currentClass = item?.grenralDetails?.className;
       if (typeof currentClass === "object" && currentClass !== null) {
         currentClass = currentClass?.className || currentClass?.name || "";
@@ -52,7 +198,7 @@ function FormFiveReport() {
         },
       };
     });
-  }, [rawData, classMap]);
+  }, [GetForms, classMap]);
 
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [deleteId, setDeleteId] = useState(null);
@@ -68,7 +214,7 @@ function FormFiveReport() {
     if (!deleteId) return;
     setIsDeleting(true);
     try {
-      await axiosInstanceToken.delete(`/co-scholastic/delete/${deleteId}`);
+      await axiosInstanceToken.delete(`/co-scholastic/${deleteId}`);
       toast({
         title: "Form Deleted",
         description: "The form has been successfully deleted.",
@@ -76,7 +222,8 @@ function FormFiveReport() {
         duration: 3000,
         isClosable: true,
       });
-      dispatch(GetAllCoScholasticForms());
+      lastFetchedParamsRef.current = "";
+      fetchCoScholasticData(page, pageSize, serverFilters);
     } catch (error) {
       toast({
         title: "Error",
@@ -93,9 +240,14 @@ function FormFiveReport() {
   };
 
   const columns = useMemo(
-    () => getCoScholasticColumns({ data, currentUserRole, onDelete: handleDeleteClick }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [data, currentUserRole]
+    () =>
+      getCoScholasticColumns({
+        data,
+        filterOptions,
+        currentUserRole,
+        onDelete: handleDeleteClick,
+      }),
+    [data, filterOptions, currentUserRole]
   );
 
   return (
@@ -104,9 +256,17 @@ function FormFiveReport() {
         title="Co-Scholastic Classroom Observation — All Records"
         columns={columns}
         data={data}
+        loading={isLoading}
         rowKey="_id"
-        pageSize={10}
-        downloadable
+        pageSize={pageSize}
+        serverSide={true}
+        pagination={pagination}
+        totalRecords={pagination?.total || 0}
+        page={page}
+        onPageChange={handlePageChange}
+        onFilterChange={handleFilterChange}
+        onFetchAllForExport={handleFetchAllForExport}
+        downloadable={true}
         downloadFileName="coscholastic_walkthrough"
       />
       <Modal isOpen={isOpen} onClose={onClose} isCentered>

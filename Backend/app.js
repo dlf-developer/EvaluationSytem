@@ -38,6 +38,7 @@ const sessionRoutes = require('./routes/sessionRoutes');
 const coScholasticRoutes = require('./routes/coScholasticRoutes');
 const accountabilityRoutes = require('./routes/accountabilityRoutes');
 const logRoutes = require('./routes/logRoutes');
+const auditLogRoutes = require('./routes/auditLogRoutes');
 
 const app = express();
 
@@ -73,6 +74,7 @@ app.use('/api/session', sessionRoutes);
 app.use('/api/co-scholastic', coScholasticRoutes);
 app.use('/api/accountability', accountabilityRoutes);
 app.use('/api/logs', logRoutes);
+app.use('/api/audit-logs', auditLogRoutes);
 
 app.get('/', (req, res) => {
     return res.json({ message: "hello" });

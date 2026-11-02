@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { Box, Flex, Heading, Text, Stack, Button } from "@chakra-ui/react";
 import { PlusCircleOutlined } from "../../Components/UI/Icons";
 import { useDispatch, useSelector } from "react-redux";
@@ -9,26 +9,162 @@ import { getUserId } from "../../Utils/auth";
 import { UserRole } from "../../config/config";
 import SmartTable from "../../Components/SmartTable";
 import { getClassroomColumns } from "../../Components/SmartTable/tableColumns";
+import { axiosInstanceToken } from "../../redux/instence";
 
 function ClassRoom() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const location = useLocation();
   const currentPath = location.pathname;
-  const Role = getUserId().access;
+  const Role = getUserId()?.access;
   const currentUserRole = Role;
   const [classes, setClasses] = useState([]);
 
-  const { isLoading, GetForms } = useSelector((state) => state?.walkThroughForm);
+  const { isLoading, GetForms, pagination, filterOptions } =
+    useSelector((state) => state?.walkThroughForm) || {};
+
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [serverFilters, setServerFilters] = useState({});
 
   useEffect(() => {
-    dispatch(GetAllClassRoomForms());
     dispatch(getCreateClassSection()).then((res) => {
       if (res?.payload?.success && Array.isArray(res?.payload?.classDetails)) {
         setClasses(res.payload.classDetails);
       }
     });
-  }, [dispatch, Role]);
+  }, [dispatch]);
+
+  const lastFetchedParamsRef = useRef("");
+
+  const fetchWalkthroughData = useCallback(
+    (currentPage = page, currentLimit = pageSize, activeFilters = serverFilters) => {
+      const params = {
+        page: currentPage,
+        limit: currentLimit,
+        skip: (currentPage - 1) * currentLimit,
+      };
+      if (activeFilters.className) {
+        params.className = Array.isArray(activeFilters.className)
+          ? activeFilters.className.join(",")
+          : activeFilters.className;
+      }
+      if (activeFilters.section) {
+        params.section = Array.isArray(activeFilters.section)
+          ? activeFilters.section.join(",")
+          : activeFilters.section;
+      }
+      if (activeFilters.subject) {
+        params.subject = Array.isArray(activeFilters.subject)
+          ? activeFilters.subject.join(",")
+          : activeFilters.subject;
+      }
+      if (activeFilters.personName) {
+        params.searchName = Array.isArray(activeFilters.personName)
+          ? activeFilters.personName.join(",")
+          : activeFilters.personName;
+      }
+      if (activeFilters.observationDate) {
+        params.date = activeFilters.observationDate;
+      }
+      if (
+        activeFilters.isTeacherCompletes !== undefined &&
+        activeFilters.isTeacherCompletes !== null &&
+        activeFilters.isTeacherCompletes !== ""
+      ) {
+        params.isTeacherCompletes = activeFilters.isTeacherCompletes;
+      }
+      if (
+        activeFilters.isObserverCompleted !== undefined &&
+        activeFilters.isObserverCompleted !== null &&
+        activeFilters.isObserverCompleted !== ""
+      ) {
+        params.isObserverCompleted = activeFilters.isObserverCompleted;
+      }
+
+      const paramKey = JSON.stringify(params);
+      if (lastFetchedParamsRef.current === paramKey) return;
+      lastFetchedParamsRef.current = paramKey;
+
+      dispatch(GetAllClassRoomForms(params));
+    },
+    [dispatch, page, pageSize, serverFilters]
+  );
+
+  useEffect(() => {
+    fetchWalkthroughData(page, pageSize, serverFilters);
+  }, [fetchWalkthroughData, page, pageSize, serverFilters]);
+
+  const handlePageChange = useCallback(
+    (newPage, newSize) => {
+      const nextLimit = newSize || pageSize;
+      setPage(newPage);
+      if (newSize && newSize !== pageSize) {
+        setPageSize(newSize);
+      }
+      fetchWalkthroughData(newPage, nextLimit, serverFilters);
+    },
+    [fetchWalkthroughData, pageSize, serverFilters]
+  );
+
+  const handleFilterChange = useCallback(
+    (newFilters) => {
+      setServerFilters(newFilters);
+      setPage(1);
+      fetchWalkthroughData(1, pageSize, newFilters);
+    },
+    [fetchWalkthroughData, pageSize]
+  );
+
+  const handleFetchAllForExport = useCallback(async () => {
+    const params = { limit: "all" };
+    if (serverFilters.className) {
+      params.className = Array.isArray(serverFilters.className)
+        ? serverFilters.className.join(",")
+        : serverFilters.className;
+    }
+    if (serverFilters.section) {
+      params.section = Array.isArray(serverFilters.section)
+        ? serverFilters.section.join(",")
+        : serverFilters.section;
+    }
+    if (serverFilters.subject) {
+      params.subject = Array.isArray(serverFilters.subject)
+        ? serverFilters.subject.join(",")
+        : serverFilters.subject;
+    }
+    if (serverFilters.personName) {
+      params.searchName = Array.isArray(serverFilters.personName)
+        ? serverFilters.personName.join(",")
+        : serverFilters.personName;
+    }
+    if (serverFilters.observationDate) {
+      params.date = serverFilters.observationDate;
+    }
+    if (
+      serverFilters.isTeacherCompletes !== undefined &&
+      serverFilters.isTeacherCompletes !== null &&
+      serverFilters.isTeacherCompletes !== ""
+    ) {
+      params.isTeacherCompletes = serverFilters.isTeacherCompletes;
+    }
+    if (
+      serverFilters.isObserverCompleted !== undefined &&
+      serverFilters.isObserverCompleted !== null &&
+      serverFilters.isObserverCompleted !== ""
+    ) {
+      params.isObserverCompleted = serverFilters.isObserverCompleted;
+    }
+
+    const response = await axiosInstanceToken.get(
+      "classroom-walkthrough/teachers/get/all",
+      { params }
+    );
+    const result = response.data;
+    if (Array.isArray(result)) return result;
+    if (Array.isArray(result?.data)) return result.data;
+    return [];
+  }, [serverFilters]);
 
   const classMap = useMemo(() => {
     const map = {};
@@ -66,11 +202,30 @@ function ClassRoom() {
     );
   }, [resolvedForms]);
 
-  const columns = useMemo(
-    () => getClassroomColumns({ data: resolvedForms, currentUserRole }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [resolvedForms, currentUserRole]
-  );
+  const columns = useMemo(() => {
+    const baseCols = getClassroomColumns({ data: resolvedForms, currentUserRole });
+    return baseCols.map((col) => {
+      if (col.key === "className" && filterOptions?.classes?.length > 0) {
+        return {
+          ...col,
+          filterConfig: {
+            ...col.filterConfig,
+            options: filterOptions.classes,
+          },
+        };
+      }
+      if (col.key === "section" && filterOptions?.sections?.length > 0) {
+        return {
+          ...col,
+          filterConfig: {
+            ...col.filterConfig,
+            options: filterOptions.sections,
+          },
+        };
+      }
+      return col;
+    });
+  }, [resolvedForms, currentUserRole, filterOptions]);
 
   return (
     <Box p={{ base: 4, md: 8 }} minH="calc(100vh - 72px)">
@@ -105,7 +260,16 @@ function ClassRoom() {
         data={sortedData}
         loading={isLoading}
         rowKey="_id"
-        pageSize={10}
+        pageSize={pageSize}
+        serverSide={true}
+        pagination={pagination}
+        totalRecords={pagination?.total || 0}
+        page={page}
+        onPageChange={handlePageChange}
+        onFilterChange={handleFilterChange}
+        onFetchAllForExport={handleFetchAllForExport}
+        downloadable={true}
+        downloadFileName="classroom_walkthrough"
       />
     </Box>
   );

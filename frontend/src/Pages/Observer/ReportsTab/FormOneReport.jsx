@@ -1,6 +1,18 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Box, Button, useDisclosure, Modal, ModalOverlay, ModalContent, ModalHeader, ModalFooter, ModalBody, ModalCloseButton, useToast } from "@chakra-ui/react";
+import {
+  Box,
+  Button,
+  useDisclosure,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalFooter,
+  ModalBody,
+  ModalCloseButton,
+  useToast,
+} from "@chakra-ui/react";
 import { axiosInstanceToken } from "../../../redux/instence";
 import { getUserId } from "../../../Utils/auth";
 import { GetAllFormsForAdmin } from "../../../redux/Form/fortnightlySlice";
@@ -14,8 +26,15 @@ function FormOneReport() {
   const currentUserRole = getUserId()?.access;
   const [classes, setClasses] = useState([]);
 
+  const { getAllAdminForms, getAllForms, loading, pagination, filterOptions } =
+    useSelector((state) => state?.Forms) || {};
+  const rawData = getAllAdminForms?.length ? getAllAdminForms : (getAllForms || []);
+
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [serverFilters, setServerFilters] = useState({});
+
   useEffect(() => {
-    dispatch(GetAllFormsForAdmin());
     dispatch(getCreateClassSection()).then((res) => {
       if (res?.payload?.success && Array.isArray(res?.payload?.classDetails)) {
         setClasses(res.payload.classDetails);
@@ -23,7 +42,126 @@ function FormOneReport() {
     });
   }, [dispatch]);
 
-  const rawData = useSelector((state) => state?.Forms?.getAllAdminForms || []);
+  const lastFetchedParamsRef = useRef("");
+
+  const fetchFortnightlyData = useCallback(
+    (currentPage = page, currentLimit = pageSize, activeFilters = serverFilters) => {
+      const params = {
+        page: currentPage,
+        limit: currentLimit,
+        skip: (currentPage - 1) * currentLimit,
+      };
+      if (activeFilters.className) {
+        params.className = Array.isArray(activeFilters.className)
+          ? activeFilters.className.join(",")
+          : activeFilters.className;
+      }
+      if (activeFilters.section) {
+        params.section = Array.isArray(activeFilters.section)
+          ? activeFilters.section.join(",")
+          : activeFilters.section;
+      }
+      if (activeFilters.personName) {
+        params.searchName = Array.isArray(activeFilters.personName)
+          ? activeFilters.personName.join(",")
+          : activeFilters.personName;
+      }
+      if (activeFilters.observationDate) {
+        params.date = activeFilters.observationDate;
+      }
+      if (
+        activeFilters.isTeacherComplete !== undefined &&
+        activeFilters.isTeacherComplete !== null &&
+        activeFilters.isTeacherComplete !== ""
+      ) {
+        params.isTeacherComplete = activeFilters.isTeacherComplete;
+      }
+      if (
+        activeFilters.isCoordinatorComplete !== undefined &&
+        activeFilters.isCoordinatorComplete !== null &&
+        activeFilters.isCoordinatorComplete !== ""
+      ) {
+        params.isCoordinatorComplete = activeFilters.isCoordinatorComplete;
+      }
+
+      const paramKey = JSON.stringify(params);
+      if (lastFetchedParamsRef.current === paramKey) return;
+      lastFetchedParamsRef.current = paramKey;
+
+      dispatch(GetAllFormsForAdmin(params));
+    },
+    [dispatch, page, pageSize, serverFilters]
+  );
+
+  useEffect(() => {
+    fetchFortnightlyData(page, pageSize, serverFilters);
+  }, [fetchFortnightlyData, page, pageSize, serverFilters]);
+
+  const handlePageChange = useCallback(
+    (newPage, newSize) => {
+      const nextLimit = newSize || pageSize;
+      setPage(newPage);
+      if (newSize && newSize !== pageSize) {
+        setPageSize(newSize);
+      }
+      fetchFortnightlyData(newPage, nextLimit, serverFilters);
+    },
+    [fetchFortnightlyData, pageSize, serverFilters]
+  );
+
+  const handleFilterChange = useCallback(
+    (newFilters) => {
+      setServerFilters(newFilters);
+      setPage(1);
+      fetchFortnightlyData(1, pageSize, newFilters);
+    },
+    [fetchFortnightlyData, pageSize]
+  );
+
+  const handleFetchAllForExport = useCallback(async () => {
+    const params = { limit: "all" };
+    if (serverFilters.className) {
+      params.className = Array.isArray(serverFilters.className)
+        ? serverFilters.className.join(",")
+        : serverFilters.className;
+    }
+    if (serverFilters.section) {
+      params.section = Array.isArray(serverFilters.section)
+        ? serverFilters.section.join(",")
+        : serverFilters.section;
+    }
+    if (serverFilters.personName) {
+      params.searchName = Array.isArray(serverFilters.personName)
+        ? serverFilters.personName.join(",")
+        : serverFilters.personName;
+    }
+    if (serverFilters.observationDate) {
+      params.date = serverFilters.observationDate;
+    }
+    if (
+      serverFilters.isTeacherComplete !== undefined &&
+      serverFilters.isTeacherComplete !== null &&
+      serverFilters.isTeacherComplete !== ""
+    ) {
+      params.isTeacherComplete = serverFilters.isTeacherComplete;
+    }
+    if (
+      serverFilters.isCoordinatorComplete !== undefined &&
+      serverFilters.isCoordinatorComplete !== null &&
+      serverFilters.isCoordinatorComplete !== ""
+    ) {
+      params.isCoordinatorComplete = serverFilters.isCoordinatorComplete;
+    }
+
+    const response = await axiosInstanceToken.get(
+      "/form/fortnightly-monitor/get/all",
+      { params }
+    );
+    const result = response.data;
+    if (Array.isArray(result)) return result;
+    if (Array.isArray(result?.data)) return result.data;
+    return [];
+  }, [serverFilters]);
 
   const classMap = useMemo(() => {
     const map = {};
@@ -75,7 +213,7 @@ function FormOneReport() {
         duration: 3000,
         isClosable: true,
       });
-      dispatch(GetAllFormsForAdmin());
+      fetchFortnightlyData(page, pageSize, serverFilters);
     } catch (error) {
       toast({
         title: "Error",
@@ -91,11 +229,34 @@ function FormOneReport() {
     }
   };
 
-  const columns = useMemo(
-    () => getReportForm1Columns({ data, currentUserRole, onDelete: handleDeleteClick }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [data, currentUserRole]
-  );
+  const columns = useMemo(() => {
+    const baseCols = getReportForm1Columns({
+      data,
+      currentUserRole,
+      onDelete: handleDeleteClick,
+    });
+    return baseCols.map((col) => {
+      if (col.key === "className" && filterOptions?.classes?.length > 0) {
+        return {
+          ...col,
+          filterConfig: {
+            ...col.filterConfig,
+            options: filterOptions.classes,
+          },
+        };
+      }
+      if (col.key === "section" && filterOptions?.sections?.length > 0) {
+        return {
+          ...col,
+          filterConfig: {
+            ...col.filterConfig,
+            options: filterOptions.sections,
+          },
+        };
+      }
+      return col;
+    });
+  }, [data, currentUserRole, filterOptions]);
 
   return (
     <Box>
@@ -103,8 +264,16 @@ function FormOneReport() {
         title="Fortnightly Monitor — All Records"
         columns={columns}
         data={data}
+        loading={loading}
         rowKey="_id"
-        pageSize={10}
+        pageSize={pageSize}
+        serverSide={true}
+        pagination={pagination}
+        totalRecords={pagination?.total || 0}
+        page={page}
+        onPageChange={handlePageChange}
+        onFilterChange={handleFilterChange}
+        onFetchAllForExport={handleFetchAllForExport}
         downloadable
         downloadFileName="fortnightly_monitor"
       />

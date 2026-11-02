@@ -5,6 +5,7 @@ const notification = require('../models/notification');
 const User = require('../models/User');
 const sendEmail = require('../utils/emailService');
 const { formInitiatedEmail, formCompletedEmail, reminderEmail } = require('../utils/emailTemplates');
+const { recordAuditLog, calculateDiff } = require('../utils/auditLogger');
 
 exports.createForm = async (req, res) => {
     const {
@@ -85,6 +86,14 @@ exports.createForm = async (req, res) => {
         });
 
         const savedForm = await newForm.save();
+
+        recordAuditLog({
+            req,
+            action: 'CREATE',
+            module: 'Co-Scholastic',
+            targetId: savedForm._id,
+            details: `${isDraftSave ? 'Saved draft' : 'Created form'} for Class ${resolvedClassName || ''} Section ${Section || ''}`,
+        });
         
         // Notify teacher only if finalized and NOT draft
         if (!isDraftSave && newForm.isObserverCompleted) {
@@ -185,8 +194,19 @@ exports.editCoScholasticForm = async (req, res) => {
         UpdateValue.isObserverCompleted = isDraftSave ? false : (isObserverCompleted !== undefined ? isObserverCompleted : true);
         UpdateValue.isTeacherCompletes = false;
 
+        const existingForm = await CoScholastic.findById(formId);
+        const formDiff = calculateDiff(existingForm, UpdateValue);
         const updatedForm = await CoScholastic.findByIdAndUpdate(formId, UpdateValue, { new: true })
             .populate('grenralDetails.NameoftheVisitingTeacher', 'name email');
+
+        recordAuditLog({
+            req,
+            action: 'UPDATE',
+            module: 'Co-Scholastic',
+            targetId: formId,
+            details: `Updated Co-Scholastic form (ID: ${formId})`,
+            changes: formDiff,
+        });
 
         // Notify the teacher only if observer completed the form and it is NOT a draft
         const teacher = updatedForm?.grenralDetails?.NameoftheVisitingTeacher;
@@ -248,43 +268,227 @@ exports.GetTeahearsForm = async (req, res) => {
     }
 }
 
+// ── Shared Helper for Server-Side Filtering, Pagination (limit/skip) & Count ───
+const buildCoScholasticQueryAndPaginate = async (req, baseCondition = {}) => {
+  const queryFilter = { ...baseCondition };
+
+  // 1. Session date filter
+  if (req.sessionDateFilter) {
+    queryFilter.createdAt = req.sessionDateFilter;
+  }
+
+  // 2. Class filter
+  if (req.query.className) {
+    const classNames = req.query.className
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (classNames.length > 0) {
+      const matchingClasses = await ClassDetails.find(
+        { className: { $in: classNames } },
+        "_id"
+      ).lean();
+      const matchingIds = matchingClasses.map((c) => c._id.toString());
+      queryFilter["grenralDetails.className"] = {
+        $in: [...classNames, ...matchingIds],
+      };
+    }
+  }
+
+  // 3. Section filter
+  if (req.query.section) {
+    const sections = req.query.section
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (sections.length > 0) {
+      queryFilter["grenralDetails.Section"] = { $in: sections };
+    }
+  }
+
+  // 4. Subject filter
+  if (req.query.subject) {
+    const subjects = req.query.subject
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (subjects.length > 0) {
+      queryFilter["grenralDetails.Subject"] = { $in: subjects };
+    }
+  }
+
+  // 5. Date of Observation
+  if (req.query.date || req.query.observationDate) {
+    const d = new Date(req.query.date || req.query.observationDate);
+    if (!isNaN(d.getTime())) {
+      const startOfDay = new Date(d);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(d);
+      endOfDay.setHours(23, 59, 59, 999);
+      queryFilter["grenralDetails.DateOfObservation"] = {
+        $gte: startOfDay,
+        $lte: endOfDay,
+      };
+    }
+  }
+
+  // 6. Boolean completion filters
+  if (
+    req.query.isTeacherCompletes !== undefined &&
+    req.query.isTeacherCompletes !== null &&
+    req.query.isTeacherCompletes !== ""
+  ) {
+    queryFilter.isTeacherCompletes = String(req.query.isTeacherCompletes) === "true";
+  }
+  if (
+    req.query.isObserverCompleted !== undefined &&
+    req.query.isObserverCompleted !== null &&
+    req.query.isObserverCompleted !== ""
+  ) {
+    queryFilter.isObserverCompleted = String(req.query.isObserverCompleted) === "true";
+  }
+
+  // 7. Search by person name
+  const search = req.query.search || req.query.searchName || req.query.personName;
+  if (search) {
+    const searchTerms = search
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (searchTerms.length > 0) {
+      const userConditions = searchTerms.map((term) => ({
+        name: { $regex: term, $options: "i" },
+      }));
+      const matchedUsers = await User.find(
+        { $or: userConditions },
+        "_id"
+      ).lean();
+      const matchedIds = matchedUsers.map((u) => u._id);
+
+      const searchOr = [
+        { teacherID: { $in: matchedIds } },
+        { createdBy: { $in: matchedIds } },
+        { "grenralDetails.NameoftheVisitingTeacher": { $in: matchedIds } },
+      ];
+
+      if (queryFilter.$or) {
+        queryFilter.$and = [
+          { $or: queryFilter.$or },
+          { $or: searchOr },
+        ];
+        delete queryFilter.$or;
+      } else {
+        queryFilter.$or = searchOr;
+      }
+    }
+  }
+
+  // 8. Pagination params (limit & skip)
+  const hasPagination =
+    req.query.page !== undefined ||
+    req.query.limit !== undefined ||
+    req.query.skip !== undefined;
+
+  const isAll =
+    !hasPagination ||
+    req.query.limit === "all" ||
+    req.query.all === "true" ||
+    parseInt(req.query.limit, 10) >= 99999;
+  const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+  const limit = isAll ? 0 : Math.max(1, parseInt(req.query.limit, 10) || 10);
+  const skip = isAll
+    ? 0
+    : req.query.skip !== undefined
+    ? Math.max(0, parseInt(req.query.skip, 10))
+    : (page - 1) * limit;
+
+  const totalCount = await CoScholastic.countDocuments(queryFilter);
+
+  let dbQuery = CoScholastic.find(queryFilter)
+    .sort({ createdAt: -1 })
+    .populate({ path: 'teacherID', select: '-password -mobile -employeeId -customId' })
+    .populate({ path: 'createdBy', select: '-password -mobile -employeeId -customId' })
+    .populate({ path: 'grenralDetails.NameoftheVisitingTeacher', select: '-password -mobile -employeeId -customId' });
+
+  if (!isAll && limit > 0) {
+    dbQuery = dbQuery.skip(skip).limit(limit);
+  }
+
+  const forms = await dbQuery.lean();
+
+  try {
+    const classDetailsList = await ClassDetails.find({}).lean();
+    const classMap = {};
+    classDetailsList.forEach((c) => {
+      if (c?._id) classMap[c._id.toString()] = c.className;
+    });
+
+    forms.forEach((form) => {
+      const cur = form?.grenralDetails?.className;
+      if (cur && classMap[cur.toString()]) {
+        form.grenralDetails.className = classMap[cur.toString()];
+      }
+    });
+  } catch (e) {
+    console.error("Error resolving class names in CoScholastic:", e);
+  }
+
+  let filterOptions = { classes: [], sections: [] };
+  try {
+    const allClasses = await ClassDetails.find({}, "className").lean();
+    const distinctSections = await CoScholastic.distinct("grenralDetails.Section", {
+      "grenralDetails.Section": { $ne: null },
+    });
+    filterOptions = {
+      classes: allClasses.map((c) => c.className).filter(Boolean),
+      sections: distinctSections.filter(Boolean),
+    };
+  } catch (e) {
+    // ignore
+  }
+
+  return {
+    data: forms,
+    pagination: {
+      total: totalCount,
+      page: isAll ? 1 : page,
+      limit: isAll ? totalCount : limit,
+      skip: isAll ? 0 : skip,
+      totalPages: isAll ? 1 : Math.ceil(totalCount / (limit || 1)),
+    },
+    filterOptions,
+  };
+};
+
 exports.GetcreatedBy = async (req, res) => {
     const userId = req?.user?.id;
-    const queryFilter = req.sessionDateFilter ? { createdAt: req.sessionDateFilter } : {};
+    if (!userId) {
+        return res.status(403).json({ message: "You do not have permission." });
+    }
     try {
-        const Form = await CoScholastic.find({ createdBy: userId, ...queryFilter })
-            .sort({ createdAt: -1 })
-            .populate({ path: 'createdBy', select: '-password -mobile -employeeId -customId' })
-            .populate({ path: 'grenralDetails.NameoftheVisitingTeacher', select: '-password -mobile -employeeId -customId' })
-            .populate({ path: 'grenralDetails.className' });
-
-        if (!userId && !userId?.id) {
-            return res.status(403).json({ message: "You do not have permission." });
-        }
-        res.status(200).send(Form)
+        const result = await buildCoScholasticQueryAndPaginate(req, { createdBy: userId });
+        res.status(200).json({ success: true, ...result });
     } catch (error) {
+        console.error("Error in GetcreatedBy CoScholastic:", error);
         res.status(500).json({ message: "Error Getting Form.", error });
     }
-}
+};
 
 exports.GetTeacherForm = async (req, res) => {
     const userId = req?.user?.id;
-    const queryFilter = req.sessionDateFilter ? { createdAt: req.sessionDateFilter } : {};
+    if (!userId) {
+        return res.status(403).json({ message: "You do not have permission." });
+    }
     try {
-        const Form = await CoScholastic.find({ "grenralDetails.NameoftheVisitingTeacher": userId, ...queryFilter })
-            .sort({ createdAt: -1 })
-            .populate({ path: 'createdBy', select: '-password -mobile -employeeId -customId' })
-            .populate({ path: 'grenralDetails.NameoftheVisitingTeacher', select: '-password -mobile -employeeId -customId' })
-            .populate({ path: 'grenralDetails.className' });
-
-        if (!userId && !userId?.id) {
-            return res.status(403).json({ message: "You do not have permission." });
-        }
-        res.status(200).send(Form)
+        const result = await buildCoScholasticQueryAndPaginate(req, {
+            "grenralDetails.NameoftheVisitingTeacher": userId,
+        });
+        res.status(200).json({ success: true, ...result });
     } catch (error) {
+        console.error("Error in GetTeacherForm CoScholastic:", error);
         res.status(500).json({ message: "Error Getting Form.", error });
     }
-}
+};
 
 exports.TeacherContinueForm = async (req, res) => {
     const userId = req?.user?.id;
@@ -334,41 +538,17 @@ exports.TeacherContinueForm = async (req, res) => {
 
 exports.getClassRoomForms = async (req, res) => {
     const userId = req?.user?.id;
-    const queryFilter = req.sessionDateFilter ? { createdAt: req.sessionDateFilter } : {};
-    try {
-        const GetAllForms = await CoScholastic.find(queryFilter)
-            .sort({ createdAt: -1 })
-            .populate({ path: 'teacherID', select: '-password -mobile -employeeId -customId' })
-            .populate({ path: 'createdBy', select: '-password -mobile -employeeId -customId' })
-            .populate({ path: 'grenralDetails.NameoftheVisitingTeacher', select: '-password -mobile -employeeId -customId' })
-            .lean();
-            
-        if (!userId) {
-            return res.status(403).json({ message: "You do not have permission." });
-        }
-
-        try {
-            const classDetailsList = await ClassDetails.find({}).lean();
-            const classMap = {};
-            classDetailsList.forEach((c) => {
-                if (c?._id) classMap[c._id.toString()] = c.className;
-            });
-
-            GetAllForms.forEach((form) => {
-                const cur = form?.grenralDetails?.className;
-                if (cur && classMap[cur.toString()]) {
-                    form.grenralDetails.className = classMap[cur.toString()];
-                }
-            });
-        } catch (e) {
-            console.error("Error resolving class names in CoScholastic:", e);
-        }
-
-        res.status(200).send(GetAllForms);
-    } catch (error) {
-        res.status(500).send({ error: error, message: "something went wrong" })
+    if (!userId) {
+        return res.status(403).json({ message: "You do not have permission." });
     }
-}
+    try {
+        const result = await buildCoScholasticQueryAndPaginate(req, {});
+        res.status(200).json({ success: true, ...result });
+    } catch (error) {
+        console.error("Error in getClassRoomForms CoScholastic:", error);
+        res.status(500).send({ error: error, message: "something went wrong" });
+    }
+};
 
 exports.ReminderForm = async (req, res) => {
     try {
@@ -417,6 +597,19 @@ exports.ReminderForm = async (req, res) => {
           formRoute: route,
         });
         await sendEmail(receiverEmail, emailData.subject, emailData.html);
+
+        recordAuditLog({
+            req,
+            action: 'REMINDER',
+            module: 'Co-Scholastic Classroom Observation',
+            targetId: String(FormDetails?._id),
+            details: `Sent reminder to ${receiverName} (${receiverEmail}) from ${sender}`,
+            changes: [
+                { field: 'receiverEmail', oldValue: null, newValue: receiverEmail },
+                { field: 'formRoute', oldValue: null, newValue: route },
+            ],
+        });
+
         return res.status(200).json({ success: true, message: "Reminder sent successfully." });
 
     } catch (error) {
@@ -431,6 +624,13 @@ exports.deleteForm = async (req, res) => {
         if (!deletedForm) {
             return res.status(404).json({ message: "Form not found." });
         }
+        recordAuditLog({
+            req,
+            action: 'DELETE',
+            module: 'Co-Scholastic',
+            targetId: formId,
+            details: `Deleted Co-Scholastic form (ID: ${formId})`,
+        });
         res.status(200).json({ message: "Form deleted successfully.", success: true });
     } catch (error) {
         res.status(500).json({ message: "Error deleting form.", error: error.message });

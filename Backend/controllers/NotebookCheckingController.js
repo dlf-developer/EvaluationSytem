@@ -6,9 +6,225 @@ const notification = require("../models/notification");
 const User = require("../models/User");
 const sendEmail = require("../utils/emailService");
 const { formInitiatedEmail, formCompletedEmail, reflectionSubmittedEmail, reminderEmail } = require("../utils/emailTemplates");
+const { recordAuditLog, calculateDiff } = require("../utils/auditLogger");
 
 // Helper to strip non-hex characters (e.g. trailing period from copied links: "6a9e...bef.")
 const cleanId = (id) => (id ? id.toString().trim().replace(/[^a-f\d]/gi, "") : "");
+
+// ── Shared Helper for Server-Side Filtering, Pagination (limit/skip) & Count ───
+const buildNotebookQueryAndPaginate = async (req, baseCondition = {}) => {
+  const queryFilter = { ...baseCondition };
+
+  // 1. Session date filter
+  if (req.sessionDateFilter) {
+    queryFilter.createdAt = req.sessionDateFilter;
+  }
+
+  // 2. Class filter
+  if (req.query.className) {
+    const classNames = req.query.className
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (classNames.length > 0) {
+      const matchingClasses = await ClassDetails.find(
+        { className: { $in: classNames } },
+        "_id"
+      ).lean();
+      const matchingIds = matchingClasses.map((c) => c._id.toString());
+      queryFilter["grenralDetails.className"] = {
+        $in: [...classNames, ...matchingIds],
+      };
+    }
+  }
+
+  // 4. Section filter
+  if (req.query.section) {
+    const sections = req.query.section
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (sections.length > 0) {
+      queryFilter["grenralDetails.Section"] = { $in: sections };
+    }
+  }
+
+  // 5. Subject filter
+  if (req.query.subject) {
+    const subjects = req.query.subject
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (subjects.length > 0) {
+      queryFilter["grenralDetails.Subject"] = { $in: subjects };
+    }
+  }
+
+  // 6. Date of Observation
+  if (req.query.date || req.query.observationDate) {
+    const d = new Date(req.query.date || req.query.observationDate);
+    if (!isNaN(d.getTime())) {
+      const startOfDay = new Date(d);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(d);
+      endOfDay.setHours(23, 59, 59, 999);
+      queryFilter["grenralDetails.DateOfObservation"] = {
+        $gte: startOfDay,
+        $lte: endOfDay,
+      };
+    }
+  }
+
+  // 7. Boolean completion / reflection filters
+  if (
+    req.query.isTeacherComplete !== undefined &&
+    req.query.isTeacherComplete !== null &&
+    req.query.isTeacherComplete !== ""
+  ) {
+    queryFilter.isTeacherComplete =
+      String(req.query.isTeacherComplete) === "true";
+  }
+  if (
+    req.query.isObserverComplete !== undefined &&
+    req.query.isObserverComplete !== null &&
+    req.query.isObserverComplete !== ""
+  ) {
+    queryFilter.isObserverComplete =
+      String(req.query.isObserverComplete) === "true";
+  }
+  if (
+    req.query.isReflation !== undefined &&
+    req.query.isReflation !== null &&
+    req.query.isReflation !== ""
+  ) {
+    queryFilter.isReflation = String(req.query.isReflation) === "true";
+  }
+
+  // 8. Search / person name filter
+  const search = req.query.search || req.query.searchName || req.query.personName;
+  if (search) {
+    const searchTerms = search
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (searchTerms.length > 0) {
+      const userConditions = searchTerms.map((term) => ({
+        name: { $regex: term, $options: "i" },
+      }));
+      const matchedUsers = await User.find(
+        { $or: userConditions },
+        "_id"
+      ).lean();
+      const matchedIds = matchedUsers.map((u) => u._id);
+
+      const searchOr = [
+        { teacherID: { $in: matchedIds } },
+        { createdBy: { $in: matchedIds } },
+        { "grenralDetails.NameofObserver": { $in: matchedIds } },
+      ];
+
+      if (queryFilter.$or) {
+        queryFilter.$and = [
+          { $or: queryFilter.$or },
+          { $or: searchOr },
+        ];
+        delete queryFilter.$or;
+      } else {
+        queryFilter.$or = searchOr;
+      }
+    }
+  }
+
+  // 8. Pagination params (limit & skip)
+  const hasPagination =
+    req.query.page !== undefined ||
+    req.query.limit !== undefined ||
+    req.query.skip !== undefined;
+
+  const isAll =
+    !hasPagination ||
+    req.query.limit === "all" ||
+    req.query.all === "true" ||
+    parseInt(req.query.limit, 10) >= 99999;
+  const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+  const limit = isAll ? 0 : Math.max(1, parseInt(req.query.limit, 10) || 10);
+  const skip = isAll
+    ? 0
+    : req.query.skip !== undefined
+    ? Math.max(0, parseInt(req.query.skip, 10))
+    : (page - 1) * limit;
+
+  // Count total matching documents on server
+  const totalCount = await Form3.countDocuments(queryFilter);
+  console.log("[DEBUG Form3 Pagination] queryFilter:", JSON.stringify(queryFilter), "totalCount:", totalCount);
+
+  // Query database with server-side skip & limit
+  let dbQuery = Form3.find(queryFilter)
+    .sort({ createdAt: -1 })
+    .populate({
+      path: "teacherID",
+      select: "-password -mobile -employeeId -customId",
+    })
+    .populate({
+      path: "grenralDetails.NameofObserver",
+      select: "-password -mobile -employeeId -customId",
+    })
+    .populate({
+      path: "createdBy",
+      select: "-password -mobile -employeeId -customId",
+    });
+
+  if (!isAll && limit > 0) {
+    dbQuery = dbQuery.skip(skip).limit(limit);
+  }
+
+  const forms = await dbQuery.lean();
+
+  // 10. Resolve Class Names from ClassDetails
+  try {
+    const classDetailsList = await ClassDetails.find({}).lean();
+    const classMap = {};
+    classDetailsList.forEach((c) => {
+      if (c?._id) classMap[c._id.toString()] = c.className;
+    });
+
+    forms.forEach((form) => {
+      const cur = form?.grenralDetails?.className;
+      if (cur && classMap[cur.toString()]) {
+        form.grenralDetails.className = classMap[cur.toString()];
+      }
+    });
+  } catch (e) {
+    console.error("Error resolving class names in Form 3:", e);
+  }
+
+  // 11. Fetch system-wide filter options for header filter dropdowns
+  let filterOptions = { classes: [], sections: [] };
+  try {
+    const allClasses = await ClassDetails.find({}, "className").lean();
+    const distinctSections = await Form3.distinct("grenralDetails.Section", {
+      "grenralDetails.Section": { $ne: null },
+    });
+    filterOptions = {
+      classes: allClasses.map((c) => c.className).filter(Boolean),
+      sections: distinctSections.filter(Boolean),
+    };
+  } catch (e) {
+    // ignore
+  }
+
+  return {
+    data: forms,
+    pagination: {
+      total: totalCount,
+      page: isAll ? 1 : page,
+      limit: isAll ? totalCount : limit,
+      skip: isAll ? 0 : skip,
+      totalPages: isAll ? 1 : Math.ceil(totalCount / (limit || 1)),
+    },
+    filterOptions,
+  };
+};
 
 exports.createForm = async (req, res) => {
   const {
@@ -105,6 +321,14 @@ exports.createForm = async (req, res) => {
     });
 
     const savedForm = await newForm.save();
+
+    recordAuditLog({
+      req,
+      action: 'CREATE',
+      module: 'Notebook Checking',
+      targetId: savedForm._id,
+      details: `${isDraftSave ? 'Saved draft' : 'Created form'} for Class ${finalClassName || ''} Section ${Section || ''} (Subject: ${Subject || ''})`,
+    });
 
     if (!isDraftSave && NameofObserver) {
       try {
@@ -231,6 +455,12 @@ exports.createInitiate = async (req, res) => {
 
       // Filter out null forms and send response
       const validForms = teacherForms.filter(Boolean);
+      recordAuditLog({
+        req,
+        action: 'CREATE',
+        module: 'Notebook Checking',
+        details: `Initiated Notebook Checking forms for ${validForms.length} teacher(s) (Class: ${finalClassName || ''} Section: ${Section || ''})`,
+      });
       return res.status(200).json({ message: "Form created successfully", form: validForms, status: true });
     } else {
       return res.status(400).json({ error: "Invalid or missing data." });
@@ -493,34 +723,17 @@ exports.GetcreatedByID = async (req, res) => {
   }
 
   try {
-    const queryFilter = req.sessionDateFilter ? { createdAt: req.sessionDateFilter } : {};
-
-    const populateOpts = [
-      { path: "createdBy teacherID", select: "-password -mobile -employeeId -customId" },
-      { path: "grenralDetails.NameofObserver", select: "-password -mobile -employeeId -customId" },
-    ];
-
-    // Teacher View: forms where user is the teacher, or self-created (NOT observer-initiated)
-    const [assignedForms, selfCreatedForms] = await Promise.all([
-      Form3.find({ teacherID: userId, ...queryFilter })
-        .sort({ createdAt: -1 })
-        .populate(populateOpts),
-
-      Form3.find({
-        createdBy: userId,
-        isObserverInitiation: { $ne: true },
-        ...queryFilter,
-      })
-        .sort({ createdAt: -1 })
-        .populate(populateOpts),
-    ]);
-
-    // Merge all, deduplicate, sort by createdAt desc
-    const uniqueForms = Array.from(
-      new Map([...assignedForms, ...selfCreatedForms].map((item) => [item._id.toString(), item])).values()
-    ).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-    res.status(200).json(uniqueForms);
+    const baseCondition = {
+      $or: [
+        { teacherID: userId },
+        { createdBy: userId, isObserverInitiation: { $ne: true } },
+      ],
+    };
+    const result = await buildNotebookQueryAndPaginate(req, baseCondition);
+    res.status(200).json({
+      success: true,
+      ...result,
+    });
   } catch (error) {
     console.error("Error Getting NoteBook:", error);
     res.status(500).json({ message: "Error Getting NoteBook.", error });
@@ -532,45 +745,24 @@ exports.GetObseverForm = async (req, res) => {
   const userId = req?.user?.id;
 
   try {
-    // Validate userId first
     if (!userId) {
       return res.status(403).json({ message: "You do not have permission." });
     }
 
-    const queryFilter = req.sessionDateFilter ? { createdAt: req.sessionDateFilter } : {};
-
-    const populateOpts = [
-      { path: "createdBy teacherID", select: "-password -mobile -employeeId -customId" },
-      { path: "grenralDetails.NameofObserver", select: "-password -mobile -employeeId -customId" },
-    ];
-
-    // Observer View: forms where user is the observer (assigned or observer-initiated)
-    const [observerAssigned, observerInitiated] = await Promise.all([
-      Form3.find({ "grenralDetails.NameofObserver": userId, ...queryFilter })
-        .sort({ createdAt: -1 })
-        .populate(populateOpts),
-
-      Form3.find({
-        createdBy: userId,
-        isObserverInitiation: true,
-        ...queryFilter,
-      })
-        .sort({ createdAt: -1 })
-        .populate(populateOpts),
-    ]);
-
-    // Combine both, remove duplicates, then re-sort by createdAt desc
-    const uniqueForms = Array.from(
-      new Map([...observerAssigned, ...observerInitiated].map((item) => [item._id.toString(), item])).values()
-    ).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-    // Send combined data as response
-    res.status(200).json(uniqueForms);
+    const baseCondition = {
+      $or: [
+        { "grenralDetails.NameofObserver": userId },
+        { createdBy: userId, isObserverInitiation: true },
+      ],
+    };
+    const result = await buildNotebookQueryAndPaginate(req, baseCondition);
+    res.status(200).json({
+      success: true,
+      ...result,
+    });
   } catch (error) {
     console.error("Error Getting NoteBook:", error);
-    res
-      .status(500)
-      .json({ message: "Error Getting NoteBook.", error });
+    res.status(500).json({ message: "Error Getting NoteBook.", error });
   }
 };
 
@@ -665,6 +857,7 @@ exports.EditUpdateNotebook = async (req, res) => {
         }
 
         const payload = updatePayload(existingForm, userRole, changes);
+        const formDiff = calculateDiff(existingForm, payload);
         let updatedForm = existingForm;
         if (Object.keys(payload).length > 0) {
             updatedForm = await Form3.findByIdAndUpdate(
@@ -677,6 +870,15 @@ exports.EditUpdateNotebook = async (req, res) => {
         if (!updatedForm) {
             return res.status(500).json({ message: "Error updating the form." });
         }
+
+        recordAuditLog({
+            req,
+            action: 'UPDATE',
+            module: 'Notebook Checking',
+            targetId: formId,
+            details: `Updated Notebook Checking form (ID: ${formId})`,
+            changes: formDiff,
+        });
 
         res.status(200).json({
             message: "Form updated successfully!",
@@ -715,50 +917,20 @@ exports.EditUpdateNotebook = async (req, res) => {
 };
 
 exports.GetNootbookForms = async (req, res) => {
-  const userId = req?.user?.id;
+  const userId = req?.user?.id || req?.user?._id;
+  if (!userId) {
+    return res.status(403).json({ message: "You do not have permission." });
+  }
+
   try {
-    const queryFilter = req.sessionDateFilter ? { createdAt: req.sessionDateFilter } : {};
-    const GetAllForms = await Form3.find(queryFilter)
-      .sort({ createdAt: -1 })
-      .populate({
-        path: "teacherID",
-        select: "-password -mobile -employeeId -customId",
-      })
-      .populate({
-        path: `grenralDetails.NameofObserver`,
-        select: "-password -mobile -employeeId -customId",
-      })
-      .populate({
-        path: "createdBy",
-        select: "-password -mobile -employeeId -customId",
-      })
-      .lean();
-
-    if (!userId && !userId?.id) {
-      return res.status(403).json({ message: "You do not have permission." });
-    }
-
-    try {
-      const classDetailsList = await ClassDetails.find({}).lean();
-      const classMap = {};
-      classDetailsList.forEach((c) => {
-        if (c?._id) classMap[c._id.toString()] = c.className;
-      });
-
-      GetAllForms.forEach((form) => {
-        const cur = form?.grenralDetails?.className;
-        if (cur && classMap[cur.toString()]) {
-          form.grenralDetails.className = classMap[cur.toString()];
-        }
-      });
-    } catch (e) {
-      console.error("Error resolving class names in Form 3:", e);
-    }
-
-    res.status(200).send(GetAllForms);
+    const result = await buildNotebookQueryAndPaginate(req, {});
+    res.status(200).json({
+      success: true,
+      ...result,
+    });
   } catch (error) {
-    console.error("Error Getting Form One:", error);
-    res.status(500).json({ message: "Error Getting Form One.", error });
+    console.error("Error Getting Notebook Forms:", error);
+    res.status(500).json({ message: "Error Getting Notebook Forms.", error });
   }
 };
 
@@ -905,6 +1077,17 @@ exports.ReminderFormThree = async (req, res) => {
 
     try {
       await sendEmail(receiverEmail, emailData.subject, emailData.html);
+      recordAuditLog({
+        req,
+        action: 'REMINDER',
+        module: 'Notebook Checking Proforma',
+        targetId: String(formId),
+        details: `Sent reminder to ${receiverName} (${receiverEmail}) from ${sender}`,
+        changes: [
+          { field: 'receiverEmail', oldValue: null, newValue: receiverEmail },
+          { field: 'formRoute', oldValue: null, newValue: route },
+        ],
+      });
     } catch (emailErr) {
       console.error("Failed to send reminder email:", emailErr);
     }
@@ -927,6 +1110,13 @@ exports.deleteFormThree = async (req, res) => {
     if (!deletedForm) {
       return res.status(404).json({ message: "Form not found." });
     }
+    recordAuditLog({
+      req,
+      action: 'DELETE',
+      module: 'Notebook Checking',
+      targetId: formId,
+      details: `Deleted Notebook Checking form (ID: ${formId})`,
+    });
     res.status(200).json({ message: "Form deleted successfully.", success: true });
   } catch (error) {
     console.error("Error deleting form:", error);
@@ -976,6 +1166,15 @@ exports.addObserverComment = async (req, res) => {
     if (!updatedForm) {
       return res.status(404).json({ success: false, message: "Notebook Checking form not found." });
     }
+
+    recordAuditLog({
+      req,
+      action: 'COMMENT',
+      module: 'Notebook Checking',
+      targetId: formId,
+      details: `Added observer comment: "${cleanComment.substring(0, 50)}${cleanComment.length > 50 ? '...' : ''}"`,
+      changes: [{ field: 'observerFeedback', oldValue: null, newValue: cleanComment }],
+    });
 
     return res.status(200).json({
       success: true,

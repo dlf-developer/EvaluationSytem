@@ -172,6 +172,7 @@ export const UserCell = ({
 // ─────────────────────────────────────────────────────────────────────────────
 export const getFortnightlyColumns = ({
   data = [],
+  filterOptions = {},
   currentUserRole,
   onDelete,
 }) => [
@@ -230,7 +231,9 @@ export const getFortnightlyColumns = ({
     render: (val) => <Text fontSize="sm">{val || "—"}</Text>,
     filterConfig: {
       type: "select",
-      options: uniq(data.map((r) => r.className)),
+      options: filterOptions?.classes?.length
+        ? filterOptions.classes
+        : uniq(data.map((r) => r.className)),
     },
   },
   {
@@ -242,7 +245,9 @@ export const getFortnightlyColumns = ({
     render: (val) => <Text fontSize="sm">{val || "—"}</Text>,
     filterConfig: {
       type: "select",
-      options: uniq(data.map((r) => r.section)),
+      options: filterOptions?.sections?.length
+        ? filterOptions.sections
+        : uniq(data.map((r) => r.section)),
     },
   },
   {
@@ -383,6 +388,7 @@ export const getFortnightlyColumns = ({
 // ─────────────────────────────────────────────────────────────────────────────
 export const getClassroomColumns = ({
   data = [],
+  filterOptions = {},
   currentUserRole,
   onDelete,
 }) => [
@@ -450,9 +456,11 @@ export const getClassroomColumns = ({
     ),
     filterConfig: {
       type: "select",
-      options: uniq(
-        data.map((r) => extractClassName(r?.grenralDetails?.className)),
-      ),
+      options: filterOptions?.classes?.length
+        ? filterOptions.classes
+        : uniq(
+            data.map((r) => extractClassName(r?.grenralDetails?.className)),
+          ),
       matchFn: (record, vals) =>
         vals.includes(extractClassName(record?.grenralDetails?.className)),
     },
@@ -470,7 +478,9 @@ export const getClassroomColumns = ({
     render: (val) => <Text fontSize="sm">{val?.Section || "—"}</Text>,
     filterConfig: {
       type: "select",
-      options: uniq(data.map((r) => r?.grenralDetails?.Section)),
+      options: filterOptions?.sections?.length
+        ? filterOptions.sections
+        : uniq(data.map((r) => r?.grenralDetails?.Section)),
       matchFn: (record, vals) =>
         vals.includes(record?.grenralDetails?.Section || ""),
     },
@@ -488,7 +498,9 @@ export const getClassroomColumns = ({
     render: (val) => <Text fontSize="sm">{val?.Subject || "—"}</Text>,
     filterConfig: {
       type: "select",
-      options: uniq(data.map((r) => r?.grenralDetails?.Subject)),
+      options: filterOptions?.subjects?.length
+        ? filterOptions.subjects
+        : uniq(data.map((r) => r?.grenralDetails?.Subject)),
       matchFn: (record, vals) =>
         vals.includes(record?.grenralDetails?.Subject || ""),
     },
@@ -620,122 +632,178 @@ export const getClassroomColumns = ({
 // ─────────────────────────────────────────────────────────────────────────────
 export const getNotebookColumns = ({
   data = [],
+  filterOptions = {},
   currentUserRole,
   onDelete,
   onComment,
   canComment = false,
-}) => [
-  {
-    title: currentUserRole === UserRole[1] ? "Teacher Name" : "Observer Name",
-    key: "personName",
-    dataIndex: "grenralDetails",
-    width: "250px",
-    minWidth: "220px",
-    sortable: true,
-    sorter: (a, b) => {
-      const aName =
-        currentUserRole === UserRole[1]
-          ? a?.teacherID?.name || a?.createdBy?.name || ""
-          : a?.grenralDetails?.NameofObserver?.name || "";
-      const bName =
-        currentUserRole === UserRole[1]
-          ? b?.teacherID?.name || b?.createdBy?.name || ""
-          : b?.grenralDetails?.NameofObserver?.name || "";
-      return aName.localeCompare(bName);
-    },
-    render: (val, record) => {
-      const userObj =
-        currentUserRole === UserRole[1]
-          ? record?.teacherID || record?.createdBy
-          : val?.NameofObserver;
-      return (
-        <UserCell
-          name={userObj?.name || (typeof userObj === "string" ? userObj : "—")}
-          user={userObj}
-          fontWeight="500"
-        />
-      );
-    },
-    filterConfig: {
-      type: "select",
-      options: uniq(
-        data.map((r) =>
-          currentUserRole === UserRole[1]
-            ? r?.teacherID?.name || r?.createdBy?.name
-            : r?.grenralDetails?.NameofObserver?.name,
+}) => {
+  const isSuperadmin =
+    currentUserRole === "Superadmin" ||
+    currentUserRole === "SuperAdmin" ||
+    currentUserRole === UserRole[0];
+
+  const cols = [];
+
+  // 1. Observer Name (shown for Superadmin and Teacher views)
+  if (isSuperadmin || currentUserRole === UserRole[2]) {
+    cols.push({
+      title: "Observer Name",
+      key: "observerName",
+      dataIndex: "grenralDetails",
+      width: "230px",
+      minWidth: "180px",
+      sortable: true,
+      sorter: (a, b) => {
+        const aName = a?.grenralDetails?.NameofObserver?.name || "";
+        const bName = b?.grenralDetails?.NameofObserver?.name || "";
+        return aName.localeCompare(bName);
+      },
+      render: (val, record) => {
+        const userObj = val?.NameofObserver;
+        return (
+          <UserCell
+            name={userObj?.name || (typeof userObj === "string" ? userObj : "—")}
+            user={userObj}
+            fontWeight="500"
+          />
+        );
+      },
+      filterConfig: {
+        type: "select",
+        options: uniq(data.map((r) => r?.grenralDetails?.NameofObserver?.name)),
+        matchFn: (record, vals) =>
+          vals.includes(record?.grenralDetails?.NameofObserver?.name || ""),
+      },
+    });
+  }
+
+  // 2. Teacher Name (shown for Superadmin and Observer views)
+  if (isSuperadmin || currentUserRole === UserRole[1]) {
+    cols.push({
+      title: "Teacher Name",
+      key: "teacherName",
+      dataIndex: "teacherID",
+      width: "230px",
+      minWidth: "180px",
+      sortable: true,
+      sorter: (a, b) => {
+        const aName = a?.teacherID?.name || a?.createdBy?.name || "";
+        const bName = b?.teacherID?.name || b?.createdBy?.name || "";
+        return aName.localeCompare(bName);
+      },
+      render: (val, record) => {
+        const userObj = record?.teacherID || record?.createdBy;
+        return (
+          <UserCell
+            name={userObj?.name || (typeof userObj === "string" ? userObj : "—")}
+            user={userObj}
+            fontWeight="500"
+          />
+        );
+      },
+      filterConfig: {
+        type: "select",
+        options: uniq(data.map((r) => r?.teacherID?.name || r?.createdBy?.name)),
+        matchFn: (record, vals) => {
+          const name = record?.teacherID?.name || record?.createdBy?.name;
+          return vals.includes(name || "");
+        },
+      },
+    });
+  }
+
+  cols.push(
+    {
+      title: "Class",
+      key: "className",
+      dataIndex: "grenralDetails",
+      width: "110px",
+      sortable: true,
+      sorter: (a, b) =>
+        extractClassName(a?.grenralDetails?.className).localeCompare(
+          extractClassName(b?.grenralDetails?.className),
         ),
+      render: (val) => (
+        <Text fontSize="sm">{extractClassName(val?.className)}</Text>
       ),
-      matchFn: (record, vals) => {
-        const name =
-          currentUserRole === UserRole[1]
-            ? record?.teacherID?.name || record?.createdBy?.name
-            : record?.grenralDetails?.NameofObserver?.name;
-        return vals.includes(name || "");
+      filterConfig: {
+        type: "select",
+        options: filterOptions?.classes?.length
+          ? filterOptions.classes
+          : uniq(
+              data.map((r) => extractClassName(r?.grenralDetails?.className)),
+            ),
+        matchFn: (record, vals) =>
+          vals.includes(extractClassName(record?.grenralDetails?.className)),
       },
     },
-  },
-  {
-    title: "Class",
-    key: "className",
-    dataIndex: "grenralDetails",
-    width: "110px",
-    sortable: true,
-    sorter: (a, b) =>
-      extractClassName(a?.grenralDetails?.className).localeCompare(
-        extractClassName(b?.grenralDetails?.className),
-      ),
-    render: (val) => (
-      <Text fontSize="sm">{extractClassName(val?.className)}</Text>
-    ),
-    filterConfig: {
-      type: "select",
-      options: uniq(
-        data.map((r) => extractClassName(r?.grenralDetails?.className)),
-      ),
-      matchFn: (record, vals) =>
-        vals.includes(extractClassName(record?.grenralDetails?.className)),
+    {
+      title: "Section",
+      key: "section",
+      dataIndex: "grenralDetails",
+      width: "90px",
+      sortable: true,
+      sorter: (a, b) =>
+        (a?.grenralDetails?.Section || "").localeCompare(
+          b?.grenralDetails?.Section || "",
+        ),
+      render: (val) => <Text fontSize="sm">{val?.Section || "—"}</Text>,
+      filterConfig: {
+        type: "select",
+        options: filterOptions?.sections?.length
+          ? filterOptions.sections
+          : uniq(data.map((r) => r?.grenralDetails?.Section)),
+        matchFn: (record, vals) =>
+          vals.includes(record?.grenralDetails?.Section || ""),
+      },
     },
-  },
-  {
-    title: "Section",
-    key: "section",
-    dataIndex: "grenralDetails",
-    width: "90px",
-    sortable: true,
-    sorter: (a, b) =>
-      (a?.grenralDetails?.Section || "").localeCompare(
-        b?.grenralDetails?.Section || "",
+    {
+      title: "Subject",
+      key: "subject",
+      dataIndex: "grenralDetails",
+      width: "120px",
+      sortable: true,
+      sorter: (a, b) =>
+        (a?.grenralDetails?.Subject || "").localeCompare(
+          b?.grenralDetails?.Subject || "",
+        ),
+      render: (val) => <Text fontSize="sm">{val?.Subject || "—"}</Text>,
+      filterConfig: {
+        type: "select",
+        options: filterOptions?.subjects?.length
+          ? filterOptions.subjects
+          : uniq(data.map((r) => r?.grenralDetails?.Subject)),
+        matchFn: (record, vals) =>
+          vals.includes(record?.grenralDetails?.Subject || ""),
+      },
+    },
+    {
+      title: "Observation Date",
+      key: "observationDate",
+      dataIndex: "grenralDetails",
+      width: "140px",
+      sortable: true,
+      sorter: (a, b) =>
+        new Date(a?.grenralDetails?.DateOfObservation) -
+        new Date(b?.grenralDetails?.DateOfObservation),
+      render: (val) => (
+        <Text fontSize="sm" color="gray.600">
+          {getAllTimes(val?.DateOfObservation)?.formattedDate2 || "—"}
+        </Text>
       ),
-    render: (val) => <Text fontSize="sm">{val?.Section || "—"}</Text>,
-    filterConfig: {
-      type: "select",
-      options: uniq(data.map((r) => r?.grenralDetails?.Section)),
-      matchFn: (record, vals) =>
-        vals.includes(record?.grenralDetails?.Section || ""),
-    },
-  },
-  {
-    title: "Observation Date",
-    key: "observationDate",
-    dataIndex: "grenralDetails",
-    width: "140px",
-    sortable: true,
-    sorter: (a, b) =>
-      new Date(a?.grenralDetails?.DateOfObservation) -
-      new Date(b?.grenralDetails?.DateOfObservation),
-    render: (val) => (
-      <Text fontSize="sm" color="gray.600">
-        {getAllTimes(val?.DateOfObservation)?.formattedDate2 || "—"}
-      </Text>
-    ),
-    filterConfig: {
-      type: "date",
-      matchFn: (record, val) =>
-        !val ||
-        new Date(record?.grenralDetails?.DateOfObservation).toDateString() ===
-          new Date(val).toDateString(),
-    },
-  },
+      filterConfig: {
+        type: "date",
+        matchFn: (record, val) =>
+          !val ||
+          new Date(record?.grenralDetails?.DateOfObservation).toDateString() ===
+            new Date(val).toDateString(),
+      },
+    }
+  );
+
+  return [
+    ...cols,
 
   {
     title: "Teacher Status",
@@ -965,6 +1033,7 @@ export const getNotebookColumns = ({
     },
   },
 ];
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 4. WEEKLY 4 FORM columns
@@ -1480,6 +1549,7 @@ export const getWingCoordinatorColumns = ({ data = [], onDuplicate }) => [
 // ─────────────────────────────────────────────────────────────────────────────
 export const getReportForm1Columns = ({
   data = [],
+  filterOptions = {},
   currentUserRole,
   onDelete,
 }) => [
@@ -1538,7 +1608,9 @@ export const getReportForm1Columns = ({
     render: (val) => <Text fontSize="sm">{val || "N/A"}</Text>,
     filterConfig: {
       type: "select",
-      options: uniq(data.map((r) => r.className)),
+      options: filterOptions?.classes?.length
+        ? filterOptions.classes
+        : uniq(data.map((r) => r.className)),
     },
   },
   {
@@ -1550,7 +1622,9 @@ export const getReportForm1Columns = ({
     render: (val) => <Text fontSize="sm">{val || "N/A"}</Text>,
     filterConfig: {
       type: "select",
-      options: uniq(data.map((r) => r.section)),
+      options: filterOptions?.sections?.length
+        ? filterOptions.sections
+        : uniq(data.map((r) => r.section)),
     },
   },
   {
@@ -1676,6 +1750,7 @@ export const getReportForm1Columns = ({
 // ─────────────────────────────────────────────────────────────────────────────
 export const getReportForm2Columns = ({
   data = [],
+  filterOptions = {},
   currentUserRole,
   onDelete,
 }) => [
@@ -1741,9 +1816,11 @@ export const getReportForm2Columns = ({
     ),
     filterConfig: {
       type: "select",
-      options: uniq(
-        data.map((r) => extractClassName(r?.grenralDetails?.className)),
-      ),
+      options: filterOptions?.classes?.length
+        ? filterOptions.classes
+        : uniq(
+            data.map((r) => extractClassName(r?.grenralDetails?.className)),
+          ),
       matchFn: (record, vals) =>
         vals.includes(extractClassName(record?.grenralDetails?.className)),
     },
@@ -1757,7 +1834,9 @@ export const getReportForm2Columns = ({
     render: (val) => <Text fontSize="sm">{val?.Section || "N/A"}</Text>,
     filterConfig: {
       type: "select",
-      options: uniq(data.map((r) => r?.grenralDetails?.Section)),
+      options: filterOptions?.sections?.length
+        ? filterOptions.sections
+        : uniq(data.map((r) => r?.grenralDetails?.Section)),
       matchFn: (record, vals) =>
         vals.includes(record?.grenralDetails?.Section || ""),
     },
@@ -1771,7 +1850,9 @@ export const getReportForm2Columns = ({
     render: (val) => <Text fontSize="sm">{val?.Subject || "N/A"}</Text>,
     filterConfig: {
       type: "select",
-      options: uniq(data.map((r) => r?.grenralDetails?.Subject)),
+      options: filterOptions?.subjects?.length
+        ? filterOptions.subjects
+        : uniq(data.map((r) => r?.grenralDetails?.Subject)),
       matchFn: (record, vals) =>
         vals.includes(record?.grenralDetails?.Subject || ""),
     },
@@ -1909,6 +1990,7 @@ const calculateNotebookScore = (formName) => {
 
 export const getReportForm3Columns = ({
   data = [],
+  filterOptions = {},
   currentUserRole,
   onDelete,
 }) => [
@@ -1989,9 +2071,11 @@ export const getReportForm3Columns = ({
     ),
     filterConfig: {
       type: "select",
-      options: uniq(
-        data.map((r) => extractClassName(r?.grenralDetails?.className)),
-      ),
+      options: filterOptions?.classes?.length
+        ? filterOptions.classes
+        : uniq(
+            data.map((r) => extractClassName(r?.grenralDetails?.className)),
+          ),
       matchFn: (record, vals) =>
         vals.includes(extractClassName(record?.grenralDetails?.className)),
     },
@@ -2005,7 +2089,9 @@ export const getReportForm3Columns = ({
     render: (val) => <Text fontSize="sm">{val?.Section || "N/A"}</Text>,
     filterConfig: {
       type: "select",
-      options: uniq(data.map((r) => r?.grenralDetails?.Section)),
+      options: filterOptions?.sections?.length
+        ? filterOptions.sections
+        : uniq(data.map((r) => r?.grenralDetails?.Section)),
       matchFn: (record, vals) =>
         vals.includes(record?.grenralDetails?.Section || ""),
     },
@@ -2019,7 +2105,9 @@ export const getReportForm3Columns = ({
     render: (val) => <Text fontSize="sm">{val?.Subject || "N/A"}</Text>,
     filterConfig: {
       type: "select",
-      options: uniq(data.map((r) => r?.grenralDetails?.Subject)),
+      options: filterOptions?.subjects?.length
+        ? filterOptions.subjects
+        : uniq(data.map((r) => r?.grenralDetails?.Subject)),
       matchFn: (record, vals) =>
         vals.includes(record?.grenralDetails?.Subject || ""),
     },
@@ -2286,6 +2374,7 @@ export const getReportForm4Columns = ({ data = [], currentUserRole, onDelete }) 
 
 export const getCoScholasticColumns = ({
   data = [],
+  filterOptions = {},
   currentUserRole,
   onDelete,
 }) => [
@@ -2357,9 +2446,11 @@ export const getCoScholasticColumns = ({
     ),
     filterConfig: {
       type: "select",
-      options: uniq(
-        data.map((r) => extractClassName(r?.grenralDetails?.className)),
-      ),
+      options: filterOptions?.classes?.length
+        ? filterOptions.classes
+        : uniq(
+            data.map((r) => extractClassName(r?.grenralDetails?.className)),
+          ),
       matchFn: (record, vals) =>
         vals.includes(extractClassName(record?.grenralDetails?.className)),
     },
@@ -2377,7 +2468,9 @@ export const getCoScholasticColumns = ({
     render: (val) => <Text fontSize="sm">{val?.Section || "—"}</Text>,
     filterConfig: {
       type: "select",
-      options: [...new Set(data.map((r) => r?.grenralDetails?.Section).filter(Boolean))],
+      options: filterOptions?.sections?.length
+        ? filterOptions.sections
+        : [...new Set(data.map((r) => r?.grenralDetails?.Section).filter(Boolean))],
       matchFn: (record, vals) =>
         vals.includes(record?.grenralDetails?.Section || ""),
     },
@@ -2395,7 +2488,9 @@ export const getCoScholasticColumns = ({
     render: (val) => <Text fontSize="sm">{val?.Subject || "—"}</Text>,
     filterConfig: {
       type: "select",
-      options: [...new Set(data.map((r) => r?.grenralDetails?.Subject).filter(Boolean))],
+      options: filterOptions?.subjects?.length
+        ? filterOptions.subjects
+        : [...new Set(data.map((r) => r?.grenralDetails?.Subject).filter(Boolean))],
       matchFn: (record, vals) =>
         vals.includes(record?.grenralDetails?.Subject || ""),
     },

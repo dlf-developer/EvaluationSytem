@@ -5,6 +5,7 @@ const User = require("../models/User");
 const Weekly4Form = require("../models/Weekly4Form");
 const sendEmail = require("../utils/emailService");
 const { formInitiatedEmail, formCompletedEmail, reminderEmail } = require("../utils/emailTemplates");
+const { recordAuditLog, calculateDiff } = require("../utils/auditLogger");
 
 // Helper to strip non-hex characters (e.g. trailing period from copied links)
 const cleanId = (id) => (id ? id.toString().trim().replace(/[^a-f\d]/gi, "") : "");
@@ -160,6 +161,12 @@ const handleInitiatedForms = async (teacherIds, Payload, res) => {
         return savedForm;
       }),
     );
+    recordAuditLog({
+      req,
+      action: 'CREATE',
+      module: 'Learning Progress',
+      details: `Initiated Learning Progress Checklist for ${dataPush.length} teacher(s)`,
+    });
     return res.status(201).json({ success: true, data: dataPush });
   } catch (error) {
     return res.status(400).json({ success: false, error: error.message });
@@ -176,6 +183,14 @@ const createNonInitiatedForm = async (Payload, res) => {
     }
     const newForm = new Weekly4Form(Payload);
     const savedForm = await newForm.save();
+
+    recordAuditLog({
+      req,
+      action: 'CREATE',
+      module: 'Learning Progress',
+      targetId: savedForm._id,
+      details: `Created Learning Progress Checklist for ${teacher?.name || 'Teacher'}`,
+    });
 
     // Send HTML email to observer: teacher has submitted their section ONLY if not draft
     if (!Payload.isDraft && Payload.isCompleted && UserName?.email) {
@@ -202,15 +217,134 @@ const createNonInitiatedForm = async (Payload, res) => {
 };
 
 
+// ── Shared Helper for Server-Side Filtering, Pagination (limit/skip) & Count ───
+const buildWeekly4QueryAndPaginate = async (req, baseCondition = {}) => {
+  const queryFilter = { ...baseCondition };
+
+  // 1. Session date filter
+  if (req.sessionDateFilter) {
+    queryFilter.createdAt = req.sessionDateFilter;
+  }
+
+  // 2. Submission date filter
+  if (req.query.date || req.query.dateOfSubmission) {
+    const d = new Date(req.query.date || req.query.dateOfSubmission);
+    if (!isNaN(d.getTime())) {
+      const startOfDay = new Date(d);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(d);
+      endOfDay.setHours(23, 59, 59, 999);
+      queryFilter.dateOfSubmission = {
+        $gte: startOfDay,
+        $lte: endOfDay,
+      };
+    }
+  }
+
+  // 3. Completion filter
+  if (
+    req.query.isCompleted !== undefined &&
+    req.query.isCompleted !== null &&
+    req.query.isCompleted !== ""
+  ) {
+    queryFilter.isCompleted = String(req.query.isCompleted) === "true";
+  }
+
+  // 4. Person search
+  const search = req.query.search || req.query.searchName || req.query.personName;
+  if (search) {
+    const searchTerms = search
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (searchTerms.length > 0) {
+      const userConditions = searchTerms.map((term) => ({
+        name: { $regex: term, $options: "i" },
+      }));
+      const matchedUsers = await User.find(
+        { $or: userConditions },
+        "_id"
+      ).lean();
+      const matchedIds = matchedUsers.map((u) => u._id);
+
+      const searchOr = [
+        { teacherId: { $in: matchedIds } },
+        { coordinatorID: { $in: matchedIds } },
+        { "isInitiated.Observer": { $in: matchedIds } },
+      ];
+
+      if (queryFilter.$or) {
+        queryFilter.$and = [
+          { $or: queryFilter.$or },
+          { $or: searchOr },
+        ];
+        delete queryFilter.$or;
+      } else {
+        queryFilter.$or = searchOr;
+      }
+    }
+  }
+
+  // 5. Pagination params
+  const hasPagination =
+    req.query.page !== undefined ||
+    req.query.limit !== undefined ||
+    req.query.skip !== undefined;
+
+  const isAll =
+    !hasPagination ||
+    req.query.limit === "all" ||
+    req.query.all === "true" ||
+    parseInt(req.query.limit, 10) >= 99999;
+  const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+  const limit = isAll ? 0 : Math.max(1, parseInt(req.query.limit, 10) || 10);
+  const skip = isAll
+    ? 0
+    : req.query.skip !== undefined
+    ? Math.max(0, parseInt(req.query.skip, 10))
+    : (page - 1) * limit;
+
+  const totalCount = await Weekly4Form.countDocuments(queryFilter);
+
+  let dbQuery = Weekly4Form.find(queryFilter)
+    .sort({ createdAt: -1 })
+    .populate(
+      "isInitiated.Observer",
+      "-password -coordinator -designation -email -updatedAt -__v"
+    )
+    .populate(
+      "teacherId",
+      "-password -coordinator -designation -email -updatedAt"
+    )
+    .populate(
+      "coordinatorID",
+      "-password -coordinator -designation -email -updatedAt -__v"
+    );
+
+  if (!isAll && limit > 0) {
+    dbQuery = dbQuery.skip(skip).limit(limit);
+  }
+
+  const forms = await dbQuery.lean();
+
+  return {
+    data: forms,
+    pagination: {
+      total: totalCount,
+      page: isAll ? 1 : page,
+      limit: isAll ? totalCount : limit,
+      skip: isAll ? 0 : skip,
+      totalPages: isAll ? 1 : Math.ceil(totalCount / (limit || 1)),
+    },
+    filterOptions: { classes: [], sections: [] },
+  };
+};
+
 // Get all Weekly4Forms
 exports.getAllWeekly4Forms = async (req, res) => {
   const userId = req.user.id;
   const activeRole = req.query.role || req.user?.activeRole || req.header('x-active-role') || req.user?.access;
   try {
-    const queryFilter = req.sessionDateFilter
-      ? { createdAt: req.sessionDateFilter }
-      : {};
-
     let roleQuery = {};
     if (activeRole === "Teacher") {
       roleQuery = { teacherId: userId };
@@ -220,23 +354,10 @@ exports.getAllWeekly4Forms = async (req, res) => {
       roleQuery = { $or: [{ teacherId: userId }, { "isInitiated.Observer": userId }, { coordinatorID: userId }] };
     }
 
-    // Fetch all Weekly4Forms
-    const forms = await Weekly4Form.find({
-      ...roleQuery,
-      ...queryFilter,
-    })
-      .sort({ createdAt: -1 })
-      .lean()
-      .populate(
-        "isInitiated.Observer",
-        "-password -coordinator -designation -email -updatedAt -__v",
-      )
-      .populate(
-        "teacherId",
-        "-password -coordinator -designation -email -updatedAt ",
-      );
-    res.status(200).json(forms);
+    const result = await buildWeekly4QueryAndPaginate(req, roleQuery);
+    res.status(200).json({ success: true, ...result });
   } catch (error) {
+    console.error("Error in getAllWeekly4Forms:", error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -385,6 +506,8 @@ exports.updateWeekly4Form = async (req, res) => {
       return res.status(404).json({ message: "Form not found" });
     }
 
+    const existingForm = await Weekly4Form.findById(formId);
+    const formDiff = calculateDiff(existingForm, Payload);
     const updatedForm = await Weekly4Form.findByIdAndUpdate(
       formId,
       Payload,
@@ -394,6 +517,15 @@ exports.updateWeekly4Form = async (req, res) => {
     if (!updatedForm) {
       return res.status(404).json({ message: "Form not found" });
     }
+
+    recordAuditLog({
+      req,
+      action: 'UPDATE',
+      module: 'Learning Progress',
+      targetId: formId,
+      details: `Updated Learning Progress Checklist (ID: ${formId})`,
+      changes: formDiff,
+    });
 
     // Send HTML email to the observer about the teacher's submission ONLY if not a draft
     if (!isDraftSave && Payload.isCompleted && updatedForm.isInitiated?.Observer?.email) {
@@ -430,6 +562,14 @@ exports.deleteWeekly4Form = async (req, res) => {
       return res.status(404).json({ message: "Form not found" });
     }
 
+    recordAuditLog({
+      req,
+      action: 'DELETE',
+      module: 'Learning Progress',
+      targetId: formId,
+      details: `Deleted Learning Progress Checklist (ID: ${formId})`,
+    });
+
     res.status(200).json({ message: "Form deleted successfully" });
   } catch (error) {
     if (error?.name === "CastError") {
@@ -439,25 +579,13 @@ exports.deleteWeekly4Form = async (req, res) => {
   }
 };
 
-// Get a Weekly4Form
+// Get all Weekly4Forms for Admin
 exports.getAllweeklyForms = async (req, res) => {
   try {
-    const queryFilter = req.sessionDateFilter
-      ? { createdAt: req.sessionDateFilter }
-      : {};
-    const getAllFrom = await Weekly4Form.find(queryFilter)
-      .sort({ createdAt: -1 })
-      .populate(
-        `isInitiated.Observer teacherId`,
-        "-password -coordinator -designation -email -updatedAt -__v",
-      );
-
-    if (!getAllFrom) {
-      return res.status(404).json({ message: "Form not found" });
-    }
-
-    res.status(200).json(getAllFrom);
+    const result = await buildWeekly4QueryAndPaginate(req, {});
+    res.status(200).json({ success: true, ...result });
   } catch (error) {
+    console.error("Error in getAllweeklyForms:", error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -583,6 +711,18 @@ exports.ReminderFormFour = async (req, res) => {
       formRoute: route,
     });
     await sendEmail(receiverEmail, emailData.subject, emailData.html);
+
+    recordAuditLog({
+      req,
+      action: 'REMINDER',
+      module: 'Learning Progress Checklist',
+      targetId: String(FormDetails?._id),
+      details: `Sent reminder to ${receiverName} (${receiverEmail}) from ${sender}`,
+      changes: [
+        { field: 'receiverEmail', oldValue: null, newValue: receiverEmail },
+        { field: 'formRoute', oldValue: null, newValue: route },
+      ],
+    });
 
     return res.status(200).json({ success: true });
   } catch (error) {

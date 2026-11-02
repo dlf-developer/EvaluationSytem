@@ -1,4 +1,5 @@
 import { baseURL } from '../config/config';
+import { recordFileDownloadAudit } from './auditLogger';
 
 const STORAGE_KEY = 'app_frontend_logs';
 const MAX_LOGS = 200;
@@ -125,11 +126,20 @@ export const frontendLogger = {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `frontend-logs-${new Date().toISOString().slice(0, 10)}.log`;
+    const logFileName = `frontend-logs-${new Date().toISOString().slice(0, 10)}.log`;
+    a.download = logFileName;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+
+    recordFileDownloadAudit({
+      fileName: logFileName,
+      fileType: "Log File (.log)",
+      module: "Frontend Diagnostics",
+      rowCount: logBuffer.length,
+      extraDetails: "Downloaded frontend diagnostics log buffer",
+    });
   },
 };
 

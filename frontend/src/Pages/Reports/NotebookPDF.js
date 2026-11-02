@@ -20,6 +20,7 @@ import { GetNoteBookForm } from "../../redux/Form/noteBookSlice";
 import NoteBookDoc from "./Documents/NoteBookDoc";
 import { getAllTimes } from "../../Utils/auth";
 import DynamicScroreThree from "../../Components/DynamicScroreThree";
+import { recordFileDownloadAudit } from "../../Utils/auditLogger";
 
 const TableCard = React.memo(({ title, dataSource }) => (
   <Box
@@ -99,11 +100,19 @@ function NotebookPDF() {
     // Trigger download
     const link = document.createElement("a");
     link.href = url;
-    link.download = `notebook-checking-proforma-${Id}.pdf`;
+    const pdfName = `notebook-checking-proforma-${Id}.pdf`;
+    link.download = pdfName;
     link.click();
 
     // Clean up the object URL
     URL.revokeObjectURL(url);
+
+    recordFileDownloadAudit({
+      fileName: pdfName,
+      fileType: "PDF",
+      module: "Notebook Checking Proforma",
+      extraDetails: `Form ID: ${Id}`,
+    });
   }, [formDataList, Id]);
 
   useEffect(() => {

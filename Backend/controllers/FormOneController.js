@@ -6,6 +6,7 @@ const Form1 = require("../models/Form1");
 const Notification = require("../models/notification");
 const ClassDetails = require("../models/ClassDetails");
 const activity = require("../models/Activity");
+const { recordAuditLog, calculateDiff } = require("../utils/auditLogger");
 
 //jab teacher form 1 ko direct init karta hai tab ye function kam karta hai
 
@@ -103,6 +104,14 @@ exports.createForm = async (req, res) => {
     }
 
     await formData.save();
+
+    recordAuditLog({
+      req,
+      action: 'CREATE',
+      module: 'Fortnightly Monitor',
+      targetId: formData._id,
+      details: `Created Fortnightly Monitor form (Class: ${formData.className || ''} Section: ${section || ''})`,
+    });
 
     const initiatorName = req?.user?.name || "Teacher";
     const tactivity = new activity({
@@ -231,6 +240,12 @@ exports.FormInitiation = async (req, res) => {
       }
 
       if (validForms.length > 0) {
+        recordAuditLog({
+          req,
+          action: 'CREATE',
+          module: 'Fortnightly Monitor',
+          details: `Initiated Fortnightly Monitor for ${validForms.length} teacher(s) (Class: ${className || ''} Section: ${section || ''})`,
+        });
         return res.status(201).json({
           message: "Fortnightly Monitor created successfully!",
           forms: validForms,
@@ -250,77 +265,226 @@ exports.FormInitiation = async (req, res) => {
   }
 };
 
+// ── Shared Helper for Server-Side Filtering, Pagination (limit/skip) & Count ───
+const buildFormOneQueryAndPaginate = async (req, baseCondition = {}) => {
+  const queryFilter = { ...baseCondition };
+
+  // 1. Session date filter
+  if (req.sessionDateFilter) {
+    queryFilter.createdAt = req.sessionDateFilter;
+  }
+
+  // 2. Class filter
+  if (req.query.className) {
+    const classNames = req.query.className
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (classNames.length > 0) {
+      const matchingClasses = await ClassDetails.find(
+        { className: { $in: classNames } },
+        "_id"
+      ).lean();
+      const matchingIds = matchingClasses.map((c) => c._id.toString());
+      queryFilter.className = {
+        $in: [...classNames, ...matchingIds],
+      };
+    }
+  }
+
+  // 3. Section filter
+  if (req.query.section) {
+    const sections = req.query.section
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (sections.length > 0) {
+      queryFilter.section = { $in: sections };
+    }
+  }
+
+  // 4. Date filter
+  if (req.query.date || req.query.observationDate) {
+    const d = new Date(req.query.date || req.query.observationDate);
+    if (!isNaN(d.getTime())) {
+      const startOfDay = new Date(d);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(d);
+      endOfDay.setHours(23, 59, 59, 999);
+      queryFilter.date = {
+        $gte: startOfDay,
+        $lte: endOfDay,
+      };
+    }
+  }
+
+  // 5. Completion filters
+  if (
+    req.query.isTeacherComplete !== undefined &&
+    req.query.isTeacherComplete !== null &&
+    req.query.isTeacherComplete !== ""
+  ) {
+    queryFilter.isTeacherComplete = String(req.query.isTeacherComplete) === "true";
+  }
+  if (
+    req.query.isCoordinatorComplete !== undefined &&
+    req.query.isCoordinatorComplete !== null &&
+    req.query.isCoordinatorComplete !== ""
+  ) {
+    queryFilter.isCoordinatorComplete = String(req.query.isCoordinatorComplete) === "true";
+  }
+
+  // 6. Person search
+  const search = req.query.search || req.query.searchName || req.query.personName;
+  if (search) {
+    const searchTerms = search
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (searchTerms.length > 0) {
+      const userConditions = searchTerms.map((term) => ({
+        name: { $regex: term, $options: "i" },
+      }));
+      const matchedUsers = await User.find(
+        { $or: userConditions },
+        "_id"
+      ).lean();
+      const matchedIds = matchedUsers.map((u) => u._id);
+
+      const searchOr = [
+        { teacherID: { $in: matchedIds } },
+        { coordinatorID: { $in: matchedIds } },
+        { userId: { $in: matchedIds } },
+      ];
+
+      if (queryFilter.$or) {
+        queryFilter.$and = [
+          { $or: queryFilter.$or },
+          { $or: searchOr },
+        ];
+        delete queryFilter.$or;
+      } else {
+        queryFilter.$or = searchOr;
+      }
+    }
+  }
+
+  // 7. Pagination params (limit & skip)
+  const hasPagination =
+    req.query.page !== undefined ||
+    req.query.limit !== undefined ||
+    req.query.skip !== undefined;
+
+  const isAll =
+    !hasPagination ||
+    req.query.limit === "all" ||
+    req.query.all === "true" ||
+    parseInt(req.query.limit, 10) >= 99999;
+  const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+  const limit = isAll ? 0 : Math.max(1, parseInt(req.query.limit, 10) || 10);
+  const skip = isAll
+    ? 0
+    : req.query.skip !== undefined
+    ? Math.max(0, parseInt(req.query.skip, 10))
+    : (page - 1) * limit;
+
+  const totalCount = await Form1.countDocuments(queryFilter);
+
+  let dbQuery = Form1.find(queryFilter)
+    .sort({ date: -1, createdAt: -1 })
+    .populate({
+      path: "teacherID",
+      select: "-password -mobile -employeeId -customId",
+    })
+    .populate({
+      path: "userId",
+      select: "-password -mobile -employeeId -customId",
+    })
+    .populate({
+      path: "coordinatorID",
+      select: "-password -mobile -employeeId -customId",
+    });
+
+  if (!isAll && limit > 0) {
+    dbQuery = dbQuery.skip(skip).limit(limit);
+  }
+
+  const forms = await dbQuery.lean();
+
+  try {
+    const classDetailsList = await ClassDetails.find({}).lean();
+    const classMap = {};
+    classDetailsList.forEach((c) => {
+      if (c?._id) classMap[c._id.toString()] = c.className;
+    });
+
+    forms.forEach((form) => {
+      if (form.className && classMap[form.className.toString()]) {
+        form.className = classMap[form.className.toString()];
+      }
+    });
+  } catch (e) {
+    console.error("Error resolving class names in Form 1:", e);
+  }
+
+  let filterOptions = { classes: [], sections: [] };
+  try {
+    const allClasses = await ClassDetails.find({}, "className").lean();
+    const distinctSections = await Form1.distinct("section", {
+      section: { $ne: null },
+    });
+    filterOptions = {
+      classes: allClasses.map((c) => c.className).filter(Boolean),
+      sections: distinctSections.filter(Boolean),
+    };
+  } catch (e) {
+    // ignore
+  }
+
+  return {
+    data: forms,
+    pagination: {
+      total: totalCount,
+      page: isAll ? 1 : page,
+      limit: isAll ? totalCount : limit,
+      skip: isAll ? 0 : skip,
+      totalPages: isAll ? 1 : Math.ceil(totalCount / (limit || 1)),
+    },
+    filterOptions,
+  };
+};
+
 exports.getuserForm = async (req, res) => {
   const userId = req?.user?.id;
+  if (!userId) {
+    return res.status(403).json({ message: "You do not have permission." });
+  }
   try {
-    const queryFilter = req.sessionDateFilter ? { createdAt: req.sessionDateFilter } : {};
-    
-    // Fetch both sets of data
-    const data = await Form1.find({ userId, ...queryFilter }).sort({ date: -1 });
-    const Form = await Form1.find({ teacherID: userId, ...queryFilter }).sort({ date: -1 }).populate(
-      "teacherID coordinatorID",
-    );
-
-    // Combine both arrays without duplicates based on _id, then re-sort by date desc
-    const combinedArray = [
-      ...data,
-      ...Form.filter(
-        (formItem) =>
-          !data.some(
-            (dataItem) => dataItem._id.toString() === formItem._id.toString(),
-          ),
-      ),
-    ].sort((a, b) => new Date(b.date) - new Date(a.date));
-
-    res.status(200).send({ CombinedForm: combinedArray });
+    const baseCondition = {
+      $or: [{ userId }, { teacherID: userId }],
+    };
+    const result = await buildFormOneQueryAndPaginate(req, baseCondition);
+    res.status(200).json({ success: true, ...result });
   } catch (err) {
+    console.error("Error in getuserForm:", err);
     res.status(400).send(err);
   }
 };
 
 exports.GetObseverForm1 = async (req, res) => {
   const userId = req?.user?.id;
+  if (!userId) {
+    return res.status(403).json({ message: "You do not have permission." });
+  }
   try {
-    const queryFilter = req.sessionDateFilter ? { createdAt: req.sessionDateFilter } : {};
-
-    const Form = await Form1.find({ coordinatorID: userId, ...queryFilter })
-      .sort({ date: -1 })
-      .populate({
-        path: "teacherID",
-        select: "-password -mobile -employeeId -customId",
-      })
-      .populate({
-        path: "userId",
-        select: "-password -mobile -employeeId -customId",
-      })
-      .populate({
-        path: "coordinatorID",
-        select: "-password -mobile -employeeId -customId",
-      });
-    const FormInitiation = await Form1.find({ isObserverInitiation: true, ...queryFilter })
-      .sort({ date: -1 })
-      .populate({
-        path: "teacherID",
-        select: "-password -mobile -employeeId -customId",
-      })
-      .populate({
-        path: "userId",
-        select: "-password -mobile -employeeId -customId",
-      })
-      .populate({
-        path: "coordinatorID",
-        select: "-password -mobile -employeeId -customId",
-      });
-    if (!userId && !userId?.id) {
-      return res.status(403).json({ message: "You do not have permission." });
-    }
-
-    res.status(200).send({ Form: Form, Initiate: FormInitiation });
+    const baseCondition = {
+      $or: [{ coordinatorID: userId }, { isObserverInitiation: true }],
+    };
+    const result = await buildFormOneQueryAndPaginate(req, baseCondition);
+    res.status(200).json({ success: true, ...result });
   } catch (error) {
-    console.error("Error Getting Classroom Walkthrough:", error);
-    res
-      .status(500)
-      .json({ message: "Error Getting Classroom Walkthrough.", error });
+    console.error("Error Getting Fortnightly Monitor Observer Forms:", error);
+    res.status(500).json({ message: "Error Getting Fortnightly Monitor.", error });
   }
 };
 
@@ -449,6 +613,7 @@ exports.FormFill = async (req, res) => {
     }
 
     // Update the form based on the formId
+    const formDiff = calculateDiff(data, updateData);
     const updatedForm = await Form1.findByIdAndUpdate(formId, updateData, {
       new: true,
     }).populate("teacherID coordinatorID userId");
@@ -459,6 +624,15 @@ exports.FormFill = async (req, res) => {
         message: "Form not found",
       });
     }
+
+    recordAuditLog({
+      req,
+      action: 'UPDATE',
+      module: 'Fortnightly Monitor',
+      targetId: formId,
+      details: `Updated Fortnightly Monitor form (ID: ${formId})`,
+      changes: formDiff,
+    });
     const recipientEmail =
       updatedForm?.userId?.email || updatedForm?.userId?.email;
     const recipientName =
@@ -599,49 +773,15 @@ exports.getObserverDashboard = async (req, res) => {
 
 exports.GetFormOneAdmin = async (req, res) => {
   const userId = req?.user?.id;
+  if (!userId) {
+    return res.status(403).json({ message: "You do not have permission." });
+  }
 
   try {
-    const queryFilter = req.sessionDateFilter ? { createdAt: req.sessionDateFilter } : {};
-
-    const GetAllForms = await Form1.find(queryFilter)
-      .sort({ date: -1 })
-      .populate({
-        path: "teacherID",
-        select: "-password -mobile -employeeId -customId",
-      })
-      .populate({
-        path: "userId",
-        select: "-password -mobile -employeeId -customId",
-      })
-      .populate({
-        path: "coordinatorID",
-        select: "-password -mobile -employeeId -customId",
-      })
-      .lean();
-
-    if (!userId && !userId?.id) {
-      return res.status(403).json({ message: "You do not have permission." });
-    }
-
-    try {
-      const classDetailsList = await ClassDetails.find({}).lean();
-      const classMap = {};
-      classDetailsList.forEach((c) => {
-        if (c?._id) classMap[c._id.toString()] = c.className;
-      });
-
-      GetAllForms.forEach((form) => {
-        if (form.className && classMap[form.className.toString()]) {
-          form.className = classMap[form.className.toString()];
-        }
-      });
-    } catch (e) {
-      console.error("Error resolving class names in Form 1:", e);
-    }
-
-    res.status(200).send(GetAllForms);
+    const result = await buildFormOneQueryAndPaginate(req, {});
+    res.status(200).json({ success: true, ...result });
   } catch (error) {
-    console.error("Error Getting Form One:", error);
+    console.error("Error Getting Form One Admin:", error);
     res.status(500).json({ message: "Error Getting Form One.", error });
   }
 };
@@ -737,6 +877,19 @@ exports.ReminderFormOne = async (req, res) => {
       formRoute: route,
     });
     await sendEmail(receiverEmail, emailData.subject, emailData.html);
+
+    recordAuditLog({
+      req,
+      action: 'REMINDER',
+      module: 'Fortnightly Monitor',
+      targetId: String(formId),
+      details: `Sent reminder to ${receiverName} (${receiverEmail}) from ${sender}`,
+      changes: [
+        { field: 'receiverEmail', oldValue: null, newValue: receiverEmail },
+        { field: 'formRoute', oldValue: null, newValue: route },
+      ],
+    });
+
     return res.status(200).json({ success: true });
   } catch (error) {
     console.error("Error sending reminder:", error);
@@ -753,6 +906,13 @@ exports.deleteFormOne = async (req, res) => {
     if (!deletedForm) {
       return res.status(404).json({ message: "Form not found." });
     }
+    recordAuditLog({
+      req,
+      action: 'DELETE',
+      module: 'Fortnightly Monitor',
+      targetId: formId,
+      details: `Deleted Fortnightly Monitor form (ID: ${formId})`,
+    });
     res.status(200).json({ message: "Form deleted successfully.", success: true });
   } catch (error) {
     console.error("Error deleting form:", error);

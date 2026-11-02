@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { Button, Box, Flex, Heading, Text, Stack } from "@chakra-ui/react";
 import { PlusCircleOutlined } from "../../Components/UI/Icons";
 import { useNavigate, useLocation, Link } from "react-router-dom";
@@ -9,21 +9,144 @@ import { getUserId, getAllTimes } from "../../Utils/auth";
 import SmartTable from "../../Components/SmartTable";
 import { UserRoleBadge, UserCell } from "../../Components/SmartTable/tableColumns";
 import Reminder from "../../Components/Reminder";
+import { axiosInstanceToken } from "../../redux/instence";
 
 const Fortnightly = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const Role = getUserId().access;
+  const Role = getUserId()?.access;
   const location = useLocation();
   const currentPath = location.pathname;
-  const currentUserRole = getUserId()?.access;
+  const currentUserRole = Role;
 
-  const CombinedData = useSelector((state) => state?.Forms?.getAllForms || []);
-  const loading = useSelector((state) => state?.Forms?.loading || false);
+  const { getAllAdminForms, getAllForms, loading, pagination, filterOptions } =
+    useSelector((state) => state?.Forms) || {};
+  const CombinedData = getAllAdminForms?.length ? getAllAdminForms : (getAllForms || []);
+
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [serverFilters, setServerFilters] = useState({});
+
+  const lastFetchedParamsRef = useRef("");
+
+  const fetchFortnightlyData = useCallback(
+    (currentPage = page, currentLimit = pageSize, activeFilters = serverFilters) => {
+      const params = {
+        page: currentPage,
+        limit: currentLimit,
+        skip: (currentPage - 1) * currentLimit,
+      };
+      if (activeFilters.className) {
+        params.className = Array.isArray(activeFilters.className)
+          ? activeFilters.className.join(",")
+          : activeFilters.className;
+      }
+      if (activeFilters.section) {
+        params.section = Array.isArray(activeFilters.section)
+          ? activeFilters.section.join(",")
+          : activeFilters.section;
+      }
+      if (activeFilters.personName) {
+        params.searchName = Array.isArray(activeFilters.personName)
+          ? activeFilters.personName.join(",")
+          : activeFilters.personName;
+      }
+      if (activeFilters.observationDate) {
+        params.date = activeFilters.observationDate;
+      }
+      if (
+        activeFilters.isTeacherComplete !== undefined &&
+        activeFilters.isTeacherComplete !== null &&
+        activeFilters.isTeacherComplete !== ""
+      ) {
+        params.isTeacherComplete = activeFilters.isTeacherComplete;
+      }
+      if (
+        activeFilters.isCoordinatorComplete !== undefined &&
+        activeFilters.isCoordinatorComplete !== null &&
+        activeFilters.isCoordinatorComplete !== ""
+      ) {
+        params.isCoordinatorComplete = activeFilters.isCoordinatorComplete;
+      }
+
+      const paramKey = JSON.stringify(params);
+      if (lastFetchedParamsRef.current === paramKey) return;
+      lastFetchedParamsRef.current = paramKey;
+
+      dispatch(GetAllFormsForAdmin(params));
+    },
+    [dispatch, page, pageSize, serverFilters]
+  );
 
   useEffect(() => {
-    dispatch(GetAllFormsForAdmin());
-  }, [dispatch]);
+    fetchFortnightlyData(page, pageSize, serverFilters);
+  }, [fetchFortnightlyData, page, pageSize, serverFilters]);
+
+  const handlePageChange = useCallback(
+    (newPage, newSize) => {
+      const nextLimit = newSize || pageSize;
+      setPage(newPage);
+      if (newSize && newSize !== pageSize) {
+        setPageSize(newSize);
+      }
+      fetchFortnightlyData(newPage, nextLimit, serverFilters);
+    },
+    [fetchFortnightlyData, pageSize, serverFilters]
+  );
+
+  const handleFilterChange = useCallback(
+    (newFilters) => {
+      setServerFilters(newFilters);
+      setPage(1);
+      fetchFortnightlyData(1, pageSize, newFilters);
+    },
+    [fetchFortnightlyData, pageSize]
+  );
+
+  const handleFetchAllForExport = useCallback(async () => {
+    const params = { limit: "all" };
+    if (serverFilters.className) {
+      params.className = Array.isArray(serverFilters.className)
+        ? serverFilters.className.join(",")
+        : serverFilters.className;
+    }
+    if (serverFilters.section) {
+      params.section = Array.isArray(serverFilters.section)
+        ? serverFilters.section.join(",")
+        : serverFilters.section;
+    }
+    if (serverFilters.personName) {
+      params.searchName = Array.isArray(serverFilters.personName)
+        ? serverFilters.personName.join(",")
+        : serverFilters.personName;
+    }
+    if (serverFilters.observationDate) {
+      params.date = serverFilters.observationDate;
+    }
+    if (
+      serverFilters.isTeacherComplete !== undefined &&
+      serverFilters.isTeacherComplete !== null &&
+      serverFilters.isTeacherComplete !== ""
+    ) {
+      params.isTeacherComplete = serverFilters.isTeacherComplete;
+    }
+    if (
+      serverFilters.isCoordinatorComplete !== undefined &&
+      serverFilters.isCoordinatorComplete !== null &&
+      serverFilters.isCoordinatorComplete !== ""
+    ) {
+      params.isCoordinatorComplete = serverFilters.isCoordinatorComplete;
+    }
+
+    const response = await axiosInstanceToken.get(
+      "/form/fortnightly-monitor/get/all",
+      { params }
+    );
+    const result = response.data;
+    if (Array.isArray(result)) return result;
+    if (Array.isArray(result?.data)) return result.data;
+    return [];
+  }, [serverFilters]);
 
   // ── Column definitions with filterConfig ──────────────────────
   const columns = useMemo(
@@ -99,47 +222,52 @@ const Fortnightly = () => {
         render: (val) => <Text fontSize="sm">{val || "—"}</Text>,
         filterConfig: {
           type: "select",
-          options: [...new Set(CombinedData.map((r) => r.className).filter(Boolean))],
+          options: filterOptions?.classes?.length
+            ? filterOptions.classes
+            : [...new Set(CombinedData.map((r) => r?.className).filter(Boolean))],
+          matchFn: (record, vals) => vals.includes(record?.className || ""),
         },
       },
       {
         title: "Section",
         key: "section",
         dataIndex: "section",
-        width: "90px",
+        width: "100px",
         sortable: true,
         render: (val) => <Text fontSize="sm">{val || "—"}</Text>,
         filterConfig: {
           type: "select",
-          options: [...new Set(CombinedData.map((r) => r.section).filter(Boolean))],
+          options: filterOptions?.sections?.length
+            ? filterOptions.sections
+            : [...new Set(CombinedData.map((r) => r?.section).filter(Boolean))],
+          matchFn: (record, vals) => vals.includes(record?.section || ""),
         },
       },
       {
-        title: "Date",
-        key: "date",
+        title: "Observation Date",
+        key: "observationDate",
         dataIndex: "date",
-        width: "120px",
+        width: "160px",
         sortable: true,
+        sorter: (a, b) => new Date(a?.date) - new Date(b?.date),
         render: (val) => (
           <Text fontSize="sm" color="gray.600">
-            {val ? getAllTimes(val)?.formattedDate2 : "—"}
+            {getAllTimes(val)?.formattedDate2 || "—"}
           </Text>
         ),
         filterConfig: {
           type: "date",
-          matchFn: (record, val) => {
-            if (!val) return true;
-            const recDate = new Date(record.date).toDateString();
-            const filterDate = new Date(val).toDateString();
-            return recDate === filterDate;
-          },
+          matchFn: (record, val) =>
+            !val ||
+            new Date(record?.date).toDateString() ===
+              new Date(val).toDateString(),
         },
       },
       {
         title: "Teacher Status",
         key: "isTeacherComplete",
         dataIndex: "isTeacherComplete",
-        width: "140px",
+        width: "145px",
         render: (val) => (
           <Box
             display="inline-flex"
@@ -278,8 +406,7 @@ const Fortnightly = () => {
         },
       },
     ],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [CombinedData, currentUserRole]
+    [CombinedData, currentUserRole, filterOptions]
   );
 
   // ── Sort: incomplete forms first ──────────────────────────────
@@ -345,7 +472,16 @@ const Fortnightly = () => {
         data={sortedData}
         loading={loading}
         rowKey="_id"
-        pageSize={10}
+        pageSize={pageSize}
+        serverSide={true}
+        pagination={pagination}
+        totalRecords={pagination?.total || 0}
+        page={page}
+        onPageChange={handlePageChange}
+        onFilterChange={handleFilterChange}
+        onFetchAllForExport={handleFetchAllForExport}
+        downloadable={true}
+        downloadFileName="fortnightly_monitor"
       />
     </Box>
   );

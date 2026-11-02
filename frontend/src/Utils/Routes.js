@@ -60,6 +60,7 @@ import WingCoordinatorReport from "../Pages/Reports/WingCoordinatorReport";
 import AccountabilityMechanism from "../Pages/Forms/AccountabilityMechanism";
 import AccountabilityForm from "../Pages/Forms/AccountabilityForm/AccountabilityForm";
 import AccountabilityReport from "../Pages/Reports/AccountabilityReport";
+import AuditLogs from "../Pages/Admin/AuditLogs";
 
 const role = getUserId()?.access;
 const isLoggedIn = getToken() !== null ? getToken() : null;
@@ -234,6 +235,7 @@ const protects = {
         { path: "/accountability/:id", element: <AccountabilityForm /> },
         { path: "/accountability/report/:id", element: <AccountabilityReport /> },
         { path: "/class-section", element: <ClassSectionPage /> },
+        { path: "/audit-logs", element: <AuditLogs /> },
         { path: "*", element: <NotFound404 /> },
       ],
     },

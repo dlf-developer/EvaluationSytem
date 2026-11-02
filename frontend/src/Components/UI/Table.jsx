@@ -75,10 +75,10 @@ export const Table = ({
       style={style}
     >
       {loading && (
-        <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/70 backdrop-blur-[1px]">
-          <div className="flex flex-col items-center gap-2">
-            <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-            <span className="text-xs font-medium text-gray-500">Loading...</span>
+        <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/75 backdrop-blur-[2px]">
+          <div className="flex flex-col items-center gap-2.5 p-4 bg-white rounded-xl border border-gray-100 shadow-lg">
+            <Loader2 className="w-7 h-7 animate-spin text-[#1a4d2e]" />
+            <span className="text-xs font-semibold text-gray-600">Loading records...</span>
           </div>
         </div>
       )}

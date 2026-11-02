@@ -11,7 +11,6 @@ import {
   Flex,
   HStack,
   Button,
-  Select,
   Skeleton,
   Badge,
   Icon,
@@ -19,6 +18,7 @@ import {
   TableContainer,
   IconButton,
   Tooltip,
+  Spinner,
 } from "@chakra-ui/react";
 import {
   ChevronLeft,
@@ -33,6 +33,8 @@ import ColumnHeader from "./ColumnHeader";
 import useTableState from "./useTableState";
 import { isCuteMalkinThemeActive } from "../../Utils/cuteMalkinTheme";
 import CustomExcelExportModal from "./CustomExcelExportModal";
+import Select, { Option } from "../UI/Select";
+import { recordFileDownloadAudit } from "../../Utils/auditLogger";
 
 // ─── Flatten a nested object to a single-level object ──────────────────────
 // e.g. { a: { b: 1 }, c: 2 } → { "a.b": 1, c: 2 }
@@ -67,6 +69,15 @@ const SmartTable = ({
   // ── Download props ──────────────────────────────────────────────
   downloadable = false,
   downloadFileName = "report",
+  // ── Server-side props ───────────────────────────────────────────
+  serverSide = false,
+  totalRecords = 0,
+  page: externalPage,
+  pagination = null,
+  onPageChange,
+  onFilterChange,
+  onSortChange,
+  onFetchAllForExport,
 }) => {
   const {
     displayData,
@@ -82,13 +93,35 @@ const SmartTable = ({
     handlePageChange,
     clearAllFilters,
     hasActiveFilters,
-  } = useTableState({ data, columns, pageSize: initialPageSize });
+  } = useTableState({
+    data,
+    columns,
+    pageSize: initialPageSize,
+    serverSide,
+    totalRecords,
+    page: externalPage,
+    pagination,
+    onPageChange,
+    onFilterChange,
+    onSortChange,
+  });
 
-  const totalPages = Math.ceil(totalFiltered / pageSize);
+  const effectiveCurrentPage =
+    serverSide && pagination?.page ? pagination.page : currentPage;
+  const effectivePageSize = pageSize || pagination?.limit || initialPageSize;
+  const effectiveTotal =
+    serverSide && pagination?.total !== undefined
+      ? pagination.total
+      : totalFiltered;
+  const effectiveTotalPages =
+    serverSide && pagination?.totalPages !== undefined
+      ? pagination.totalPages
+      : Math.ceil(effectiveTotal / (effectivePageSize || 1)) || 1;
 
   // ── Cute theme & Custom Excel Export state ────────────────────
   const [isCuteActive, setIsCuteActive] = useState(() => isCuteMalkinThemeActive());
   const [isCustomExportOpen, setIsCustomExportOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
     const handleThemeChange = (e) => {
@@ -101,13 +134,26 @@ const SmartTable = ({
   }, []);
 
   // ── Download handler ──────────────────────────────────────────
-  const handleDownload = useCallback(() => {
-    const source = allFilteredData ?? data;
+  const handleDownload = useCallback(async () => {
+    let source = allFilteredData ?? data;
+
+    if (serverSide && typeof onFetchAllForExport === "function") {
+      try {
+        setIsExporting(true);
+        const fullData = await onFetchAllForExport();
+        if (Array.isArray(fullData) && fullData.length > 0) {
+          source = fullData;
+        }
+      } catch (err) {
+        console.error("Failed to fetch full data for export:", err);
+      } finally {
+        setIsExporting(false);
+      }
+    }
     
     // Flatten records to ensure all nested properties (like Observer/Teacher details) get their own column
     const flattenedData = source.map(record => {
       const flat = flattenObject(record);
-      // Optional: remove backend-specific keys if necessary
       delete flat._id;
       delete flat.__v;
       return flat;
@@ -128,16 +174,39 @@ const SmartTable = ({
     ws["!cols"] = colWidths;
 
     XLSX.utils.book_append_sheet(wb, ws, "Data");
-    XLSX.writeFile(wb, `${downloadFileName}_${new Date().toISOString().slice(0, 10)}.xlsx`);
-  }, [allFilteredData, data, downloadFileName]);
+    const outFileName = `${downloadFileName}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    XLSX.writeFile(wb, outFileName);
+
+    recordFileDownloadAudit({
+      fileName: outFileName,
+      fileType: "Excel (.xlsx)",
+      module: title || downloadFileName,
+      rowCount: flattenedData.length,
+      columnCount: headers.length,
+      extraDetails: "Direct Excel Download",
+    });
+  }, [serverSide, onFetchAllForExport, allFilteredData, data, downloadFileName]);
 
   // ── Smart page-number list ──────────────────────────────────
   const pageNumbers = (() => {
-    if (totalPages <= 5) return Array.from({ length: totalPages }, (_, i) => i + 1);
-    if (currentPage <= 3) return [1, 2, 3, 4, 5];
-    if (currentPage >= totalPages - 2)
-      return [totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
-    return [currentPage - 2, currentPage - 1, currentPage, currentPage + 1, currentPage + 2];
+    if (effectiveTotalPages <= 5)
+      return Array.from({ length: effectiveTotalPages }, (_, i) => i + 1);
+    if (effectiveCurrentPage <= 3) return [1, 2, 3, 4, 5];
+    if (effectiveCurrentPage >= effectiveTotalPages - 2)
+      return [
+        effectiveTotalPages - 4,
+        effectiveTotalPages - 3,
+        effectiveTotalPages - 2,
+        effectiveTotalPages - 1,
+        effectiveTotalPages,
+      ];
+    return [
+      effectiveCurrentPage - 2,
+      effectiveCurrentPage - 1,
+      effectiveCurrentPage,
+      effectiveCurrentPage + 1,
+      effectiveCurrentPage + 2,
+    ];
   })();
 
   return (
@@ -227,6 +296,8 @@ const SmartTable = ({
                   fontWeight="600"
                   fontSize="xs"
                   onClick={handleDownload}
+                  isLoading={isExporting}
+                  loadingText="Exporting..."
                   isDisabled={totalFiltered === 0}
                 >
                   Export .xlsx
@@ -283,129 +354,170 @@ const SmartTable = ({
         </Flex>
       )}
 
-      {/* ── Table ───────────────────────────────────────────── */}
-      <TableContainer overflowX="auto">
-        <Table
-          variant="unstyled"
-          size="sm"
-          w="full"
-          style={{ tableLayout: "auto", borderCollapse: "separate", borderSpacing: 0 }}
-        >
-          <Thead>
-            <Tr bg="#EAF0E8">
-              {columns.map((col) => (
-                <Th
-                  key={col.key}
-                  w={col.width || "auto"}
-                  minW={col.minWidth || col.width || "90px"}
-                  maxW={col.maxWidth || "none"}
-                  px={4}
-                  py={3}
-                  borderBottom="2px solid"
-                  borderColor="rgba(74,103,65,0.2)"
-                  textTransform="none"
-                  letterSpacing="normal"
-                  fontWeight="normal"
-                  verticalAlign="middle"
-                >
-                  <ColumnHeader
-                    column={col}
-                    data={data}
-                    sortState={sortState}
-                    onSort={handleSort}
-                    activeFilter={activeFilters[col.key]}
-                    onFilterApply={handleFilterChange}
-                    onFilterClear={handleFilterClear}
-                  />
-                </Th>
-              ))}
-            </Tr>
-          </Thead>
+      {/* ── Table Container with Centered Loading Spinner Overlay ── */}
+      <Box position="relative" minH={loading ? "280px" : "auto"}>
+        {loading && (
+          <Flex
+            position="absolute"
+            inset={0}
+            zIndex={25}
+            bg="rgba(255, 255, 255, 0.75)"
+            backdropFilter="blur(2px)"
+            align="center"
+            justify="center"
+            direction="column"
+            gap={3}
+            transition="all 0.2s ease"
+            pointerEvents="auto"
+          >
+            <Flex
+              p={4}
+              bg="white"
+              borderRadius="xl"
+              boxShadow="0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04)"
+              border="1px solid"
+              borderColor="gray.100"
+              direction="column"
+              align="center"
+              gap={2.5}
+            >
+              <Spinner
+                thickness="3.5px"
+                speed="0.65s"
+                emptyColor="gray.100"
+                color="brand.primary"
+                size="lg"
+              />
+              <Text fontSize="xs" fontWeight="600" color="gray.600" letterSpacing="0.02em">
+                Loading records...
+              </Text>
+            </Flex>
+          </Flex>
+        )}
 
-          <Tbody>
-            {loading ? (
-              Array.from({ length: 5 }).map((_, i) => (
-                <Tr key={`skel-${i}`} borderBottom="1px solid" borderColor="gray.50">
-                  {columns.map((col) => (
-                    <Td key={col.key} px={4} py={3} verticalAlign="middle">
-                      <Skeleton
-                        height="14px"
-                        borderRadius="md"
-                        startColor="gray.100"
-                        endColor="gray.200"
-                        w={i % 2 === 0 ? "80%" : "60%"}
-                      />
-                    </Td>
-                  ))}
-                </Tr>
-              ))
-            ) : displayData.length === 0 ? (
-              <Tr>
-                <Td colSpan={columns.length} textAlign="center" py={16}>
-                  <Flex direction="column" align="center" gap={2}>
-                    <Box fontSize="2xl">📭</Box>
-                    <Text color="gray.400" fontSize="sm" fontWeight="500">
-                      {emptyText}
-                    </Text>
-                    {hasActiveFilters && (
-                      <Button
-                        size="xs"
-                        variant="ghost"
-                        colorScheme="green"
-                        color="brand.primary"
-                        onClick={clearAllFilters}
-                        mt={1}
-                      >
-                        Clear filters to see all records
-                      </Button>
-                    )}
-                  </Flex>
-                </Td>
+        <TableContainer overflowX="auto">
+          <Table
+            variant="unstyled"
+            size="sm"
+            w="full"
+            style={{ tableLayout: "auto", borderCollapse: "separate", borderSpacing: 0 }}
+          >
+            <Thead>
+              <Tr bg="#EAF0E8">
+                {columns.map((col) => (
+                  <Th
+                    key={col.key}
+                    w={col.width || "auto"}
+                    minW={col.minWidth || col.width || "90px"}
+                    maxW={col.maxWidth || "none"}
+                    px={4}
+                    py={3}
+                    borderBottom="2px solid"
+                    borderColor="rgba(74,103,65,0.2)"
+                    textTransform="none"
+                    letterSpacing="normal"
+                    fontWeight="normal"
+                    verticalAlign="middle"
+                  >
+                    <ColumnHeader
+                      column={col}
+                      data={data}
+                      sortState={sortState}
+                      onSort={handleSort}
+                      activeFilter={activeFilters[col.key]}
+                      onFilterApply={handleFilterChange}
+                      onFilterClear={handleFilterClear}
+                    />
+                  </Th>
+                ))}
               </Tr>
-            ) : (
-              displayData.map((record, rowIndex) => (
-                <Tr
-                  key={record[rowKey] ?? rowIndex}
-                  borderBottom="1px solid"
-                  borderColor="gray.50"
-                  cursor={onRowClick ? "pointer" : "default"}
-                  onClick={() => onRowClick?.(record)}
-                  _hover={{ bg: "#F7F5F0" }}
-                  transition="background 0.15s ease"
-                >
-                  {columns.map((col) => (
-                    <Td
-                      key={col.key}
-                      px={4}
-                      py={3}
-                      fontSize="sm"
-                      color="brand.text"
-                      verticalAlign="middle"
-                      w={col.width || "auto"}
-                      minW={col.minWidth || col.width || "auto"}
-                      maxW={col.maxWidth || "none"}
-                      whiteSpace={col.noWrap !== false ? "nowrap" : "normal"}
-                      overflow={col.overflow || (col.render ? "visible" : "hidden")}
-                      textOverflow={col.textOverflow || "ellipsis"}
-                    >
-                      {col.render ? (
-                        col.render(record[col.dataIndex], record, rowIndex)
-                      ) : record[col.dataIndex] != null ? (
-                        String(record[col.dataIndex])
-                      ) : (
-                        <Text color="gray.300" fontSize="sm">—</Text>
+            </Thead>
+
+            <Tbody>
+              {loading && displayData.length === 0 ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <Tr key={`skel-${i}`} borderBottom="1px solid" borderColor="gray.50">
+                    {columns.map((col) => (
+                      <Td key={col.key} px={4} py={3} verticalAlign="middle">
+                        <Skeleton
+                          height="14px"
+                          borderRadius="md"
+                          startColor="gray.100"
+                          endColor="gray.200"
+                          w={i % 2 === 0 ? "80%" : "60%"}
+                        />
+                      </Td>
+                    ))}
+                  </Tr>
+                ))
+              ) : displayData.length === 0 ? (
+                <Tr>
+                  <Td colSpan={columns.length} textAlign="center" py={16}>
+                    <Flex direction="column" align="center" gap={2}>
+                      <Box fontSize="2xl">📭</Box>
+                      <Text color="gray.400" fontSize="sm" fontWeight="500">
+                        {emptyText}
+                      </Text>
+                      {hasActiveFilters && (
+                        <Button
+                          size="xs"
+                          variant="ghost"
+                          colorScheme="green"
+                          color="brand.primary"
+                          onClick={clearAllFilters}
+                          mt={1}
+                        >
+                          Clear filters to see all records
+                        </Button>
                       )}
-                    </Td>
-                  ))}
+                    </Flex>
+                  </Td>
                 </Tr>
-              ))
-            )}
-          </Tbody>
-        </Table>
-      </TableContainer>
+              ) : (
+                displayData.map((record, rowIndex) => (
+                  <Tr
+                    key={record[rowKey] ?? rowIndex}
+                    borderBottom="1px solid"
+                    borderColor="gray.50"
+                    cursor={onRowClick ? "pointer" : "default"}
+                    onClick={() => onRowClick?.(record)}
+                    _hover={{ bg: "#F7F5F0" }}
+                    transition="background 0.15s ease"
+                  >
+                    {columns.map((col) => (
+                      <Td
+                        key={col.key}
+                        px={4}
+                        py={3}
+                        fontSize="sm"
+                        color="brand.text"
+                        verticalAlign="middle"
+                        w={col.width || "auto"}
+                        minW={col.minWidth || col.width || "auto"}
+                        maxW={col.maxWidth || "none"}
+                        whiteSpace={col.noWrap !== false ? "nowrap" : "normal"}
+                        overflow={col.overflow || (col.render ? "visible" : "hidden")}
+                        textOverflow={col.textOverflow || "ellipsis"}
+                      >
+                        {col.render ? (
+                          col.render(record[col.dataIndex], record, rowIndex)
+                        ) : record[col.dataIndex] != null ? (
+                          String(record[col.dataIndex])
+                        ) : (
+                          <Text color="gray.300" fontSize="sm">—</Text>
+                        )}
+                      </Td>
+                    ))}
+                  </Tr>
+                ))
+              )}
+            </Tbody>
+          </Table>
+        </TableContainer>
+      </Box>
 
       {/* ── Pagination ─────────────────────────────────────── */}
-      {!loading && totalFiltered > 0 && (
+      {effectiveTotal > 0 && (
         <Flex
           align="center"
           justify="space-between"
@@ -416,44 +528,50 @@ const SmartTable = ({
           bg="#FAFAF8"
           flexWrap="wrap"
           gap={2}
+          position="relative"
+          overflow="visible"
+          opacity={loading ? 0.6 : 1}
+          pointerEvents={loading ? "none" : "auto"}
+          transition="opacity 0.2s ease"
         >
+        
           <Text fontSize="xs" color="gray.500" fontWeight="500">
             Showing{" "}
             <Text as="span" fontWeight="700" color="brand.text">
-              {Math.min((currentPage - 1) * pageSize + 1, totalFiltered)}
-              –{Math.min(currentPage * pageSize, totalFiltered)}
+              {Math.min((effectiveCurrentPage - 1) * effectivePageSize + 1, effectiveTotal)}
+              –{Math.min(effectiveCurrentPage * effectivePageSize, effectiveTotal)}
             </Text>{" "}
             of{" "}
             <Text as="span" fontWeight="700" color="brand.text">
-              {totalFiltered}
+              {effectiveTotal}
             </Text>
           </Text>
 
-          <HStack spacing={2}>
-            <Select
-              size="xs"
-              value={pageSize}
-              onChange={(e) => handlePageChange(1, Number(e.target.value))}
-              w="90px"
-              borderRadius="lg"
-              borderColor="gray.200"
-              fontSize="xs"
-              fontWeight="600"
-              color="gray.600"
-              _focus={{ borderColor: "brand.primary", boxShadow: "none" }}
-            >
-              {[5, 10, 20, 50].map((s) => (
-                <option key={s} value={s}>{s} / page</option>
-              ))}
-            </Select>
+          <HStack spacing={2} align="center">
+            <Box w="120px" minW="115px">
+              <Select
+                size="small"
+                value={effectivePageSize}
+                onChange={(newVal) => handlePageChange(1, Number(newVal))}
+                showSearch={false}
+                placement="top"
+                dropdownClassName="min-w-[120px] shadow-lg rounded-lg border-gray-200"
+              >
+                <Option value={5}>5 / page</Option>
+                <Option value={10}>10 / page</Option>
+                <Option value={20}>20 / page</Option>
+                <Option value={50}>50 / page</Option>
+                <Option value={100}>100 / page</Option>
+              </Select>
+            </Box>
 
             <HStack spacing={0.5}>
               <IconButton
                 icon={<Icon as={ChevronLeft} boxSize="14px" />}
                 size="xs"
                 variant="ghost"
-                onClick={() => handlePageChange(currentPage - 1, pageSize)}
-                isDisabled={currentPage === 1}
+                onClick={() => handlePageChange(effectiveCurrentPage - 1, effectivePageSize)}
+                isDisabled={effectiveCurrentPage <= 1}
                 aria-label="Previous page"
                 borderRadius="md"
                 color="gray.500"
@@ -468,13 +586,13 @@ const SmartTable = ({
                   h="28px"
                   px={0}
                   variant="ghost"
-                  bg={currentPage === page ? "brand.primary" : "transparent"}
-                  color={currentPage === page ? "white" : "gray.600"}
-                  fontWeight={currentPage === page ? "700" : "500"}
+                  bg={effectiveCurrentPage === page ? "brand.primary" : "transparent"}
+                  color={effectiveCurrentPage === page ? "white" : "gray.600"}
+                  fontWeight={effectiveCurrentPage === page ? "700" : "500"}
                   fontSize="xs"
                   borderRadius="md"
-                  onClick={() => handlePageChange(page, pageSize)}
-                  _hover={currentPage !== page ? { bg: "gray.100", color: "brand.primary" } : {}}
+                  onClick={() => handlePageChange(page, effectivePageSize)}
+                  _hover={effectiveCurrentPage !== page ? { bg: "gray.100", color: "brand.primary" } : {}}
                 >
                   {page}
                 </Button>
@@ -483,8 +601,8 @@ const SmartTable = ({
                 icon={<Icon as={ChevronRight} boxSize="14px" />}
                 size="xs"
                 variant="ghost"
-                onClick={() => handlePageChange(currentPage + 1, pageSize)}
-                isDisabled={currentPage >= totalPages}
+                onClick={() => handlePageChange(effectiveCurrentPage + 1, effectivePageSize)}
+                isDisabled={effectiveCurrentPage >= effectiveTotalPages}
                 aria-label="Next page"
                 borderRadius="md"
                 color="gray.500"
@@ -505,6 +623,8 @@ const SmartTable = ({
         downloadFileName={downloadFileName}
         tableTitle={title}
         isCuteActive={isCuteActive}
+        serverSide={serverSide}
+        fetchAllData={onFetchAllForExport}
       />
     </Box>
   );

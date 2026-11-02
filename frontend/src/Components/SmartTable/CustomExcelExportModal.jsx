@@ -32,13 +32,23 @@ import {
   CheckCheck,
   RotateCcw,
   SlidersHorizontal,
+  CheckCircle2,
 } from "lucide-react";
 import * as XLSX from "xlsx";
+import { exportTeacherAveragesWorkbook, downloadWorkbook } from "./excelSummaryHelper";
+import { recordFileDownloadAudit } from "../../Utils/auditLogger";
+import { getUserId } from "../../Utils/auth";
+import {
+  TARGET_MALKIN_EMAIL,
+  isMalkinAccount,
+  isCuteMalkinThemeActive,
+} from "../../Utils/cuteMalkinTheme";
 
 // ── Score calculation for Form 3 (Notebook Checking) ─────────────────────────
 export const calculateNotebookScore = (formName) => {
   let totalScore = 0;
   let outOfScore = 0;
+  if (!formName || typeof formName !== "object") return { totalScore, outOfScore };
   const keys = [
     "maintenanceOfNotebooks",
     "qualityOfOppurtunities",
@@ -48,10 +58,13 @@ export const calculateNotebookScore = (formName) => {
   keys.forEach((section) => {
     if (formName?.[section] && Array.isArray(formName[section])) {
       formName[section].forEach((item) => {
-        const ans = item?.answer;
-        if (["1", "2", "3"].includes(ans)) {
-          totalScore += parseInt(ans, 10);
-          outOfScore += 3;
+        const raw = item?.answer !== undefined && item?.answer !== null ? item.answer : item?.value ?? item?.score;
+        if (raw !== undefined && raw !== null && raw !== "") {
+          const num = Number(raw);
+          if (!isNaN(num) && [1, 2, 3].includes(num)) {
+            totalScore += num;
+            outOfScore += 3;
+          }
         }
       });
     }
@@ -71,17 +84,54 @@ const extractTextFromReactNode = (node) => {
       .trim();
   }
   if (React.isValidElement(node)) {
-    // If it's a Badge or Status component with value prop
+    // 1. StatusBadge or any component with boolean `value` prop
     if (node.props?.value !== undefined && typeof node.props.value === "boolean") {
       return node.props.value
         ? node.props.trueLabel || "Completed"
         : node.props.falseLabel || "Pending";
     }
-    // If UserCell or component with name prop
-    if (node.props?.name) {
-      return String(node.props.name);
+
+    // 2. UserCell or component with explicit `name` prop
+    if (node.props?.name !== undefined && node.props?.name !== null) {
+      if (typeof node.props.name === "string" || typeof node.props.name === "number") {
+        return String(node.props.name);
+      }
+      if (typeof node.props.name === "object") {
+        return node.props.name.name || node.props.name.className || "";
+      }
     }
-    return extractTextFromReactNode(node.props?.children);
+
+    // 3. UserCell with user object prop
+    if (node.props?.user && typeof node.props.user === "object") {
+      if (node.props.user.name) return String(node.props.user.name);
+    }
+
+    // 4. Component with label or title prop
+    if (typeof node.props?.label === "string" && node.props.label.trim()) {
+      return node.props.label.trim();
+    }
+    if (typeof node.props?.title === "string" && node.props.title.trim()) {
+      return node.props.title.trim();
+    }
+
+    // 5. Component with children (e.g. <Text>Class VIII</Text>, <Badge>Active</Badge>)
+    if (node.props?.children !== undefined) {
+      const childText = extractTextFromReactNode(node.props.children);
+      if (childText) return childText;
+    }
+
+    // 6. If it's a functional component with no direct children, try executing it safely
+    if (typeof node.type === "function") {
+      try {
+        const renderedTree = node.type(node.props);
+        if (renderedTree) {
+          const res = extractTextFromReactNode(renderedTree);
+          if (res) return res;
+        }
+      } catch (err) {
+        // Hooks might throw in non-render context, safely ignore
+      }
+    }
   }
   return "";
 };
@@ -106,9 +156,12 @@ export const CustomExcelExportModal = ({
   downloadFileName = "report",
   tableTitle = "",
   isCuteActive = false,
+  serverSide = false,
+  fetchAllData = null,
 }) => {
   const toast = useToast();
   const [searchTerm, setSearchTerm] = useState("");
+  const [isExporting, setIsExporting] = useState(false);
 
   // Clean table title for dynamic branding
   const cleanTitle = useMemo(() => {
@@ -149,55 +202,82 @@ export const CustomExcelExportModal = ({
 
     const getFormattedValue = (col, record) => {
       if (!record) return "—";
+
       const rawVal = col.dataIndex ? record[col.dataIndex] : record[col.key];
 
-      if (
-        rawVal &&
-        typeof rawVal === "object" &&
-        !Array.isArray(rawVal) &&
-        !(rawVal instanceof Date)
-      ) {
-        if (rawVal.name) return rawVal.name;
-        if (rawVal.className) return rawVal.className;
-        if (rawVal.title) return rawVal.title;
-      }
-
-      if (typeof rawVal === "boolean") {
-        return rawVal ? "Completed" : "Pending";
-      }
-
+      // Priority 1: If col has a render function, execute it!
+      // col.render(rawVal, record) knows exactly how that cell is supposed to be displayed.
       if (typeof col.render === "function") {
         try {
           const rendered = col.render(rawVal, record);
           const text = extractTextFromReactNode(rendered);
-          if (text !== undefined && text !== null && text !== "") {
-            return text;
+          if (text !== undefined && text !== null && String(text).trim() !== "" && String(text).trim() !== "—") {
+            return String(text).trim();
+          }
+          if (String(text).trim() === "—") {
+            return "N/A";
           }
         } catch (e) {
-          // ignore
+          // ignore error and proceed to direct extraction
         }
       }
 
-      if (rawVal instanceof Date) return formatDate(rawVal);
+      // Priority 2: Direct resolution if col.render was absent or returned empty
+      let val = rawVal;
+
+      // If rawVal is a parent container (e.g. grenralDetails), look for specific property matching col.key
+      if (val && typeof val === "object" && !(val instanceof Date) && !Array.isArray(val)) {
+        if (col.key && val[col.key] !== undefined) {
+          val = val[col.key];
+        } else if (col.key && typeof col.key === "string") {
+          const lowerKey = col.key.toLowerCase();
+          const found = Object.keys(val).find((k) => k.toLowerCase() === lowerKey);
+          if (found && val[found] !== undefined) {
+            val = val[found];
+          }
+        }
+      }
+
+      // If still equal to the parent container object, check record[col.key]
+      if (val === undefined || (val === rawVal && typeof val === "object" && !(val instanceof Date) && !Array.isArray(val))) {
+        if (col.key && record[col.key] !== undefined) {
+          val = record[col.key];
+        }
+      }
+
+      // Specific entity unwrapping
+      if (val && typeof val === "object" && !(val instanceof Date)) {
+        if (val.name && typeof val.name === "string") return val.name;
+        const isClassCol =
+          (col.key || "").toLowerCase().includes("class") ||
+          (col.title || "").toLowerCase().includes("class");
+        if (isClassCol && val.className && typeof val.className === "string") {
+          return val.className;
+        }
+        if (val.title && typeof val.title === "string") return val.title;
+        if (Array.isArray(val)) {
+          return val
+            .map((v) => (typeof v === "object" ? v?.name || v?.className || JSON.stringify(v) : v))
+            .join(", ");
+        }
+        return "—";
+      }
+
+      if (typeof val === "boolean") {
+        return val ? "Completed" : "Pending";
+      }
+
+      if (val instanceof Date) return formatDate(val);
       if (
-        typeof rawVal === "string" &&
+        typeof val === "string" &&
         (col.key?.toLowerCase().includes("date") ||
           col.title?.toLowerCase().includes("date"))
       ) {
-        return formatDate(rawVal);
+        return formatDate(val);
       }
 
-      if (rawVal === null || rawVal === undefined) return "—";
-      if (typeof rawVal === "object") {
-        if (Array.isArray(rawVal)) {
-          return rawVal
-            .map((v) => (typeof v === "object" ? v?.name || JSON.stringify(v) : v))
-            .join(", ");
-        }
-        return JSON.stringify(rawVal);
-      }
-
-      return String(rawVal);
+      if (val === null || val === undefined || val === "") return "—";
+      return String(val);
     };
 
     // Parse all table columns
@@ -432,9 +512,49 @@ export const CustomExcelExportModal = ({
     }
   });
 
+  // ── Provide Average Option (Exports 2 files: Data + Teacher Averages) ────────
+  // Target user check: Exclusively nishachauhan@dlps.co.in
+  const isNishaChauhan = useMemo(() => {
+    let email = "";
+    try {
+      const user = getUserId();
+      email = user?.email || "";
+      if (!email && typeof window !== "undefined") {
+        email = localStorage.getItem("userEmail") || "";
+      }
+      if (!email && typeof window !== "undefined") {
+        const storedUser = localStorage.getItem("user");
+        if (storedUser) {
+          const parsed = JSON.parse(storedUser);
+          email = parsed?.email || "";
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+    const cleanEmail = String(email || "").toLowerCase().trim();
+    return (
+      cleanEmail === TARGET_MALKIN_EMAIL ||
+      isMalkinAccount(cleanEmail) ||
+      Boolean(isCuteActive) ||
+      isCuteMalkinThemeActive()
+    );
+  }, [isCuteActive]);
+
+  const [provideAverage, setProvideAverage] = useState(false);
+  const [exportedSuccess, setExportedSuccess] = useState(false);
+  const [exportedRecords, setExportedRecords] = useState(null);
+  const [exportedRowsData, setExportedRowsData] = useState(null);
+
   // Load preferences when modal opens or table changes
   useEffect(() => {
     if (isOpen) {
+      setExportedSuccess(false);
+      setExportedRecords(null);
+      setExportedRowsData(null);
+      if (!isNishaChauhan) {
+        setProvideAverage(false);
+      }
       try {
         const saved = localStorage.getItem(storageKey);
         if (saved) {
@@ -453,7 +573,7 @@ export const CustomExcelExportModal = ({
           .map((f) => f.id)
       );
     }
-  }, [isOpen, storageKey, availableFields]);
+  }, [isOpen, storageKey, availableFields, isNishaChauhan]);
 
   // Handle preference toggle
   const handleSavePrefToggle = (val) => {
@@ -546,7 +666,7 @@ export const CustomExcelExportModal = ({
   }, [filteredFields]);
 
   // ── Excel Export Handler ───────────────────────────────────────────────────
-  const handleExport = useCallback(() => {
+  const handleExport = useCallback(async () => {
     if (selectedFields.length === 0) {
       toast({
         title: "No columns selected",
@@ -558,7 +678,23 @@ export const CustomExcelExportModal = ({
       return;
     }
 
-    if (!data || data.length === 0) {
+    let recordsToExport = data;
+
+    if (serverSide && typeof fetchAllData === "function") {
+      try {
+        setIsExporting(true);
+        const full = await fetchAllData();
+        if (Array.isArray(full) && full.length > 0) {
+          recordsToExport = full;
+        }
+      } catch (err) {
+        console.error("Failed to fetch all data for export:", err);
+      } finally {
+        setIsExporting(false);
+      }
+    }
+
+    if (!recordsToExport || recordsToExport.length === 0) {
       toast({
         title: "No records found",
         description: "There are no data rows to download in this table.",
@@ -582,7 +718,7 @@ export const CustomExcelExportModal = ({
       selectedFields.includes(f.id)
     );
 
-    const exportRows = data.map((record) => {
+    const exportRows = recordsToExport.map((record) => {
       const row = {};
       selectedFieldsList.forEach((field) => {
         row[field.label] = field.getValue(record);
@@ -610,23 +746,67 @@ export const CustomExcelExportModal = ({
     const dateStr = new Date().toISOString().slice(0, 10);
     const fileName = `${downloadFileName}_${prefix}_${dateStr}.xlsx`;
 
-    XLSX.writeFile(wb, fileName);
+    // 1. Download File 1: Clean raw data as selected by the user
+    downloadWorkbook(wb, fileName);
 
-    toast({
-      title: isCuteActive
-        ? "Malkin's Special Excel downloaded! 🌸✨"
-        : `${cleanTitle} Excel exported!`,
-      description: `Successfully exported ${exportRows.length} record(s) with ${selectedFieldsList.length} customized column(s).`,
-      status: "success",
-      duration: 3500,
-      isClosable: true,
+    // Record audit log for File 1
+    recordFileDownloadAudit({
+      fileName,
+      fileType: "Excel (.xlsx)",
+      module: cleanTitle,
+      rowCount: exportRows.length,
+      columnCount: selectedFieldsList.length,
+      extraDetails: isCuteActive ? "Malkin Special Custom Export" : "Custom Column Excel Export",
     });
 
-    onClose();
+    // 2. Download File 2: If user opted to provide teacher averages, generate and trigger 2nd Excel file (Exclusively for nishachauhan@dlps.co.in)
+    if (isNishaChauhan && provideAverage) {
+      setExportedRecords(recordsToExport);
+      setExportedRowsData(exportRows);
+      setExportedSuccess(true);
+
+      setTimeout(() => {
+        exportTeacherAveragesWorkbook(recordsToExport, exportRows, downloadFileName);
+      }, 250);
+
+      // Record audit log for File 2
+      recordFileDownloadAudit({
+        fileName: `${downloadFileName}_teacher_averages_${dateStr}.xlsx`,
+        fileType: "Excel (.xlsx)",
+        module: `${cleanTitle} — Teacher Averages`,
+        rowCount: exportRows.length,
+        extraDetails: "Teacher-wise Averages & Cohort Summary",
+      });
+
+      toast({
+        title: isCuteActive
+          ? "2 Malkin Special Files downloading! 🌸✨"
+          : "Exporting 2 Excel files...",
+        description: "File 1 (Data) and File 2 (Teacher Averages) started downloading.",
+        status: "success",
+        duration: 4000,
+        isClosable: true,
+      });
+    } else {
+      toast({
+        title: isCuteActive
+          ? "Malkin's Special Excel downloaded! 🌸✨"
+          : `${cleanTitle} Excel exported!`,
+        description: `Successfully exported ${exportRows.length} record(s) with ${selectedFieldsList.length} customized column(s).`,
+        status: "success",
+        duration: 3500,
+        isClosable: true,
+      });
+      onClose();
+    }
   }, [
     selectedFields,
     data,
+    serverSide,
+    fetchAllData,
     savePreferences,
+    provideAverage,
+    isNishaChauhan,
     storageKey,
     availableFields,
     isCuteActive,
@@ -981,40 +1161,151 @@ export const CustomExcelExportModal = ({
             )}
           </VStack>
 
+          {/* ── TEACHER AVERAGE SCORE OPTION CARD (Exclusively for nishachauhan@dlps.co.in) ── */}
+          {isNishaChauhan && (
+            <Box
+              mt={4}
+              p={3.5}
+              rounded="xl"
+              border="2px solid"
+              borderColor={
+                provideAverage
+                  ? isCuteActive
+                    ? "pink.400"
+                    : "#1a4d2e"
+                  : "gray.200"
+              }
+              bg={
+                provideAverage
+                  ? isCuteActive
+                    ? "#fff0f5"
+                    : "#f4f8f4"
+                  : "white"
+              }
+              cursor="pointer"
+              transition="all 0.2s cubic-bezier(0.16, 1, 0.3, 1)"
+              onClick={() => setProvideAverage(!provideAverage)}
+              _hover={{
+                borderColor: isCuteActive ? "pink.500" : "#1a4d2e",
+                boxShadow: "sm",
+              }}
+            >
+              <Flex align="center" justify="space-between" gap={3}>
+                <Flex align="center" gap={3.5}>
+                  {/* Checkbox box indicator */}
+                  <Box
+                    w="22px"
+                    h="22px"
+                    rounded="md"
+                    display="flex"
+                    alignItems="center"
+                    justifyContent="center"
+                    bg={
+                      provideAverage
+                        ? isCuteActive
+                          ? "pink.500"
+                          : "#1a4d2e"
+                        : "white"
+                    }
+                    border="2px solid"
+                    borderColor={
+                      provideAverage
+                        ? isCuteActive
+                          ? "pink.500"
+                          : "#1a4d2e"
+                        : "gray.400"
+                    }
+                    color="white"
+                    boxShadow={provideAverage ? "0 2px 4px rgba(26,77,46,0.2)" : "none"}
+                    transition="all 0.15s ease"
+                    flexShrink={0}
+                  >
+                    {provideAverage && (
+                      <Icon as={Check} boxSize="14px" strokeWidth={4} />
+                    )}
+                  </Box>
+
+                  <Box>
+                    <HStack spacing={2} align="center">
+                      <Icon
+                        as={SlidersHorizontal}
+                        boxSize="15px"
+                        color={provideAverage ? brandAccent : "gray.400"}
+                      />
+                      <Text
+                        fontSize="xs"
+                        fontWeight="700"
+                        color={provideAverage ? "gray.900" : "gray.700"}
+                      >
+                        Provide Teacher Average Scores as well
+                      </Text>
+                      {provideAverage && (
+                        <Badge
+                          colorScheme={isCuteActive ? "pink" : "green"}
+                          fontSize="9px"
+                          rounded="full"
+                          px={1.5}
+                        >
+                          2 Files (Data + Averages)
+                        </Badge>
+                      )}
+                    </HStack>
+                    <Text fontSize="10px" color="gray.500" mt={0.5}>
+                      Exports 2 separate files: 1) Clean original data sheet, 2) Teacher-wise average scores & cohort summary.
+                    </Text>
+                  </Box>
+                </Flex>
+
+                <Badge
+                  variant={provideAverage ? "solid" : "outline"}
+                  colorScheme={isCuteActive ? "pink" : "green"}
+                  fontSize="10px"
+                  px={2.5}
+                  py={0.5}
+                  rounded="md"
+                  flexShrink={0}
+                  fontWeight="700"
+                >
+                  {provideAverage ? "2 Files" : "1 File"}
+                </Badge>
+              </Flex>
+            </Box>
+          )}
+
           {/* ── PROMINENT PREFERENCE CALLOUT CARD ──────────────────────────── */}
           <Box
-            mt={4}
+            mt={2.5}
             p={3.5}
             rounded="xl"
-            border="1.5px solid"
+            border="2px solid"
             borderColor={
               savePreferences
                 ? isCuteActive
-                  ? "pink.300"
-                  : "#cce0cd"
-                : "gray.200"
+                  ? "pink.400"
+                  : "#1a4d2e"
+                : "gray.300"
             }
             bg={
               savePreferences
                 ? isCuteActive
                   ? "#fff0f5"
                   : "#f4f8f4"
-                : "gray.50/80"
+                : "gray.50"
             }
             cursor="pointer"
             transition="all 0.2s cubic-bezier(0.16, 1, 0.3, 1)"
             onClick={() => handleSavePrefToggle(!savePreferences)}
             _hover={{
-              borderColor: isCuteActive ? "pink.400" : "#1a4d2e",
-              boxShadow: "xs",
+              borderColor: isCuteActive ? "pink.500" : "#133821",
+              boxShadow: "sm",
             }}
           >
             <Flex align="center" justify="space-between" gap={3}>
-              <Flex align="center" gap={3}>
-                {/* Checkbox box indicator */}
+              <Flex align="center" gap={3.5}>
+                {/* Checkbox box indicator - High contrast & evident */}
                 <Box
-                  w="20px"
-                  h="20px"
+                  w="22px"
+                  h="22px"
                   rounded="md"
                   display="flex"
                   alignItems="center"
@@ -1032,14 +1323,15 @@ export const CustomExcelExportModal = ({
                       ? isCuteActive
                         ? "pink.500"
                         : "#1a4d2e"
-                      : "gray.300"
+                      : "gray.400"
                   }
                   color="white"
+                  boxShadow={savePreferences ? "0 2px 4px rgba(26,77,46,0.2)" : "none"}
                   transition="all 0.15s ease"
                   flexShrink={0}
                 >
                   {savePreferences && (
-                    <Icon as={Check} boxSize="13px" strokeWidth={3.5} />
+                    <Icon as={Check} boxSize="14px" strokeWidth={4} />
                   )}
                 </Box>
 
@@ -1078,15 +1370,107 @@ export const CustomExcelExportModal = ({
                 variant={savePreferences ? "solid" : "outline"}
                 colorScheme={isCuteActive ? "pink" : "green"}
                 fontSize="10px"
-                px={2}
+                px={2.5}
                 py={0.5}
                 rounded="md"
                 flexShrink={0}
+                fontWeight="700"
               >
                 {savePreferences ? "Enabled" : "Off"}
               </Badge>
             </Flex>
           </Box>
+
+          {/* ── EXPORT SUCCESS & RE-DOWNLOAD BANNER (Exclusively for nishachauhan@dlps.co.in) ── */}
+          {isNishaChauhan && provideAverage && exportedSuccess && (
+            <Box
+              mt={3.5}
+              p={4}
+              rounded="xl"
+              border="2px solid"
+              borderColor={isCuteActive ? "pink.400" : "#1a4d2e"}
+              bg={isCuteActive ? "#fff0f5" : "#f4f8f4"}
+              boxShadow="sm"
+            >
+              <Flex direction="column" gap={2.5}>
+                <HStack spacing={2} align="center">
+                  <Icon
+                    as={CheckCircle2}
+                    boxSize="18px"
+                    color={isCuteActive ? "pink.500" : "#1a4d2e"}
+                  />
+                  <Text
+                    fontSize="xs"
+                    fontWeight="700"
+                    color={isCuteActive ? "pink.900" : "gray.900"}
+                  >
+                    Downloads Started: 2 Files Generated
+                  </Text>
+                </HStack>
+
+                <VStack align="start" spacing={1} pl={6}>
+                  <Text fontSize="11px" color="gray.700">
+                    ✅ <strong>File 1:</strong> All Detailed Records ({exportedRowsData?.length || data.length} rows)
+                  </Text>
+                  <Text fontSize="11px" color="gray.700">
+                    📊 <strong>File 2:</strong> Teacher-wise Averages & Cohort Summary
+                  </Text>
+                </VStack>
+
+                <Box
+                  p={2.5}
+                  rounded="lg"
+                  bg="white"
+                  border="1px solid"
+                  borderColor="gray.200"
+                >
+                  <Text fontSize="11px" color="gray.600" mb={2}>
+                    If your browser prevented the 2nd file from downloading automatically, click below:
+                  </Text>
+                  <HStack spacing={2}>
+                    <Button
+                      size="xs"
+                      colorScheme={isCuteActive ? "pink" : "green"}
+                      bg={isCuteActive ? "pink.500" : "#1a4d2e"}
+                      color="white"
+                      _hover={{ bg: isCuteActive ? "pink.600" : "#133821" }}
+                      leftIcon={<Icon as={Download} boxSize="12px" />}
+                      onClick={() => {
+                        exportTeacherAveragesWorkbook(
+                          exportedRecords || data,
+                          exportedRowsData || [],
+                          downloadFileName
+                        );
+                        recordFileDownloadAudit({
+                          fileName: `${downloadFileName}_teacher_averages_${new Date().toISOString().slice(0, 10)}.xlsx`,
+                          fileType: "Excel (.xlsx)",
+                          module: `${cleanTitle} — Teacher Averages`,
+                          rowCount: (exportedRecords || data).length,
+                          extraDetails: "Manual re-download from confirmation banner",
+                        });
+                        toast({
+                          title: "Teacher Averages Downloaded",
+                          description: "File 2 saved to your downloads.",
+                          status: "success",
+                          duration: 2500,
+                          isClosable: true,
+                        });
+                      }}
+                    >
+                      Download File 2 (Teacher Averages)
+                    </Button>
+                    <Button
+                      size="xs"
+                      variant="outline"
+                      onClick={onClose}
+                    >
+                      Done / Close
+                    </Button>
+                  </HStack>
+                </Box>
+              </Flex>
+            </Box>
+          )}
         </ModalBody>
 
         {/* ── FOOTER ──────────────────────────────────────────────────────── */}
@@ -1100,7 +1484,7 @@ export const CustomExcelExportModal = ({
           <Flex align="center" justify="space-between" w="full">
             {/* Left summary counter */}
             <Text fontSize="xs" color="gray.500" fontWeight="500">
-              {data.length} row{data.length !== 1 ? "s" : ""} •{" "}
+              {serverSide ? "All matching server records" : `${data.length} row${data.length !== 1 ? "s" : ""}`} •{" "}
               <strong style={{ color: "#111827" }}>
                 {selectedFields.length} column{selectedFields.length !== 1 ? "s" : ""}
               </strong>{" "}
@@ -1123,6 +1507,8 @@ export const CustomExcelExportModal = ({
                 size="sm"
                 leftIcon={<Icon as={Download} boxSize="14px" />}
                 colorScheme={isCuteActive ? "pink" : "green"}
+                isLoading={isExporting}
+                loadingText="Fetching all rows..."
                 bg={
                   isCuteActive
                     ? "linear-gradient(135deg, #f472b6 0%, #ec4899 50%, #db2777 100%)"
@@ -1151,9 +1537,13 @@ export const CustomExcelExportModal = ({
                 boxShadow="sm"
                 px={4}
               >
-                {isCuteActive
-                  ? `Export with Love 💕 (${selectedFields.length})`
-                  : `Export ${selectedFields.length} Columns (.xlsx)`}
+                {isNishaChauhan && provideAverage
+                  ? (isCuteActive
+                      ? "Export 2 Files with Love 💕"
+                      : "Export 2 Files (Data + Averages)")
+                  : (isCuteActive
+                      ? `Export with Love 💕 (${selectedFields.length})`
+                      : `Export ${selectedFields.length} Columns (.xlsx)`)}
               </Button>
             </HStack>
           </Flex>

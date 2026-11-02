@@ -61,6 +61,8 @@ export const MailOutlined = createIcon(Lucide.Mail);
 export const CalendarOutlined = createIcon(Lucide.Calendar);
 export const EyeOutlined = createIcon(Lucide.Eye);
 export const EyeInvisibleOutlined = createIcon(Lucide.EyeOff);
+export const HistoryOutlined = createIcon(Lucide.History);
+export const ShieldAlertOutlined = createIcon(Lucide.ShieldAlert);
 
 export default {
   AppstoreAddOutlined,

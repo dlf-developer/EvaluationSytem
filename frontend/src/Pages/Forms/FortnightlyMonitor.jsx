@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { Box, Flex, Heading, Text, Stack, Button, useDisclosure, Modal, ModalOverlay, ModalContent, ModalHeader, ModalFooter, ModalBody, ModalCloseButton, useToast } from "@chakra-ui/react";
 import { PlusCircleOutlined } from "../../Components/UI/Icons";
 import { Link, useNavigate } from "react-router-dom";
@@ -19,15 +19,139 @@ function FortnightlyMonitor() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
-  useEffect(() => {
-    if (Role === UserRole[1]) dispatch(GetObserverFormsOne());
-    else if (Role === UserRole[2]) dispatch(GetFormsOne());
-  }, [dispatch, Role]);
+  const { getAllForms, loading, pagination, filterOptions } =
+    useSelector((state) => state?.Forms) || {};
+  const CombinedData = getAllForms || [];
 
-  const CombinedData = useSelector(
-    (state) => state?.Forms?.getAllForms?.Combined || []
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [serverFilters, setServerFilters] = useState({});
+
+  const lastFetchedParamsRef = useRef("");
+
+  const fetchFortnightlyData = useCallback(
+    (currentPage = page, currentLimit = pageSize, activeFilters = serverFilters) => {
+      const params = {
+        page: currentPage,
+        limit: currentLimit,
+        skip: (currentPage - 1) * currentLimit,
+      };
+      if (activeFilters.className) {
+        params.className = Array.isArray(activeFilters.className)
+          ? activeFilters.className.join(",")
+          : activeFilters.className;
+      }
+      if (activeFilters.section) {
+        params.section = Array.isArray(activeFilters.section)
+          ? activeFilters.section.join(",")
+          : activeFilters.section;
+      }
+      if (activeFilters.personName) {
+        params.searchName = Array.isArray(activeFilters.personName)
+          ? activeFilters.personName.join(",")
+          : activeFilters.personName;
+      }
+      if (activeFilters.observationDate) {
+        params.date = activeFilters.observationDate;
+      }
+      if (
+        activeFilters.isTeacherComplete !== undefined &&
+        activeFilters.isTeacherComplete !== null &&
+        activeFilters.isTeacherComplete !== ""
+      ) {
+        params.isTeacherComplete = activeFilters.isTeacherComplete;
+      }
+      if (
+        activeFilters.isCoordinatorComplete !== undefined &&
+        activeFilters.isCoordinatorComplete !== null &&
+        activeFilters.isCoordinatorComplete !== ""
+      ) {
+        params.isCoordinatorComplete = activeFilters.isCoordinatorComplete;
+      }
+
+      const paramKey = JSON.stringify({ ...params, role: Role });
+      if (lastFetchedParamsRef.current === paramKey) return;
+      lastFetchedParamsRef.current = paramKey;
+
+      if (Role === UserRole[1]) {
+        dispatch(GetObserverFormsOne(params));
+      } else if (Role === UserRole[2]) {
+        dispatch(GetFormsOne(params));
+      }
+    },
+    [dispatch, Role, page, pageSize, serverFilters]
   );
-  const loading = useSelector((state) => state?.Forms?.loading || false);
+
+  useEffect(() => {
+    fetchFortnightlyData(page, pageSize, serverFilters);
+  }, [fetchFortnightlyData, page, pageSize, serverFilters]);
+
+  const handlePageChange = useCallback(
+    (newPage, newSize) => {
+      const nextLimit = newSize || pageSize;
+      setPage(newPage);
+      if (newSize && newSize !== pageSize) {
+        setPageSize(newSize);
+      }
+      fetchFortnightlyData(newPage, nextLimit, serverFilters);
+    },
+    [fetchFortnightlyData, pageSize, serverFilters]
+  );
+
+  const handleFilterChange = useCallback(
+    (newFilters) => {
+      setServerFilters(newFilters);
+      setPage(1);
+      fetchFortnightlyData(1, pageSize, newFilters);
+    },
+    [fetchFortnightlyData, pageSize]
+  );
+
+  const handleFetchAllForExport = useCallback(async () => {
+    const params = { limit: "all" };
+    if (serverFilters.className) {
+      params.className = Array.isArray(serverFilters.className)
+        ? serverFilters.className.join(",")
+        : serverFilters.className;
+    }
+    if (serverFilters.section) {
+      params.section = Array.isArray(serverFilters.section)
+        ? serverFilters.section.join(",")
+        : serverFilters.section;
+    }
+    if (serverFilters.personName) {
+      params.searchName = Array.isArray(serverFilters.personName)
+        ? serverFilters.personName.join(",")
+        : serverFilters.personName;
+    }
+    if (serverFilters.observationDate) {
+      params.date = serverFilters.observationDate;
+    }
+    if (
+      serverFilters.isTeacherComplete !== undefined &&
+      serverFilters.isTeacherComplete !== null &&
+      serverFilters.isTeacherComplete !== ""
+    ) {
+      params.isTeacherComplete = serverFilters.isTeacherComplete;
+    }
+    if (
+      serverFilters.isCoordinatorComplete !== undefined &&
+      serverFilters.isCoordinatorComplete !== null &&
+      serverFilters.isCoordinatorComplete !== ""
+    ) {
+      params.isCoordinatorComplete = serverFilters.isCoordinatorComplete;
+    }
+
+    const endpoint =
+      Role === UserRole[1]
+        ? "/form/fortnightly-monitor/oberver/get"
+        : "/form/fortnightly-monitor";
+    const response = await axiosInstanceToken.get(endpoint, { params });
+    const result = response.data;
+    if (Array.isArray(result)) return result;
+    if (Array.isArray(result?.data)) return result.data;
+    return [];
+  }, [Role, serverFilters]);
 
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [deleteId, setDeleteId] = useState(null);
@@ -51,8 +175,7 @@ function FortnightlyMonitor() {
         duration: 3000,
         isClosable: true,
       });
-      if (Role === UserRole[1]) dispatch(GetObserverFormsOne());
-      else if (Role === UserRole[2]) dispatch(GetFormsOne());
+      fetchFortnightlyData(page, pageSize, serverFilters);
     } catch (error) {
       toast({
         title: "Error",
@@ -68,11 +191,34 @@ function FortnightlyMonitor() {
     }
   };
 
-  const columns = useMemo(
-    () => getFortnightlyColumns({ data: CombinedData, currentUserRole, onDelete: handleDeleteClick }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [CombinedData, currentUserRole]
-  );
+  const columns = useMemo(() => {
+    const baseCols = getFortnightlyColumns({
+      data: CombinedData,
+      currentUserRole,
+      onDelete: handleDeleteClick,
+    });
+    return baseCols.map((col) => {
+      if (col.key === "className" && filterOptions?.classes?.length > 0) {
+        return {
+          ...col,
+          filterConfig: {
+            ...col.filterConfig,
+            options: filterOptions.classes,
+          },
+        };
+      }
+      if (col.key === "section" && filterOptions?.sections?.length > 0) {
+        return {
+          ...col,
+          filterConfig: {
+            ...col.filterConfig,
+            options: filterOptions.sections,
+          },
+        };
+      }
+      return col;
+    });
+  }, [CombinedData, currentUserRole, filterOptions]);
 
   const sortedData = useMemo(
     () =>
@@ -88,7 +234,7 @@ function FortnightlyMonitor() {
             Fortnightly Monitor
           </Heading>
           <Text color="gray.500" fontSize="sm">
-            Monitor and evaluate teacher performance periodically.
+            Review and manage ongoing Fortnightly Monitor submissions.
           </Text>
         </Box>
 
@@ -103,33 +249,41 @@ function FortnightlyMonitor() {
               onClick={() => navigate("/fortnightly-monitor/create")}
               px={6}
             >
-              Fill New Form
+              New Form
             </Button>
           )}
           {Role === UserRole[1] && (
-            <Link to="/fortnightly-monitor/form-initiation">
-              <Button
-                leftIcon={<PlusCircleOutlined />}
-                bg="brand.primary"
-                color="white"
-                _hover={{ bg: "brand.secondary", transform: "translateY(-1px)" }}
-                transition="all 0.2s"
-                px={6}
-              >
-                Form Initiation
-              </Button>
-            </Link>
+            <Button
+              leftIcon={<PlusCircleOutlined />}
+              bg="brand.primary"
+              color="white"
+              _hover={{ bg: "brand.secondary", transform: "translateY(-1px)" }}
+              transition="all 0.2s"
+              onClick={() => navigate("/fortnightly-monitor/form-initiation")}
+              px={6}
+            >
+              Form Initiation
+            </Button>
           )}
         </Stack>
       </Flex>
 
       <SmartTable
-        title="All Forms"
+        title="Fortnightly Monitor Evaluations"
         columns={columns}
         data={sortedData}
         loading={loading}
         rowKey="_id"
-        pageSize={10}
+        pageSize={pageSize}
+        serverSide={true}
+        pagination={pagination}
+        totalRecords={pagination?.total || 0}
+        page={page}
+        onPageChange={handlePageChange}
+        onFilterChange={handleFilterChange}
+        onFetchAllForExport={handleFetchAllForExport}
+        downloadable
+        downloadFileName="fortnightly_monitor"
       />
 
       <Modal isOpen={isOpen} onClose={onClose} isCentered>

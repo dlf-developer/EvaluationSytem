@@ -1,4 +1,5 @@
 import {jwtDecode} from "jwt-decode";
+import { recordRoleSwitchAudit } from "./auditLogger";
 
 
 
@@ -86,8 +87,16 @@ export const getActiveRole = () => {
 export const switchActiveRole = (newRole) => {
   if (typeof window !== "undefined") {
     if (["Observer", "Teacher"].includes(newRole)) {
+      const oldRole = localStorage.getItem("activeRole");
       localStorage.setItem("activeRole", newRole);
-      window.location.replace("/dashboard");
+      try {
+        recordRoleSwitchAudit({ fromRole: oldRole, toRole: newRole });
+      } catch (e) {
+        // ignore
+      }
+      setTimeout(() => {
+        window.location.replace("/dashboard");
+      }, 50);
     }
   }
 };

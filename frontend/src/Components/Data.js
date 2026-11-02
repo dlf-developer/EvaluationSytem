@@ -9,7 +9,9 @@ import {
   SignatureOutlined,
   UserAddOutlined,
   UserOutlined,
+  HistoryOutlined,
 } from "./UI/Icons";
+import { isLocalDev } from "../Utils/env";
 import { getAllTimes, getUserId } from "../Utils/auth";
 import { UserRole } from "../config/config";
 import React, { useState, useEffect } from "react";
@@ -70,6 +72,16 @@ export const Menu = {
       route: "/accountability",
       icon: <PieChartOutlined />,
     },
+    ...(isLocalDev()
+      ? [
+          { label: "Audit & Security (Dev)" },
+          {
+            name: "Audit Logs",
+            route: "/audit-logs",
+            icon: <HistoryOutlined />,
+          },
+        ]
+      : []),
   ],
   Observer: [
     { name: "Dashboard", route: "/dashboard", icon: <AppstoreAddOutlined /> },
@@ -112,6 +124,16 @@ export const Menu = {
       route: "/accountability",
       icon: <PieChartOutlined />,
     },
+    ...(isLocalDev()
+      ? [
+          { label: "Audit & Security (Dev)" },
+          {
+            name: "Audit Logs",
+            route: "/audit-logs",
+            icon: <HistoryOutlined />,
+          },
+        ]
+      : []),
   ],
   Teacher: [
     { name: "Dashboard", route: "/dashboard", icon: <AppstoreAddOutlined /> },

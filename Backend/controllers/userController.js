@@ -1,6 +1,7 @@
 const User = require("../models/User");
 const sendEmail = require("../utils/emailService");
 const { accountCreatedEmail } = require("../utils/emailTemplates");
+const { recordAuditLog, calculateDiff } = require("../utils/auditLogger");
 
 const generateCustomerId = () => {
   const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -70,6 +71,14 @@ const createUser = async (req, res) => {
       password,
     });
     await newUser.save();
+
+    recordAuditLog({
+      req,
+      action: 'CREATE',
+      module: 'User Management',
+      targetId: newUser._id,
+      details: `Created user ${name} (${email} - ${access})`,
+    });
 
     const emailData = accountCreatedEmail({ recipientName: name, email, password });
     await sendEmail(email, emailData.subject, emailData.html);
@@ -200,6 +209,9 @@ const updateUserById = async (req, res) => {
         : [baseAccess];
     }
 
+    const existingUser = await User.findById(userId).select('-password');
+    const userDiff = calculateDiff(existingUser, updateData, ['password', '_id', '__v']);
+
     const updatedUser = await User.findByIdAndUpdate(userId, updateData, {
       new: true,
       runValidators: true,
@@ -209,6 +221,15 @@ const updateUserById = async (req, res) => {
     if (!updatedUser) {
       return res.status(404).json({ message: "User not found" });
     }
+
+    recordAuditLog({
+      req,
+      action: 'UPDATE',
+      module: 'User Management',
+      targetId: userId,
+      details: `Updated user ${updatedUser.name} (${updatedUser.email})`,
+      changes: userDiff,
+    });
 
     res
       .status(200)
@@ -228,6 +249,14 @@ const deleteUserById = async (req, res) => {
     if (!deletedUser) {
       return res.status(404).json({ message: "User not found" });
     }
+
+    recordAuditLog({
+      req,
+      action: 'DELETE',
+      module: 'User Management',
+      targetId: userId,
+      details: `Deleted user ${deletedUser.name} (${deletedUser.email})`,
+    });
 
     res.status(200).json({ message: "User deleted successfull" });
   } catch (error) {
@@ -256,6 +285,13 @@ const BulkUserCreate = async (req, res) => {
 
     // Insert all users into the database
     await User.insertMany(usersWithCustomIds, { ordered: false }); // `ordered: false` skips duplicates
+
+    recordAuditLog({
+      req,
+      action: 'BULK_CREATE',
+      module: 'User Management',
+      details: `Bulk uploaded ${usersWithCustomIds.length} user(s)`,
+    });
 
     res
       .status(200)

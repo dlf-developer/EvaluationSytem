@@ -9,6 +9,7 @@ import { DownloadOutlined } from "../../Components/UI/Icons";
 import { Button, Spin } from "../../Components/UI";
 import { Box, Flex, Heading } from "@chakra-ui/react";
 import TeacherWalkthroughshow from "./TeacherWalkthroughshow";
+import { recordFileDownloadAudit } from "../../Utils/auditLogger";
 
 function ClassroomWalkthroughReader() {
   const Id = useParams().id;
@@ -28,11 +29,19 @@ function ClassroomWalkthroughReader() {
     // Trigger download
     const link = document.createElement("a");
     link.href = url;
-    link.download = `classroom-walkthrough-${Id}.pdf`;
+    const pdfName = `classroom-walkthrough-${Id}.pdf`;
+    link.download = pdfName;
     link.click();
 
     // Clean up the object URL
     URL.revokeObjectURL(url);
+
+    recordFileDownloadAudit({
+      fileName: pdfName,
+      fileType: "PDF",
+      module: "Classroom Walkthrough",
+      extraDetails: `Form ID: ${Id}`,
+    });
   };
 
   useEffect(() => {
