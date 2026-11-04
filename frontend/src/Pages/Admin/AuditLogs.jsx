@@ -43,10 +43,16 @@ import {
 } from "lucide-react";
 import { axiosInstanceToken } from "../../redux/instence";
 import SmartTable from "../../Components/SmartTable";
-import { isLocalDev } from "../../Utils/env";
+import {
+  ADMIN_SECRET_PIN,
+  isAdminFeaturesUnlocked,
+  setAdminFeaturesUnlocked,
+} from "../../Utils/adminUnlock";
+import { message } from "../../Components/UI";
 
 export default function AuditLogs() {
-  const isDev = isLocalDev();
+  const [isAdminUnlocked, setIsAdminUnlocked] = useState(() => isAdminFeaturesUnlocked());
+  const [pinInput, setPinInput] = useState("");
 
   const [logs, setLogs] = useState([]);
   const [stats, setStats] = useState({
@@ -66,9 +72,39 @@ export default function AuditLogs() {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [activeLog, setActiveLog] = useState(null);
 
+  // Sync unlock state across tabs & components
+  useEffect(() => {
+    const handleUnlockChange = (e) => {
+      setIsAdminUnlocked(Boolean(e.detail?.unlocked));
+    };
+    window.addEventListener("admin-features-unlock-changed", handleUnlockChange);
+    return () => {
+      window.removeEventListener("admin-features-unlock-changed", handleUnlockChange);
+    };
+  }, []);
+
+  const handleUnlock = (val) => {
+    const clean = (val !== undefined ? val : pinInput).trim();
+    if (clean === ADMIN_SECRET_PIN) {
+      setAdminFeaturesUnlocked(true);
+      setIsAdminUnlocked(true);
+      setPinInput("");
+      message.success("Access granted! Audit Logs unlocked.");
+    } else {
+      message.error("Incorrect PIN. Access denied.");
+    }
+  };
+
+  const handleLock = () => {
+    setAdminFeaturesUnlocked(false);
+    setIsAdminUnlocked(false);
+    setPinInput("");
+    message.info("Audit logs locked and hidden.");
+  };
+
   // Fetch Logs
   const fetchLogs = useCallback(async () => {
-    if (!isDev) return;
+    if (!isAdminUnlocked) return;
     setLoading(true);
     try {
       const params = {
@@ -94,11 +130,13 @@ export default function AuditLogs() {
     } finally {
       setLoading(false);
     }
-  }, [isDev, search, actionFilter, moduleFilter]);
+  }, [isAdminUnlocked, search, actionFilter, moduleFilter]);
 
   useEffect(() => {
-    fetchLogs();
-  }, [fetchLogs]);
+    if (isAdminUnlocked) {
+      fetchLogs();
+    }
+  }, [isAdminUnlocked, fetchLogs]);
 
   // Open Changes modal
   const handleInspectChanges = (record) => {
@@ -333,19 +371,75 @@ export default function AuditLogs() {
     []
   );
 
-  // If accessed in production, show dev environment guard
-  if (!isDev) {
+  // If locked, render administrative Security PIN prompt
+  if (!isAdminUnlocked) {
     return (
-      <Box p={8} maxW="700px" mx="auto" textAlign="center" mt={12}>
-        <VStack spacing={4} bg="white" p={8} rounded="2xl" shadow="sm" border="1px solid" borderColor="gray.200">
-          <ShieldAlert size={48} color="#e11d48" />
-          <Heading size="md" color="gray.800">
-            Audit Logs Dashboard Restricted
-          </Heading>
-          <Text fontSize="sm" color="gray.600" maxW="lg">
-            Audit monitoring is actively recording system actions in the background. The visual audit dashboard is restricted to <b>Local / Development</b> environments and hidden from production users.
-          </Text>
-          <Badge colorScheme="green" px={3} py={1} rounded="full">
+      <Box p={8} maxW="560px" mx="auto" textAlign="center" mt={16}>
+        <VStack spacing={5} bg="white" p={8} rounded="2xl" shadow="md" border="1px solid" borderColor="gray.200">
+          <Box p={4} bg="green.50" rounded="full" color="brand.primary">
+            <ShieldCheck size={48} color="#2D4027" />
+          </Box>
+          <Box>
+            <Heading size="md" color="gray.800" mb={1}>
+              Administrative Feature Locked
+            </Heading>
+            <Text fontSize="xs" color="gray.500" maxW="sm" mx="auto">
+              System Audit Logs are restricted for administrative monitoring. Enter your 4-digit Security PIN to view audit logs and user activity.
+            </Text>
+          </Box>
+          <Box w="full" maxW="280px" position="relative">
+            <input
+              type="password"
+              placeholder="Enter PIN"
+              value={pinInput}
+              maxLength={6}
+              onChange={(e) => {
+                setPinInput(e.target.value);
+                if (e.target.value.trim() === ADMIN_SECRET_PIN) {
+                  handleUnlock(e.target.value);
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleUnlock(pinInput);
+              }}
+              style={{
+                width: "100%",
+                height: "42px",
+                padding: "8px 65px 8px 14px",
+                borderRadius: "12px",
+                border: "1px solid #cbd5e1",
+                outline: "none",
+                fontSize: "14px",
+                backgroundColor: "#ffffff",
+                boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+              }}
+              autoComplete="off"
+            />
+            <button
+              type="button"
+              onClick={() => handleUnlock(pinInput)}
+              style={{
+                position: "absolute",
+                right: "5px",
+                top: "5px",
+                bottom: "5px",
+                padding: "0 14px",
+                backgroundColor: "#2D4027",
+                color: "#ffffff",
+                border: "none",
+                borderRadius: "8px",
+                fontSize: "12px",
+                fontWeight: 700,
+                cursor: "pointer",
+                transition: "all 0.2s ease",
+              }}
+              onMouseOver={(e) => (e.currentTarget.style.backgroundColor = "#4A6741")}
+              onMouseOut={(e) => (e.currentTarget.style.backgroundColor = "#2D4027")}
+            >
+              PIN
+            </button>
+          </Box>
+          <Badge colorScheme="green" px={3} py={1} rounded="full" fontSize="10px">
             MONITORING STATUS: ACTIVE
           </Badge>
         </VStack>
@@ -368,19 +462,6 @@ export default function AuditLogs() {
             <Heading size="lg" color="gray.800" fontWeight="800">
               System Audit Logs
             </Heading>
-            <Badge
-              bg="purple.100"
-              color="purple.800"
-              px={2.5}
-              py={0.8}
-              rounded="full"
-              fontSize="11px"
-              fontWeight="700"
-              border="1px solid"
-              borderColor="purple.300"
-            >
-              LOCAL DEV ONLY
-            </Badge>
             <Tooltip
               label="Audit logs are strictly append-only. Nobody—including Superadmin—can edit or delete any log."
               hasArrow
@@ -410,6 +491,17 @@ export default function AuditLogs() {
         </Box>
 
         <HStack spacing={2}>
+          <ChakraButton
+            size="sm"
+            variant="outline"
+            colorScheme="red"
+            color="red.600"
+            borderColor="red.200"
+            rounded="xl"
+            onClick={handleLock}
+          >
+            Lock
+          </ChakraButton>
           <ChakraButton
             leftIcon={<RotateCw size={14} className={loading ? "animate-spin" : ""} />}
             size="sm"

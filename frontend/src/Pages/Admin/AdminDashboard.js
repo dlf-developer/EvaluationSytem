@@ -1,5 +1,4 @@
 import {
-  DeleteFilled,
   UserOutlined,
   FileOutlined,
   CheckCircleOutlined,
@@ -11,6 +10,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { Link } from "react-router-dom";
 import { getAllTimes } from "../../Utils/auth";
 import { GetUserList } from "../../redux/userSlice";
+import { axiosInstanceToken } from "../../redux/instence";
 import { Box, SimpleGrid, Flex, Heading, Text } from "@chakra-ui/react";
 import EditUserModal from "../../Components/EditUserModal";
 
@@ -18,6 +18,12 @@ function AdminDashboard() {
   const [loading, setLoading] = useState(false); // Loader state
   const [editingUser, setEditingUser] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [adminStats, setAdminStats] = useState({
+    totalUsers: 0,
+    totalForms: 0,
+    pendingForms: 0,
+    filledForms: 0,
+  });
   const UserLists = useSelector(
     (state) => state?.user?.data?.data || state?.user?.data || [],
   );
@@ -29,6 +35,18 @@ function AdminDashboard() {
   useEffect(() => {
     setLoading(true); // Show loader
     dispatch(GetUserList()).finally(() => setLoading(false)); // Hide loader after fetching data
+
+    // Fetch live system-wide evaluation metrics
+    axiosInstanceToken
+      .get("/auth/admin-dashboard-stats")
+      .then((res) => {
+        if (res?.data?.success) {
+          setAdminStats(res.data);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to load admin stats:", err);
+      });
   }, [dispatch]);
 
   const columns = useMemo(
@@ -152,24 +170,30 @@ function AdminDashboard() {
         <Text color="gray.500">Overview of users and system metrics.</Text>
       </Box>
 
-      <SimpleGrid columns={{ base: 1, md: 3 }} spacing={6} mb={8}>
+      <SimpleGrid columns={{ base: 1, sm: 2, lg: 4 }} spacing={5} mb={6}>
         <StatCard
           title="Total Users"
-          value={totalUsers > 0 ? totalUsers : "0"}
-          icon={<UserOutlined style={{ fontSize: "24px" }} />}
-          gradient="linear(to-br, brand.primary, brand.secondary)"
+          value={adminStats.totalUsers || (totalUsers > 0 ? totalUsers : "0")}
+          icon={<UserOutlined style={{ fontSize: "22px" }} />}
+          gradient="linear(to-br, #2D4027, #4A6741)"
         />
         <StatCard
-          title="Pending Forms"
-          value={0}
-          icon={<FileOutlined style={{ fontSize: "24px" }} />}
+          title="Total Evaluations"
+          value={adminStats.totalForms || 0}
+          icon={<FileOutlined style={{ fontSize: "22px" }} />}
+          gradient="linear(to-br, #1890ff, #096dd9)"
+        />
+        <StatCard
+          title="Pending Evaluations"
+          value={adminStats.pendingForms || 0}
+          icon={<EditOutlined style={{ fontSize: "22px" }} />}
           gradient="linear(to-br, orange.400, red.400)"
         />
         <StatCard
-          title="Filled Forms"
-          value={0}
-          icon={<CheckCircleOutlined style={{ fontSize: "24px" }} />}
-          gradient="linear(to-br, green.400, teal.400)"
+          title="Completed Evaluations"
+          value={adminStats.filledForms || 0}
+          icon={<CheckCircleOutlined style={{ fontSize: "22px" }} />}
+          gradient="linear(to-br, #52c41a, #389e0d)"
         />
       </SimpleGrid>
 

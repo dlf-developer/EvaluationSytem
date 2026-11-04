@@ -8,6 +8,8 @@ const Form2 = require('../models/Form2');
 const Form3 = require('../models/Form3');
 const Weekly4Form = require('../models/Weekly4Form');
 const CoScholastic = require('../models/CoScholastic');
+const WingCoordinator = require('../models/WingCoordinator');
+const AccountabilityMechanism = require('../models/AccountabilityMechanism');
 const { recordAuditLog, getClientIp } = require('../utils/auditLogger');
 
 const createOTPTemplate = (otp, duration, title) => `
@@ -229,8 +231,8 @@ const FromCount = async (req, res) => {
     try {
         const queryFilter = req.sessionDateFilter ? { createdAt: req.sessionDateFilter } : {};
 
-        let formTotalOneCount, formTotalTwoCount, formTotalThreeCount, formTotalFourCount;
-        let formOneCount, formTwoCount, formThreeCount, formFourCount;
+        let formTotalOneCount, formTotalTwoCount, formTotalThreeCount, formTotalFourCount, formTotalFiveCount;
+        let formOneCount, formTwoCount, formThreeCount, formFourCount, formFiveCount;
 
         if (activeRole === "Teacher") {
             // Teacher mode: only count forms where this user is the teacher being evaluated
@@ -248,6 +250,10 @@ const FromCount = async (req, res) => {
             });
             formTotalFourCount = await Weekly4Form.countDocuments({
                 teacherId: user,
+                ...queryFilter,
+            });
+            formTotalFiveCount = await CoScholastic.countDocuments({
+                $or: [{ teacherID: user }, { 'grenralDetails.NameoftheVisitingTeacher': user }],
                 ...queryFilter,
             });
 
@@ -271,6 +277,11 @@ const FromCount = async (req, res) => {
                 isCompleted: false,
                 ...queryFilter,
             });
+            formFiveCount = await CoScholastic.countDocuments({
+                $or: [{ teacherID: user }, { 'grenralDetails.NameoftheVisitingTeacher': user }],
+                isTeacherCompletes: false,
+                ...queryFilter,
+            });
         } else if (activeRole === "Observer") {
             // Observer mode: only count forms where this user is the observer
             formTotalOneCount = await Form1.countDocuments({
@@ -287,6 +298,10 @@ const FromCount = async (req, res) => {
             });
             formTotalFourCount = await Weekly4Form.countDocuments({
                 $or: [{ 'isInitiated.Observer': user }, { coordinatorID: user }],
+                ...queryFilter,
+            });
+            formTotalFiveCount = await CoScholastic.countDocuments({
+                createdBy: user,
                 ...queryFilter,
             });
 
@@ -310,12 +325,18 @@ const FromCount = async (req, res) => {
                 isCompleted: false,
                 ...queryFilter,
             });
+            formFiveCount = await CoScholastic.countDocuments({
+                createdBy: user,
+                isObserverCompleted: false,
+                ...queryFilter,
+            });
         } else {
             // Superadmin or fallback
             formTotalOneCount = await Form1.countDocuments({ ...queryFilter });
             formTotalTwoCount = await Form2.countDocuments({ ...queryFilter });
             formTotalThreeCount = await Form3.countDocuments({ ...queryFilter });
             formTotalFourCount = await Weekly4Form.countDocuments({ ...queryFilter });
+            formTotalFiveCount = await CoScholastic.countDocuments({ ...queryFilter });
 
             formOneCount = await Form1.countDocuments({
                 $or: [{ isTeacherComplete: false }, { isCoordinatorComplete: false }],
@@ -331,6 +352,10 @@ const FromCount = async (req, res) => {
             });
             formFourCount = await Weekly4Form.countDocuments({
                 isCompleted: false,
+                ...queryFilter,
+            });
+            formFiveCount = await CoScholastic.countDocuments({
+                $or: [{ isTeacherCompletes: false }, { isObserverCompleted: false }],
                 ...queryFilter,
             });
         }
@@ -364,6 +389,13 @@ const FromCount = async (req, res) => {
                 color: "#F9F0FF",
                 route: "/weekly4form",
             },
+            {
+                fromName: "Co-Scholastic Observation",
+                count: formTotalFiveCount,
+                pending: formFiveCount,
+                color: "#F6FFED",
+                route: "/co-scholastic",
+            },
         ];
 
         // Send the payload as a JSON response
@@ -372,6 +404,62 @@ const FromCount = async (req, res) => {
     } catch (error) {
         console.error("Error fetching form counts:", error);
         res.status(500).json({ message: "Server error" });
+    }
+};
+
+const getAdminDashboardStats = async (req, res) => {
+    try {
+        const queryFilter = req.sessionDateFilter ? { createdAt: req.sessionDateFilter } : {};
+
+        const [
+            f1Total, f1Pending,
+            f2Total, f2Pending,
+            f3Total, f3Pending,
+            f4Total, f4Pending,
+            f5Total, f5Pending,
+            wingTotal,
+            accountabilityTotal,
+            totalUsersCount,
+        ] = await Promise.all([
+            Form1.countDocuments(queryFilter),
+            Form1.countDocuments({ $or: [{ isTeacherComplete: false }, { isCoordinatorComplete: false }], ...queryFilter }),
+            Form2.countDocuments(queryFilter),
+            Form2.countDocuments({ $or: [{ isTeacherCompletes: false }, { isObserverCompleted: false }], ...queryFilter }),
+            Form3.countDocuments(queryFilter),
+            Form3.countDocuments({ $or: [{ isTeacherComplete: false }, { isObserverComplete: false }], ...queryFilter }),
+            Weekly4Form.countDocuments(queryFilter),
+            Weekly4Form.countDocuments({ isCompleted: false, ...queryFilter }),
+            CoScholastic.countDocuments(queryFilter),
+            CoScholastic.countDocuments({ $or: [{ isTeacherCompletes: false }, { isObserverCompleted: false }], ...queryFilter }),
+            WingCoordinator.countDocuments(queryFilter).catch(() => 0),
+            AccountabilityMechanism.countDocuments(queryFilter).catch(() => 0),
+            User.countDocuments({ isActive: { $ne: false } }),
+        ]);
+
+        const totalForms = f1Total + f2Total + f3Total + f4Total + f5Total + wingTotal + accountabilityTotal;
+        const totalPending = f1Pending + f2Pending + f3Pending + f4Pending + f5Pending;
+        const totalFilled = Math.max(0, totalForms - totalPending);
+
+        res.status(200).json({
+            success: true,
+            totalUsers: totalUsersCount,
+            totalForms,
+            pendingForms: totalPending,
+            filledForms: totalFilled,
+            completionRate: totalForms > 0 ? Math.round((totalFilled / totalForms) * 100) : 100,
+            breakdown: {
+                fortnightly: { total: f1Total, pending: f1Pending },
+                walkthrough: { total: f2Total, pending: f2Pending },
+                notebook: { total: f3Total, pending: f3Pending },
+                weekly: { total: f4Total, pending: f4Pending },
+                coScholastic: { total: f5Total, pending: f5Pending },
+                wingCoordinator: { total: wingTotal },
+                accountability: { total: accountabilityTotal },
+            }
+        });
+    } catch (err) {
+        console.error("Error in getAdminDashboardStats:", err);
+        res.status(500).json({ success: false, message: "Error calculating admin dashboard stats" });
     }
 };
 
@@ -604,4 +692,4 @@ const verifyLoginOTP = async (req, res) => {
     }
 };
 
-module.exports = { register, login, requestPasswordReset, resetPassword, changePassword, FromCount, getFillterForms, sendLoginOTP, verifyLoginOTP };
+module.exports = { register, login, requestPasswordReset, resetPassword, changePassword, FromCount, getAdminDashboardStats, getFillterForms, sendLoginOTP, verifyLoginOTP };

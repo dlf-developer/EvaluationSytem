@@ -61,6 +61,8 @@ import AccountabilityMechanism from "../Pages/Forms/AccountabilityMechanism";
 import AccountabilityForm from "../Pages/Forms/AccountabilityForm/AccountabilityForm";
 import AccountabilityReport from "../Pages/Reports/AccountabilityReport";
 import AuditLogs from "../Pages/Admin/AuditLogs";
+import ExecutiveAnalytics from "../Pages/Analytics/ExecutiveAnalytics";
+import TeacherPortfolio from "../Pages/Teachers/TeacherPortfolio";
 
 const role = getUserId()?.access;
 const isLoggedIn = getToken() !== null ? getToken() : null;
@@ -145,6 +147,7 @@ const protects = {
           path: "/notebook-checking-proforma/complete/:id",
           element: <NotebookComplete />,
         },
+        { path: "/my-portfolio", element: <TeacherPortfolio /> },
         { path: "*", element: <NotFound404 /> },
       ],
     },
@@ -236,6 +239,7 @@ const protects = {
         { path: "/accountability/report/:id", element: <AccountabilityReport /> },
         { path: "/class-section", element: <ClassSectionPage /> },
         { path: "/audit-logs", element: <AuditLogs /> },
+        { path: "/analytics-insights", element: <ExecutiveAnalytics /> },
         { path: "*", element: <NotFound404 /> },
       ],
     },
@@ -340,6 +344,7 @@ const protects = {
         { path: "/accountability", element: <AccountabilityMechanism /> },
         { path: "/accountability/:id", element: <AccountabilityForm /> },
         { path: "/accountability/report/:id", element: <AccountabilityReport /> },
+        { path: "/analytics-insights", element: <ExecutiveAnalytics /> },
         { path: "*", element: <NotFound404 /> },
       ],
     },
@@ -377,6 +382,10 @@ const protects = {
   ],
 };
 
+protects["OT"] = protects["Observer"];
+
 export const protect =
-  role && isLoggedIn ? protects[role] : protects["default"];
+  role && isLoggedIn
+    ? (protects[role] || protects["Observer"] || protects["Teacher"] || protects["default"])
+    : protects["default"];
 export const defaultProtect = protects["default"];

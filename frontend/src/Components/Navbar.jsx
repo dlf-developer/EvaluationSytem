@@ -1,14 +1,17 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { getUserId, switchActiveRole } from '../Utils/auth';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { Drawer } from './UI/Drawer';
 import { BellFilled, MenuOutlined, SwapOutlined } from "./UI/Icons";
 import { useNavigate } from 'react-router-dom';
 import { Tag } from '@chakra-ui/react';
 import Sidebar from './Sidebar';
 import { isCuteMalkinThemeActive } from '../Utils/cuteMalkinTheme';
+import { axiosInstanceToken } from '../redux/instence';
+import { getUserNotification } from '../redux/userSlice';
 
 function Navbar() {
+  const dispatch = useDispatch();
   const user = getUserId();
   const role = user?.access;
   const isDualRole = user?.isDualRole;
@@ -45,10 +48,36 @@ function Navbar() {
     };
   }, [notifOpen]);
 
-  const handleNotificationClick = (route) => {
+  const handleNotificationClick = async (item) => {
     setNotifOpen(false);
-    if (route) {
-      navigate(route);
+    if (item?._id && item?.status !== 'seen') {
+      try {
+        await axiosInstanceToken.put(`/notification/read/${item._id}`);
+        dispatch(getUserNotification());
+      } catch (e) {
+        console.error("Failed to mark notification as read:", e);
+      }
+    }
+    if (item?.route) {
+      navigate(item.route);
+    }
+  };
+
+  const handleMarkAllRead = async () => {
+    try {
+      await axiosInstanceToken.put('/notification/mark-all-read');
+      dispatch(getUserNotification());
+    } catch (e) {
+      console.error("Failed to mark all as read:", e);
+    }
+  };
+
+  const handleClearAll = async () => {
+    try {
+      await axiosInstanceToken.delete('/notification/clear-all');
+      dispatch(getUserNotification());
+    } catch (e) {
+      console.error("Failed to clear notifications:", e);
     }
   };
 
@@ -60,6 +89,7 @@ function Navbar() {
   };
 
   const notificationList = userNotification || [];
+  const unseenCount = notificationList.filter(n => n?.status !== 'seen').length;
 
   return (
     <div style={{ width: "100%" }}>
@@ -126,45 +156,77 @@ function Navbar() {
               aria-label="Notifications"
             >
               <BellFilled size={20} className="text-white" />
-              {notificationList.length > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full h-4 min-w-[16px] px-1 flex items-center justify-center shadow-sm">
-                  {notificationList.length}
+              {unseenCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full h-4 min-w-[16px] px-1 flex items-center justify-center shadow-sm animate-pulse">
+                  {unseenCount}
                 </span>
               )}
             </button>
 
             {notifOpen && (
-              <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+              <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
                 <div className="px-4 py-2 border-b border-gray-100 flex items-center justify-between">
                   <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">
-                    Notifications
+                    Notifications {unseenCount > 0 ? `(${unseenCount} new)` : ""}
                   </span>
-                  <span className="text-xs text-gray-400 font-medium">
-                    {notificationList.length} new
-                  </span>
-                </div>
-                <div className="max-h-64 overflow-y-auto divide-y divide-gray-50">
-                  {notificationList.length > 0 ? (
-                    notificationList.map((item, idx) => (
+                  {notificationList.length > 0 && (
+                    <div className="flex items-center gap-2">
+                      {unseenCount > 0 && (
+                        <button
+                          type="button"
+                          onClick={handleMarkAllRead}
+                          className="text-[11px] text-brand-primary hover:underline font-medium text-green-700"
+                        >
+                          Mark read
+                        </button>
+                      )}
                       <button
-                        key={idx}
                         type="button"
-                        onClick={() => handleNotificationClick(item.route)}
-                        className="w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors flex flex-col gap-0.5"
+                        onClick={handleClearAll}
+                        className="text-[11px] text-gray-400 hover:text-red-500 transition-colors font-medium"
                       >
-                        <span className="text-sm font-medium text-gray-800">
-                          {item.title}
-                        </span>
-                        {item.subtitle && (
-                          <span className="text-xs text-gray-500">
-                            {item.subtitle}
-                          </span>
-                        )}
+                        Clear all
                       </button>
-                    ))
+                    </div>
+                  )}
+                </div>
+                <div className="max-h-72 overflow-y-auto divide-y divide-gray-50">
+                  {notificationList.length > 0 ? (
+                    notificationList.map((item, idx) => {
+                      const isUnread = item?.status !== "seen";
+                      return (
+                        <button
+                          key={item?._id || idx}
+                          type="button"
+                          onClick={() => handleNotificationClick(item)}
+                          className={`w-full text-left px-4 py-2.5 transition-colors flex items-start gap-2.5 ${
+                            isUnread ? "bg-green-50/40 hover:bg-green-50/70" : "hover:bg-gray-50"
+                          }`}
+                        >
+                          {isUnread && (
+                            <span className="mt-1.5 w-2 h-2 rounded-full bg-green-600 flex-shrink-0" />
+                          )}
+                          <div className="flex-1 flex flex-col gap-0.5">
+                            <span className={`text-sm ${isUnread ? "font-semibold text-gray-900" : "font-normal text-gray-700"}`}>
+                              {item.title}
+                            </span>
+                            {item.subtitle && (
+                              <span className="text-xs text-gray-500">
+                                {item.subtitle}
+                              </span>
+                            )}
+                            {item.date && (
+                              <span className="text-[10px] text-gray-400 mt-0.5">
+                                {new Date(item.date).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                              </span>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })
                   ) : (
                     <div className="py-6 text-center text-xs text-gray-400 font-medium">
-                      No new notifications
+                      No notifications
                     </div>
                   )}
                 </div>

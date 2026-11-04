@@ -2,6 +2,7 @@ import React, { useMemo, useState, useEffect } from "react";
 import { Menu } from "./Data";
 import { getUserId } from "../Utils/auth";
 import { isCuteMalkinThemeActive } from "../Utils/cuteMalkinTheme";
+import { isAdminFeaturesUnlocked } from "../Utils/adminUnlock";
 import { isDevOrLocalEnv } from "../Utils/env";
 import { Link, useLocation } from "react-router-dom";
 import {
@@ -18,6 +19,12 @@ import {
   LogOut,
   ChevronRight,
   CalendarDays,
+  GraduationCap,
+  Scale,
+  PieChart,
+  BarChart3,
+  Sparkles,
+  History,
 } from "lucide-react";
 import {
   Box,
@@ -46,6 +53,16 @@ const iconMap = {
   "Notebook Checking": BookOpen,
   "Learning Progress Checklist": TrendingUp,
   "Wing Coordinator": ShieldCheck,
+  "Co-Scholastic Classroom Observation": GraduationCap,
+  "Co-Scholastic Observation": GraduationCap,
+  "Accountability Mechanism": Scale,
+  Overview: PieChart,
+  Overviews: PieChart,
+  "Admin Analytics": BarChart3,
+  "Analytics & Insights": BarChart3,
+  "Analytics & Insights (Dev)": BarChart3,
+  "Audit Logs": History,
+  "Growth Portfolio (Dev)": Sparkles,
 };
 
 function Sidebar({ collapsed, onCloseDrawer }) {
@@ -57,17 +74,59 @@ function Sidebar({ collapsed, onCloseDrawer }) {
 
   const isDev = isDevOrLocalEnv();
   const isAdmin = Role === "Superadmin";
+  const [isAdminUnlocked, setIsAdminUnlocked] = useState(() => isAdminFeaturesUnlocked());
+
+  useEffect(() => {
+    const handleAdminUnlock = (e) => {
+      setIsAdminUnlocked(Boolean(e.detail?.unlocked));
+    };
+    window.addEventListener("admin-features-unlock-changed", handleAdminUnlock);
+    return () => {
+      window.removeEventListener("admin-features-unlock-changed", handleAdminUnlock);
+    };
+  }, []);
+
   const menuItems = useMemo(() => {
     const rawItems = Menu[Role] || [];
-    // Only Superadmin (Admin) in Local/Dev mode has access to Audit Logs tab
-    if (isDev && isAdmin) return rawItems;
-    return rawItems.filter(
-      (item) =>
-        item.route !== "/audit-logs" &&
-        !item.label?.toLowerCase().includes("audit") &&
-        !item.label?.toLowerCase().includes("(dev)")
-    );
-  }, [Role, isDev, isAdmin]);
+
+    if (isAdmin) {
+      // If unlocked with PIN 1111: show everything (Audit Logs + Admin Analytics)
+      if (isAdminUnlocked) return rawItems;
+
+      // Until unlocked: strictly hide both Audit Logs and Admin Analytics
+      return rawItems.filter(
+        (item) =>
+          item.route !== "/audit-logs" &&
+          item.route !== "/analytics-insights" &&
+          !item.label?.toLowerCase().includes("audit") &&
+          !item.label?.toLowerCase().includes("intelligence") &&
+          !item.name?.toLowerCase().includes("audit") &&
+          !item.name?.toLowerCase().includes("analytics")
+      );
+    }
+
+    if (Role === "Observer") {
+      if (isDev) return rawItems;
+      return rawItems.filter(
+        (item) =>
+          item.route !== "/analytics-insights" &&
+          !item.label?.toLowerCase().includes("(dev)") &&
+          !item.name?.toLowerCase().includes("(dev)")
+      );
+    }
+
+    if (Role === "Teacher") {
+      if (isDev) return rawItems;
+      return rawItems.filter(
+        (item) =>
+          item.route !== "/my-portfolio" &&
+          !item.label?.toLowerCase().includes("(dev)") &&
+          !item.name?.toLowerCase().includes("(dev)")
+      );
+    }
+
+    return rawItems;
+  }, [Role, isDev, isAdmin, isAdminUnlocked]);
   const { session, changeSession, loading } = useSessionPicker();
   const [isCute, setIsCute] = useState(() => isCuteMalkinThemeActive());
 

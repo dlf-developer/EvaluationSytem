@@ -10,6 +10,8 @@ import {
   UserAddOutlined,
   UserOutlined,
   HistoryOutlined,
+  BarChartOutlined,
+  RiseOutlined,
 } from "./UI/Icons";
 import { isLocalDev } from "../Utils/env";
 import { getAllTimes, getUserId } from "../Utils/auth";
@@ -72,16 +74,18 @@ export const Menu = {
       route: "/accountability",
       icon: <PieChartOutlined />,
     },
-    ...(isLocalDev()
-      ? [
-          { label: "Audit & Security (Dev)" },
-          {
-            name: "Audit Logs",
-            route: "/audit-logs",
-            icon: <HistoryOutlined />,
-          },
-        ]
-      : []),
+    { label: "Intelligence & Insights" },
+    {
+      name: "Admin Analytics",
+      route: "/analytics-insights",
+      icon: <BarChartOutlined />,
+    },
+    { label: "Audit & Security" },
+    {
+      name: "Audit Logs",
+      route: "/audit-logs",
+      icon: <HistoryOutlined />,
+    },
   ],
   Observer: [
     { name: "Dashboard", route: "/dashboard", icon: <AppstoreAddOutlined /> },
@@ -124,6 +128,16 @@ export const Menu = {
       route: "/accountability",
       icon: <PieChartOutlined />,
     },
+    ...(isLocalDev()
+      ? [
+          { label: "Intelligence & Insights (Dev)" },
+          {
+            name: "Analytics & Insights (Dev)",
+            route: "/analytics-insights",
+            icon: <BarChartOutlined />,
+          },
+        ]
+      : []),
   ],
   Teacher: [
     { name: "Dashboard", route: "/dashboard", icon: <AppstoreAddOutlined /> },
@@ -154,6 +168,16 @@ export const Menu = {
       route: "/weekly4form",
       icon: <DatabaseFilled />,
     },
+    ...(isLocalDev()
+      ? [
+          { label: "Career & Growth (Dev)" },
+          {
+            name: "Growth Portfolio (Dev)",
+            route: "/my-portfolio",
+            icon: <RiseOutlined />,
+          },
+        ]
+      : []),
   ],
 };
 

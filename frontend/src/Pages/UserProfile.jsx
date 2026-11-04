@@ -17,6 +17,11 @@ import {
   isCuteMalkinThemeActive,
   setCuteMalkinTheme,
 } from "../Utils/cuteMalkinTheme";
+import {
+  ADMIN_SECRET_PIN,
+  isAdminFeaturesUnlocked,
+  setAdminFeaturesUnlocked,
+} from "../Utils/adminUnlock";
 import WelcomeMalkinModal from "../Components/WelcomeMalkinModal";
 
 const UserProfile = () => {
@@ -29,6 +34,10 @@ const UserProfile = () => {
   const [pinInput, setPinInput] = useState("");
   const [isCuteActive, setIsCuteActive] = useState(() => isCuteMalkinThemeActive());
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
+
+  // Admin PIN States
+  const [adminPinInput, setAdminPinInput] = useState("");
+  const [isAdminUnlocked, setIsAdminUnlocked] = useState(() => isAdminFeaturesUnlocked());
 
   const dispatch = useDispatch();
   const userId = getUserId()?.id;
@@ -73,6 +82,37 @@ const UserProfile = () => {
   ).toLowerCase().trim();
 
   const isTargetUser = isMalkinAccount(currentEmail);
+  const isAdmin = (userData?.access || getUserId()?.access) === "Superadmin";
+
+  // Listen to admin unlock changes
+  useEffect(() => {
+    const handleAdminUnlock = (e) => {
+      setIsAdminUnlocked(Boolean(e.detail?.unlocked));
+    };
+    window.addEventListener("admin-features-unlock-changed", handleAdminUnlock);
+    return () => {
+      window.removeEventListener("admin-features-unlock-changed", handleAdminUnlock);
+    };
+  }, []);
+
+  const handleActivateAdminFeatures = (val) => {
+    const clean = (val !== undefined ? val : adminPinInput).trim();
+    if (clean === ADMIN_SECRET_PIN) {
+      setAdminFeaturesUnlocked(true);
+      setIsAdminUnlocked(true);
+      setAdminPinInput("");
+      message.success("Access granted! Audit Logs and Admin Analytics unlocked.");
+    } else {
+      message.error("Incorrect PIN. Access denied.");
+    }
+  };
+
+  const handleDeactivateAdminFeatures = () => {
+    setAdminFeaturesUnlocked(false);
+    setIsAdminUnlocked(false);
+    setAdminPinInput("");
+    message.info("Admin features locked and hidden.");
+  };
 
   // Handle PIN verification
   const handleActivateTheme = (inputVal) => {
@@ -440,6 +480,78 @@ const UserProfile = () => {
                         style={{ borderRadius: "8px", padding: "10px 14px" }}
                         autoComplete="off"
                       />
+                    </Form.Item>
+                  </Col>
+                )}
+
+                {/* Admin Security PIN field (Exclusively for Superadmin to unlock Audit Logs & Analytics) */}
+                {isAdmin && (
+                  <Col xs={24} sm={12}>
+                    <Form.Item
+                      label={
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
+                          <span style={{ fontWeight: 500, color: "#4a5568" }}>
+                            Admin Security PIN
+                          </span>
+                          {isAdminUnlocked && (
+                            <button
+                              type="button"
+                              onClick={handleDeactivateAdminFeatures}
+                              style={{
+                                background: "none",
+                                border: "none",
+                                color: "#ef4444",
+                                fontSize: "11px",
+                                cursor: "pointer",
+                                textDecoration: "underline",
+                                padding: 0,
+                              }}
+                            >
+                              Lock features
+                            </button>
+                          )}
+                        </div>
+                      }
+                    >
+                      <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                        <Input
+                          placeholder={isAdminUnlocked ? "Features Unlocked (1111)" : "Enter PIN"}
+                          value={adminPinInput}
+                          maxLength={6}
+                          type="password"
+                          disabled={false}
+                          onChange={(e) => {
+                            setAdminPinInput(e.target.value);
+                            if (e.target.value.trim() === ADMIN_SECRET_PIN) {
+                              handleActivateAdminFeatures(e.target.value);
+                            }
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") handleActivateAdminFeatures(adminPinInput);
+                          }}
+                          style={{ borderRadius: "8px", padding: "10px 14px", paddingRight: "65px" }}
+                          autoComplete="off"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleActivateAdminFeatures(adminPinInput)}
+                          style={{
+                            position: "absolute",
+                            right: "6px",
+                            height: "32px",
+                            padding: "0 12px",
+                            backgroundColor: "#2D4027",
+                            color: "white",
+                            border: "none",
+                            borderRadius: "6px",
+                            fontSize: "12px",
+                            fontWeight: "bold",
+                            cursor: "pointer",
+                          }}
+                        >
+                          PIN
+                        </button>
+                      </div>
                     </Form.Item>
                   </Col>
                 )}

@@ -9,15 +9,8 @@ const {
 } = require('../controllers/auditLogController');
 const { isLocalDev } = require('../utils/auditLogger');
 
-// Middleware to restrict access to Superadmin (Admin) and Local/Dev only
-const requireSuperadminAndLocalDev = (req, res, next) => {
-  if (!isLocalDev(req)) {
-    return res.status(403).json({
-      success: false,
-      message: 'Audit logs dashboard is restricted to Local / Development environments.',
-    });
-  }
-
+// Middleware to restrict access to Superadmin (Admin)
+const requireSuperadmin = (req, res, next) => {
   const role = req.user?.access || req.user?.activeRole;
   if (role !== 'Superadmin') {
     return res.status(403).json({
@@ -30,8 +23,8 @@ const requireSuperadminAndLocalDev = (req, res, next) => {
 };
 
 // Read routes
-router.get('/', authMiddleware, requireSuperadminAndLocalDev, getAuditLogs);
-router.get('/stats', authMiddleware, requireSuperadminAndLocalDev, getAuditStats);
+router.get('/', authMiddleware, requireSuperadmin, getAuditLogs);
+router.get('/stats', authMiddleware, requireSuperadmin, getAuditStats);
 
 // Client-initiated audit recording (e.g. file downloads, exports, sensitive views)
 router.post('/record', authMiddleware, recordClientAuditLog);

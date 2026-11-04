@@ -118,7 +118,7 @@ const ObserverDashboard = () => {
             <Box
               key={index}
               px="8px"
-              w={{ base: "100%", sm: "50%", md: "25%" }}
+              w={{ base: "100%", sm: "50%", md: "33.333%", lg: "20%" }}
               mb={4}
             >
               <Skeleton height="120px" borderRadius="16px" />
@@ -127,7 +127,7 @@ const ObserverDashboard = () => {
             <Box
               key={index}
               px="8px"
-              w={{ base: "100%", sm: "50%", md: "25%" }}
+              w={{ base: "100%", sm: "50%", md: "33.333%", lg: "20%" }}
               mb={4}
             >
               <DashboardCard index={index} stat={stat} />

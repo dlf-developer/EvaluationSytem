@@ -63,6 +63,13 @@ export const EyeOutlined = createIcon(Lucide.Eye);
 export const EyeInvisibleOutlined = createIcon(Lucide.EyeOff);
 export const HistoryOutlined = createIcon(Lucide.History);
 export const ShieldAlertOutlined = createIcon(Lucide.ShieldAlert);
+export const BarChartOutlined = createIcon(Lucide.BarChart3);
+export const RiseOutlined = createIcon(Lucide.TrendingUp);
+export const TrophyOutlined = createIcon(Lucide.Trophy);
+export const SmileOutlined = createIcon(Lucide.Smile);
+export const BulbOutlined = createIcon(Lucide.Lightbulb);
+export const PrinterOutlined = createIcon(Lucide.Printer);
+export const FileDoneOutlined = createIcon(Lucide.FileCheck2);
 
 export default {
   AppstoreAddOutlined,
