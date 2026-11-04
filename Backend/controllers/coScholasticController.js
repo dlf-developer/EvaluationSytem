@@ -227,6 +227,8 @@ exports.editCoScholasticForm = async (req, res) => {
         res.status(200).json({
             message: isDraftSave ? 'Draft saved successfully!' : 'Form updated successfully!',
             success: true,
+            status: true,
+            form: updatedForm,
             updatedForm,
         });
 
@@ -348,7 +350,45 @@ const buildCoScholasticQueryAndPaginate = async (req, baseCondition = {}) => {
     queryFilter.isObserverCompleted = String(req.query.isObserverCompleted) === "true";
   }
 
-  // 7. Search by person name
+  // 7. Person & Name search
+  const andConditions = [];
+
+  if (req.query.teacherName) {
+    const terms = req.query.teacherName
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (terms.length > 0) {
+      const userConditions = terms.map((term) => ({
+        name: { $regex: term, $options: "i" },
+      }));
+      const matchedUsers = await User.find({ $or: userConditions }, "_id").lean();
+      const matchedIds = matchedUsers.map((u) => u._id);
+      andConditions.push({
+        $or: [
+          { teacherID: { $in: matchedIds } },
+          { "grenralDetails.NameoftheVisitingTeacher": { $in: matchedIds } },
+          { "grenralDetails.NameoftheTeacher": { $in: matchedIds } },
+        ],
+      });
+    }
+  }
+
+  if (req.query.observerName) {
+    const terms = req.query.observerName
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (terms.length > 0) {
+      const userConditions = terms.map((term) => ({
+        name: { $regex: term, $options: "i" },
+      }));
+      const matchedUsers = await User.find({ $or: userConditions }, "_id").lean();
+      const matchedIds = matchedUsers.map((u) => u._id);
+      andConditions.push({ createdBy: { $in: matchedIds } });
+    }
+  }
+
   const search = req.query.search || req.query.searchName || req.query.personName;
   if (search) {
     const searchTerms = search
@@ -365,21 +405,25 @@ const buildCoScholasticQueryAndPaginate = async (req, baseCondition = {}) => {
       ).lean();
       const matchedIds = matchedUsers.map((u) => u._id);
 
-      const searchOr = [
-        { teacherID: { $in: matchedIds } },
-        { createdBy: { $in: matchedIds } },
-        { "grenralDetails.NameoftheVisitingTeacher": { $in: matchedIds } },
-      ];
+      andConditions.push({
+        $or: [
+          { teacherID: { $in: matchedIds } },
+          { createdBy: { $in: matchedIds } },
+          { "grenralDetails.NameoftheVisitingTeacher": { $in: matchedIds } },
+          { "grenralDetails.NameoftheTeacher": { $in: matchedIds } },
+        ],
+      });
+    }
+  }
 
-      if (queryFilter.$or) {
-        queryFilter.$and = [
-          { $or: queryFilter.$or },
-          { $or: searchOr },
-        ];
-        delete queryFilter.$or;
-      } else {
-        queryFilter.$or = searchOr;
-      }
+  if (andConditions.length > 0) {
+    if (queryFilter.$and) {
+      queryFilter.$and.push(...andConditions);
+    } else if (queryFilter.$or) {
+      queryFilter.$and = [{ $or: queryFilter.$or }, ...andConditions];
+      delete queryFilter.$or;
+    } else {
+      queryFilter.$and = andConditions;
     }
   }
 
@@ -404,8 +448,31 @@ const buildCoScholasticQueryAndPaginate = async (req, baseCondition = {}) => {
 
   const totalCount = await CoScholastic.countDocuments(queryFilter);
 
+  // Parse sorting params
+  const { parseSortParams } = require("../utils/sortHelper");
+  const coScholasticSortMap = {
+    observationDate: "grenralDetails.DateOfObservation",
+    date: "grenralDetails.DateOfObservation",
+    className: "grenralDetails.className",
+    section: "grenralDetails.Section",
+    subject: "grenralDetails.Subject",
+    topic: "grenralDetails.Topic",
+    personName: "grenralDetails.NameoftheVisitingTeacher",
+    teacherName: "grenralDetails.NameoftheVisitingTeacher",
+    observerName: "createdBy",
+    totalScores: "totalScores",
+    scoreOutof: "scoreOutof",
+    percentageScore: "percentageScore",
+    Grade: "Grade",
+    grade: "Grade",
+    isTeacherCompletes: "isTeacherCompletes",
+    isObserverCompleted: "isObserverCompleted",
+    createdAt: "createdAt",
+  };
+  const sortCriteria = parseSortParams(req.query, coScholasticSortMap, { createdAt: -1 });
+
   let dbQuery = CoScholastic.find(queryFilter)
-    .sort({ createdAt: -1 })
+    .sort(sortCriteria)
     .populate({ path: 'teacherID', select: '-password -mobile -employeeId -customId' })
     .populate({ path: 'createdBy', select: '-password -mobile -employeeId -customId' })
     .populate({ path: 'grenralDetails.NameoftheVisitingTeacher', select: '-password -mobile -employeeId -customId' });

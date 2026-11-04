@@ -11,6 +11,7 @@ import {
 import { LOGO_BASE64, BANNER_BASE64 } from "../logoAssets";
 import { getAllTimes } from "../../../Utils/auth";
 import { PDF_FONT } from "../pdfFonts"; // registers NotoSansDevanagari (Hindi + Latin)
+import { WALKTHROUGH_QUESTIONS } from "../../Forms/FormInside/walkthroughQuestions";
 
 function WalkthroughDoc({ data }) {
   const RenderData = ({ keyName, keylenght }) => (
@@ -36,7 +37,9 @@ function WalkthroughDoc({ data }) {
               width: "70%",
             }}
           >
-            <Text style={styles.Question}>{item?.question}</Text>
+            <Text style={styles.Question}>
+              {item?.question || WALKTHROUGH_QUESTIONS[keyName]?.[index] || ""}
+            </Text>
           </View>
 
           <View
@@ -76,7 +79,9 @@ function WalkthroughDoc({ data }) {
               width: "80%",
             }}
           >
-            <Text style={styles.Question}>{item?.question}</Text>
+            <Text style={styles.Question}>
+              {item?.question || WALKTHROUGH_QUESTIONS[keyName]?.[index] || ""}
+            </Text>
 
             <Text style={[styles.boldText, { marginTop: 6 }]}>
               {item?.answer}
@@ -111,7 +116,7 @@ function WalkthroughDoc({ data }) {
                 ans: data?.createdBy?.name,
               },
               {
-                question: "Name of the Visiting Teacher",
+                question: "Name of the Teacher",
                 ans: data?.grenralDetails?.NameoftheVisitingTeacher?.name,
               },
               {

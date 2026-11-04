@@ -203,6 +203,11 @@ const FilterPopover = ({
                   placeholder={`Search ${title}…`}
                   value={localValue || ""}
                   onChange={(e) => setLocalValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      handleApply(onClose);
+                    }
+                  }}
                   size="sm"
                   borderRadius="lg"
                   borderColor="gray.200"

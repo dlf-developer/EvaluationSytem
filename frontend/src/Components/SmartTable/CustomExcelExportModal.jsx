@@ -72,6 +72,81 @@ export const calculateNotebookScore = (formName) => {
   return { totalScore, outOfScore };
 };
 
+// ── Helpers to format observation & feedback data for clean Excel export ────
+export const formatWalkthroughObservation = (record, targetRole = "observer") => {
+  if (!record || typeof record !== "object") return "";
+  const sections = [
+    { name: "Essential Agreements", items: record.essentialAggrements },
+    { name: "Planning & Preparation", items: record.planingAndPreparation },
+    { name: "Classroom Environment", items: record.classRoomEnvironment },
+    { name: "Instruction", items: record.instruction },
+  ];
+
+  const out = [];
+  sections.forEach(({ name, items }) => {
+    if (Array.isArray(items) && items.length > 0) {
+      const lines = items.map((it, idx) => {
+        const q = it?.question || `Criterion ${idx + 1}`;
+        const rating =
+          targetRole === "teacher"
+            ? (it?.selfObservation ?? it?.answer ?? "—")
+            : (it?.observer ?? it?.answer ?? "—");
+        return `  ${idx + 1}. ${q}: ${rating}`;
+      });
+      out.push(`[${name}]\n${lines.join("\n")}`);
+    }
+  });
+
+  return out.length > 0 ? out.join("\n\n") : "";
+};
+
+export const formatNotebookObservation = (formObj) => {
+  if (!formObj || typeof formObj !== "object") return "";
+  const sections = [
+    { name: "Maintenance of Notebooks", items: formObj.maintenanceOfNotebooks },
+    { name: "Quality of Opportunities", items: formObj.qualityOfOppurtunities },
+    { name: "Quality of Teacher Feedback", items: formObj.qualityOfTeacherFeedback },
+    { name: "Quality of Learner", items: formObj.qualityOfLearner },
+  ];
+
+  const out = [];
+  sections.forEach(({ name, items }) => {
+    if (Array.isArray(items) && items.length > 0) {
+      const lines = items.map((it, idx) => {
+        const q = it?.question || `Criterion ${idx + 1}`;
+        const sc = it?.answer ?? it?.value ?? it?.score ?? "—";
+        const rem = it?.remark ? ` (Remark: ${it.remark})` : "";
+        return `  ${idx + 1}. ${q}: ${sc}${rem}`;
+      });
+      out.push(`[${name}]\n${lines.join("\n")}`);
+    }
+  });
+
+  return out.length > 0 ? out.join("\n\n") : "";
+};
+
+export const formatFortnightlyObservation = (formObj) => {
+  if (!formObj || typeof formObj !== "object") return "";
+  const ignored = ["_id", "totalScore", "OutOf", "ObservationDates"];
+  const lines = Object.entries(formObj)
+    .filter(([k, v]) => !ignored.includes(k) && v !== null && v !== undefined && v !== "")
+    .map(([k, v]) => {
+      const label = k.replace(/([A-Z])/g, " $1").replace(/^./, (s) => s.toUpperCase());
+      return `  • ${label}: ${v}`;
+    });
+  return lines.length > 0 ? lines.join("\n") : "";
+};
+
+export const formatFeedbackArray = (items) => {
+  if (!Array.isArray(items) || items.length === 0) return "";
+  return items
+    .map((it, idx) => {
+      const q = it?.question ? `Q: ${it.question}\n` : `Question ${idx + 1}:\n`;
+      return `${q}Ans: ${it?.answer || "—"}`;
+    })
+    .join("\n\n");
+};
+
 // ── Helper to recursively extract plain text from React nodes ───────────────
 const extractTextFromReactNode = (node) => {
   if (node === null || node === undefined || typeof node === "boolean") return "";
@@ -446,44 +521,204 @@ export const CustomExcelExportModal = ({
       }
     });
 
-    // Check sample record for additional remarks/comments
-    const sample = data?.[0] || {};
-    if (
-      (sample.observerComment || sample?.ObserverForm?.comment || sample.notebookComment) &&
-      !addedIds.has("observerComment")
-    ) {
-      addField({
-        id: "observerComment",
-        label: "Observer Comment / Feedback",
-        category: "Comments & Feedback",
-        typeBadge: "Text",
-        getValue: (r) =>
-          r?.observerComment ||
-          r?.ObserverForm?.comment ||
-          r?.notebookComment ||
-          "—",
-      });
+    // ── Context and data detection ──
+    const hasDataProp = (predicate) => Array.isArray(data) && data.some(predicate);
+    const titleKey = `${tableTitle} ${downloadFileName}`.toLowerCase();
+    const isWalkthroughTable =
+      titleKey.includes("walkthrough") ||
+      titleKey.includes("classroom") ||
+      hasDataProp((r) => r?.totalScores !== undefined || r?.scoreOutof !== undefined || r?.essentialAggrements);
+    const isNotebookTable =
+      titleKey.includes("notebook") ||
+      hasDataProp((r) => r?.TeacherForm || r?.ObserverForm || r?.observerComment || r?.observerFeedback);
+    const isFortnightlyTable =
+      titleKey.includes("fortnightly") ||
+      hasDataProp((r) => r?.teacherForm || r?.observerForm);
+
+    // ── 1. Scored Form / Classroom Walkthrough Extra Score Fields ──
+    if (isWalkthroughTable || hasDataProp((r) => r?.totalScores !== undefined || r?.scoreOutof !== undefined)) {
+      if (!addedIds.has("totalScores_score") && !addedIds.has("totalScores")) {
+        addField({
+          id: "totalScores_score",
+          label: "Total Score (Obtained)",
+          category: "Scores & Evaluation",
+          isScore: true,
+          scoreType: "obtained",
+          typeBadge: "Score",
+          badgeColor: "teal",
+          getValue: (r) => (r?.totalScores !== undefined && r?.totalScores !== null && r?.totalScores !== "" ? r.totalScores : "N/A"),
+        });
+      }
+      if (!addedIds.has("totalScores_outOfScore")) {
+        addField({
+          id: "totalScores_outOfScore",
+          label: "Total Score (Out Of)",
+          category: "Scores & Evaluation",
+          isScore: true,
+          scoreType: "outOf",
+          typeBadge: "Max Out Of",
+          badgeColor: "purple",
+          getValue: (r) => (r?.scoreOutof !== undefined && r?.scoreOutof !== null && r?.scoreOutof !== "" ? r.scoreOutof : "N/A"),
+        });
+      }
+      if (!addedIds.has("totalScores_percentage")) {
+        addField({
+          id: "totalScores_percentage",
+          label: "Total Score (%)",
+          category: "Scores & Evaluation",
+          isScore: true,
+          scoreType: "percentage",
+          typeBadge: "% Formula",
+          badgeColor: "blue",
+          getValue: (r) => {
+            if (r?.percentageScore) {
+              return String(r.percentageScore).endsWith("%") ? r.percentageScore : `${r.percentageScore}%`;
+            }
+            if (r?.totalScores !== undefined && r?.scoreOutof) {
+              const sc = Number(r.totalScores);
+              const out = Number(r.scoreOutof);
+              if (out > 0 && !isNaN(sc) && !isNaN(out)) {
+                return `${((sc / out) * 100).toFixed(1)}%`;
+              }
+            }
+            return "N/A";
+          },
+        });
+      }
+      if (!addedIds.has("Grade") && (hasDataProp((r) => r?.Grade !== undefined) || isWalkthroughTable)) {
+        addField({
+          id: "Grade",
+          label: "Grade",
+          category: "Scores & Evaluation",
+          typeBadge: "Grade",
+          badgeColor: "green",
+          getValue: (r) => r?.Grade || "N/A",
+        });
+      }
+      if (!addedIds.has("NumberofParametersNotApplicable") && hasDataProp((r) => r?.NumberofParametersNotApplicable !== undefined)) {
+        addField({
+          id: "NumberofParametersNotApplicable",
+          label: "N/A Parameters",
+          category: "Scores & Evaluation",
+          typeBadge: "Count",
+          badgeColor: "gray",
+          getValue: (r) => r?.NumberofParametersNotApplicable ?? "0",
+        });
+      }
     }
 
+    // ── 2. Teacher Observation Column ──
+    const hasObservationData =
+      isWalkthroughTable ||
+      isNotebookTable ||
+      isFortnightlyTable ||
+      hasDataProp((r) => r?.essentialAggrements || r?.planingAndPreparation || r?.TeacherForm || r?.ObserverForm || r?.teacherForm || r?.observerForm);
+
+    if (hasObservationData) {
+      if (!addedIds.has("teacherObservation")) {
+        addField({
+          id: "teacherObservation",
+          label: "Teacher Observation",
+          category: "Observations & Remarks",
+          typeBadge: "Observation",
+          badgeColor: "orange",
+          getValue: (r) => {
+            const wt = formatWalkthroughObservation(r, "teacher");
+            if (wt) return wt;
+            const nb = formatNotebookObservation(r?.TeacherForm);
+            if (nb) return nb;
+            const fn = formatFortnightlyObservation(r?.teacherForm);
+            if (fn) return fn;
+            return "—";
+          },
+        });
+      }
+
+      if (!addedIds.has("observerObservation")) {
+        addField({
+          id: "observerObservation",
+          label: "Observer Observation",
+          category: "Observations & Remarks",
+          typeBadge: "Observation",
+          badgeColor: "orange",
+          getValue: (r) => {
+            const wt = formatWalkthroughObservation(r, "observer");
+            if (wt) return wt;
+            const nb = formatNotebookObservation(r?.ObserverForm);
+            if (nb) return nb;
+            const fn = formatFortnightlyObservation(r?.observerForm);
+            if (fn) return fn;
+            return "—";
+          },
+        });
+      }
+    }
+
+    // ── 3. Comments & Feedback (Observer Comments & Teacher Reflection) ──
+    const hasCommentData =
+      isWalkthroughTable ||
+      isNotebookTable ||
+      hasDataProp((r) => r?.ObserverFeedback || r?.TeacherFeedback || r?.observerFeedback || r?.teacherReflationFeedback || r?.observerComment);
+
+    if (hasCommentData) {
+      if (!addedIds.has("observerComments") && !addedIds.has("observerComment")) {
+        addField({
+          id: "observerComments",
+          label: "Observer Comments / Feedback",
+          category: "Comments & Feedback",
+          typeBadge: "Comments",
+          badgeColor: "blue",
+          getValue: (r) => {
+            if (Array.isArray(r?.ObserverFeedback) && r.ObserverFeedback.length > 0) {
+              return formatFeedbackArray(r.ObserverFeedback);
+            }
+            if (r?.observerFeedback) return r.observerFeedback;
+            if (r?.ObserverForm?.comment) return r.ObserverForm.comment;
+            if (r?.notebookComment) return r.notebookComment;
+            if (r?.observerComment) return r.observerComment;
+            return "—";
+          },
+        });
+      }
+
+      if (!addedIds.has("teacherComments") && !addedIds.has("reflectionFeedback")) {
+        addField({
+          id: "teacherComments",
+          label: "Teacher Reflection / Comments",
+          category: "Comments & Feedback",
+          typeBadge: "Reflection",
+          badgeColor: "green",
+          getValue: (r) => {
+            if (Array.isArray(r?.TeacherFeedback) && r.TeacherFeedback.length > 0) {
+              return formatFeedbackArray(r.TeacherFeedback);
+            }
+            if (r?.teacherReflationFeedback) return r.teacherReflationFeedback;
+            if (r?.TeacherForm?.reflection) return r.TeacherForm.reflection;
+            if (r?.reflectionFeedback) return r.reflectionFeedback;
+            if (r?.reflection) return r.reflection;
+            return "—";
+          },
+        });
+      }
+    }
+
+    // ── 4. Overview Comment (Notebook Checking) ──
     if (
-      (sample?.TeacherForm?.reflection || sample.reflectionFeedback || sample.reflection) &&
-      !addedIds.has("reflectionFeedback")
+      (isNotebookTable || hasDataProp((r) => r?.observerComment)) &&
+      !addedIds.has("overviewComment")
     ) {
       addField({
-        id: "reflectionFeedback",
-        label: "Teacher Reflection Remarks",
+        id: "overviewComment",
+        label: "Overview Comment",
         category: "Comments & Feedback",
-        typeBadge: "Text",
-        getValue: (r) =>
-          r?.TeacherForm?.reflection ||
-          r?.reflectionFeedback ||
-          r?.reflection ||
-          "—",
+        typeBadge: "Overview",
+        badgeColor: "purple",
+        getValue: (r) => r?.observerComment || "—",
       });
     }
 
     return fields;
-  }, [columns, data]);
+  }, [columns, data, tableTitle, downloadFileName]);
 
   // ── Selected Field IDs ─────────────────────────────────────────────────────
   const [selectedFields, setSelectedFields] = useState(() => {
@@ -733,9 +968,13 @@ export const CustomExcelExportModal = ({
     const colWidths = headers.map((header) => {
       const maxLen = Math.max(
         String(header).length,
-        ...exportRows.map((row) => String(row[header] ?? "").length)
+        ...exportRows.map((row) => {
+          const valStr = String(row[header] ?? "");
+          const lines = valStr.split("\n");
+          return Math.max(...lines.map((l) => l.length), 0);
+        })
       );
-      return { wch: Math.min(Math.max(maxLen + 3, 12), 48) };
+      return { wch: Math.min(Math.max(maxLen + 3, 14), 52) };
     });
     ws["!cols"] = colWidths;
 

@@ -120,7 +120,8 @@ const useTableState = ({
 
   // ── Sorting ──────────────────────────────────────────────────
   const sortedData = useMemo(() => {
-    if (serverSide) {
+    // If serverSide AND server sort callback is handled externally, pass data as-is
+    if (serverSide && onSortChange) {
       return filteredData;
     }
 
@@ -130,10 +131,20 @@ const useTableState = ({
     if (!col) return filteredData;
 
     const sorted = [...filteredData].sort((a, b) => {
-      if (col.sorter) return col.sorter(a, b);
+      if (typeof col.sorter === "function") {
+        return col.sorter(a, b);
+      }
 
-      const aVal = a[col.dataIndex];
-      const bVal = b[col.dataIndex];
+      const getVal = (record) => {
+        if (!record) return null;
+        if (typeof col.dataIndex === "string" && col.dataIndex.includes(".")) {
+          return col.dataIndex.split(".").reduce((acc, part) => acc?.[part], record);
+        }
+        return record[col.dataIndex];
+      };
+
+      const aVal = getVal(a);
+      const bVal = getVal(b);
 
       if (aVal == null) return 1;
       if (bVal == null) return -1;
@@ -150,7 +161,7 @@ const useTableState = ({
     });
 
     return sortState.direction === "desc" ? sorted.reverse() : sorted;
-  }, [serverSide, filteredData, sortState, getColumnByKey]);
+  }, [serverSide, onSortChange, filteredData, sortState, getColumnByKey]);
 
   // ── Pagination ───────────────────────────────────────────────
   const paginatedData = useMemo(() => {
@@ -191,20 +202,39 @@ const useTableState = ({
     }
   }, [serverSide, onFilterChange, onPageChange, pageSize]);
 
-  const handleSort = useCallback((key) => {
-    setSortState((prev) => {
-      const next =
-        prev.key !== key
-          ? { key, direction: "asc" }
-          : prev.direction === "asc"
-          ? { key, direction: "desc" }
-          : { key: null, direction: null };
-      if (serverSide && onSortChange) {
-        onSortChange(next);
+  const handleSort = useCallback(
+    (key, targetDirection) => {
+      setSortState((prev) => {
+        let nextDirection;
+        if (targetDirection) {
+          nextDirection =
+            prev.key === key && prev.direction === targetDirection
+              ? null
+              : targetDirection;
+        } else {
+          nextDirection =
+            prev.key !== key
+              ? "asc"
+              : prev.direction === "asc"
+              ? "desc"
+              : null;
+        }
+        const next = {
+          key: nextDirection ? key : null,
+          direction: nextDirection,
+        };
+        if (serverSide && onSortChange) {
+          onSortChange(next);
+        }
+        return next;
+      });
+      setCurrentPage(1);
+      if (serverSide && onPageChange) {
+        onPageChange(1, pageSize);
       }
-      return next;
-    });
-  }, [serverSide, onSortChange]);
+    },
+    [serverSide, onSortChange, onPageChange, pageSize]
+  );
 
   const handlePageChange = useCallback((page, size) => {
     setCurrentPage(page);

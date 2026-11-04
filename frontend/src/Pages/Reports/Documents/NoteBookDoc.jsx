@@ -226,7 +226,7 @@ function NoteBookDoc({ data }) {
                         <Text style={styles.subTitle}>OBSERVER'S COMMENTS</Text>
                         <View style={{ borderWidth: 1, padding: 10, minHeight: 60, borderColor: '#000' }}>
                             <Text style={{ fontSize: 10, lineHeight: 1.5, fontFamily: PDF_FONT }}>
-                                {data?.observerFeedback || data?.observerComment || "No feedback provided."}
+                                {data?.observerFeedback || "No feedback provided."}
                             </Text>
                         </View>
                     </View>
@@ -239,6 +239,17 @@ function NoteBookDoc({ data }) {
                             </Text>
                         </View>
                     </View>
+
+                    {data?.observerComment && (
+                        <View style={styles.observationSection}>
+                            <Text style={styles.subTitle}>OVERVIEW COMMENT</Text>
+                            <View style={{ borderWidth: 1, padding: 10, minHeight: 60, borderColor: '#000' }}>
+                                <Text style={{ fontSize: 10, lineHeight: 1.5, fontFamily: PDF_FONT }}>
+                                    {data?.observerComment}
+                                </Text>
+                            </View>
+                        </View>
+                    )}
 
                     {/* Total Tables Section */}
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 30 }}>

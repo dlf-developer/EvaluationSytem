@@ -1,20 +1,16 @@
 const AuditLog = require('../models/AuditLog');
 
 /**
- * Determine whether the current environment / request is LOCAL DEVELOPMENT.
- * Audit logging will only run if this returns true.
+ * Determine whether the current environment / request is LOCAL or DEV ENVIRONMENT.
+ * Used to restrict access to the audit inspection dashboard.
  */
 const isLocalDev = (req) => {
-  // If explicitly production and not explicitly LOCAL=true, return false
-  if (process.env.NODE_ENV === 'production' && process.env.LOCAL !== 'true') {
-    return false;
-  }
   if (process.env.LOCAL === 'true') return true;
   if (process.env.NODE_ENV === 'development') return true;
 
-  const host = req?.headers?.host || '';
-  const origin = req?.headers?.origin || '';
-  const hostname = req?.hostname || '';
+  const host = (req?.headers?.host || '').toLowerCase();
+  const origin = (req?.headers?.origin || '').toLowerCase();
+  const hostname = (req?.hostname || '').toLowerCase();
 
   return (
     hostname === 'localhost' ||
@@ -22,7 +18,11 @@ const isLocalDev = (req) => {
     host.includes('localhost') ||
     host.includes('127.0.0.1') ||
     origin.includes('localhost') ||
-    origin.includes('127.0.0.1')
+    origin.includes('127.0.0.1') ||
+    host.includes('dev.') ||
+    origin.includes('dev.') ||
+    host.includes('staging.') ||
+    origin.includes('staging.')
   );
 };
 
@@ -88,7 +88,8 @@ const calculateDiff = (oldDoc, changesObj, ignoredKeys = ['_id', '__v', 'created
 };
 
 /**
- * Record an audit log entry. Only executes in LOCAL DEV.
+ * Record an audit log entry.
+ * Runs in both Development and Production environments to continuously monitor user actions.
  */
 const recordAuditLog = async ({
   req,
@@ -104,11 +105,6 @@ const recordAuditLog = async ({
   ipAddress = '',
 }) => {
   try {
-    // Strictly live only for LOCAL DEV, never in prod
-    if (!isLocalDev(req)) {
-      return null;
-    }
-
     const resolvedUser = req?.user || {};
     const finalUserId = user || resolvedUser.id || resolvedUser._id || null;
     const finalUserName = userName || resolvedUser.name || 'Unknown User';

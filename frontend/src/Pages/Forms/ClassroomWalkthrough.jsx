@@ -25,16 +25,26 @@ function ClassroomWalkthrough() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [serverFilters, setServerFilters] = useState({});
+  const [serverSort, setServerSort] = useState({ key: null, direction: null });
 
   const lastFetchedParamsRef = useRef("");
 
   const fetchWalkthroughData = useCallback(
-    (currentPage = page, currentLimit = pageSize, activeFilters = serverFilters) => {
+    (
+      currentPage = page,
+      currentLimit = pageSize,
+      activeFilters = serverFilters,
+      activeSort = serverSort
+    ) => {
       const params = {
         page: currentPage,
         limit: currentLimit,
         skip: (currentPage - 1) * currentLimit,
       };
+      if (activeSort?.key && activeSort?.direction) {
+        params.sortBy = activeSort.key;
+        params.sortOrder = activeSort.direction;
+      }
       if (activeFilters.className) {
         params.className = Array.isArray(activeFilters.className)
           ? activeFilters.className.join(",")
@@ -49,6 +59,16 @@ function ClassroomWalkthrough() {
         params.subject = Array.isArray(activeFilters.subject)
           ? activeFilters.subject.join(",")
           : activeFilters.subject;
+      }
+      if (activeFilters.teacherName) {
+        params.teacherName = Array.isArray(activeFilters.teacherName)
+          ? activeFilters.teacherName.join(",")
+          : activeFilters.teacherName;
+      }
+      if (activeFilters.observerName) {
+        params.observerName = Array.isArray(activeFilters.observerName)
+          ? activeFilters.observerName.join(",")
+          : activeFilters.observerName;
       }
       if (activeFilters.personName) {
         params.searchName = Array.isArray(activeFilters.personName)
@@ -83,12 +103,12 @@ function ClassroomWalkthrough() {
         dispatch(GetcreatedBy(params));
       }
     },
-    [dispatch, Role, page, pageSize, serverFilters]
+    [dispatch, Role, page, pageSize, serverFilters, serverSort]
   );
 
   useEffect(() => {
-    fetchWalkthroughData(page, pageSize, serverFilters);
-  }, [fetchWalkthroughData, page, pageSize, serverFilters]);
+    fetchWalkthroughData(page, pageSize, serverFilters, serverSort);
+  }, [fetchWalkthroughData, page, pageSize, serverFilters, serverSort]);
 
   const handlePageChange = useCallback(
     (newPage, newSize) => {
@@ -97,18 +117,27 @@ function ClassroomWalkthrough() {
       if (newSize && newSize !== pageSize) {
         setPageSize(newSize);
       }
-      fetchWalkthroughData(newPage, nextLimit, serverFilters);
+      fetchWalkthroughData(newPage, nextLimit, serverFilters, serverSort);
     },
-    [fetchWalkthroughData, pageSize, serverFilters]
+    [fetchWalkthroughData, pageSize, serverFilters, serverSort]
   );
 
   const handleFilterChange = useCallback(
     (newFilters) => {
       setServerFilters(newFilters);
       setPage(1);
-      fetchWalkthroughData(1, pageSize, newFilters);
+      fetchWalkthroughData(1, pageSize, newFilters, serverSort);
     },
-    [fetchWalkthroughData, pageSize]
+    [fetchWalkthroughData, pageSize, serverSort]
+  );
+
+  const handleSortChange = useCallback(
+    (newSort) => {
+      setServerSort(newSort);
+      setPage(1);
+      fetchWalkthroughData(1, pageSize, serverFilters, newSort);
+    },
+    [fetchWalkthroughData, pageSize, serverFilters]
   );
 
   const handleFetchAllForExport = useCallback(async () => {
@@ -127,6 +156,16 @@ function ClassroomWalkthrough() {
       params.subject = Array.isArray(serverFilters.subject)
         ? serverFilters.subject.join(",")
         : serverFilters.subject;
+    }
+    if (serverFilters.teacherName) {
+      params.teacherName = Array.isArray(serverFilters.teacherName)
+        ? serverFilters.teacherName.join(",")
+        : serverFilters.teacherName;
+    }
+    if (serverFilters.observerName) {
+      params.observerName = Array.isArray(serverFilters.observerName)
+        ? serverFilters.observerName.join(",")
+        : serverFilters.observerName;
     }
     if (serverFilters.personName) {
       params.searchName = Array.isArray(serverFilters.personName)
@@ -276,6 +315,7 @@ function ClassroomWalkthrough() {
         page={page}
         onPageChange={handlePageChange}
         onFilterChange={handleFilterChange}
+        onSortChange={handleSortChange}
         onFetchAllForExport={handleFetchAllForExport}
         downloadable
         downloadFileName="classroom_walkthrough"

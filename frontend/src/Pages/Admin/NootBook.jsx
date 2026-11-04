@@ -8,9 +8,7 @@ import { getUserId } from "../../Utils/auth";
 import { UserRole } from "../../config/config";
 import SmartTable from "../../Components/SmartTable";
 import { getNotebookColumns } from "../../Components/SmartTable/tableColumns";
-import { Modal, TextArea, Button as AntdButton, message } from "../../Components/UI";
 import { axiosInstanceToken } from "../../redux/instence";
-import { MessageSquare } from "lucide-react";
 
 function NoteBook() {
   const navigate = useNavigate();
@@ -25,51 +23,27 @@ function NoteBook() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [serverFilters, setServerFilters] = useState({});
-
-  const [canComment, setCanComment] = useState(() => {
-    return Boolean(
-      user?.canAddNotebookComment === true ||
-      user?.canAddNotebookComment === "true" ||
-      user?.access === "Superadmin"
-    );
-  });
-
-  const [commentModalOpen, setCommentModalOpen] = useState(false);
-  const [commentForm, setCommentForm] = useState(null);
-  const [commentText, setCommentText] = useState("");
-  const [isSavingComment, setIsSavingComment] = useState(false);
-
-  useEffect(() => {
-    const currentUserId = user?.id || user?._id || user?.userId;
-    if (currentUserId) {
-      axiosInstanceToken
-        .get(`/user/single/${currentUserId}`)
-        .then((res) => {
-          const u = res?.data?.data || res?.data?.user || res?.data;
-          if (u) {
-            setCanComment(
-              Boolean(
-                u.canAddNotebookComment === true ||
-                u.canAddNotebookComment === "true" ||
-                u.access === "Superadmin"
-              )
-            );
-          }
-        })
-        .catch(() => {});
-    }
-  }, []);
+  const [serverSort, setServerSort] = useState({ key: null, direction: null });
 
   const lastFetchedParamsRef = useRef("");
 
   // Fetch data with server-side limit, skip, and filters
   const fetchNotebookData = useCallback(
-    (currentPage = page, currentLimit = pageSize, activeFilters = serverFilters) => {
+    (
+      currentPage = page,
+      currentLimit = pageSize,
+      activeFilters = serverFilters,
+      activeSort = serverSort
+    ) => {
       const params = {
         page: currentPage,
         limit: currentLimit,
         skip: (currentPage - 1) * currentLimit,
       };
+      if (activeSort?.key && activeSort?.direction) {
+        params.sortBy = activeSort.key;
+        params.sortOrder = activeSort.direction;
+      }
       if (activeFilters.className) {
         params.className = Array.isArray(activeFilters.className)
           ? activeFilters.className.join(",")
@@ -84,6 +58,16 @@ function NoteBook() {
         params.subject = Array.isArray(activeFilters.subject)
           ? activeFilters.subject.join(",")
           : activeFilters.subject;
+      }
+      if (activeFilters.teacherName) {
+        params.teacherName = Array.isArray(activeFilters.teacherName)
+          ? activeFilters.teacherName.join(",")
+          : activeFilters.teacherName;
+      }
+      if (activeFilters.observerName) {
+        params.observerName = Array.isArray(activeFilters.observerName)
+          ? activeFilters.observerName.join(",")
+          : activeFilters.observerName;
       }
       if (activeFilters.personName) {
         params.searchName = Array.isArray(activeFilters.personName)
@@ -121,12 +105,12 @@ function NoteBook() {
 
       dispatch(getNootbookForms(params));
     },
-    [dispatch, page, pageSize, serverFilters]
+    [dispatch, page, pageSize, serverFilters, serverSort]
   );
 
   useEffect(() => {
-    fetchNotebookData(page, pageSize, serverFilters);
-  }, [fetchNotebookData, page, pageSize, serverFilters]);
+    fetchNotebookData(page, pageSize, serverFilters, serverSort);
+  }, [fetchNotebookData, page, pageSize, serverFilters, serverSort]);
 
   const handlePageChange = useCallback(
     (newPage, newSize) => {
@@ -135,18 +119,27 @@ function NoteBook() {
       if (newSize && newSize !== pageSize) {
         setPageSize(newSize);
       }
-      fetchNotebookData(newPage, nextLimit, serverFilters);
+      fetchNotebookData(newPage, nextLimit, serverFilters, serverSort);
     },
-    [fetchNotebookData, pageSize, serverFilters]
+    [fetchNotebookData, pageSize, serverFilters, serverSort]
   );
 
   const handleFilterChange = useCallback(
     (newFilters) => {
       setServerFilters(newFilters);
       setPage(1);
-      fetchNotebookData(1, pageSize, newFilters);
+      fetchNotebookData(1, pageSize, newFilters, serverSort);
     },
-    [fetchNotebookData, pageSize]
+    [fetchNotebookData, pageSize, serverSort]
+  );
+
+  const handleSortChange = useCallback(
+    (newSort) => {
+      setServerSort(newSort);
+      setPage(1);
+      fetchNotebookData(1, pageSize, serverFilters, newSort);
+    },
+    [fetchNotebookData, pageSize, serverFilters]
   );
 
   // Fetch all filtered records from the server for standard or custom Excel export
@@ -168,6 +161,16 @@ function NoteBook() {
       params.subject = Array.isArray(serverFilters.subject)
         ? serverFilters.subject.join(",")
         : serverFilters.subject;
+    }
+    if (serverFilters.teacherName) {
+      params.teacherName = Array.isArray(serverFilters.teacherName)
+        ? serverFilters.teacherName.join(",")
+        : serverFilters.teacherName;
+    }
+    if (serverFilters.observerName) {
+      params.observerName = Array.isArray(serverFilters.observerName)
+        ? serverFilters.observerName.join(",")
+        : serverFilters.observerName;
     }
     if (serverFilters.personName) {
       params.searchName = Array.isArray(serverFilters.personName)
@@ -209,57 +212,10 @@ function NoteBook() {
     return [];
   }, [serverFilters]);
 
-  const handleCommentClick = (record) => {
-    setCommentForm(record);
-    setCommentText(record?.observerComment || record?.observerFeedback || "");
-    setCommentModalOpen(true);
-  };
-
-  const handleSaveComment = async () => {
-    if (!commentForm?._id) return;
-    setIsSavingComment(true);
-    try {
-      const response = await axiosInstanceToken.post(
-        `/notebook-checking-proforma/comment/${commentForm._id}`,
-        {
-          comment: commentText,
-        }
-      );
-      if (response.data?.success) {
-        toast({
-          title: "Comment Saved",
-          description: "Observer comment has been updated and will appear in report & PDF.",
-          status: "success",
-          duration: 3000,
-          isClosable: true,
-        });
-        setCommentModalOpen(false);
-        setCommentForm(null);
-        setCommentText("");
-        fetchNotebookData(page, pageSize, serverFilters);
-      } else {
-        throw new Error(response.data?.message || "Failed to save comment");
-      }
-    } catch (err) {
-      toast({
-        title: "Error",
-        description:
-          err?.response?.data?.message || err?.message || "Failed to save comment.",
-        status: "error",
-        duration: 3000,
-        isClosable: true,
-      });
-    } finally {
-      setIsSavingComment(false);
-    }
-  };
-
   const columns = useMemo(() => {
     const baseCols = getNotebookColumns({
       data: GetForms2 || [],
       currentUserRole,
-      onComment: handleCommentClick,
-      canComment,
     });
 
     // Enhance dropdown filters with all database options if available from server
@@ -284,7 +240,7 @@ function NoteBook() {
       }
       return col;
     });
-  }, [GetForms2, currentUserRole, canComment, filterOptions]);
+  }, [GetForms2, currentUserRole, filterOptions]);
 
   return (
     <Box p={{ base: 4, md: 8 }} minH="calc(100vh - 72px)">
@@ -326,98 +282,11 @@ function NoteBook() {
         page={page}
         onPageChange={handlePageChange}
         onFilterChange={handleFilterChange}
+        onSortChange={handleSortChange}
         onFetchAllForExport={handleFetchAllForExport}
         downloadable={true}
         downloadFileName="notebook_checking_proforma"
       />
-
-      {/* Quick Observer Comment Modal */}
-      <Modal
-        open={commentModalOpen}
-        onCancel={() => {
-          if (!isSavingComment) {
-            setCommentModalOpen(false);
-            setCommentForm(null);
-            setCommentText("");
-          }
-        }}
-        width={560}
-        title={
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center shrink-0">
-              <MessageSquare className="w-4 h-4" />
-            </div>
-            <div>
-              <div className="text-base font-bold text-gray-900 leading-tight">
-                Notebook Checking — Observer Comment
-              </div>
-              <div className="text-xs text-gray-500 font-normal">
-                This comment will be reflected immediately in the final report and downloaded PDF.
-              </div>
-            </div>
-          </div>
-        }
-        footer={
-          <div className="flex items-center justify-end gap-2.5">
-            <AntdButton
-              onClick={() => {
-                setCommentModalOpen(false);
-                setCommentForm(null);
-                setCommentText("");
-              }}
-              disabled={isSavingComment}
-            >
-              Cancel
-            </AntdButton>
-            <AntdButton
-              type="primary"
-              onClick={handleSaveComment}
-              loading={isSavingComment}
-              style={{
-                backgroundColor: "#7e22ce",
-                borderColor: "#7e22ce",
-              }}
-            >
-              Save Comment
-            </AntdButton>
-          </div>
-        }
-      >
-        <div className="py-2">
-          {commentForm && (
-            <div className="mb-3.5 p-3 rounded-lg bg-gray-50 border border-gray-200/80 text-xs text-gray-600 flex flex-wrap gap-x-4 gap-y-1">
-              <div>
-                <span className="font-semibold text-gray-800">Teacher:</span>{" "}
-                {commentForm.teacherID?.name || commentForm.createdBy?.name || "N/A"}
-              </div>
-              <div>
-                <span className="font-semibold text-gray-800">Class:</span>{" "}
-                {commentForm.grenralDetails?.className || "N/A"}
-              </div>
-              <div>
-                <span className="font-semibold text-gray-800">Section:</span>{" "}
-                {commentForm.grenralDetails?.Section || "N/A"}
-              </div>
-              <div>
-                <span className="font-semibold text-gray-800">Subject:</span>{" "}
-                {commentForm.grenralDetails?.Subject || "N/A"}
-              </div>
-            </div>
-          )}
-
-          <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-            Observer Remarks & Evaluation Feedback
-          </label>
-          <TextArea
-            rows={5}
-            value={commentText}
-            onChange={(e) => setCommentText(e.target.value)}
-            placeholder="Write your qualitative remarks, notebook maintenance feedback, or areas of improvement..."
-            disabled={isSavingComment}
-            autoFocus
-          />
-        </div>
-      </Modal>
     </Box>
   );
 }

@@ -81,28 +81,39 @@ function BasicDetailsForm() {
   
 
   const handleSubmit = async (values) => {
+    const cleanCoordinatorId =
+      values?.coordinatorID && typeof values?.coordinatorID === "object"
+        ? values?.coordinatorID._id || values?.coordinatorID.value || values?.coordinatorID.id
+        : values?.coordinatorID;
+
+    const cleanTeacherId =
+      values?.teacherID && typeof values?.teacherID === "object"
+        ? values?.teacherID._id || values?.teacherID.value || values?.teacherID.id
+        : values?.teacherID;
+
+    const isCoord = Boolean(values?.isCoordinator || isCoordinator);
+    const isTeach = Boolean(values?.isTeacher || isTeacher);
 
     const payload = {
       className: values?.className,
       section: values?.section,
       date: values?.date,
-      isCoordinator: values?.isCoordinator || isCoordinator,
-      coordinatorID: values?.coordinatorID || "",
-      isTeacher: values?.isTeacher|| isTeacher,
-      teacherID: values?.teacherID || "",
+      isCoordinator: isCoord,
+      coordinatorID: isCoord && cleanCoordinatorId ? cleanCoordinatorId : undefined,
+      isTeacher: isTeach,
+      teacherID: isTeach && cleanTeacherId ? cleanTeacherId : undefined,
     };
 
     setLoading(true);
     try {
       const response = await dispatch(CreateFormOne(payload)).unwrap();
-      message.success(response?.message);
+      message.success(response?.message || "Fortnightly Monitor created successfully!");
 
-  
       form.resetFields(); // Reset the form fields after submission
       navigate(`/fortnightly-monitor/create/${response?.form?._id}`);
       dispatch(GetFormsOne());
     } catch (error) {
-      message.error("Error creating Fortnightly Monitor");
+      message.error(error?.message || "Error creating Fortnightly Monitor");
       console.error(error);
     } finally {
       setLoading(false);

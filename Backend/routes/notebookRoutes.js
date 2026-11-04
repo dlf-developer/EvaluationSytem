@@ -17,6 +17,7 @@ router.put('/teacher/reflation/:id', updateTeacherReflationFeedback);
 router.post('/reminder/:id', authMiddleware, ReminderFormThree);
 router.delete('/delete/:id', authMiddleware, deleteFormThree);
 router.post('/comment/:id', authMiddleware, addObserverComment);
+router.post('/overview-comment/:id', authMiddleware, addObserverComment);
 
 
 module.exports = router;

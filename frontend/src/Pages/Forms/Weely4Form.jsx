@@ -8,15 +8,16 @@ import {
   UpdateFromObserver,
   getAllWeeklyFromById,
 } from "../../redux/userSlice";
-import { useParams, useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import { Form, Select, Button, Input, TextArea, Radio, message, Space, Card, Tag, Divider, Spin } from "../../Components/UI";
 import { Box, Flex, Heading, Text, SimpleGrid } from "@chakra-ui/react";
-import { getUserId, getUserRoleTag } from "../../Utils/auth";
+import { getUserId, getUserRoleTag, getActiveRole } from "../../Utils/auth";
 import "./Weekly4Form.css";
 import { UserRole } from "../../config/config";
 import { MinusCircleOutlined, PlusOutlined, EditOutlined, SaveOutlined } from "../../Components/UI/Icons";
 import { CreateActivityApi } from "../../redux/Activity/activitySlice";
 import CommonStepper from "../../Components/CommonStepper";
+import ChoiceScaleSelector from "../../Components/Forms/ChoiceScaleSelector";
 
 const QUESTIONS = [
   "I have completed last week's plan.",
@@ -34,22 +35,26 @@ const WIZARD_STEPS = [
 ];
 
 function Weekly4Form() {
-  const [isInitiate, setIsInitiate] = useState(false);
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const routeFormId = useParams().id;
+  const isInitiateUrl = searchParams.get("Initiate") === "true" && !routeFormId;
+  const [isInitiate, setIsInitiate] = useState(isInitiateUrl);
   const [thankYou, setThankYou] = useState(false);
   const [currStep, setCurrStep] = useState(0);
   const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingForm, setIsLoadingForm] = useState(false);
+  const [assignedTeacher, setAssignedTeacher] = useState(null);
 
   const dispatch = useDispatch();
   const { GetTeachersLists, GetObserverLists } = useSelector(
     (state) => state.user,
   );
-  const [searchParams] = useSearchParams();
   const [form] = Form.useForm();
+  const [initiateForm] = Form.useForm();
   const [classList, setClassList] = useState([]);
   const [ObsereverId, setObsereverId] = useState();
-  const routeFormId = useParams().id;
   const [activeFormId, setActiveFormId] = useState(routeFormId);
 
   const yesNoNAOptions = [
@@ -67,18 +72,30 @@ function Weekly4Form() {
 
   useEffect(() => {
     const initiateValue = searchParams.get("Initiate");
-    if (UserRole[1] === getUserId().access && initiateValue === "true") {
+    const activeRole = getActiveRole() || getUserId()?.access;
+    const canInitiate =
+      (activeRole === "Observer" ||
+        activeRole === "OT" ||
+        getUserId()?.access === "Observer" ||
+        getUserId()?.access === "OT" ||
+        getUserId()?.access === "Superadmin") &&
+      initiateValue === "true" &&
+      !routeFormId;
+
+    if (canInitiate) {
       setIsInitiate(true);
     } else {
+      setIsInitiate(false);
       GetImportantDetails();
     }
-  }, [searchParams]);
+  }, [searchParams, routeFormId]);
 
   useEffect(() => {
     if (isInitiate) {
       dispatch(GetTeacherList());
     } else {
       dispatch(GetObserverList());
+      GetImportantDetails();
     }
   }, [isInitiate, dispatch]);
 
@@ -87,6 +104,7 @@ function Weekly4Form() {
     if (routeFormId) {
       setActiveFormId(routeFormId);
       setIsLoadingForm(true);
+      GetImportantDetails();
       dispatch(getAllWeeklyFromById(routeFormId))
         .then((res) => {
           if (res?.payload?.success && res?.payload?.form) {
@@ -97,6 +115,9 @@ function Weekly4Form() {
             if (formRecord.isInitiated?.Observer) {
               const obs = formRecord.isInitiated.Observer;
               setObsereverId(typeof obs === "object" ? obs._id : obs);
+            }
+            if (formRecord.teacherId) {
+              setAssignedTeacher(formRecord.teacherId);
             }
             if (formRecord.FormData && Array.isArray(formRecord.FormData)) {
               form.setFieldsValue({
@@ -110,6 +131,16 @@ function Weekly4Form() {
         });
     }
   }, [routeFormId, dispatch, form]);
+
+  // Auto-initialize first row on Step 1 if empty
+  useEffect(() => {
+    if (currStep === 1) {
+      const currentSections = form.getFieldValue(["FormData", 2, "sections"]);
+      if (!currentSections || !Array.isArray(currentSections) || currentSections.length === 0) {
+        form.setFieldValue(["FormData", 2, "sections"], [{ classId: undefined, section: undefined, answer: undefined }]);
+      }
+    }
+  }, [currStep, form]);
 
   const getSectionsForClass = (classId) => {
     if (!classId || !classList?.length) return [];
@@ -225,14 +256,87 @@ function Weekly4Form() {
     }
   };
 
+  const handleInitiateSubmit = async (values) => {
+    if (isSubmitting) return;
+    try {
+      setIsSubmitting(true);
+      const vals = values || initiateForm.getFieldsValue(true);
+      const singleTeacherId = Array.isArray(vals?.teacherId)
+        ? vals.teacherId[0]
+        : vals?.teacherId;
+
+      if (!singleTeacherId) {
+        message.error("Please select a Teacher!");
+        setIsSubmitting(false);
+        return;
+      }
+
+      const payload = {
+        teacherId: singleTeacherId,
+        date: new Date(),
+        isInitiated: {
+          status: true,
+          Observer: getUserId()?.id,
+        },
+      };
+
+      const res = await dispatch(initiateFromObserver(payload));
+      if (res?.payload?.success) {
+        const userInfo = res?.payload?.data?.[0]?.teacherId;
+        const formId = res?.payload?.data?.[0]?._id;
+        const activity = {
+          observerMessage: `You have Initiated the Learning Progress Checklist.`,
+          teacherMessage: `${getUserId()?.name} has Initiated the Learning Progress Checklist.`,
+          route: `/weekly4form/create/${formId}`,
+          date: new Date(),
+          reciverId: userInfo,
+          senderId: getUserId()?.id,
+          fromNo: 4,
+          data: res?.payload?.data,
+        };
+
+        const activitiRecord = await dispatch(CreateActivityApi(activity));
+        if (!activitiRecord?.payload?.success) {
+          console.warn("Error on Activity Record:", activitiRecord);
+        }
+        const matchedTeacher = GetTeachersLists?.find(
+          (t) => String(t?._id) === String(singleTeacherId)
+        );
+        if (matchedTeacher) {
+          setAssignedTeacher(matchedTeacher);
+        }
+
+        message.success("Checklist initiated! Please fill out the form.");
+        setIsInitiate(false);
+        setActiveFormId(formId);
+        navigate(`/weekly4form/create/${formId}`);
+      } else {
+        message.error(res?.payload?.error || res?.payload?.message || "Something went wrong!");
+      }
+    } catch (err) {
+      console.error("Initiation error:", err);
+      message.error(err?.message || "Failed to initiate checklist.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleSubmit = async () => {
+    if (isInitiate) {
+      return handleInitiateSubmit();
+    }
     try {
       await form.validateFields();
       setIsSubmitting(true);
       const values = form.getFieldsValue(true);
 
+      const singleTeacherId = Array.isArray(values?.teacherId)
+        ? values.teacherId[0]
+        : values?.teacherId;
+
       const basePayload = {
         ...values,
+        teacherId: singleTeacherId,
         date: new Date(),
         dateOfSubmission: new Date(),
         isCompleted: true,
@@ -302,8 +406,10 @@ function Weekly4Form() {
             message.error("Error on Activity Record");
           }
 
-          setThankYou(true);
-          setTimeout(() => (window.location.href = "/weekly4form"), 1500);
+          message.success("Evaluation submitted successfully!");
+          setTimeout(() => {
+            navigate(`/weekly4form/report/${res?.payload?.data?._id || activeFormId}`);
+          }, 800);
         } else {
           message.error("Something went wrong!");
         }
@@ -336,7 +442,9 @@ function Weekly4Form() {
           }
 
           message.success("Evaluation submitted successfully!");
-          setTimeout(() => (window.location.href = "/weekly4form"), 1000);
+          setTimeout(() => {
+            navigate(`/weekly4form/report/${res?.payload?._id || activeFormId}`);
+          }, 800);
         } else {
           message.error("Something went wrong!");
         }
@@ -542,6 +650,39 @@ function Weekly4Form() {
           </Text>
         </Box>
 
+        {assignedTeacher && !isInitiate && (
+          <Box
+            mb={6}
+            p={4}
+            bg="white"
+            borderRadius="2xl"
+            borderWidth="1px"
+            borderColor="green.200"
+            boxShadow="sm"
+          >
+            <Flex align="center" justify="space-between" flexWrap="wrap" gap={3}>
+              <Box>
+                <Text
+                  fontSize="xs"
+                  fontWeight="bold"
+                  textTransform="uppercase"
+                  color="gray.500"
+                  letterSpacing="wider"
+                >
+                  Evaluating Teacher
+                </Text>
+                <Text fontSize="lg" fontWeight="bold" color="#1a4d2e">
+                  {assignedTeacher?.name || "Teacher"}
+                  {assignedTeacher?.designation ? ` — ${assignedTeacher.designation}` : ""}
+                </Text>
+              </Box>
+              <Tag colorScheme="green" size="lg" borderRadius="full">
+                {getUserRoleTag(assignedTeacher) ? `[${getUserRoleTag(assignedTeacher)}]` : "Teacher"}
+              </Tag>
+            </Flex>
+          </Box>
+        )}
+
         {isInitiate ? (
           /* Observer Initiate View */
           <Box
@@ -568,12 +709,17 @@ function Weekly4Form() {
                 </Text>
               </Flex>
             ) : (
-              <Form form={form} onFinish={handleSubmit} layout="vertical">
+              <Form
+                form={initiateForm}
+                onFinish={handleInitiateSubmit}
+                onFinishFailed={() => message.error("Please select a Teacher!")}
+                layout="vertical"
+              >
                 <Flex justify="center" align="center" minH="50vh">
                   <Box w={{ base: "100%", md: "50%" }}>
                     <Form.Item
                       className="w-100"
-                      label={<Text fontWeight="500">Assign to Teacher(s)</Text>}
+                      label={<Text fontWeight="500">Assign to Teacher</Text>}
                       name="teacherId"
                       rules={[
                         { required: true, message: "Please select a Teacher!" },
@@ -581,10 +727,9 @@ function Weekly4Form() {
                     >
                       <Select
                         size="large"
-                        mode="multiple"
                         allowClear
                         showSearch
-                        placeholder="Select Teacher(s)"
+                        placeholder="Select a Teacher"
                         options={GetTeachersLists?.filter((t) => t?._id !== getUserId()?.id && t?.isActive !== false)?.map((item) => ({
                           value: item?._id,
                           label: `${item?.name || "Teacher"} [${getUserRoleTag(item)}]`,
@@ -600,6 +745,14 @@ function Weekly4Form() {
                       type="primary"
                       size="large"
                       htmlType="submit"
+                      onClick={() => {
+                        const val = initiateForm.getFieldValue("teacherId");
+                        if (!val) {
+                          message.error("Please select a Teacher!");
+                          return;
+                        }
+                        handleInitiateSubmit({ teacherId: val });
+                      }}
                       loading={isSubmitting}
                       style={{
                         borderRadius: "8px",
@@ -690,12 +843,7 @@ function Weekly4Form() {
                             { required: true, message: "Please select an answer!" },
                           ]}
                         >
-                          <Radio.Group
-                            size="large"
-                            options={yesNoNAOptions}
-                            optionType="button"
-                            buttonStyle="solid"
-                          />
+                          <ChoiceScaleSelector size="large" />
                         </Form.Item>
                         {renderHiddenQuestionField(0, QUESTIONS[0])}
                       </Box>
@@ -716,12 +864,7 @@ function Weekly4Form() {
                             { required: true, message: "Please select an answer!" },
                           ]}
                         >
-                          <Radio.Group
-                            size="large"
-                            options={yesNoNAOptions}
-                            optionType="button"
-                            buttonStyle="solid"
-                          />
+                          <ChoiceScaleSelector size="large" />
                         </Form.Item>
                         {renderHiddenQuestionField(1, QUESTIONS[1])}
                       </Box>
@@ -862,17 +1005,13 @@ function Weekly4Form() {
                                         display: "flex",
                                         alignItems: "center",
                                         justifyContent: "space-between",
+                                        gap: "8px",
                                       }}
                                     >
-                                      <Radio.Group
-                                        size="middle"
-                                        options={yesNoNAOptions}
-                                        optionType="button"
-                                        buttonStyle="solid"
-                                      />
+                                      <ChoiceScaleSelector size="middle" />
                                       <MinusCircleOutlined
                                         style={{
-                                          marginLeft: "8px",
+                                          marginLeft: "4px",
                                           cursor: "pointer",
                                           color: "red",
                                           fontSize: "18px",
@@ -1062,12 +1201,7 @@ function Weekly4Form() {
                           },
                         ]}
                       >
-                        <Radio.Group
-                          size="large"
-                          options={yesNoNAOptions}
-                          optionType="button"
-                          buttonStyle="solid"
-                        />
+                        <ChoiceScaleSelector size="large" />
                       </Form.Item>
 
                       <Form.Item

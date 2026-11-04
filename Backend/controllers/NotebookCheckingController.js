@@ -100,7 +100,44 @@ const buildNotebookQueryAndPaginate = async (req, baseCondition = {}) => {
     queryFilter.isReflation = String(req.query.isReflation) === "true";
   }
 
-  // 8. Search / person name filter
+  // 8. Person & Name search
+  const andConditions = [];
+
+  if (req.query.teacherName) {
+    const terms = req.query.teacherName
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (terms.length > 0) {
+      const userConditions = terms.map((term) => ({
+        name: { $regex: term, $options: "i" },
+      }));
+      const matchedUsers = await User.find({ $or: userConditions }, "_id").lean();
+      const matchedIds = matchedUsers.map((u) => u._id);
+      andConditions.push({ teacherID: { $in: matchedIds } });
+    }
+  }
+
+  if (req.query.observerName) {
+    const terms = req.query.observerName
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (terms.length > 0) {
+      const userConditions = terms.map((term) => ({
+        name: { $regex: term, $options: "i" },
+      }));
+      const matchedUsers = await User.find({ $or: userConditions }, "_id").lean();
+      const matchedIds = matchedUsers.map((u) => u._id);
+      andConditions.push({
+        $or: [
+          { createdBy: { $in: matchedIds } },
+          { "grenralDetails.NameofObserver": { $in: matchedIds } },
+        ],
+      });
+    }
+  }
+
   const search = req.query.search || req.query.searchName || req.query.personName;
   if (search) {
     const searchTerms = search
@@ -117,21 +154,24 @@ const buildNotebookQueryAndPaginate = async (req, baseCondition = {}) => {
       ).lean();
       const matchedIds = matchedUsers.map((u) => u._id);
 
-      const searchOr = [
-        { teacherID: { $in: matchedIds } },
-        { createdBy: { $in: matchedIds } },
-        { "grenralDetails.NameofObserver": { $in: matchedIds } },
-      ];
+      andConditions.push({
+        $or: [
+          { teacherID: { $in: matchedIds } },
+          { createdBy: { $in: matchedIds } },
+          { "grenralDetails.NameofObserver": { $in: matchedIds } },
+        ],
+      });
+    }
+  }
 
-      if (queryFilter.$or) {
-        queryFilter.$and = [
-          { $or: queryFilter.$or },
-          { $or: searchOr },
-        ];
-        delete queryFilter.$or;
-      } else {
-        queryFilter.$or = searchOr;
-      }
+  if (andConditions.length > 0) {
+    if (queryFilter.$and) {
+      queryFilter.$and.push(...andConditions);
+    } else if (queryFilter.$or) {
+      queryFilter.$and = [{ $or: queryFilter.$or }, ...andConditions];
+      delete queryFilter.$or;
+    } else {
+      queryFilter.$and = andConditions;
     }
   }
 
@@ -158,9 +198,28 @@ const buildNotebookQueryAndPaginate = async (req, baseCondition = {}) => {
   const totalCount = await Form3.countDocuments(queryFilter);
   console.log("[DEBUG Form3 Pagination] queryFilter:", JSON.stringify(queryFilter), "totalCount:", totalCount);
 
+  // Parse sorting params
+  const { parseSortParams } = require("../utils/sortHelper");
+  const form3SortMap = {
+    observationDate: "grenralDetails.DateOfObservation",
+    date: "grenralDetails.DateOfObservation",
+    className: "grenralDetails.className",
+    section: "grenralDetails.Section",
+    subject: "grenralDetails.Subject",
+    personName: "teacherID",
+    teacherName: "teacherID",
+    observerName: "createdBy",
+    totalScores: "totalScores",
+    isTeacherComplete: "isTeacherComplete",
+    isObserverComplete: "isObserverComplete",
+    isReflation: "isReflation",
+    createdAt: "createdAt",
+  };
+  const sortCriteria = parseSortParams(req.query, form3SortMap, { createdAt: -1 });
+
   // Query database with server-side skip & limit
   let dbQuery = Form3.find(queryFilter)
-    .sort({ createdAt: -1 })
+    .sort(sortCriteria)
     .populate({
       path: "teacherID",
       select: "-password -mobile -employeeId -customId",
@@ -375,7 +434,7 @@ exports.createForm = async (req, res) => {
   }
 };
 exports.createInitiate = async (req, res) => {
-  const { isTeacher, teacherIDs, className, Section, Subject } = req.body;
+  const { isTeacher, teacherIDs, teacherID, className, Section, Subject } = req.body;
   const userId = req?.user?.id;
 
   try {
@@ -388,83 +447,83 @@ exports.createInitiate = async (req, res) => {
       if (classData) finalClassName = classData.className;
     }
 
-    const teacherList = Array.isArray(teacherIDs)
-      ? teacherIDs
-      : teacherIDs
-      ? [teacherIDs]
-      : [];
-
-    if (isTeacher && teacherList.length > 0) {
-      const teacherForms = await Promise.all(
-        teacherList.map(async (teacherId) => {
-          if (teacherId.toString() === userId.toString()) return null;
-          const teacher = await User.findById(teacherId);
-
-          if (!teacher?.email) return null;
-
-          // Create and save the form
-          const formData = await new Form3({
-            isObserverInitiation: true,
-            teacherID: teacher._id,
-            grenralDetails: {
-              NameofObserver: userId,
-              DateOfObservation: new Date(),
-              className: finalClassName,
-              Section: Section,
-              Subject: Subject,
-            },
-            TeacherForm: {},
-            ObserverForm: {},
-          }).save();
-
-          // The frontend route for BOTH teacher-created and observer-initiated
-          // notebook forms is the same: notebook-checking-proforma/create/:id
-          const route = `notebook-checking-proforma/create/${formData._id}`;
-          const emailData = formInitiatedEmail({
-            recipientName: teacher.name,
-            initiatorName: req.user?.name,
-            formTitle: "Notebook Checking Proforma",
-            formRoute: route,
-            className: finalClassName,
-            section: Section,
-            subject: Subject,
-          });
-
-          try {
-            await sendEmail(teacher.email, emailData.subject, emailData.html);
-          } catch (emailErr) {
-            console.error("Failed to send initiate email:", emailErr);
-          }
-
-          // Create and save the notification
-          try {
-            await new notification({
-              title: "You are invited to fill the Notebook Form Initiated",
-              route: `notebook-checking-proforma/create/${formData._id}`,
-              reciverId: teacher._id,
-              date: new Date(),
-              status: "unSeen",
-            }).save();
-          } catch (notifErr) {
-            console.error("Failed to create initiate notification:", notifErr);
-          }
-
-          return formData;
-        })
-      );
-
-      // Filter out null forms and send response
-      const validForms = teacherForms.filter(Boolean);
-      recordAuditLog({
-        req,
-        action: 'CREATE',
-        module: 'Notebook Checking',
-        details: `Initiated Notebook Checking forms for ${validForms.length} teacher(s) (Class: ${finalClassName || ''} Section: ${Section || ''})`,
-      });
-      return res.status(200).json({ message: "Form created successfully", form: validForms, status: true });
-    } else {
-      return res.status(400).json({ error: "Invalid or missing data." });
+    // Extract single teacher ID (each form is strictly individual to ONE teacher)
+    let rawId = teacherID || (Array.isArray(teacherIDs) ? teacherIDs[0] : teacherIDs);
+    if (rawId && typeof rawId === "object") {
+      rawId = rawId._id || rawId.value || rawId.id || null;
     }
+    const cleanTeacherId = rawId ? String(rawId).trim() : "";
+
+    if (!cleanTeacherId || !mongoose.Types.ObjectId.isValid(cleanTeacherId) || !/^[a-f\d]{24}$/i.test(cleanTeacherId)) {
+      return res.status(400).json({ error: "Please select a valid teacher." });
+    }
+
+    if (userId && cleanTeacherId === userId.toString()) {
+      return res.status(400).json({ error: "You cannot initiate a form to yourself." });
+    }
+
+    const teacher = await User.findById(cleanTeacherId);
+    if (!teacher) {
+      return res.status(404).json({ error: "Selected teacher not found." });
+    }
+
+    // Create and save exactly one form for this individual teacher
+    const formData = await new Form3({
+      isObserverInitiation: true,
+      teacherID: teacher._id,
+      grenralDetails: {
+        NameofObserver: userId,
+        DateOfObservation: new Date(),
+        className: finalClassName,
+        Section: Section,
+        Subject: Subject,
+      },
+      TeacherForm: {},
+      ObserverForm: {},
+    }).save();
+
+    // The frontend route for BOTH teacher-created and observer-initiated
+    // notebook forms is the same: notebook-checking-proforma/create/:id
+    const route = `notebook-checking-proforma/create/${formData._id}`;
+    if (teacher.email) {
+      const emailData = formInitiatedEmail({
+        recipientName: teacher.name,
+        initiatorName: req.user?.name,
+        formTitle: "Notebook Checking Proforma",
+        formRoute: route,
+        className: finalClassName,
+        section: Section,
+        subject: Subject,
+      });
+
+      try {
+        await sendEmail(teacher.email, emailData.subject, emailData.html);
+      } catch (emailErr) {
+        console.error("Failed to send initiate email:", emailErr);
+      }
+    }
+
+    // Create and save the notification
+    try {
+      await new notification({
+        title: "You are invited to fill the Notebook Form Initiated",
+        route: `notebook-checking-proforma/create/${formData._id}`,
+        reciverId: teacher._id,
+        date: new Date(),
+        status: "unSeen",
+      }).save();
+    } catch (notifErr) {
+      console.error("Failed to create initiate notification:", notifErr);
+    }
+
+    recordAuditLog({
+      req,
+      action: 'CREATE',
+      module: 'Notebook Checking',
+      details: `Initiated Notebook Checking form for ${teacher.name} (Class: ${finalClassName || ''} Section: ${Section || ''})`,
+    });
+
+    return res.status(200).json({ message: "Form created successfully", form: [formData], status: true });
   } catch (err) {
     console.error("Error in createInitiate:", err);
     return res.status(500).json({ error: "Internal server error." });
@@ -654,8 +713,8 @@ exports.updateObserverFields = async (req, res) => {
                 qualityOfTeacherFeedback: qualityOfTeacherFeedback !== undefined ? qualityOfTeacherFeedback : existingForm?.ObserverForm?.qualityOfTeacherFeedback,
                 qualityOfLearner: qualityOfLearner !== undefined ? qualityOfLearner : existingForm?.ObserverForm?.qualityOfLearner,
             },
-            observerFeedback: observerFeedback !== undefined ? observerFeedback : (observerComment !== undefined ? observerComment : existingForm?.observerFeedback),
-            observerComment: observerComment !== undefined ? observerComment : (observerFeedback !== undefined ? observerFeedback : existingForm?.observerComment),
+            observerFeedback: observerFeedback !== undefined ? observerFeedback : existingForm?.observerFeedback,
+            observerComment: observerComment !== undefined ? observerComment : existingForm?.observerComment,
             isReflation: false,
         };
 
@@ -831,8 +890,8 @@ exports.EditUpdateNotebook = async (req, res) => {
             NotebooksSubmitted: req.body.NotebooksSubmitted,
             Absentees: req.body.Absentees,
             Defaulters: req.body.Defaulters,
-            observerFeedback: req.body.observerFeedback !== undefined ? req.body.observerFeedback : req.body.observerComment,
-            observerComment: req.body.observerComment !== undefined ? req.body.observerComment : req.body.observerFeedback,
+            observerFeedback: req.body.observerFeedback !== undefined ? req.body.observerFeedback : undefined,
+            observerComment: req.body.observerComment !== undefined ? req.body.observerComment : undefined,
             isObserverComplete: req.body.isObserverComplete,
             maintenanceOfNotebooks: req.body.maintenanceOfNotebooks,
             qualityOfOppurtunities: req.body.qualityOfOppurtunities,
@@ -1127,7 +1186,7 @@ exports.deleteFormThree = async (req, res) => {
 exports.addObserverComment = async (req, res) => {
   const formId = cleanId(req.params?.id);
   const userId = req.user?.id;
-  const comment = req.body?.comment ?? req.body?.observerComment ?? req.body?.observerFeedback;
+  const comment = req.body?.comment ?? req.body?.overviewComment ?? req.body?.observerComment;
 
   try {
     if (!formId || !mongoose.Types.ObjectId.isValid(formId)) {
@@ -1147,7 +1206,24 @@ exports.addObserverComment = async (req, res) => {
     if (!isAllowed) {
       return res.status(403).json({
         success: false,
-        message: "You are not authorized to add comments on Notebook Checking.",
+        message: "You are not authorized to add overview comments on Notebook Checking.",
+      });
+    }
+
+    const existingForm = await Form3.findById(formId);
+    if (!existingForm) {
+      return res.status(404).json({ success: false, message: "Notebook Checking form not found." });
+    }
+
+    const isTeacherDone = Boolean(existingForm.isTeacherComplete);
+    const isObserverDone = Boolean(existingForm.isObserverComplete);
+    const isReflectionDone = Boolean(existingForm.isReflation);
+
+    if (!isTeacherDone || !isObserverDone || !isReflectionDone) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Overview comment can only be added when the form has been completed by both teacher and observer, and reflection has been submitted.",
       });
     }
 
@@ -1157,32 +1233,27 @@ exports.addObserverComment = async (req, res) => {
       {
         $set: {
           observerComment: cleanComment,
-          observerFeedback: cleanComment,
         },
       },
       { new: true }
     );
 
-    if (!updatedForm) {
-      return res.status(404).json({ success: false, message: "Notebook Checking form not found." });
-    }
-
     recordAuditLog({
       req,
-      action: 'COMMENT',
+      action: 'OVERVIEW_COMMENT',
       module: 'Notebook Checking',
       targetId: formId,
-      details: `Added observer comment: "${cleanComment.substring(0, 50)}${cleanComment.length > 50 ? '...' : ''}"`,
-      changes: [{ field: 'observerFeedback', oldValue: null, newValue: cleanComment }],
+      details: `Added overview comment: "${cleanComment.substring(0, 50)}${cleanComment.length > 50 ? '...' : ''}"`,
+      changes: [{ field: 'observerComment', oldValue: existingForm.observerComment || null, newValue: cleanComment }],
     });
 
     return res.status(200).json({
       success: true,
-      message: "Observer comment saved successfully.",
+      message: "Overview comment saved successfully.",
       data: updatedForm,
     });
   } catch (error) {
-    console.error("Error saving notebook comment:", error);
+    console.error("Error saving notebook overview comment:", error);
     return res.status(500).json({ success: false, message: "Failed to save comment", error: error.message });
   }
 };

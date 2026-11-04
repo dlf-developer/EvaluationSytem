@@ -187,10 +187,10 @@ function CreateUserForm({ onOk, onCancel, Payload }) {
                 <div className="p-3 rounded-xl border border-gray-200/90 bg-white hover:border-[#1a4d2e]/40 shadow-xs transition-all flex items-center justify-between gap-3 h-full">
                   <div className="pr-2">
                     <div className="text-xs font-semibold text-gray-900">
-                      Notebook Comment Access
+                      Overview Comment Access
                     </div>
                     <p className="text-[11px] text-gray-500 mt-0.5 leading-tight">
-                      Allow observer to add comments in Notebook Checking evaluations
+                      Allow observer to add overview comments in Notebook Checking Overview
                     </p>
                   </div>
                   <Form.Item name="canAddNotebookComment" valuePropName="checked" className="mb-0 shrink-0">

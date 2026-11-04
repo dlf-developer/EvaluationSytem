@@ -124,16 +124,6 @@ export const Menu = {
       route: "/accountability",
       icon: <PieChartOutlined />,
     },
-    ...(isLocalDev()
-      ? [
-          { label: "Audit & Security (Dev)" },
-          {
-            name: "Audit Logs",
-            route: "/audit-logs",
-            icon: <HistoryOutlined />,
-          },
-        ]
-      : []),
   ],
   Teacher: [
     { name: "Dashboard", route: "/dashboard", icon: <AppstoreAddOutlined /> },

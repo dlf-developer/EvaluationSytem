@@ -8,6 +8,7 @@ import {
 import { getAllTimes, getUserId } from "../../Utils/auth";
 import { Button, Form, Input, message, Radio, Spin, TextArea } from "../../Components/UI";
 import { Box, Flex, Heading, Text, VStack, SimpleGrid } from "@chakra-ui/react";
+import { WALKTHROUGH_QUESTIONS } from "../Forms/FormInside/walkthroughQuestions";
 
 function TeacherWalkthroughshow() {
   const dispatch = useDispatch();
@@ -278,7 +279,7 @@ function TeacherWalkthroughshow() {
                   borderColor="gray.100"
                 >
                   <Text flex="1" pr={4} color="gray.700" fontWeight="500">
-                    {item?.question}
+                    {item?.question || WALKTHROUGH_QUESTIONS.essentialAggrements[index]}
                   </Text>
                   <Box
                     className={`px-4 py-2 text-sm rounded-md font-bold shadow-sm ${MapColor(item)} min-w-[100px] text-center`}
@@ -307,7 +308,7 @@ function TeacherWalkthroughshow() {
                   borderColor="gray.100"
                 >
                   <Text flex="1" pr={4} color="gray.700" fontWeight="500">
-                    {item?.question}
+                    {item?.question || WALKTHROUGH_QUESTIONS.planingAndPreparation[index]}
                   </Text>
                   <Box
                     className={`px-4 py-2 text-sm rounded-md font-bold shadow-sm ${MapColor(item)} min-w-[100px] text-center`}
@@ -336,7 +337,7 @@ function TeacherWalkthroughshow() {
                   borderColor="gray.100"
                 >
                   <Text flex="1" pr={4} color="gray.700" fontWeight="500">
-                    {item?.question}
+                    {item?.question || WALKTHROUGH_QUESTIONS.classRoomEnvironment[index]}
                   </Text>
                   <Box
                     className={`px-4 py-2 text-sm rounded-md font-bold shadow-sm ${MapColor(item)} min-w-[100px] text-center`}
@@ -365,7 +366,7 @@ function TeacherWalkthroughshow() {
                   borderColor="gray.100"
                 >
                   <Text flex="1" pr={4} color="gray.700" fontWeight="500">
-                    {item?.question}
+                    {item?.question || WALKTHROUGH_QUESTIONS.instruction[index]}
                   </Text>
                   <Box
                     className={`px-4 py-2 text-sm rounded-md font-bold shadow-sm ${MapColor(item)} min-w-[100px] text-center`}
@@ -392,7 +393,7 @@ function TeacherWalkthroughshow() {
                   borderColor="blue.100"
                 >
                   <Text color="blue.900" fontWeight="600" mb={3}>
-                    {item?.question}
+                    {item?.question || WALKTHROUGH_QUESTIONS.ObserverFeedback[index]}
                   </Text>
                   <Text
                     color="gray.700"
@@ -431,7 +432,7 @@ function TeacherWalkthroughshow() {
                     borderColor="green.200"
                   >
                     <Text color="gray.800" fontWeight="600" mb={3}>
-                      {item?.question}
+                      {item?.question || WALKTHROUGH_QUESTIONS.TeacherFeedback[index]}
                     </Text>
                     <Text color="gray.600">{item?.answer}</Text>
                   </Box>

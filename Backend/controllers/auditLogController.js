@@ -68,9 +68,20 @@ exports.getAuditLogs = async (req, res) => {
     const limitNum = Math.min(200, Math.max(1, parseInt(limit, 10)));
     const skip = (pageNum - 1) * limitNum;
 
+    const { parseSortParams } = require("../utils/sortHelper");
+    const auditSortMap = {
+      timestamp: "createdAt",
+      createdAt: "createdAt",
+      action: "action",
+      module: "module",
+      userName: "userName",
+      userRole: "userRole",
+    };
+    const sortCriteria = parseSortParams(req.query, auditSortMap, { createdAt: -1 });
+
     const [logs, total] = await Promise.all([
       AuditLog.find(query)
-        .sort({ createdAt: -1 })
+        .sort(sortCriteria)
         .skip(skip)
         .limit(limitNum)
         .lean(),

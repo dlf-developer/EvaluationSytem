@@ -69,6 +69,7 @@ export const getRecordTeacherName = (record = {}, row = {}) => {
     const possibleKeys = [
       "Teacher Name",
       "Teacher",
+      "Name of the Teacher",
       "teacherName",
       "TeacherName",
       "Visiting Teacher",

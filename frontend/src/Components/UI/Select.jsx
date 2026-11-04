@@ -18,6 +18,7 @@ export const Select = forwardRef(
       showSearch,
       allowClear = false,
       mode, // "multiple" or undefined
+      maxTagCount = "responsive",
       className = "",
       style,
       error = false,
@@ -47,23 +48,39 @@ export const Select = forwardRef(
     // Extract options from either props.options or props.children (<Option />)
     const normalizedOptions = useMemo(() => {
       if (options && Array.isArray(options)) {
-        return options.map((opt) =>
-          typeof opt === "object" && opt !== null
-            ? {
-                value: opt.value,
-                label: opt.label !== undefined ? opt.label : String(opt.value),
-                disabled: Boolean(opt.disabled),
-              }
-            : { value: opt, label: String(opt), disabled: false }
-        );
+        return options.map((opt) => {
+          if (typeof opt === "object" && opt !== null) {
+            const lbl =
+              opt.label !== undefined
+                ? opt.label
+                : opt.name !== undefined
+                ? opt.name
+                : String(opt.value);
+            return {
+              value: opt.value !== undefined ? opt.value : opt.id,
+              label: lbl,
+              children: lbl,
+              name: lbl,
+              disabled: Boolean(opt.disabled),
+            };
+          }
+          const str = String(opt);
+          return { value: opt, label: str, children: str, name: str, disabled: false };
+        });
       }
 
       const list = [];
       React.Children.forEach(children, (child) => {
         if (React.isValidElement(child)) {
+          const lbl =
+            child.props.children ||
+            child.props.label ||
+            (child.props.name !== undefined ? child.props.name : String(child.props.value));
           list.push({
             value: child.props.value,
-            label: child.props.children || child.props.label || String(child.props.value),
+            label: lbl,
+            children: child.props.children || lbl,
+            name: lbl,
             disabled: Boolean(child.props.disabled),
           });
         }
@@ -77,14 +94,23 @@ export const Select = forwardRef(
       const lower = searchTerm.toLowerCase();
       return normalizedOptions.filter((opt) => {
         if (filterOption && typeof filterOption === "function") {
-          return filterOption(searchTerm, opt);
+          try {
+            return Boolean(filterOption(searchTerm, opt));
+          } catch (e) {
+            // fallback to label search if custom filter throws
+          }
         }
-        return String(opt.label).toLowerCase().includes(lower);
+        return (
+          String(opt.label || "").toLowerCase().includes(lower) ||
+          String(opt.children || "").toLowerCase().includes(lower) ||
+          String(opt.name || "").toLowerCase().includes(lower) ||
+          String(opt.value || "").toLowerCase().includes(lower)
+        );
       });
     }, [normalizedOptions, searchTerm, filterOption]);
 
     // Fast windowed rendering
-    const DISPLAY_LIMIT = 60;
+    const DISPLAY_LIMIT = 300;
     const displayedOptions = useMemo(() => {
       return filteredOptions.slice(0, DISPLAY_LIMIT);
     }, [filteredOptions]);
@@ -156,9 +182,20 @@ export const Select = forwardRef(
 
     const sizeClasses = {
       small: "min-h-[30px] h-[30px] py-0 px-2.5 text-xs font-semibold",
-      middle: "min-h-[38px] py-1.5 px-3 text-sm",
-      large: "min-h-[42px] py-2 px-3.5 text-sm",
+      middle: "min-h-[38px] h-[38px] py-1 px-3 text-sm",
+      large: "min-h-[42px] h-[42px] py-1 px-3.5 text-sm",
     };
+
+    const maxTags =
+      maxTagCount === "responsive"
+        ? 1
+        : typeof maxTagCount === "number"
+        ? maxTagCount
+        : 1;
+
+    const visibleTags = isMultiple ? selectedOptionsList.slice(0, maxTags) : [];
+    const hiddenCount = isMultiple ? selectedOptionsList.length - maxTags : 0;
+    const hiddenOptions = isMultiple ? selectedOptionsList.slice(maxTags) : [];
 
     return (
       <div
@@ -183,23 +220,33 @@ export const Select = forwardRef(
           }`}
           {...props}
         >
-          <div className="flex-1 flex flex-wrap items-center gap-1.5 overflow-hidden py-0.5">
+          <div className="flex-1 flex items-center gap-1.5 overflow-hidden py-0.5 min-w-0 flex-nowrap">
             {selectedOptionsList.length > 0 ? (
               isMultiple ? (
-                selectedOptionsList.map((opt) => (
-                  <span
-                    key={opt.value}
-                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#f4f8f4] text-[#1a4d2e] text-xs font-medium border border-[#cce0cd]"
-                  >
-                    <span className="truncate max-w-[200px]">{opt.label}</span>
-                    {!disabled && (
-                      <X
-                        className="w-3 h-3 text-[#1a4d2e] hover:text-red-600 cursor-pointer"
-                        onClick={(e) => handleRemoveTag(e, opt.value)}
-                      />
-                    )}
-                  </span>
-                ))
+                <>
+                  {visibleTags.map((opt) => (
+                    <span
+                      key={opt.value}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#f4f8f4] text-[#1a4d2e] text-xs font-medium border border-[#cce0cd] shrink-0 max-w-[140px]"
+                    >
+                      <span className="truncate">{opt.label}</span>
+                      {!disabled && (
+                        <X
+                          className="w-3 h-3 text-[#1a4d2e] hover:text-red-600 cursor-pointer shrink-0"
+                          onClick={(e) => handleRemoveTag(e, opt.value)}
+                        />
+                      )}
+                    </span>
+                  ))}
+                  {hiddenCount > 0 && (
+                    <span
+                      title={hiddenOptions.map((o) => o.label).join(", ")}
+                      className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold border border-gray-200 shrink-0 cursor-default transition-colors"
+                    >
+                      +{hiddenCount} more
+                    </span>
+                  )}
+                </>
               ) : (
                 <span className="truncate block text-gray-900 font-normal">
                   {selectedOptionsList[0].label}

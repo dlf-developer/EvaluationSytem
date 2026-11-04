@@ -390,6 +390,7 @@ const StepIndicator = ({ current }) => (
 // ─────────────────────────────────────────────────────────────────────────────
 function OB_Wing() {
   const { getFilteredDataList, loading } = useSelector((s) => s?.user);
+  const [pageLoading, setPageLoading] = useState(true);
   const [formData, setFormData] = useState();
   const [currForm, setCurrForm] = useState();
   const [currStep, setCurrStep] = useState(1);
@@ -618,25 +619,32 @@ function OB_Wing() {
   // ── Load existing form ──
   useEffect(() => {
     const load = async () => {
-      const res = await dispatch(GetSingleWingFrom(id));
-      if (res?.payload?.success) {
-        if (res.payload.data?.isComplete && !res.payload.data?.isDraft) {
-          navigate("/wing-coordinator");
+      setPageLoading(true);
+      try {
+        const res = await dispatch(GetSingleWingFrom(id));
+        if (res?.payload?.success) {
+          if (res.payload.data?.isComplete && !res.payload.data?.isDraft) {
+            navigate("/wing-coordinator");
+          } else {
+            setCurrForm(res.payload.data);
+          }
         } else {
-          setCurrForm(res.payload.data);
+          toast({
+            title: "Error loading form",
+            description: "Could not load form. Please try again.",
+            status: "error",
+            duration: 3000,
+            isClosable: true,
+          });
         }
-      } else {
-        toast({
-          title: "Error loading form",
-          description: "Could not load form. Please try again.",
-          status: "error",
-          duration: 3000,
-          isClosable: true,
-        });
+      } catch (err) {
+        console.error("Error loading form:", err);
+      } finally {
+        setPageLoading(false);
       }
     };
     load();
-  }, [dispatch, id]);
+  }, [dispatch, id, navigate, toast]);
 
   useEffect(() => {
     if (currForm) {
@@ -1314,11 +1322,25 @@ function OB_Wing() {
           <Text fontSize="sm" fontWeight="600" color="brand.text" mb={4}>
             Search Filters
           </Text>
-          <Fillter_Wing saveData={setFormData} data={currForm} />
+          <Fillter_Wing key={id} saveData={setFormData} data={formData || currForm} loading={loading} />
         </Box>
 
         {/* Form type sections */}
-        {getFilteredDataList ? (
+        {loading ? (
+          <Box
+            bg="gray.50"
+            borderRadius="xl"
+            p={12}
+            textAlign="center"
+            borderWidth="1px"
+            borderColor="gray.100"
+          >
+            <Spinner size="lg" color="brand.primary" thickness="3px" mb={3} />
+            <Text color="gray.600" fontSize="sm" fontWeight="500">
+              Loading available forms...
+            </Text>
+          </Box>
+        ) : getFilteredDataList ? (
           <VStack spacing={6} align="stretch">
             {(formData?.formTypes?.length > 0
               ? FORM_TITLES.filter((f) => formData.formTypes.includes(f.key))
@@ -1638,8 +1660,8 @@ function OB_Wing() {
       {/* ── Step Indicator ── */}
       <StepIndicator current={currStep} />
 
-      {/* ── Loading overlay ── */}
-      {loading && (
+      {/* ── Loading overlay (initial form load only) ── */}
+      {pageLoading && (
         <Flex justify="center" align="center" py={12}>
           <Spinner size="xl" color="brand.primary" thickness="3px" />
         </Flex>
@@ -1653,7 +1675,7 @@ function OB_Wing() {
         borderColor="gray.100"
         boxShadow="sm"
         p={{ base: 5, md: 8 }}
-        display={loading ? "none" : "block"}
+        display={pageLoading ? "none" : "block"}
       >
         <Box display={currStep === 1 ? "block" : "none"}>
           {renderMonthlyReport()}
@@ -1674,7 +1696,7 @@ function OB_Wing() {
         pt={4}
         borderTopWidth="1px"
         borderColor="gray.100"
-        display={loading ? "none" : "flex"}
+        display={pageLoading ? "none" : "flex"}
       >
         <Button
           variant="ghost"

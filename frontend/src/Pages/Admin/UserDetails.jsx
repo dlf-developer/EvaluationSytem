@@ -465,7 +465,7 @@ const UserDetails = () => {
                     </Tag>
                   )}
                 </Descriptions.Item>
-                <Descriptions.Item label="Notebook Comment Access">
+                <Descriptions.Item label="Overview Comment Access">
                   {editStatus ? (
                     <AntdSelect
                       value={
@@ -476,7 +476,7 @@ const UserDetails = () => {
                       onChange={(val) => handleFieldChange("canAddNotebookComment", val, {})}
                       style={{ width: "100%" }}
                       options={[
-                        { value: true, label: "Enabled (Can add comments in Notebook Checking)" },
+                        { value: true, label: "Enabled (Can add overview comments in Notebook Checking)" },
                         { value: false, label: "Disabled" },
                       ]}
                     />

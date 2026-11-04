@@ -192,10 +192,7 @@ export const getFortnightlyColumns = ({
       return <UserCell name={userObj?.name} user={userObj} fontWeight="500" />;
     },
     filterConfig: {
-      type: "select",
-      options: uniq(data.map((r) => r?.teacherID?.name || r?.userId?.name)),
-      matchFn: (record, vals) =>
-        vals.includes(record?.teacherID?.name || record?.userId?.name || ""),
+      type: "text",
     },
   },
   {
@@ -214,12 +211,7 @@ export const getFortnightlyColumns = ({
       return <UserCell name={userObj?.name} user={userObj} color="gray.600" />;
     },
     filterConfig: {
-      type: "select",
-      options: uniq(data.map((r) => r?.coordinatorID?.name || r?.userId?.name)),
-      matchFn: (record, vals) =>
-        vals.includes(
-          record?.coordinatorID?.name || record?.userId?.name || "",
-        ),
+      type: "text",
     },
   },
   {
@@ -424,21 +416,7 @@ export const getClassroomColumns = ({
       );
     },
     filterConfig: {
-      type: "select",
-      options: uniq(
-        data.map((r) =>
-          currentUserRole === UserRole[2]
-            ? r?.createdBy?.name
-            : r?.grenralDetails?.NameoftheVisitingTeacher?.name,
-        ),
-      ),
-      matchFn: (record, vals) => {
-        const name =
-          currentUserRole === UserRole[2]
-            ? record?.createdBy?.name
-            : record?.grenralDetails?.NameoftheVisitingTeacher?.name;
-        return vals.includes(name || "");
-      },
+      type: "text",
     },
   },
   {
@@ -526,6 +504,27 @@ export const getClassroomColumns = ({
         new Date(record?.grenralDetails?.DateOfObservation).toDateString() ===
           new Date(val).toDateString(),
     },
+  },
+  {
+    title: "Total Score",
+    key: "totalScores",
+    dataIndex: "totalScores",
+    width: "125px",
+    sortable: true,
+    sorter: (a, b) => (Number(a.totalScores) || 0) - (Number(b.totalScores) || 0),
+    render: (val, record) => (
+      <Text
+        fontSize="sm"
+        fontWeight="600"
+        color={val ? "brand.primary" : "gray.400"}
+      >
+        {val
+          ? record?.scoreOutof > 0
+            ? `${val} / ${record.scoreOutof}`
+            : val
+          : "N/A"}
+      </Text>
+    ),
   },
   {
     title: "Teacher Status",
@@ -670,10 +669,7 @@ export const getNotebookColumns = ({
         );
       },
       filterConfig: {
-        type: "select",
-        options: uniq(data.map((r) => r?.grenralDetails?.NameofObserver?.name)),
-        matchFn: (record, vals) =>
-          vals.includes(record?.grenralDetails?.NameofObserver?.name || ""),
+        type: "text",
       },
     });
   }
@@ -703,12 +699,7 @@ export const getNotebookColumns = ({
         );
       },
       filterConfig: {
-        type: "select",
-        options: uniq(data.map((r) => r?.teacherID?.name || r?.createdBy?.name)),
-        matchFn: (record, vals) => {
-          const name = record?.teacherID?.name || record?.createdBy?.name;
-          return vals.includes(name || "");
-        },
+        type: "text",
       },
     });
   }
@@ -983,38 +974,9 @@ export const getNotebookColumns = ({
         return <Reminder id={record?._id} type="form3" size="sm" />;
       };
 
-      const hasComment = Boolean(record?.observerComment || record?.observerFeedback);
-      const recordObserver = record?.grenralDetails?.NameofObserver;
-      const recordCreator = record?.createdBy;
-      const isRecordObserverAllowed = Boolean(
-        recordObserver?.canAddNotebookComment === true ||
-        recordObserver?.canAddNotebookComment === "true" ||
-        recordCreator?.canAddNotebookComment === true ||
-        recordCreator?.canAddNotebookComment === "true"
-      );
-      const isAllowedToComment = Boolean(
-        canComment ||
-        isRecordObserverAllowed ||
-        (typeof canComment === "function" && canComment(record))
-      );
-
       return (
         <Flex gap={2} align="center" flexWrap="nowrap">
           {renderAction()}
-          {isAllowedToComment && onComment && (
-            <Button
-              size="sm"
-              variant={hasComment ? "solid" : "outline"}
-              colorScheme="purple"
-              fontWeight="medium"
-              flexShrink={0}
-              onClick={() => onComment(record)}
-              title={hasComment ? "Edit Observer Comment" : "Add Observer Comment"}
-              leftIcon={<CommentOutlined />}
-            >
-              {hasComment ? "Edit Comment" : "Comment"}
-            </Button>
-          )}
           {currentUserRole === UserRole[1] && onDelete && (
             <Button
               size="sm"
@@ -1050,9 +1012,7 @@ export const getWeeklyColumns = ({ data = [], currentUserRole, onDelete }) => [
       (a?.teacherId?.name || "").localeCompare(b?.teacherId?.name || ""),
     render: (val) => <UserCell name={val?.name || "N/A"} user={val} fontWeight="500" />,
     filterConfig: {
-      type: "select",
-      options: uniq(data.map((r) => r?.teacherId?.name)),
-      matchFn: (record, vals) => vals.includes(record?.teacherId?.name || ""),
+      type: "text",
     },
   },
   {
@@ -1074,10 +1034,7 @@ export const getWeeklyColumns = ({ data = [], currentUserRole, onDelete }) => [
       />
     ),
     filterConfig: {
-      type: "select",
-      options: uniq(data.map((r) => r?.isInitiated?.Observer?.name)),
-      matchFn: (record, vals) =>
-        vals.includes(record?.isInitiated?.Observer?.name || ""),
+      type: "text",
     },
   },
   {
@@ -1129,7 +1086,7 @@ export const getWeeklyColumns = ({ data = [], currentUserRole, onDelete }) => [
             View Report
           </Button>
         </Link>
-        {!record?.isCompleted && currentUserRole === UserRole[2] && (
+        {!record?.isCompleted && (currentUserRole === UserRole[1] || currentUserRole === UserRole[2]) && (
           <Link to={`/weekly4form/create/${record?._id}`}>
             <Button
               size="sm"
@@ -1444,9 +1401,7 @@ export const getWingCoordinatorColumns = ({ data = [], onDuplicate }) => [
       (a?.teacherID?.name || "").localeCompare(b?.teacherID?.name || ""),
     render: (val) => <UserCell name={val?.name || "—"} user={val} fontWeight="500" />,
     filterConfig: {
-      type: "select",
-      options: uniq(data.map((r) => r?.teacherID?.name)),
-      matchFn: (record, vals) => vals.includes(record?.teacherID?.name || ""),
+      type: "text",
     },
   },
   {
@@ -1569,12 +1524,7 @@ export const getReportForm1Columns = ({
       return <UserCell name={userObj?.name || "N/A"} user={userObj} fontWeight="500" />;
     },
     filterConfig: {
-      type: "select",
-      options: uniq(data.map((r) => r?.coordinatorID?.name || r?.userId?.name)),
-      matchFn: (record, vals) =>
-        vals.includes(
-          record?.coordinatorID?.name || record?.userId?.name || "",
-        ),
+      type: "text",
     },
   },
   {
@@ -1593,10 +1543,7 @@ export const getReportForm1Columns = ({
       return <UserCell name={userObj?.name || "N/A"} user={userObj} />;
     },
     filterConfig: {
-      type: "select",
-      options: uniq(data.map((r) => r?.teacherID?.name || r?.userId?.name)),
-      matchFn: (record, vals) =>
-        vals.includes(record?.teacherID?.name || record?.userId?.name || ""),
+      type: "text",
     },
   },
   {
@@ -1765,9 +1712,7 @@ export const getReportForm2Columns = ({
       (a?.createdBy?.name || "").localeCompare(b?.createdBy?.name || ""),
     render: (val) => <UserCell name={val?.name || "N/A"} user={val} fontWeight="500" />,
     filterConfig: {
-      type: "select",
-      options: uniq(data.map((r) => r?.createdBy?.name)),
-      matchFn: (record, vals) => vals.includes(record?.createdBy?.name || ""),
+      type: "text",
     },
   },
   {
@@ -1791,14 +1736,7 @@ export const getReportForm2Columns = ({
       );
     },
     filterConfig: {
-      type: "select",
-      options: uniq(
-        data.map((r) => r?.grenralDetails?.NameoftheVisitingTeacher?.name),
-      ),
-      matchFn: (record, vals) =>
-        vals.includes(
-          record?.grenralDetails?.NameoftheVisitingTeacher?.name || "",
-        ),
+      type: "text",
     },
   },
   {
@@ -1993,6 +1931,8 @@ export const getReportForm3Columns = ({
   filterOptions = {},
   currentUserRole,
   onDelete,
+  onOverviewComment,
+  canAddOverviewComment,
 }) => [
   {
     title: "Observer Name",
@@ -2020,18 +1960,7 @@ export const getReportForm3Columns = ({
       );
     },
     filterConfig: {
-      type: "select",
-      options: uniq(
-        data.map(
-          (r) => r?.grenralDetails?.NameofObserver?.name || r?.createdBy?.name,
-        ),
-      ),
-      matchFn: (record, vals) =>
-        vals.includes(
-          record?.grenralDetails?.NameofObserver?.name ||
-            record?.createdBy?.name ||
-            "",
-        ),
+      type: "text",
     },
   },
   {
@@ -2050,10 +1979,7 @@ export const getReportForm3Columns = ({
       return <UserCell name={userObj?.name || "N/A"} user={userObj} />;
     },
     filterConfig: {
-      type: "select",
-      options: uniq(data.map((r) => r?.teacherID?.name || r?.createdBy?.name)),
-      matchFn: (record, vals) =>
-        vals.includes(record?.teacherID?.name || record?.createdBy?.name || ""),
+      type: "text",
     },
   },
   {
@@ -2212,48 +2138,76 @@ export const getReportForm3Columns = ({
     title: "Action",
     key: "action",
     dataIndex: "action",
-    width: "280px",
-    render: (_, record) => (
-      <Flex gap={1} align="center">
-        <Link to={`/notebook-checking-proforma/report/${record._id}`}>
-          <Button
-            size="md"
-            variant="outline"
-            colorScheme="blue"
-            fontWeight="medium"
-            flexShrink={0}
-          >
-            View Report
-          </Button>
-        </Link>
-        {currentUserRole === UserRole[2] && record.isTeacherComplete && record.isObserverComplete && !record.isReflation && (
-          <Link to={`/notebook-checking-proforma/complete/${record._id}`}>
+    width: "380px",
+    render: (_, record) => {
+      const isPermitted = Boolean(
+        typeof canAddOverviewComment === "function"
+          ? canAddOverviewComment(record)
+          : canAddOverviewComment
+      );
+      const isEligible = Boolean(
+        record?.isTeacherComplete &&
+        record?.isObserverComplete &&
+        record?.isReflation
+      );
+      const hasOverviewComment = Boolean(record?.observerComment);
+
+      return (
+        <Flex gap={1.5} align="center" flexWrap="nowrap">
+          <Link to={`/notebook-checking-proforma/report/${record._id}`}>
             <Button
               size="md"
               variant="outline"
-              colorScheme="orange"
+              colorScheme="blue"
               fontWeight="medium"
               flexShrink={0}
             >
-              Reflection
+              View Report
             </Button>
           </Link>
-        )}
-        {currentUserRole === UserRole[1] && onDelete && (
-          <Button
-            size="md"
-            variant="outline"
-            colorScheme="red"
-            px={2}
-            flexShrink={0}
-            onClick={() => onDelete(record._id)}
-            title="Delete"
-          >
-            <DeleteFilled />
-          </Button>
-        )}
-      </Flex>
-    ),
+          {currentUserRole === UserRole[2] && record.isTeacherComplete && record.isObserverComplete && !record.isReflation && (
+            <Link to={`/notebook-checking-proforma/complete/${record._id}`}>
+              <Button
+                size="md"
+                variant="outline"
+                colorScheme="orange"
+                fontWeight="medium"
+                flexShrink={0}
+              >
+                Reflection
+              </Button>
+            </Link>
+          )}
+          {isPermitted && isEligible && onOverviewComment && (
+            <Button
+              size="md"
+              variant={hasOverviewComment ? "solid" : "outline"}
+              colorScheme="purple"
+              fontWeight="medium"
+              flexShrink={0}
+              onClick={() => onOverviewComment(record)}
+              title={hasOverviewComment ? "Edit Overview Comment" : "Add Overview Comment"}
+              leftIcon={<CommentOutlined />}
+            >
+              {hasOverviewComment ? "Edit Overview Comment" : "Overview Comment"}
+            </Button>
+          )}
+          {currentUserRole === UserRole[1] && onDelete && (
+            <Button
+              size="md"
+              variant="outline"
+              colorScheme="red"
+              px={2}
+              flexShrink={0}
+              onClick={() => onDelete(record._id)}
+              title="Delete"
+            >
+              <DeleteFilled />
+            </Button>
+          )}
+        </Flex>
+      );
+    },
   },
 ];
 
@@ -2280,10 +2234,7 @@ export const getReportForm4Columns = ({ data = [], currentUserRole, onDelete }) 
       />
     ),
     filterConfig: {
-      type: "select",
-      options: uniq(data.map((r) => r?.isInitiated?.Observer?.name)),
-      matchFn: (record, vals) =>
-        vals.includes(record?.isInitiated?.Observer?.name || ""),
+      type: "text",
     },
   },
   {
@@ -2297,9 +2248,7 @@ export const getReportForm4Columns = ({ data = [], currentUserRole, onDelete }) 
       (a?.teacherId?.name || "").localeCompare(b?.teacherId?.name || ""),
     render: (val) => <UserCell name={val?.name || "N/A"} user={val} />,
     filterConfig: {
-      type: "select",
-      options: uniq(data.map((r) => r?.teacherId?.name)),
-      matchFn: (record, vals) => vals.includes(record?.teacherId?.name || ""),
+      type: "text",
     },
   },
   {
@@ -2394,10 +2343,7 @@ export const getCoScholasticColumns = ({
       return <UserCell name={userObj?.name || "—"} user={userObj} fontWeight="500" />;
     },
     filterConfig: {
-      type: "select",
-      options: [...new Set(data.map((r) => r?.createdBy?.name || r?.userId?.name).filter(Boolean))],
-      matchFn: (record, vals) =>
-        vals.includes(record?.createdBy?.name || record?.userId?.name || ""),
+      type: "text",
     },
   },
   {
@@ -2423,12 +2369,7 @@ export const getCoScholasticColumns = ({
       );
     },
     filterConfig: {
-      type: "select",
-      options: [...new Set(data.map((r) => r?.grenralDetails?.NameoftheVisitingTeacher?.name || r?.teacherID?.name || (typeof r?.grenralDetails?.NameoftheVisitingTeacher === "string" ? r?.grenralDetails?.NameoftheVisitingTeacher : null)).filter(Boolean))],
-      matchFn: (record, vals) => {
-        const name = record?.grenralDetails?.NameoftheVisitingTeacher?.name || record?.teacherID?.name || (typeof record?.grenralDetails?.NameoftheVisitingTeacher === "string" ? record?.grenralDetails?.NameoftheVisitingTeacher : "");
-        return vals.includes(name || "");
-      },
+      type: "text",
     },
   },
   {

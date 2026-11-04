@@ -26,12 +26,26 @@ exports.createForm = async (req, res) => {
     let reciverId = "";
     let formData;
 
+    const cleanCoordinatorId =
+      coordinatorID && typeof coordinatorID === "object"
+        ? coordinatorID._id || coordinatorID.value || coordinatorID.id
+        : coordinatorID;
+    const cleanTeacherId =
+      teacherID && typeof teacherID === "object"
+        ? teacherID._id || teacherID.value || teacherID.id
+        : teacherID;
+
     // Determine the recipient based on role
-    if (isCoordinator && coordinatorID) {
-      if (coordinatorID.toString() === userId.toString()) {
+    if (
+      isCoordinator &&
+      cleanCoordinatorId &&
+      typeof cleanCoordinatorId === "string" &&
+      mongoose.Types.ObjectId.isValid(cleanCoordinatorId)
+    ) {
+      if (cleanCoordinatorId.toString() === userId.toString()) {
         return res.status(400).json({ message: "You cannot assign yourself as the coordinator/observer." });
       }
-      const coordinator = await User.findById(coordinatorID);
+      const coordinator = await User.findById(cleanCoordinatorId);
       if (coordinator?.email) {
         recipientEmail = coordinator.email;
         reciverId = coordinator._id;
@@ -58,16 +72,21 @@ exports.createForm = async (req, res) => {
         section,
         date: new Date(date),
         isCoordinator,
-        coordinatorID,
+        coordinatorID: cleanCoordinatorId,
         isTeacher,
         observerForm: {}, // Defaults will apply
         teacherForm: {}, // Defaults will apply
       });
-    } else if (isTeacher && teacherID) {
-      if (teacherID.toString() === userId.toString()) {
+    } else if (
+      isTeacher &&
+      cleanTeacherId &&
+      typeof cleanTeacherId === "string" &&
+      mongoose.Types.ObjectId.isValid(cleanTeacherId)
+    ) {
+      if (cleanTeacherId.toString() === userId.toString()) {
         return res.status(400).json({ message: "You cannot assign yourself as the teacher." });
       }
-      const teacher = await User.findById(teacherID);
+      const teacher = await User.findById(cleanTeacherId);
       if (teacher?.email) {
         recipientEmail = teacher.email;
         reciverId = teacher._id;
@@ -89,7 +108,7 @@ exports.createForm = async (req, res) => {
         date: new Date(date),
         isCoordinator,
         isTeacher,
-        teacherID,
+        teacherID: cleanTeacherId,
         observerForm: {}, // Defaults will apply
         teacherForm: {}, // Defaults will apply
       });
@@ -163,37 +182,140 @@ exports.createForm = async (req, res) => {
 
 // jab observer form 1 ko init karata hai tab ye function kam karta hai
 exports.FormInitiation = async (req, res) => {
-  const { isTeacher, teacherIDs, className, section } = req.body;
+  const { isTeacher, teacherIDs, teacherID, isCoordinator, coordinatorID, className, section } = req.body;
   const userId = req?.user?.id;
   const userIdName = req?.user?.name;
-  let FormData;
+
   try {
     let finalClassName = className;
-    if (className && mongoose.Types.ObjectId.isValid(className)) {
+    if (className && mongoose.Types.ObjectId.isValid(className) && /^[a-f\d]{24}$/i.test(className)) {
       const classData = await ClassDetails.findById(className);
+      if (classData) finalClassName = classData.className;
+    } else if (className) {
+      const classData = await ClassDetails.findOne({ className });
       if (classData) finalClassName = classData.className;
     }
 
-    if (isTeacher && Array.isArray(teacherIDs) && teacherIDs.length > 0) {
+    // 1. Check if initiating for Coordinator
+    const cleanCoordinatorId =
+      coordinatorID && typeof coordinatorID === "object"
+        ? coordinatorID._id || coordinatorID.value || coordinatorID.id
+        : coordinatorID;
+
+    if (
+      isCoordinator &&
+      cleanCoordinatorId &&
+      typeof cleanCoordinatorId === "string" &&
+      mongoose.Types.ObjectId.isValid(cleanCoordinatorId)
+    ) {
+      if (cleanCoordinatorId.toString() === userId.toString()) {
+        return res.status(400).json({ message: "You cannot assign yourself as the coordinator/observer." });
+      }
+      const coordinator = await User.findById(cleanCoordinatorId);
+      if (!coordinator?.email) {
+        return res.status(400).json({ message: "Selected Coordinator does not have a valid email." });
+      }
+
+      const formData = new Form1({
+        userId,
+        isCoordinator: true,
+        isObserverInitiation: true,
+        observerForm: {},
+        teacherForm: {},
+        coordinatorID: coordinator._id,
+        date: new Date(),
+        className: finalClassName,
+        section,
+      });
+
+      const savedForm = await formData.save();
+
+      const newActivity = new activity({
+        userId,
+        title: "Fortnightly Monitor",
+        form1: {
+          message: "Fortnightly Monitor Form Created",
+          router: `fortnightly-monitor/create/${savedForm._id}`,
+        },
+      });
+      await newActivity.save().catch((err) => console.error("Activity save error:", err));
+
+      const notification = new Notification({
+        title: "You are invited to fill the Fortnightly Monitor Form",
+        route: `fortnightly-monitor/create/${savedForm._id}`,
+        reciverId: coordinator._id,
+        date: new Date(),
+        status: "unSeen",
+      });
+      await notification.save().catch((err) => console.error("Notification save error:", err));
+
+      try {
+        const route = `fortnightly-monitor/create/${savedForm._id}`;
+        const emailData = formInitiatedEmail({
+          recipientName: coordinator.name,
+          initiatorName: userIdName || req?.user?.name || "Admin",
+          formTitle: "Fortnightly Monitor",
+          formRoute: route,
+          className: finalClassName,
+          section,
+        });
+        await sendEmail(coordinator.email, emailData.subject, emailData.html);
+      } catch (emailErr) {
+        console.error("Email send error for coordinator:", coordinator.email, emailErr);
+      }
+
+      recordAuditLog({
+        req,
+        action: 'CREATE',
+        module: 'Fortnightly Monitor',
+        details: `Initiated Fortnightly Monitor for coordinator ${coordinator.name} (Class: ${finalClassName || ''} Section: ${section || ''})`,
+      });
+
+      return res.status(201).json({
+        message: "Fortnightly Monitor created successfully!",
+        form: savedForm,
+        forms: [savedForm],
+      });
+    }
+
+    // 2. Extract and sanitize teacher IDs
+    let rawTeacherIds = teacherIDs;
+    if (rawTeacherIds === undefined || rawTeacherIds === null || rawTeacherIds === "") {
+      rawTeacherIds = teacherID ? [teacherID] : [];
+    } else if (!Array.isArray(rawTeacherIds)) {
+      rawTeacherIds = [rawTeacherIds];
+    }
+
+    const cleanTeacherIds = rawTeacherIds
+      .map((item) => {
+        if (!item) return null;
+        if (typeof item === "object") {
+          return item._id || item.value || item.id || null;
+        }
+        return typeof item === "string" ? item.trim() : String(item).trim();
+      })
+      .filter((id) => id && typeof id === "string" && mongoose.Types.ObjectId.isValid(id) && id.toString() !== userId.toString());
+
+    const singleTeacherIds = cleanTeacherIds.slice(0, 1);
+    if (singleTeacherIds.length > 0) {
       const teacherForms = await Promise.all(
-        teacherIDs.map(async (item) => {
-          if (item.toString() === userId.toString()) return null;
-          const teacher = await User.findById({ _id: item });
+        singleTeacherIds.map(async (teacherId) => {
+          const teacher = await User.findById(teacherId);
           if (teacher?.email) {
             const formData = new Form1({
               userId,
-              isTeacher,
+              isTeacher: true,
               isObserverInitiation: true,
               observerForm: {},
               teacherForm: {},
-              teacherID: teacher?._id,
+              teacherID: teacher._id,
               date: new Date(),
               className: finalClassName,
               section,
             });
 
             // Save the form
-            FormData = await formData.save();
+            const savedForm = await formData.save();
 
             // Save activity log
             const newActivity = new activity({
@@ -201,61 +323,64 @@ exports.FormInitiation = async (req, res) => {
               title: "Fortnightly Monitor",
               form1: {
                 message: "Fortnightly Monitor Form Created",
-                router: `fortnightly-monitor/create/${formData._id}`,
+                router: `fortnightly-monitor/create/${savedForm._id}`,
               },
             });
-            await newActivity.save();
+            await newActivity.save().catch((err) => console.error("Activity save error:", err));
 
             const notification = new Notification({
               title: "You are invited to fill the Fortnightly Monitor Form",
-              route: `fortnightly-monitor/create/${formData._id}`,
+              route: `fortnightly-monitor/create/${savedForm._id}`,
               reciverId: teacher._id,
               date: new Date(),
               status: "unSeen",
             });
-            await notification.save();
+            await notification.save().catch((err) => console.error("Notification save error:", err));
 
-            return formData;
+            // Send notification email to each initiated teacher
+            try {
+              const route = `fortnightly-monitor/create/${savedForm._id}`;
+              const emailData = formInitiatedEmail({
+                recipientName: teacher.name,
+                initiatorName: userIdName || req?.user?.name || "Observer",
+                formTitle: "Fortnightly Monitor",
+                formRoute: route,
+                className: finalClassName,
+                section,
+              });
+              await sendEmail(teacher.email, emailData.subject, emailData.html);
+            } catch (emailErr) {
+              console.error("Email send error for teacher:", teacher.email, emailErr);
+            }
+
+            return savedForm;
           }
           return null;
         }),
       );
-      const checkForm = await Form1.findById(FormData._id).populate(
-        "teacherID coordinatorID userId",
-      );
-      const validForms = teacherForms.filter((form) => form !== null);
-      const recipientEmail = checkForm?.teacherID?.email;
-      const recipientName  = checkForm?.teacherID?.name;
-      const route = `fortnightly-monitor/create/${FormData._id}`;
-      const emailData = formInitiatedEmail({
-        recipientName,
-        initiatorName: checkForm?.coordinatorID?.name || checkForm?.userId?.name,
-        formTitle: "Fortnightly Monitor",
-        formRoute: route,
-        className: checkForm?.className,
-        section: checkForm?.section,
-      });
-      if (recipientEmail) {
-        await sendEmail(recipientEmail, emailData.subject, emailData.html);
-      }
+
+      const validForms = teacherForms.filter((form) => form !== null && form !== undefined);
 
       if (validForms.length > 0) {
         recordAuditLog({
           req,
           action: 'CREATE',
           module: 'Fortnightly Monitor',
-          details: `Initiated Fortnightly Monitor for ${validForms.length} teacher(s) (Class: ${className || ''} Section: ${section || ''})`,
+          details: `Initiated Fortnightly Monitor for ${validForms.length} teacher(s) (Class: ${finalClassName || ''} Section: ${section || ''})`,
         });
         return res.status(201).json({
           message: "Fortnightly Monitor created successfully!",
           forms: validForms,
         });
+      } else {
+        return res.status(400).json({
+          message: "Could not initiate form. None of the selected teachers have a valid email address.",
+        });
       }
     }
 
     return res.status(400).json({
-      message:
-        "Invalid data. Either coordinator or teacher details are required.",
+      message: "Please select at least one valid Teacher to initiate the form.",
     });
   } catch (error) {
     console.error("Error creating Fortnightly Monitor:", error);
@@ -334,7 +459,44 @@ const buildFormOneQueryAndPaginate = async (req, baseCondition = {}) => {
     queryFilter.isCoordinatorComplete = String(req.query.isCoordinatorComplete) === "true";
   }
 
-  // 6. Person search
+  // 6. Person & Name search
+  const andConditions = [];
+
+  if (req.query.teacherName) {
+    const terms = req.query.teacherName
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (terms.length > 0) {
+      const userConditions = terms.map((term) => ({
+        name: { $regex: term, $options: "i" },
+      }));
+      const matchedUsers = await User.find({ $or: userConditions }, "_id").lean();
+      const matchedIds = matchedUsers.map((u) => u._id);
+      andConditions.push({ teacherID: { $in: matchedIds } });
+    }
+  }
+
+  if (req.query.observerName) {
+    const terms = req.query.observerName
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (terms.length > 0) {
+      const userConditions = terms.map((term) => ({
+        name: { $regex: term, $options: "i" },
+      }));
+      const matchedUsers = await User.find({ $or: userConditions }, "_id").lean();
+      const matchedIds = matchedUsers.map((u) => u._id);
+      andConditions.push({
+        $or: [
+          { userId: { $in: matchedIds } },
+          { coordinatorID: { $in: matchedIds } },
+        ],
+      });
+    }
+  }
+
   const search = req.query.search || req.query.searchName || req.query.personName;
   if (search) {
     const searchTerms = search
@@ -351,32 +513,29 @@ const buildFormOneQueryAndPaginate = async (req, baseCondition = {}) => {
       ).lean();
       const matchedIds = matchedUsers.map((u) => u._id);
 
-      const searchOr = [
-        { teacherID: { $in: matchedIds } },
-        { coordinatorID: { $in: matchedIds } },
-        { userId: { $in: matchedIds } },
-      ];
+      andConditions.push({
+        $or: [
+          { teacherID: { $in: matchedIds } },
+          { coordinatorID: { $in: matchedIds } },
+          { userId: { $in: matchedIds } },
+        ],
+      });
+    }
+  }
 
-      if (queryFilter.$or) {
-        queryFilter.$and = [
-          { $or: queryFilter.$or },
-          { $or: searchOr },
-        ];
-        delete queryFilter.$or;
-      } else {
-        queryFilter.$or = searchOr;
-      }
+  if (andConditions.length > 0) {
+    if (queryFilter.$and) {
+      queryFilter.$and.push(...andConditions);
+    } else if (queryFilter.$or) {
+      queryFilter.$and = [{ $or: queryFilter.$or }, ...andConditions];
+      delete queryFilter.$or;
+    } else {
+      queryFilter.$and = andConditions;
     }
   }
 
   // 7. Pagination params (limit & skip)
-  const hasPagination =
-    req.query.page !== undefined ||
-    req.query.limit !== undefined ||
-    req.query.skip !== undefined;
-
   const isAll =
-    !hasPagination ||
     req.query.limit === "all" ||
     req.query.all === "true" ||
     parseInt(req.query.limit, 10) >= 99999;
@@ -390,8 +549,26 @@ const buildFormOneQueryAndPaginate = async (req, baseCondition = {}) => {
 
   const totalCount = await Form1.countDocuments(queryFilter);
 
+  // Parse sorting params
+  const { parseSortParams } = require("../utils/sortHelper");
+  const form1SortMap = {
+    date: "date",
+    observationDate: "date",
+    className: "className",
+    section: "section",
+    personName: "teacherID",
+    teacherName: "teacherID",
+    observerName: "coordinatorID",
+    isTeacherComplete: "isTeacherComplete",
+    isCoordinatorComplete: "isCoordinatorComplete",
+    totalScores: "observerForm.totalScore",
+    totalScore: "observerForm.totalScore",
+    createdAt: "createdAt",
+  };
+  const sortCriteria = parseSortParams(req.query, form1SortMap, { date: -1, createdAt: -1 });
+
   let dbQuery = Form1.find(queryFilter)
-    .sort({ date: -1, createdAt: -1 })
+    .sort(sortCriteria)
     .populate({
       path: "teacherID",
       select: "-password -mobile -employeeId -customId",
@@ -464,7 +641,7 @@ exports.getuserForm = async (req, res) => {
       $or: [{ userId }, { teacherID: userId }],
     };
     const result = await buildFormOneQueryAndPaginate(req, baseCondition);
-    res.status(200).json({ success: true, ...result });
+    res.status(200).json({ success: true, Combined: result.data, ...result });
   } catch (err) {
     console.error("Error in getuserForm:", err);
     res.status(400).send(err);
@@ -478,15 +655,21 @@ exports.GetObseverForm1 = async (req, res) => {
   }
   try {
     const baseCondition = {
-      $or: [{ coordinatorID: userId }, { isObserverInitiation: true }],
+      $or: [
+        { coordinatorID: userId },
+        { userId, isObserverInitiation: true },
+      ],
     };
     const result = await buildFormOneQueryAndPaginate(req, baseCondition);
-    res.status(200).json({ success: true, ...result });
+    res.status(200).json({ success: true, Combined: result.data, ...result });
   } catch (error) {
     console.error("Error Getting Fortnightly Monitor Observer Forms:", error);
     res.status(500).json({ message: "Error Getting Fortnightly Monitor.", error });
   }
 };
+
+exports.getUserForm = exports.getuserForm;
+exports.GetObserverForm01 = exports.GetObseverForm1;
 
 exports.getSingleuserForm = async (req, res) => {
   const formId = req?.params.id;

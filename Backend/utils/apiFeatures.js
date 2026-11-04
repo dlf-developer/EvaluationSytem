@@ -36,9 +36,28 @@ class APIFeatures {
   }
 
   sort() {
-    if (this.queryString.sort) {
-      const sortBy = this.queryString.sort.split(",").join(" ");
-      this.query = this.query.sort(sortBy);
+    const sortField =
+      this.queryString.sort ||
+      this.queryString.sortBy ||
+      this.queryString.sortKey;
+    const order = (
+      this.queryString.sortOrder ||
+      this.queryString.sortDir ||
+      this.queryString.order ||
+      ""
+    ).toLowerCase();
+
+    if (sortField) {
+      if (order === "desc" || sortField.startsWith("-")) {
+        const cleanField = sortField.replace(/^-/, "");
+        this.query = this.query.sort(`-${cleanField}`);
+      } else if (order === "asc" || sortField.startsWith("+")) {
+        const cleanField = sortField.replace(/^[+-]/, "");
+        this.query = this.query.sort(cleanField);
+      } else {
+        const sortBy = sortField.split(",").join(" ");
+        this.query = this.query.sort(sortBy);
+      }
     } else {
       this.query = this.query.sort("-createdAt");
     }

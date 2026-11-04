@@ -3,12 +3,14 @@ import React, {
   useContext,
   useState,
   useCallback,
+  useMemo,
   useRef,
   useEffect,
 } from "react";
 import { HelpCircle } from "lucide-react";
 
-const FormContext = createContext(null);
+export const FormContext = createContext(null);
+export const FormListContext = createContext(null);
 
 export class FormStore {
   constructor(initialValues = {}) {
@@ -16,6 +18,7 @@ export class FormStore {
     this.listeners = new Set();
     this.fieldRules = {};
     this.errors = {};
+    this.onValuesChange = null;
   }
 
   notify() {
@@ -54,6 +57,24 @@ export class FormStore {
       delete this.errors[this.getNameKey(name)];
     }
     this.notify();
+    if (this.onValuesChange && typeof this.onValuesChange === "function") {
+      let changed = {};
+      if (Array.isArray(name)) {
+        let curr = changed;
+        for (let i = 0; i < name.length - 1; i++) {
+          curr[name[i]] = typeof name[i + 1] === "number" ? [] : {};
+          curr = curr[name[i]];
+        }
+        curr[name[name.length - 1]] = value;
+      } else {
+        changed[name] = value;
+      }
+      try {
+        this.onValuesChange(changed, this.getFieldsValue(true));
+      } catch (e) {
+        console.error("onValuesChange error:", e);
+      }
+    }
   }
 
   getNameKey(name) {
@@ -75,6 +96,13 @@ export class FormStore {
       }
       if (changed) {
         this.notify();
+        if (this.onValuesChange && typeof this.onValuesChange === "function") {
+          try {
+            this.onValuesChange(newValues, this.getFieldsValue(true));
+          } catch (e) {
+            console.error("onValuesChange error:", e);
+          }
+        }
       }
     }
   }
@@ -99,6 +127,12 @@ export class FormStore {
   registerField(name, rules) {
     const key = this.getNameKey(name);
     this.fieldRules[key] = { name, rules };
+  }
+
+  unregisterField(name) {
+    const key = this.getNameKey(name);
+    delete this.fieldRules[key];
+    delete this.errors[key];
   }
 
   async validateFields(fieldsToValidate) {
@@ -166,6 +200,7 @@ export function useForm(form) {
         setFieldsValue: (v) => store.setFieldsValue(v),
         resetFields: (f) => store.resetFields(f),
         validateFields: (f) => store.validateFields(f),
+        submit: () => {},
         _store: store,
       };
     }
@@ -178,6 +213,7 @@ export const Form = ({
   form,
   onFinish,
   onFinishFailed,
+  onValuesChange,
   initialValues,
   layout = "vertical",
   children,
@@ -187,17 +223,25 @@ export const Form = ({
 }) => {
   const [internalForm] = useForm(form);
   const activeForm = form || internalForm;
-  const prevInitialValuesRef = useRef();
+  const hasInitializedRef = useRef(false);
+
+  if (activeForm?._store) {
+    activeForm._store.onValuesChange = onValuesChange;
+  }
 
   useEffect(() => {
-    if (initialValues && typeof initialValues === "object") {
-      const prev = prevInitialValuesRef.current;
-      const isDifferent =
-        !prev ||
-        Object.keys(initialValues).some((k) => initialValues[k] !== prev[k]) ||
-        Object.keys(prev).some((k) => !(k in initialValues));
-      if (isDifferent) {
-        prevInitialValuesRef.current = { ...initialValues };
+    if (activeForm?._store) {
+      activeForm._store.onValuesChange = onValuesChange;
+    }
+  }, [activeForm, onValuesChange]);
+
+  useEffect(() => {
+    if (!hasInitializedRef.current && initialValues && typeof initialValues === "object") {
+      const hasMeaningfulData = Object.values(initialValues).some(
+        (v) => v !== undefined && v !== null && (Array.isArray(v) ? v.length > 0 : true)
+      );
+      if (hasMeaningfulData) {
+        hasInitializedRef.current = true;
         activeForm.setFieldsValue(initialValues);
       }
     }
@@ -209,9 +253,15 @@ export const Form = ({
       const values = await activeForm.validateFields();
       onFinish?.(values);
     } catch (err) {
-      onFinishFailed?.(err);
+      if (onFinishFailed) {
+        onFinishFailed(err);
+      } else {
+        console.warn("Form validation failed:", err);
+      }
     }
   };
+
+  activeForm.submit = handleSubmit;
 
   return (
     <FormContext.Provider value={{ form: activeForm, layout }}>
@@ -243,6 +293,7 @@ export const FormItem = ({
   name,
   label,
   rules,
+  initialValue,
   valuePropName = "value",
   children,
   className = "",
@@ -253,19 +304,36 @@ export const FormItem = ({
   ...props
 }) => {
   const ctx = useContext(FormContext);
+  const listCtx = useContext(FormListContext);
   const form = ctx?.form;
   const layout = ctx?.layout || "vertical";
   const [, forceUpdate] = useState({});
 
-  useEffect(() => {
-    if (name && form?._store) {
-      form._store.registerField(name, rules);
-      return form._store.subscribe(() => forceUpdate({}));
+  const resolvedName = useMemo(() => {
+    if (name === undefined || name === null) return name;
+    if (listCtx?.namePath && listCtx.namePath.length > 0) {
+      const nameParts = Array.isArray(name) ? name : [name];
+      return [...listCtx.namePath, ...nameParts];
     }
-  }, [name, rules, form]);
+    return name;
+  }, [name, listCtx]);
 
-  const value = name && form ? form.getFieldValue(name) : undefined;
-  const key = name ? (Array.isArray(name) ? name.join(".") : String(name)) : null;
+  useEffect(() => {
+    if (resolvedName && form?._store) {
+      form._store.registerField(resolvedName, rules);
+      if (initialValue !== undefined && form.getFieldValue(resolvedName) === undefined) {
+        form.setFieldValue(resolvedName, initialValue);
+      }
+      const unsubscribe = form._store.subscribe(() => forceUpdate({}));
+      return () => {
+        unsubscribe?.();
+        form._store.unregisterField?.(resolvedName);
+      };
+    }
+  }, [resolvedName, rules, form, initialValue]);
+
+  const value = resolvedName && form ? form.getFieldValue(resolvedName) : undefined;
+  const key = resolvedName ? (Array.isArray(resolvedName) ? resolvedName.join(".") : String(resolvedName)) : null;
   const error = key && form?._store ? form._store.errors[key] : null;
 
   const isRequired = rules && rules.some((r) => r.required);
@@ -278,13 +346,13 @@ export const FormItem = ({
           ? valOrEvent.target.checked
           : valOrEvent.target.value;
     }
-    if (name && form) {
-      form.setFieldValue(name, newVal);
+    if (resolvedName && form) {
+      form.setFieldValue(resolvedName, newVal);
     }
   };
 
   let renderedChild = children;
-  if (name && React.isValidElement(children)) {
+  if (resolvedName && React.isValidElement(children)) {
     const childProps = {
       [valuePropName]: value !== undefined ? value : "",
       onChange: (v) => {
@@ -350,30 +418,64 @@ export const FormItem = ({
   );
 };
 
-export const FormList = ({ name, children }) => {
+export const FormList = ({ name, rules, initialValue = [], children }) => {
   const ctx = useContext(FormContext);
+  const listCtx = useContext(FormListContext);
   const form = ctx?.form;
-  const value = name && form ? form.getFieldValue(name) || [] : [];
+  const [, forceUpdate] = useState({});
+
+  const fullNamePath = useMemo(() => {
+    const parentPath = listCtx?.namePath || [];
+    const thisPath = Array.isArray(name) ? name : [name];
+    return [...parentPath, ...thisPath];
+  }, [listCtx, name]);
+
+  useEffect(() => {
+    if (form?._store) {
+      return form._store.subscribe(() => forceUpdate({}));
+    }
+  }, [form]);
+
+  useEffect(() => {
+    if (fullNamePath && rules && form?._store) {
+      form._store.registerField(fullNamePath, rules);
+      return () => {
+        form._store.unregisterField?.(fullNamePath);
+      };
+    }
+  }, [fullNamePath, rules, form]);
+
+  const rawValue = form ? form.getFieldValue(fullNamePath) : undefined;
+  const value = Array.isArray(rawValue) ? rawValue : (initialValue || []);
 
   const add = (defaultValue = {}) => {
-    const next = [...value, defaultValue];
-    form?.setFieldValue(name, next);
+    const currentList = form ? form.getFieldValue(fullNamePath) : [];
+    const baseList = Array.isArray(currentList) ? currentList : [];
+    const next = [...baseList, defaultValue];
+    form?.setFieldValue(fullNamePath, next);
   };
 
   const remove = (index) => {
-    const next = value.filter((_, i) => i !== index);
-    form?.setFieldValue(name, next);
+    const currentList = form ? form.getFieldValue(fullNamePath) : [];
+    if (!Array.isArray(currentList)) return;
+    const next = currentList.filter((_, i) => i !== index);
+    form?.setFieldValue(fullNamePath, next);
   };
 
   const fields = value.map((_, index) => ({
     key: index,
     name: index,
+    fieldKey: index,
     isListField: true,
   }));
 
   const operation = { add, remove };
 
-  return <>{children(fields, operation)}</>;
+  return (
+    <FormListContext.Provider value={{ namePath: fullNamePath }}>
+      {typeof children === "function" ? children(fields, operation) : null}
+    </FormListContext.Provider>
+  );
 };
 
 Form.Item = FormItem;

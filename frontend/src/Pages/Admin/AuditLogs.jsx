@@ -333,20 +333,20 @@ export default function AuditLogs() {
     []
   );
 
-  // If accessed in production, show local dev guard
+  // If accessed in production, show dev environment guard
   if (!isDev) {
     return (
       <Box p={8} maxW="700px" mx="auto" textAlign="center" mt={12}>
         <VStack spacing={4} bg="white" p={8} rounded="2xl" shadow="sm" border="1px solid" borderColor="gray.200">
           <ShieldAlert size={48} color="#e11d48" />
           <Heading size="md" color="gray.800">
-            Audit Logs Feature Disabled
+            Audit Logs Dashboard Restricted
           </Heading>
           <Text fontSize="sm" color="gray.600" maxW="lg">
-            Audit logging and tracking are currently restricted strictly to <b>Local Development</b> mode and are not enabled on production builds.
+            Audit monitoring is actively recording system actions in the background. The visual audit dashboard is restricted to <b>Local / Development</b> environments and hidden from production users.
           </Text>
-          <Badge colorScheme="red" px={3} py={1} rounded="full">
-            ENVIRONMENT: PRODUCTION
+          <Badge colorScheme="green" px={3} py={1} rounded="full">
+            MONITORING STATUS: ACTIVE
           </Badge>
         </VStack>
       </Box>

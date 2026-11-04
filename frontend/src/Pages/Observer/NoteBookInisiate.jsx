@@ -68,9 +68,13 @@ function NoteBookInisiate() {
   };
 
   const handleSubmit = async (values) => {
+    const singleTeacherId = Array.isArray(values?.teacherIDs)
+      ? values.teacherIDs[0]
+      : values?.teacherIDs;
+
     const payload = {
       isTeacher: values?.isTeacher || isTeacher,
-      teacherIDs: values?.teacherIDs || "",
+      teacherIDs: singleTeacherId ? [singleTeacherId] : [],
       className: values?.className,
       Section: values?.Section,
       Subject: values?.Subject,
@@ -151,14 +155,13 @@ function NoteBookInisiate() {
                 <>
                   <Form.Item
                     className="w-100"
-                    label="Teacher ID"
+                    label="Teacher"
                     name="teacherIDs"
                     rules={[
                       { required: true, message: "Please select a Teacher!" },
                     ]}
                   >
                     <Select
-                      mode="multiple"
                       allowClear
                       showSearch
                       placeholder="Select a Teacher"

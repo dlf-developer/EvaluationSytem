@@ -20,6 +20,8 @@ import {
   GetWalkThroughForm,
 } from "../../redux/Form/classroomWalkthroughSlice";
 import moment from "moment";
+import { WALKTHROUGH_QUESTIONS } from "../Forms/FormInside/walkthroughQuestions";
+import ChoiceScaleSelector from "../../Components/Forms/ChoiceScaleSelector";
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -119,14 +121,7 @@ function OB_WalkthroughEdit() {
             <TextArea rows={4} placeholder="Enter Your Feedback" />
           </>
         ) : (
-          <Radio.Group
-            options={yesNoNAOptions.map((value) => ({
-              label: value,
-              value: value,
-            }))}
-            optionType="button"
-            buttonStyle="solid"
-          />
+          <ChoiceScaleSelector options={yesNoNAOptions} size="large" />
         )}
       </Form.Item>
       <Form.Item
@@ -334,12 +329,30 @@ function OB_WalkthroughEdit() {
     </>
   );
 
+  const enrichWithQuestions = (data) => {
+    if (!data) return data;
+    const enriched = { ...data };
+    Object.keys(WALKTHROUGH_QUESTIONS).forEach((key) => {
+      if (enriched[key]) {
+        const canonical = WALKTHROUGH_QUESTIONS[key];
+        const raw = enriched[key];
+        const list = Array.isArray(raw) ? raw : Object.values(raw);
+        enriched[key] = list.map((item, idx) => ({
+          ...(item || {}),
+          question: (item && item.question) || canonical[idx] || "",
+        }));
+      }
+    });
+    return enriched;
+  };
+
   const saveDraft = async (data, targetStep) => {
     try {
-      let resolvedClassName = data.className;
-      if (data.className && newData?.length) {
+      const enriched = enrichWithQuestions(data);
+      let resolvedClassName = enriched.className;
+      if (enriched.className && newData?.length) {
         const matched = newData.find(
-          (c) => c._id === data.className || c.className === data.className
+          (c) => c._id === enriched.className || c.className === enriched.className
         );
         if (matched?.className) {
           resolvedClassName = matched.className;
@@ -350,7 +363,7 @@ function OB_WalkthroughEdit() {
         EditUpdateClassForm({
           id: FormId,
           data: {
-            ...data,
+            ...enriched,
             className: resolvedClassName,
             isDraft: true,
             currentStep: targetStep !== undefined ? targetStep : currStep,
@@ -389,10 +402,11 @@ function OB_WalkthroughEdit() {
   };
 
   const handleSubmit = async (data) => {
-    let resolvedClassName = data.className;
-    if (data.className && newData?.length) {
+    const enriched = enrichWithQuestions(data);
+    let resolvedClassName = enriched.className;
+    if (enriched.className && newData?.length) {
       const matched = newData.find(
-        (c) => c._id === data.className || c.className === data.className
+        (c) => c._id === enriched.className || c.className === enriched.className
       );
       if (matched?.className) {
         resolvedClassName = matched.className;
@@ -402,7 +416,7 @@ function OB_WalkthroughEdit() {
     const payload = {
       id: FormId,
       data: {
-        ...data,
+        ...enriched,
         className: resolvedClassName,
         isDraft: false,
         isFinalSubmit: true,

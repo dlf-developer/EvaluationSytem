@@ -34,7 +34,7 @@ exports.createWeekly4Form = async (req, res) => {
     // Step 2: Handle initiated forms directly
     if (isInitiated?.status) {
       const payload = { date, isInitiated };
-      return handleInitiatedForms(teacherIds, payload, res);
+      return handleInitiatedForms(teacherIds, payload, res, req);
     }
 
     // Step 3: Fetch class names for each classId in FormData
@@ -73,10 +73,10 @@ exports.createWeekly4Form = async (req, res) => {
           ...payload,
           isInitiated: { ...payload.isInitiated, Observer: observer },
         };
-        return createNonInitiatedForm(observerPayload, res);
+        return createNonInitiatedForm(observerPayload, res, req);
       }
     } else {
-      return createNonInitiatedForm(payload, res);
+      return createNonInitiatedForm(payload, res, req);
     }
 
     return res
@@ -129,52 +129,77 @@ const getClassNamesForFormData = async (FormData) => {
   return FormData; // Return updated FormData with classNames
 };
 
-const handleInitiatedForms = async (teacherIds, Payload, res) => {
+const handleInitiatedForms = async (rawTeacherIds, Payload, res, req) => {
   try {
-    const dataPush = await Promise.all(
-      teacherIds.map(async (teacherId) => {
-        if (Payload?.isInitiated?.Observer && String(teacherId) === String(Payload.isInitiated.Observer)) {
-          return null;
-        }
-        Payload.teacherId = teacherId;
-        const teachName = await User.findById(teacherId);
-        const ObserverName = await User.findById(
-          Payload?.isInitiated?.Observer,
-        );
+    let rawId = Array.isArray(rawTeacherIds) ? rawTeacherIds[0] : rawTeacherIds;
+    if (rawId && typeof rawId === "object") {
+      rawId = rawId._id || rawId.value || rawId.id || null;
+    }
+    const cleanTeacherId = rawId ? String(rawId).trim() : "";
 
-        const newForm = new Weekly4Form(Payload);
-        const savedForm = await newForm.save();
+    if (!cleanTeacherId || !mongoose.Types.ObjectId.isValid(cleanTeacherId) || !/^[a-f\d]{24}$/i.test(cleanTeacherId)) {
+      return res.status(400).json({ success: false, error: "Please select a valid teacher." });
+    }
 
-        // Send email using the standard HTML template with a direct form link
-        if (teachName?.email) {
-          const route = `weekly4form/create/${savedForm._id}`;
-          const emailData = formInitiatedEmail({
-            recipientName: teachName.name,
-            initiatorName: ObserverName?.name || "Observer",
-            formTitle: "Learning Progress Checklist",
-            formRoute: route,
-          });
-          await sendEmail(teachName.email, emailData.subject, emailData.html);
-        }
+    if (Payload?.isInitiated?.Observer && cleanTeacherId === String(Payload.isInitiated.Observer)) {
+      return res.status(400).json({ success: false, error: "You cannot initiate a form to yourself." });
+    }
 
-        if (!savedForm) throw new Error("Form not saved");
-        return savedForm;
-      }),
-    );
-    recordAuditLog({
-      req,
-      action: 'CREATE',
-      module: 'Learning Progress',
-      details: `Initiated Learning Progress Checklist for ${dataPush.length} teacher(s)`,
-    });
-    return res.status(201).json({ success: true, data: dataPush });
+    const teachName = await User.findById(cleanTeacherId);
+    if (!teachName) {
+      return res.status(404).json({ success: false, error: "Selected teacher not found." });
+    }
+
+    let observerId = Payload?.isInitiated?.Observer || req?.user?.id;
+    if (observerId && typeof observerId === "object") {
+      observerId = observerId._id || observerId.id;
+    }
+    const cleanObserverId = observerId ? String(observerId).trim() : "";
+    const ObserverName = (cleanObserverId && mongoose.Types.ObjectId.isValid(cleanObserverId))
+      ? await User.findById(cleanObserverId)
+      : null;
+
+    const formPayload = {
+      ...Payload,
+      teacherId: teachName._id,
+    };
+
+    const newForm = new Weekly4Form(formPayload);
+    const savedForm = await newForm.save();
+
+    // Send email using the standard HTML template with a direct form link
+    if (teachName?.email) {
+      const route = `weekly4form/create/${savedForm._id}`;
+      const emailData = formInitiatedEmail({
+        recipientName: teachName.name,
+        initiatorName: ObserverName?.name || "Observer",
+        formTitle: "Learning Progress Checklist",
+        formRoute: route,
+      });
+      try {
+        await sendEmail(teachName.email, emailData.subject, emailData.html);
+      } catch (e) {
+        console.error("Failed to send initiate email:", e);
+      }
+    }
+
+    if (req) {
+      recordAuditLog({
+        req,
+        action: 'CREATE',
+        module: 'Learning Progress',
+        details: `Initiated Learning Progress Checklist for ${teachName.name}`,
+      });
+    }
+
+    return res.status(201).json({ success: true, data: [savedForm] });
   } catch (error) {
     return res.status(400).json({ success: false, error: error.message });
   }
 };
 
 // Helper function to handle non-initiated forms (single form)
-const createNonInitiatedForm = async (Payload, res) => {
+const createNonInitiatedForm = async (Payload, res, req) => {
   try {
     const teacher = await User.findById(Payload?.teacherId);
     const UserName = await User.findById(Payload?.isInitiated?.Observer);
@@ -250,7 +275,45 @@ const buildWeekly4QueryAndPaginate = async (req, baseCondition = {}) => {
     queryFilter.isCompleted = String(req.query.isCompleted) === "true";
   }
 
-  // 4. Person search
+  // 4. Person & Name search
+  const andConditions = [];
+
+  if (req.query.teacherName) {
+    const terms = req.query.teacherName
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (terms.length > 0) {
+      const userConditions = terms.map((term) => ({
+        name: { $regex: term, $options: "i" },
+      }));
+      const matchedUsers = await User.find({ $or: userConditions }, "_id").lean();
+      const matchedIds = matchedUsers.map((u) => u._id);
+      andConditions.push({ teacherId: { $in: matchedIds } });
+    }
+  }
+
+  if (req.query.observerName) {
+    const terms = req.query.observerName
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (terms.length > 0) {
+      const userConditions = terms.map((term) => ({
+        name: { $regex: term, $options: "i" },
+      }));
+      const matchedUsers = await User.find({ $or: userConditions }, "_id").lean();
+      const matchedIds = matchedUsers.map((u) => u._id);
+      andConditions.push({
+        $or: [
+          { coordinatorID: { $in: matchedIds } },
+          { "isInitiated.Observer": { $in: matchedIds } },
+          { userId: { $in: matchedIds } },
+        ],
+      });
+    }
+  }
+
   const search = req.query.search || req.query.searchName || req.query.personName;
   if (search) {
     const searchTerms = search
@@ -267,21 +330,25 @@ const buildWeekly4QueryAndPaginate = async (req, baseCondition = {}) => {
       ).lean();
       const matchedIds = matchedUsers.map((u) => u._id);
 
-      const searchOr = [
-        { teacherId: { $in: matchedIds } },
-        { coordinatorID: { $in: matchedIds } },
-        { "isInitiated.Observer": { $in: matchedIds } },
-      ];
+      andConditions.push({
+        $or: [
+          { teacherId: { $in: matchedIds } },
+          { coordinatorID: { $in: matchedIds } },
+          { "isInitiated.Observer": { $in: matchedIds } },
+          { userId: { $in: matchedIds } },
+        ],
+      });
+    }
+  }
 
-      if (queryFilter.$or) {
-        queryFilter.$and = [
-          { $or: queryFilter.$or },
-          { $or: searchOr },
-        ];
-        delete queryFilter.$or;
-      } else {
-        queryFilter.$or = searchOr;
-      }
+  if (andConditions.length > 0) {
+    if (queryFilter.$and) {
+      queryFilter.$and.push(...andConditions);
+    } else if (queryFilter.$or) {
+      queryFilter.$and = [{ $or: queryFilter.$or }, ...andConditions];
+      delete queryFilter.$or;
+    } else {
+      queryFilter.$and = andConditions;
     }
   }
 
@@ -306,8 +373,23 @@ const buildWeekly4QueryAndPaginate = async (req, baseCondition = {}) => {
 
   const totalCount = await Weekly4Form.countDocuments(queryFilter);
 
+  // Parse sorting params
+  const { parseSortParams } = require("../utils/sortHelper");
+  const weekly4SortMap = {
+    date: "date",
+    dateOfSubmission: "dateOfSubmission",
+    className: "className",
+    section: "section",
+    personName: "teacherId",
+    teacherName: "teacherId",
+    observerName: "coordinatorID",
+    isCompleted: "isCompleted",
+    createdAt: "createdAt",
+  };
+  const sortCriteria = parseSortParams(req.query, weekly4SortMap, { createdAt: -1 });
+
   let dbQuery = Weekly4Form.find(queryFilter)
-    .sort({ createdAt: -1 })
+    .sort(sortCriteria)
     .populate(
       "isInitiated.Observer",
       "-password -coordinator -designation -email -updatedAt -__v"
@@ -369,9 +451,9 @@ exports.getWeekly4FormById = async (req, res) => {
     if (!formId || !mongoose.Types.ObjectId.isValid(formId)) {
       return res.status(404).json({ success: false, message: "Form not found" });
     }
-    const form = await Weekly4Form.findById(formId).populate(
-      "isInitiated.Observer",
-    );
+    const form = await Weekly4Form.findById(formId)
+      .populate("isInitiated.Observer", "name email access designation")
+      .populate("teacherId", "name email access designation");
     if (!form) {
       return res
         .status(404)
@@ -512,7 +594,9 @@ exports.updateWeekly4Form = async (req, res) => {
       formId,
       Payload,
       { new: true, runValidators: true },
-    ).populate("isInitiated.Observer", "name email");
+    )
+      .populate("isInitiated.Observer", "name email access designation")
+      .populate("teacherId", "name email access designation");
 
     if (!updatedForm) {
       return res.status(404).json({ message: "Form not found" });

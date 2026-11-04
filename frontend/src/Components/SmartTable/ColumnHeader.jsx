@@ -44,28 +44,39 @@ const ColumnHeader = ({
           as="span"
           direction="column"
           align="center"
-          gap="1px"
+          gap="2px"
           flexShrink={0}
-          /* fix size so it never shifts siblings */
-          style={{ width: 10, lineHeight: 0 }}
-          onClick={(e) => {
-            e.stopPropagation(); // prevent FilterPopover from opening
-            onSort(key);
-          }}
+          style={{ width: 12, lineHeight: 0 }}
         >
           <Icon
             as={ArrowUp}
             boxSize="9px"
             display="block"
-            color={isSortedAsc ? "brand.primary" : "gray.500"}
+            cursor="pointer"
+            color={isSortedAsc ? "brand.primary" : "gray.400"}
+            _hover={{ color: "brand.primary", transform: "scale(1.2)" }}
+            transition="all 0.15s ease"
             strokeWidth={isSortedAsc ? 3 : 2}
+            title="Sort Ascending"
+            onClick={(e) => {
+              e.stopPropagation();
+              onSort(key, "asc");
+            }}
           />
           <Icon
             as={ArrowDown}
             boxSize="9px"
             display="block"
-            color={isSortedDesc ? "brand.primary" : "gray.500"}
+            cursor="pointer"
+            color={isSortedDesc ? "brand.primary" : "gray.400"}
+            _hover={{ color: "brand.primary", transform: "scale(1.2)" }}
+            transition="all 0.15s ease"
             strokeWidth={isSortedDesc ? 3 : 2}
+            title="Sort Descending"
+            onClick={(e) => {
+              e.stopPropagation();
+              onSort(key, "desc");
+            }}
           />
         </Flex>
       )}

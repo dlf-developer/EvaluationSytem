@@ -15,7 +15,7 @@ const FORM_TYPE_OPTIONS = [
     { value: 'form4', label: 'Learning Progress Checklist' },
 ];
 
-function Fillter_Wing({ saveData, data }) {
+function Fillter_Wing({ saveData, data, loading }) {
     const [form] = Form.useForm();
     const dispatch = useDispatch();
     const [newData, setNewData] = useState([]);
@@ -43,18 +43,22 @@ function Fillter_Wing({ saveData, data }) {
 
     useEffect(() => {
         if (data && !didAutoFetch.current) {
+            didAutoFetch.current = true;
+
             const hasValidRange = Array.isArray(data?.range) && data.range.length === 2 && data?.range[0] && data?.range[1];
             const parsedRange = hasValidRange
                 ? [dayjs(data.range[0]), dayjs(data.range[1])]
                 : [];
             const isRangeValid = parsedRange.length === 2 && parsedRange.every((d) => d.isValid());
 
-            form.setFieldsValue({
-                range: isRangeValid ? parsedRange : [],
-                className: data?.className || [],
-                formTypes: data?.formTypes || ['form1', 'form2', 'form3', 'form4', 'form5'],
-                observers: data?.observers || [],
-            });
+            if (isRangeValid || (data?.className && data.className.length > 0)) {
+                form.setFieldsValue({
+                    range: isRangeValid ? parsedRange : [],
+                    className: data?.className || [],
+                    formTypes: data?.formTypes || ['form1', 'form2', 'form3', 'form4', 'form5'],
+                    observers: data?.observers || [],
+                });
+            }
 
             if (data?.className?.length > 0 && isRangeValid) {
                 const payload = {
@@ -63,14 +67,12 @@ function Fillter_Wing({ saveData, data }) {
                     formTypes: data?.formTypes || ['form1', 'form2', 'form3', 'form4', 'form5'],
                     observers: data?.observers || [],
                 };
-                didAutoFetch.current = true;
                 onFinish(payload);
             }
         }
     }, [data, form]);
 
     const onFinish = async (values) => {
-        saveData(values);
         if (!values?.range || !Array.isArray(values.range) || values.range.length !== 2 || !values.range[0] || !values.range[1]) {
             message.warning("Please select a valid Date Range before searching.");
             return;
@@ -90,6 +92,7 @@ function Fillter_Wing({ saveData, data }) {
                 d2.endOf('day').toISOString()
             ]
         };
+        saveData(formattedValues);
         await dispatch(getFilteredData(formattedValues));
     };
 
@@ -146,9 +149,9 @@ function Fillter_Wing({ saveData, data }) {
             }}
         >
             <div className="filter-container">
-                <Row gutter={[16, 16]} align="bottom">
+                <Row gutter={[16, 16]}>
                     {/* Date Range */}
-                    <Col xl={5} lg={6} md={12} sm={24} xs={24}>
+                    <Col xl={6} lg={12} md={12} sm={24} xs={24}>
                         <Form.Item
                             className="m-0"
                             label={<span style={{ fontWeight: 500, color: '#4A5568' }}>Date Range</span>}
@@ -160,7 +163,7 @@ function Fillter_Wing({ saveData, data }) {
                     </Col>
 
                     {/* Form Type */}
-                    <Col xl={5} lg={6} md={12} sm={24} xs={24}>
+                    <Col xl={6} lg={12} md={12} sm={24} xs={24}>
                         <Form.Item
                             className="m-0"
                             label={<span style={{ fontWeight: 500, color: '#4A5568' }}>Form Type</span>}
@@ -181,7 +184,7 @@ function Fillter_Wing({ saveData, data }) {
                     </Col>
 
                     {/* Class */}
-                    <Col xl={5} lg={6} md={12} sm={24} xs={24}>
+                    <Col xl={6} lg={12} md={12} sm={24} xs={24}>
                         <Form.Item
                             className="m-0"
                             label={<span style={{ fontWeight: 500, color: '#4A5568' }}>Class</span>}
@@ -203,7 +206,7 @@ function Fillter_Wing({ saveData, data }) {
                     </Col>
 
                     {/* Observers */}
-                    <Col xl={5} lg={6} md={12} sm={24} xs={24}>
+                    <Col xl={6} lg={12} md={12} sm={24} xs={24}>
                         <Form.Item
                             className="m-0"
                             label={<span style={{ fontWeight: 500, color: '#4A5568' }}>Observer</span>}
@@ -222,31 +225,49 @@ function Fillter_Wing({ saveData, data }) {
                             />
                         </Form.Item>
                     </Col>
-
-                    {/* Action Buttons */}
-                    <Col xl={4} lg={24} md={24} sm={24} xs={24}>
-                        <Space className="w-full" style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
-                            <Button
-                                size="large"
-                                onClick={handleClear}
-                                icon={<ClearOutlined />}
-                                style={{ borderRadius: '8px' }}
-                            >
-                                Clear
-                            </Button>
-                            <Button
-                                type="primary"
-                                size="large"
-                                htmlType="button"
-                                onClick={() => form.submit()}
-                                icon={<SearchOutlined />}
-                                style={{ borderRadius: '8px' }}
-                            >
-                                Search
-                            </Button>
-                        </Space>
-                    </Col>
                 </Row>
+
+                {/* Action Buttons */}
+                <div
+                    style={{
+                        display: 'flex',
+                        justifyContent: 'flex-end',
+                        alignItems: 'center',
+                        gap: '12px',
+                        marginTop: '16px',
+                        paddingTop: '16px',
+                        borderTop: '1px solid #f0f0f0',
+                    }}
+                >
+                    <Button
+                        size="large"
+                        onClick={handleClear}
+                        disabled={loading}
+                        icon={<ClearOutlined />}
+                        style={{ borderRadius: '8px', paddingLeft: '20px', paddingRight: '20px' }}
+                    >
+                        Clear
+                    </Button>
+                    <Button
+                        type="primary"
+                        size="large"
+                        htmlType="submit"
+                        loading={loading}
+                        disabled={loading}
+                        icon={<SearchOutlined />}
+                        style={{
+                            borderRadius: '8px',
+                            backgroundColor: '#1a4d2e',
+                            borderColor: '#1a4d2e',
+                            color: 'white',
+                            paddingLeft: '24px',
+                            paddingRight: '24px',
+                            fontWeight: 600,
+                        }}
+                    >
+                        {loading ? "Searching..." : "Search"}
+                    </Button>
+                </div>
             </div>
         </Form>
     );

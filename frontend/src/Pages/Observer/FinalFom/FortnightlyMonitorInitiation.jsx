@@ -75,9 +75,48 @@ function FortnightlyMonitorInitiation() {
   };
 
   const handleSubmit = async (values) => {
+    // Collect and sanitize teacher IDs
+    let selectedTeachers = values?.teacherIDs;
+    if (selectedTeachers === undefined || selectedTeachers === null || selectedTeachers === "") {
+      selectedTeachers = values?.teacherID ? [values?.teacherID] : [];
+    } else if (!Array.isArray(selectedTeachers)) {
+      selectedTeachers = [selectedTeachers];
+    }
+
+    const cleanTeacherIds = selectedTeachers
+      .map((item) => {
+        if (!item) return null;
+        if (typeof item === "object") {
+          return item._id || item.value || item.id || null;
+        }
+        return typeof item === "string" ? item.trim() : String(item).trim();
+      })
+      .filter((id) => id && id.length === 24);
+
+    const singleTeacherId = cleanTeacherIds[0];
+    const finalTeacherIds = singleTeacherId ? [singleTeacherId] : [];
+
+    const isCoordSelected = Boolean(values?.isCoordinator || isCoordinator);
+    const cleanCoordinatorId =
+      values?.coordinatorID && typeof values?.coordinatorID === "object"
+        ? values?.coordinatorID._id || values?.coordinatorID.value || values?.coordinatorID.id
+        : values?.coordinatorID;
+
+    if (!isCoordSelected && finalTeacherIds.length === 0) {
+      message.error("Please select a Teacher!");
+      return;
+    }
+
+    if (isCoordSelected && !cleanCoordinatorId) {
+      message.error("Please select a Coordinator!");
+      return;
+    }
+
     const payload = {
-      isTeacher: values?.isTeacher || isTeacher,
-      teacherIDs: values?.teacherIDs || "",
+      isTeacher: isCoordSelected ? false : true,
+      teacherIDs: finalTeacherIds,
+      isCoordinator: isCoordSelected,
+      coordinatorID: cleanCoordinatorId || undefined,
       className: values?.className,
       section: values?.section,
     };
@@ -85,13 +124,13 @@ function FortnightlyMonitorInitiation() {
     setLoading(true);
     try {
       const response = await dispatch(FormInitiationAction(payload)).unwrap();
-      message.success(response?.message);
+      message.success(response?.message || "Fortnightly Monitor created successfully!");
       const activity = {
         observerMessage: "You have Initiated New Fortnightly Monitor Form.",
         teacherMessage: `${getUserId()?.name} has Initiated New Fortnightly Monitor Form.`,
         route: "/fortnightly-monitor",
         date: new Date(),
-        reciverId: values?.teacherIDs || values?.teacherID || [],
+        reciverId: cleanTeacherIds.length > 0 ? cleanTeacherIds : (cleanCoordinatorId ? [cleanCoordinatorId] : []),
         senderId: getUserId()?.id,
         fromNo: 1,
         data: payload,
@@ -107,7 +146,7 @@ function FortnightlyMonitorInitiation() {
       navigate(`/fortnightly-monitor`);
       dispatch(GetFormsOne());
     } catch (error) {
-      message.error("Error creating Fortnightly Monitor");
+      message.error(error?.message || "Error creating Fortnightly Monitor");
       console.error(error);
     } finally {
       setLoading(false);
@@ -155,14 +194,13 @@ function FortnightlyMonitorInitiation() {
                 <>
                   <Form.Item
                     className="w-100"
-                    label="Teacher ID"
+                    label="Teacher"
                     name="teacherIDs"
                     rules={[
                       { required: true, message: "Please select a Teacher!" },
                     ]}
                   >
                     <Select
-                      mode="multiple"
                       allowClear
                       showSearch
                       placeholder="Select a Teacher"

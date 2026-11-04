@@ -9,12 +9,12 @@ const {
 } = require('../controllers/auditLogController');
 const { isLocalDev } = require('../utils/auditLogger');
 
-// Middleware to restrict access to Superadmin and Local Dev only
+// Middleware to restrict access to Superadmin (Admin) and Local/Dev only
 const requireSuperadminAndLocalDev = (req, res, next) => {
   if (!isLocalDev(req)) {
     return res.status(403).json({
       success: false,
-      message: 'Audit logs are only accessible in Local Development.',
+      message: 'Audit logs dashboard is restricted to Local / Development environments.',
     });
   }
 
@@ -22,7 +22,7 @@ const requireSuperadminAndLocalDev = (req, res, next) => {
   if (role !== 'Superadmin') {
     return res.status(403).json({
       success: false,
-      message: 'Access denied. Superadmin role is required.',
+      message: 'Access denied. Only Superadmin has audit log access.',
     });
   }
 

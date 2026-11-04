@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useRef } from "react";
 import CommonStepper from "../../../Components/CommonStepper";
 import {
   Box,
@@ -17,7 +17,6 @@ import {
   Form,
   message,
   Input,
-  Radio,
   Spin,
 } from "../../../Components/UI";
 import { useDispatch, useSelector } from "react-redux";
@@ -35,6 +34,9 @@ import { getUserId, getUserRoleTag } from "../../../Utils/auth";
 import "./DetailsWalkthrough.css";
 import { CreateActivityApi } from "../../../redux/Activity/activitySlice";
 import moment from "moment";
+import RubricScaleSelector, { RUBRIC_LEVELS } from "../../../Components/Forms/RubricScaleSelector";
+import { Check, Sparkles } from "lucide-react";
+import { WALKTHROUGH_QUESTIONS } from "./walkthroughQuestions";
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -151,6 +153,26 @@ function DetailsWalkthrough() {
   const [getOutOfScore, setGetOutOfScore] = useState(0);
   const [grade, setGrade] = useState("");
   const [sectionState, setSectionState] = useState([]);
+  const [totalAnswered, setTotalAnswered] = useState(0);
+  const [sectionStats, setSectionStats] = useState({
+    essentialAggrements: 0,
+    planingAndPreparation: 0,
+    classRoomEnvironment: 0,
+    instruction: 0,
+  });
+  const [, setFormTick] = useState(0);
+  const isCalculatingRef = useRef(false);
+
+  // Subscribe to form store so DetailsWalkthrough re-renders live whenever any answer is selected
+  useEffect(() => {
+    if (form?._store) {
+      return form._store.subscribe(() => {
+        setFormTick((t) => t + 1);
+      });
+    }
+  }, [form]);
+
+  const totalQuestions = 27;
 
   const sections = [
     "essentialAggrements",
@@ -161,23 +183,45 @@ function DetailsWalkthrough() {
 
   const validValues = ["1", "2", "3", "4"];
 
-  const calculateScore = () => {
-    const formValues = form.getFieldsValue();
+  const calculateScore = (changedOrAllValues, maybeAllValues) => {
+    if (isCalculatingRef.current) return;
+    const formValues =
+      maybeAllValues ||
+      (changedOrAllValues && !changedOrAllValues.target ? changedOrAllValues : null) ||
+      form.getFieldsValue();
+
     let total = 0;
     let outOf = 0;
     let naCount = 0;
+    let answered = 0;
+    const progress = {
+      essentialAggrements: 0,
+      planingAndPreparation: 0,
+      classRoomEnvironment: 0,
+      instruction: 0,
+    };
 
     sections.forEach((section) => {
-      if (formValues[section]) {
-        formValues[section].forEach((item) => {
+      let secAnswered = 0;
+      const secData = formValues?.[section];
+      if (secData) {
+        const items = Array.isArray(secData) ? secData : Object.values(secData);
+        items.forEach((item) => {
           const answer = item?.answer;
-          if (validValues.includes(answer)) {
+          if (answer !== undefined && answer !== null && answer !== "") {
+            answered++;
+            secAnswered++;
+          }
+          if (validValues.includes(String(answer))) {
             total += parseInt(answer, 10);
             outOf += 4;
           }
-          if (["N/A", "NA", "N"].includes(answer)) naCount++;
+          if (["N/A", "NA", "N"].includes(String(answer).trim().toUpperCase())) {
+            naCount++;
+          }
         });
       }
+      progress[section] = secAnswered;
     });
 
     const pct = outOf > 0 ? (total / outOf) * 100 : 0;
@@ -197,15 +241,26 @@ function DetailsWalkthrough() {
     setNumOfParameters(naCount);
     setPercentageScore(parseFloat(pct.toFixed(2)));
     setGrade(g);
+    setTotalAnswered(answered);
+    setSectionStats(progress);
 
-    form.setFieldsValue({
-      totalScores: total,
-      scoreOutof: outOf,
-      percentageScore: pct,
-      Grade: g,
-      NumberofParametersNotApplicable: naCount,
-    });
+    isCalculatingRef.current = true;
+    try {
+      form.setFieldsValue({
+        totalScores: total,
+        scoreOutof: outOf,
+        percentageScore: pct,
+        Grade: g,
+        NumberofParametersNotApplicable: naCount,
+      });
+    } finally {
+      isCalculatingRef.current = false;
+    }
   };
+
+  useEffect(() => {
+    calculateScore();
+  }, [currStep]);
 
   const resetState = () => setSectionState([]);
 
@@ -218,33 +273,100 @@ function DetailsWalkthrough() {
   };
 
   /* ─── Render helpers ─────────────────────────────────────────────── */
-  const renderRadioFormItem = ({ name, label, question, isTextArea }) => (
+  const renderRadioFormItem = ({
+    name,
+    index,
+    question,
+    isAnswered,
+    rubricObj,
+    isTextArea,
+  }) => (
     <>
+      <Flex justify="space-between" align="flex-start" gap={3} mb={3}>
+        <Flex align="flex-start" gap={2.5}>
+          <Badge
+            flexShrink={0}
+            fontSize="xs"
+            fontWeight="800"
+            borderRadius="md"
+            bg={isAnswered ? "rgba(26,77,46,0.1)" : "gray.100"}
+            color={isAnswered ? "#1a4d2e" : "gray.600"}
+            px={2}
+            py={0.5}
+            mt="2px"
+          >
+            {String(index + 1).padStart(2, "0")}
+          </Badge>
+          <Text
+            fontSize={{ base: "sm", md: "15px" }}
+            color="gray.800"
+            fontWeight="600"
+            lineHeight="1.5"
+          >
+            {question}
+          </Text>
+        </Flex>
+
+        {/* Status indicator on top-right */}
+        {!isTextArea && (
+          <Box flexShrink={0}>
+            {isAnswered && rubricObj ? (
+              <Badge
+                variant="subtle"
+                borderRadius="full"
+                px={2.5}
+                py={0.5}
+                fontSize="11px"
+                fontWeight="700"
+                bg={rubricObj.bg}
+                color={rubricObj.activeText}
+                borderWidth="1px"
+                borderColor={rubricObj.border}
+                display="inline-flex"
+                alignItems="center"
+                gap={1}
+              >
+                <Box
+                  w="6px"
+                  h="6px"
+                  borderRadius="full"
+                  bg={rubricObj.dotColor}
+                />
+                {rubricObj.title} · {rubricObj.label}
+              </Badge>
+            ) : (
+              <Badge
+                variant="outline"
+                borderRadius="full"
+                px={2}
+                py={0.5}
+                fontSize="10px"
+                color="gray.400"
+                borderColor="gray.200"
+              >
+                Pending
+              </Badge>
+            )}
+          </Box>
+        )}
+      </Flex>
+
       <Form.Item
         className="mb-0"
         name={[...name, "answer"]}
-        label={
-          <Text fontSize="sm" color="gray.700" fontWeight="500" mb={1}>
-            {label}
-          </Text>
-        }
-        rules={[{ required: true, message: "Please select an answer!" }]}
+        rules={[{ required: true, message: "Please select an evaluation rating!" }]}
       >
         {isTextArea ? (
           <TextArea
             rows={4}
-            placeholder="Enter your feedback…"
-            style={{ borderRadius: 10 }}
+            placeholder="Provide specific, actionable feedback…"
+            className="w-full text-sm rounded-xl p-3 border-gray-200 focus:border-[#1a4d2e] focus:ring-1 focus:ring-[#1a4d2e]"
           />
         ) : (
-          <Radio.Group
-            size="large"
-            options={yesNoNAOptions.map((v) => ({ label: v, value: v }))}
-            optionType="button"
-            buttonStyle="solid"
-          />
+          <RubricScaleSelector />
         )}
       </Form.Item>
+
       <Form.Item
         className="hidden"
         hidden
@@ -256,71 +378,139 @@ function DetailsWalkthrough() {
     </>
   );
 
-  const renderSections = (title, questions, namePrefix) => (
-    <Box w="100%" mb={8}>
-      {/* Section header */}
-      <Flex
-        align="center"
-        gap={3}
-        mb={5}
-        pb={3}
-        borderBottom="1.5px solid"
-        borderColor="rgba(74,103,65,0.15)"
-      >
-        <Box
-          w={1}
-          h="22px"
-          bg="brand.primary"
-          borderRadius="full"
-          flexShrink={0}
-        />
-        <Heading size="sm" color="brand.secondary" fontWeight="700">
-          {title}
-        </Heading>
-        <Badge
-          ml="auto"
-          fontSize="10px"
-          colorScheme="green"
-          variant="subtle"
-          borderRadius="full"
-          px={2}
-        >
-          {questions.length} items
-        </Badge>
-      </Flex>
+  const renderSections = (title, questions, namePrefix) => {
+    const answeredInSec = sectionStats[namePrefix] || 0;
+    const totalInSec = questions.length;
+    const isSecComplete = answeredInSec === totalInSec;
 
-      <VStack spacing={3} align="stretch">
-        {questions.map((question, index) => (
-          <Box
-            key={`${namePrefix}${index}`}
-            bg="white"
-            px={5}
-            py={4}
-            borderRadius="xl"
-            borderWidth="1px"
-            borderColor="gray.100"
-            _hover={{ borderColor: "rgba(74,103,65,0.25)", boxShadow: "sm" }}
-            transition="all 0.18s ease"
-          >
-            {renderRadioFormItem({
-              name: [namePrefix, index],
-              label: `${index + 1}. ${question}`,
-              question,
-              isTextArea: currStep === 2,
-            })}
-          </Box>
-        ))}
-      </VStack>
-    </Box>
-  );
+    return (
+      <Box w="100%" mb={8} id={`section-${namePrefix}`}>
+        {/* Section header */}
+        <Flex
+          align={{ base: "flex-start", sm: "center" }}
+          justify="space-between"
+          direction={{ base: "column", sm: "row" }}
+          gap={3}
+          mb={5}
+          pb={3}
+          borderBottom="2px solid"
+          borderColor="rgba(74,103,65,0.18)"
+        >
+          <Flex align="center" gap={3}>
+            <Box
+              w="5px"
+              h="24px"
+              bg="#1a4d2e"
+              borderRadius="full"
+              flexShrink={0}
+            />
+            <Heading size="md" color="#1a4d2e" fontWeight="800" letterSpacing="-0.01em">
+              {title}
+            </Heading>
+          </Flex>
+
+          {/* Section progress badge */}
+          {namePrefix !== "ObserverFeedback" && (
+            <Flex align="center" gap={2}>
+              <Badge
+                fontSize="xs"
+                bg={isSecComplete ? "green.50" : "gray.100"}
+                color={isSecComplete ? "green.800" : "gray.600"}
+                borderWidth="1px"
+                borderColor={isSecComplete ? "green.300" : "gray.200"}
+                borderRadius="full"
+                px={3}
+                py={1}
+                fontWeight="700"
+                display="inline-flex"
+                alignItems="center"
+                gap={1.5}
+              >
+                {isSecComplete ? (
+                  <>
+                    <Box as={Check} size={13} strokeWidth={3} />
+                    Complete ({answeredInSec}/{totalInSec})
+                  </>
+                ) : (
+                  <>
+                    {answeredInSec} of {totalInSec} answered
+                  </>
+                )}
+              </Badge>
+            </Flex>
+          )}
+        </Flex>
+
+        <VStack spacing={4} align="stretch">
+          {questions.map((question, index) => {
+            const currentAnswer = form.getFieldValue([namePrefix, index, "answer"]);
+            const isAnswered = currentAnswer !== undefined && currentAnswer !== null && currentAnswer !== "";
+            const rubricObj = RUBRIC_LEVELS.find((l) => String(l.value) === String(currentAnswer));
+
+            return (
+              <Box
+                key={`${namePrefix}${index}`}
+                bg="white"
+                p={{ base: 4, sm: 5 }}
+                borderRadius="2xl"
+                borderWidth="1.5px"
+                borderColor={isAnswered ? (rubricObj ? rubricObj.border : "rgba(74,103,65,0.3)") : "gray.200"}
+                boxShadow={
+                  isAnswered
+                    ? "0 2px 8px rgba(0,0,0,0.03)"
+                    : "0 1px 3px rgba(0,0,0,0.02)"
+                }
+                _hover={{
+                  borderColor: isAnswered ? rubricObj?.activeBorder || "#1a4d2e" : "rgba(74,103,65,0.4)",
+                  boxShadow: "0 4px 14px rgba(0,0,0,0.05)",
+                }}
+                transition="all 0.2s ease"
+                position="relative"
+                overflow="hidden"
+              >
+                {/* Answered left border accent */}
+                {isAnswered && (
+                  <Box
+                    position="absolute"
+                    left="0"
+                    top="0"
+                    bottom="0"
+                    w="4px"
+                    bg={rubricObj?.dotColor || "#1a4d2e"}
+                  />
+                )}
+
+                {/* Question item */}
+                {renderRadioFormItem({
+                  name: [namePrefix, index],
+                  index,
+                  question,
+                  isAnswered,
+                  rubricObj,
+                  isTextArea: currStep === 2,
+                })}
+              </Box>
+            );
+          })}
+        </VStack>
+      </Box>
+    );
+  };
+
+  const sortedTeachers = useMemo(() => {
+    if (!Array.isArray(GetTeachersLists)) return [];
+    return [...GetTeachersLists]
+      .filter((t) => t?._id !== getUserId()?.id && t?.isActive !== false)
+      .sort((a, b) => (a?.name || "").localeCompare(b?.name || ""));
+  }, [GetTeachersLists]);
 
   const generalDetails = useMemo(
     () => [
       {
         name: "NameoftheVisitingTeacher",
-        label: "Visiting Teacher",
+        label: "Name of the Teacher",
         type: "select",
-        options: GetTeachersLists?.filter((t) => t?._id !== getUserId()?.id && t?.isActive !== false)?.map((item) => ({
+        options: sortedTeachers?.map((item) => ({
           id: item?._id,
           value: item?._id,
           name: `${item?.name} [${getUserRoleTag(item)}]`,
@@ -359,7 +549,7 @@ function DetailsWalkthrough() {
       },
       { name: "Topic", label: "Topic", type: "input" },
     ],
-    [GetTeachersLists, newData, sectionState],
+    [sortedTeachers, newData, sectionState],
   );
 
   const renderGeneralDetails = () => (
@@ -387,7 +577,7 @@ function DetailsWalkthrough() {
                   showSearch
                   optionFilterProp="children"
                   filterOption={(input, option) =>
-                    (option?.children ?? "")
+                    (option?.label || option?.children || option?.name || "")
                       .toString()
                       .toLowerCase()
                       .includes(input.toLowerCase())
@@ -431,53 +621,22 @@ function DetailsWalkthrough() {
     <>
       {renderSections(
         "Essential Agreements",
-        [
-          "Teacher uses gender-neutral vocabulary and is sensitive to caste/class/gender in society.",
-          "Teacher has established classroom rules and procedures, clear to both teacher and learners.",
-          "Learners speak only when permitted (control with teacher).",
-          "Student misbehavior is addressed promptly to maintain class focus.",
-          "Teacher manages support roles well, including responses, praise, and decorum.",
-        ],
+        WALKTHROUGH_QUESTIONS.essentialAggrements,
         "essentialAggrements",
       )}
       {renderSections(
         "Planning and Preparation",
-        [
-          "Teacher displays extensive and deep knowledge of her discipline.",
-          "Teacher's approach is interdisciplinary and contextual.",
-          "Learning Outcomes are clear, actionable and permit viable methods of assessment.",
-          "Teacher's conduct of the lesson is aligned with the expected Learning Outcomes.",
-          "Teacher has adequate audio-visual aids / resources to share with the learners.",
-          "Teacher creates opportunities for students to refer to text book, presentations and other required resources.",
-          "Timings were managed well throughout the class.",
-        ],
+        WALKTHROUGH_QUESTIONS.planingAndPreparation,
         "planingAndPreparation",
       )}
       {renderSections(
         "Classroom Environment",
-        [
-          "Classroom interactions among the teacher and individual students are highly respectful; active listening is encouraged.",
-          "Teacher displays awareness of her students' backgrounds, cultures, skills, knowledge proficiency, interests and special needs.",
-          "Teacher ensures that all students receive opportunities to respond to questions.",
-          "Student thinking is visible through display of responses and doubts.",
-          "Teacher uses positive reinforcement in the form of smileys, stickers and verbal appreciation.",
-        ],
+        WALKTHROUGH_QUESTIONS.classRoomEnvironment,
         "classRoomEnvironment",
       )}
       {renderSections(
         "Instruction",
-        [
-          "Appropriate Pre-Read/Pre-Watch was assigned as prior knowledge test.",
-          "Teacher's instructions are clear and well paced.",
-          "Teacher's instruction is coherent and takes students from surface to deep learning.",
-          "Teacher has included BIG Question, Think lines and HOTS to stimulate and challenge student thinking.",
-          "Questions/situations posed by the teacher relate to children's real life context or lend to invoking responses from children's experience.",
-          "Self and Peer Assessment by students is used to monitor progress.",
-          "Activities/Assessment are fully aligned with learning outcomes.",
-          "Instruction is differentiated appropriately.",
-          "Teacher provides good Feed forward such that it enables student learning.",
-          "Teacher recapitulates the lesson /topic and checks for the attainment of the learning outcomes.",
-        ],
+        WALKTHROUGH_QUESTIONS.instruction,
         "instruction",
       )}
     </>
@@ -487,26 +646,44 @@ function DetailsWalkthrough() {
     <>
       {renderSections(
         "Observer Feedback",
-        ["What went well?", "Areas that need work"],
+        WALKTHROUGH_QUESTIONS.ObserverFeedback,
         "ObserverFeedback",
       )}
     </>
   );
 
+  const enrichWithQuestions = (data) => {
+    if (!data) return data;
+    const enriched = { ...data };
+    Object.keys(WALKTHROUGH_QUESTIONS).forEach((key) => {
+      if (enriched[key]) {
+        const canonical = WALKTHROUGH_QUESTIONS[key];
+        const raw = enriched[key];
+        const list = Array.isArray(raw) ? raw : Object.values(raw);
+        enriched[key] = list.map((item, idx) => ({
+          ...(item || {}),
+          question: (item && item.question) || canonical[idx] || "",
+        }));
+      }
+    });
+    return enriched;
+  };
+
   /* ─── Navigation ─────────────────────────────────────────────────── */
   const saveDraftData = async (data, targetStep) => {
+    const enrichedData = enrichWithQuestions(data);
     const {
       totalScore,
       getOutOfScore,
       percentageScore,
       grade,
       numOfParameters,
-    } = calculateScoreFromData(data);
+    } = calculateScoreFromData(enrichedData);
 
-    let resolvedClassName = data.className;
-    if (data.className && newData?.length) {
+    let resolvedClassName = enrichedData.className;
+    if (enrichedData.className && newData?.length) {
       const matched = newData.find(
-        (c) => c._id === data.className || c.className === data.className
+        (c) => c._id === enrichedData.className || c.className === enrichedData.className
       );
       if (matched?.className) {
         resolvedClassName = matched.className;
@@ -514,7 +691,7 @@ function DetailsWalkthrough() {
     }
 
     const payloadData = {
-      ...data,
+      ...enrichedData,
       className: resolvedClassName,
       totalScores: totalScore,
       scoreOutof: getOutOfScore,
@@ -571,14 +748,18 @@ function DetailsWalkthrough() {
     let naCount = 0;
 
     sections.forEach((section) => {
-      if (data[section]) {
-        data[section].forEach((item) => {
+      const secData = data?.[section];
+      if (secData) {
+        const items = Array.isArray(secData) ? secData : Object.values(secData);
+        items.forEach((item) => {
           const answer = item?.answer;
-          if (validValues.includes(answer)) {
+          if (validValues.includes(String(answer))) {
             total += parseInt(answer, 10);
             outOf += 4;
           }
-          if (["N/A", "NA", "N"].includes(answer)) naCount++;
+          if (["N/A", "NA", "N"].includes(String(answer).trim().toUpperCase())) {
+            naCount++;
+          }
         });
       }
     });
@@ -605,18 +786,19 @@ function DetailsWalkthrough() {
   };
 
   const handleSubmit = async (data) => {
+    const enrichedData = enrichWithQuestions(data);
     const {
       totalScore,
       getOutOfScore,
       percentageScore,
       grade,
       numOfParameters,
-    } = calculateScoreFromData(data);
+    } = calculateScoreFromData(enrichedData);
 
-    let resolvedClassName = data.className;
-    if (data.className && newData?.length) {
+    let resolvedClassName = enrichedData.className;
+    if (enrichedData.className && newData?.length) {
       const matched = newData.find(
-        (c) => c._id === data.className || c.className === data.className
+        (c) => c._id === enrichedData.className || c.className === enrichedData.className
       );
       if (matched?.className) {
         resolvedClassName = matched.className;
@@ -624,7 +806,7 @@ function DetailsWalkthrough() {
     }
 
     const submissionData = {
-      ...data,
+      ...enrichedData,
       className: resolvedClassName,
       totalScores: totalScore,
       scoreOutof: getOutOfScore,
@@ -732,12 +914,12 @@ function DetailsWalkthrough() {
                 </Box>
 
                 {/* Navigation buttons */}
-                <Flex justify="space-between" align="center" mt={5}>
+                <Flex justify="space-between" align="center" mt={6} pt={4} borderTop="1px solid" borderColor="gray.100" flexWrap="wrap" gap={3}>
                   {currStep > 0 ? (
                     <Button
                       size="large"
                       onClick={handleBack}
-                      style={{ borderRadius: "10px", minWidth: "120px" }}
+                      style={{ borderRadius: "12px", minWidth: "120px", fontWeight: 600 }}
                     >
                       ← Back
                     </Button>
@@ -754,7 +936,7 @@ function DetailsWalkthrough() {
                         await saveDraftData(merged, currStep);
                         message.success("Draft saved successfully!");
                       }}
-                      style={{ borderRadius: "10px" }}
+                      style={{ borderRadius: "12px", fontWeight: 600 }}
                     >
                       Save Draft
                     </Button>
@@ -763,14 +945,15 @@ function DetailsWalkthrough() {
                       size="large"
                       onClick={handleNext}
                       style={{
-                        borderRadius: "10px",
+                        borderRadius: "12px",
                         minWidth: "140px",
-                        background: "#4A6741",
+                        background: "#1a4d2e",
                         border: "none",
-                        fontWeight: 600,
+                        fontWeight: 700,
+                        boxShadow: "0 2px 8px rgba(26, 77, 46, 0.25)",
                       }}
                     >
-                      {currStep < steps.length - 1 ? "Next →" : "Submit"}
+                      {currStep < steps.length - 1 ? "Next Step →" : "Complete & Submit"}
                     </Button>
                   </Flex>
                 </Flex>
@@ -778,141 +961,305 @@ function DetailsWalkthrough() {
             </Spin>
           </Box>
 
-          {/* ── Right: score panel (sticky) ─────────────────────────── */}
+          {/* ── Right: Live Scorecard (sticky) ─────────────────────────── */}
           <Box
-            w={{ base: "100%", lg: "280px" }}
+            w={{ base: "100%", lg: "320px" }}
             flexShrink={0}
+            position={{ base: "static", lg: "sticky" }}
+            top="24px"
+            alignSelf="flex-start"
+            zIndex={10}
           >
             <Box
-            position={{ base: "sticky", md: "sticky" }}
-
-              top="16px"
               bg="white"
               borderRadius="2xl"
               borderWidth="1px"
-              borderColor="gray.100"
+              borderColor="gray.200"
+              boxShadow="0 4px 20px rgba(0,0,0,0.06)"
               overflow="hidden"
+              maxH="calc(100vh - 48px)"
+              overflowY="auto"
             >
-              {/* ── Header ── */}
-              <Box px={5} pt={5} pb={4}>
-                <Text
+              {/* Header with Live indicator */}
+              <Flex
+                px={5}
+                py={3.5}
+                bg="#1a4d2e"
+                color="white"
+                align="center"
+                justify="space-between"
+              >
+                <Flex align="center" gap={2}>
+                  <Box as={Sparkles} size={15} color="#EAF0E8" />
+                  <Text
+                    fontSize="11px"
+                    fontWeight="800"
+                    letterSpacing="0.08em"
+                    textTransform="uppercase"
+                  >
+                    Live Evaluation
+                  </Text>
+                </Flex>
+                <Badge
+                  bg="rgba(255,255,255,0.2)"
+                  color="white"
                   fontSize="10px"
                   fontWeight="700"
-                  color="brand.primary"
-                  textTransform="uppercase"
-                  letterSpacing="1.5px"
-                  mb={0.5}
-                >
-                  Live Score
-                </Text>
-
-                {/* Big percentage display */}
-                <Flex align="baseline" gap={1} mt={3}>
-                  <Text
-                    fontSize="48px"
-                    fontWeight="800"
-                    color={percentageScore > 0 ? "brand.secondary" : "gray.200"}
-                    lineHeight="1"
-                    transition="color 0.3s"
-                  >
-                    {percentageScore || "0"}
-                  </Text>
-                  <Text
-                    fontSize="18px"
-                    fontWeight="600"
-                    color="gray.400"
-                    pb={1}
-                  >
-                    %
-                  </Text>
-                </Flex>
-
-                {/* Thin progress bar */}
-                <Box
-                  mt={4}
-                  h="4px"
-                  bg="gray.100"
                   borderRadius="full"
-                  overflow="hidden"
+                  px={2}
+                  py={0.5}
+                  display="inline-flex"
+                  alignItems="center"
+                  gap={1.5}
                 >
                   <Box
+                    w="6px"
+                    h="6px"
+                    borderRadius="full"
+                    bg="#4ADE80"
+                    boxShadow="0 0 6px #4ADE80"
+                  />
+                  ACTIVE
+                </Badge>
+              </Flex>
+
+              {/* Main Score & Grade Hero */}
+              <Box px={5} pt={5} pb={4}>
+                <Flex align="center" justify="space-between">
+                  <Box>
+                    <Text fontSize="11px" fontWeight="700" color="gray.400" textTransform="uppercase" letterSpacing="0.05em">
+                      Overall Score
+                    </Text>
+                    <Flex align="baseline" gap={1} mt={0.5}>
+                      <Text
+                        fontSize="44px"
+                        fontWeight="900"
+                        color={
+                          percentageScore >= 80
+                            ? "#1a4d2e"
+                            : percentageScore >= 60
+                            ? "#D97706"
+                            : percentageScore > 0
+                            ? "#DC2626"
+                            : "gray.300"
+                        }
+                        lineHeight="1"
+                        letterSpacing="-0.02em"
+                      >
+                        {percentageScore}
+                      </Text>
+                      <Text fontSize="18px" fontWeight="700" color="gray.400">
+                        %
+                      </Text>
+                    </Flex>
+                  </Box>
+
+                  {/* Grade Pill */}
+                  <Box textAlign="right">
+                    <Text fontSize="11px" fontWeight="700" color="gray.400" textTransform="uppercase" letterSpacing="0.05em" mb={1}>
+                      Grade
+                    </Text>
+                    <Badge
+                      fontSize="18px"
+                      fontWeight="900"
+                      px={3.5}
+                      py={1}
+                      borderRadius="xl"
+                      bg={
+                        grade === "A"
+                          ? "green.50"
+                          : grade === "B"
+                          ? "blue.50"
+                          : grade === "C"
+                          ? "orange.50"
+                          : grade === "D" || grade === "F"
+                          ? "red.50"
+                          : "gray.100"
+                      }
+                      color={
+                        grade === "A"
+                          ? "green.700"
+                          : grade === "B"
+                          ? "blue.700"
+                          : grade === "C"
+                          ? "orange.700"
+                          : grade === "D" || grade === "F"
+                          ? "red.700"
+                          : "gray.400"
+                      }
+                      borderWidth="1.5px"
+                      borderColor={
+                        grade === "A"
+                          ? "green.300"
+                          : grade === "B"
+                          ? "blue.300"
+                          : grade === "C"
+                          ? "orange.300"
+                          : grade === "D" || grade === "F"
+                          ? "red.300"
+                          : "gray.200"
+                      }
+                    >
+                      {grade || "—"}
+                    </Badge>
+                  </Box>
+                </Flex>
+
+                {/* Score Progress Bar */}
+                <Box mt={3.5} h="6px" bg="gray.100" borderRadius="full" overflow="hidden">
+                  <Box
                     h="100%"
-                    w={`${percentageScore}%`}
+                    w={`${Math.min(percentageScore, 100)}%`}
                     bg={
                       percentageScore >= 80
-                        ? "brand.primary"
+                        ? "linear-gradient(90deg, #16A34A, #22C55E)"
                         : percentageScore >= 60
-                          ? "#D97706"
-                          : percentageScore > 0
-                            ? "#DC2626"
-                            : "transparent"
+                        ? "linear-gradient(90deg, #D97706, #F59E0B)"
+                        : percentageScore > 0
+                        ? "linear-gradient(90deg, #DC2626, #EF4444)"
+                        : "transparent"
                     }
                     borderRadius="full"
-                    transition="width 0.4s ease, background 0.3s"
+                    transition="width 0.4s cubic-bezier(0.4, 0, 0.2, 1)"
                   />
                 </Box>
-
-                {/* Grade inline */}
-                <Flex align="center" justify="space-between" mt={4}>
-                  <Text fontSize="xs" color="gray.400" fontWeight="500">
-                    Grade
-                  </Text>
-                  <Text
-                    fontSize="22px"
-                    fontWeight="800"
-                    color={gradeColor(grade)}
-                    lineHeight="1"
-                    transition="color 0.3s"
-                  >
-                    {grade || "—"}
-                  </Text>
-                </Flex>
               </Box>
 
               <Divider borderColor="gray.100" />
 
-              {/* ── Stat rows ── */}
-              <VStack spacing={0} align="stretch" px={5} py={4}>
-                {[
-                  { label: "Score", value: totalScore },
-                  { label: "Out of", value: getOutOfScore || "—" },
-                  { label: "N/A", value: numOfParameters },
-                ].map(({ label, value }, i, arr) => (
-                  <Box key={label}>
-                    <Flex justify="space-between" align="center" py={3}>
-                      <Text fontSize="sm" color="gray.500" fontWeight="400">
-                        {label}
-                      </Text>
-                      <Text
-                        fontSize="sm"
-                        fontWeight="600"
-                        color={
-                          label === "Score" && totalScore > 0
-                            ? "brand.primary"
-                            : "gray.700"
-                        }
-                      >
-                        {value}
-                      </Text>
-                    </Flex>
-                    {i < arr.length - 1 && <Divider borderColor="gray.50" />}
-                  </Box>
-                ))}
-              </VStack>
+              {/* Progress Count (Questions Evaluated) */}
+              <Box px={5} py={3.5} bg="#FAFAF8">
+                <Flex justify="space-between" align="center" mb={1.5}>
+                  <Text fontSize="xs" fontWeight="600" color="gray.600">
+                    Evaluation Progress
+                  </Text>
+                  <Text fontSize="xs" fontWeight="700" color="#1a4d2e">
+                    {totalAnswered} / {totalQuestions} ({Math.round((totalAnswered / totalQuestions) * 100)}%)
+                  </Text>
+                </Flex>
+                <Box h="5px" bg="gray.200" borderRadius="full" overflow="hidden">
+                  <Box
+                    h="100%"
+                    w={`${Math.round((totalAnswered / totalQuestions) * 100)}%`}
+                    bg="#1a4d2e"
+                    borderRadius="full"
+                    transition="width 0.3s ease"
+                  />
+                </Box>
+              </Box>
 
               <Divider borderColor="gray.100" />
 
-              {/* ── Legend ── */}
-              <Box px={5} py={4}>
-                <Text
-                  fontSize="10px"
-                  color="gray.400"
-                  lineHeight="1.8"
-                  fontWeight="400"
-                >
-                  1 Unsatisfactory · 2 Basic
-                  <br />3 Proficient · 4 Distinguished
+              {/* Stat grid */}
+              <SimpleGrid columns={2} spacing={2} p={4}>
+                <Box bg="gray.50" p={2.5} borderRadius="xl" border="1px solid" borderColor="gray.100">
+                  <Text fontSize="10px" fontWeight="700" color="gray.400" textTransform="uppercase">
+                    Points Earned
+                  </Text>
+                  <Text fontSize="md" fontWeight="800" color="#1a4d2e" mt={0.5}>
+                    {totalScore} <Text as="span" fontSize="xs" fontWeight="500" color="gray.400">/ {getOutOfScore || "—"}</Text>
+                  </Text>
+                </Box>
+
+                <Box bg="gray.50" p={2.5} borderRadius="xl" border="1px solid" borderColor="gray.100">
+                  <Text fontSize="10px" fontWeight="700" color="gray.400" textTransform="uppercase">
+                    Not Applicable
+                  </Text>
+                  <Text fontSize="md" fontWeight="800" color="gray.700" mt={0.5}>
+                    {numOfParameters} <Text as="span" fontSize="xs" fontWeight="500" color="gray.400">items</Text>
+                  </Text>
+                </Box>
+              </SimpleGrid>
+
+              {/* Section Jump Nav (on step 1) */}
+              {currStep === 1 && (
+                <>
+                  <Divider borderColor="gray.100" />
+                  <Box px={4} py={3}>
+                    <Text fontSize="10px" fontWeight="800" color="gray.400" textTransform="uppercase" letterSpacing="0.05em" mb={2}>
+                      Jump To Section
+                    </Text>
+                    <VStack spacing={1.5} align="stretch">
+                      {[
+                        { key: "essentialAggrements", name: "Essential Agreements", count: 5 },
+                        { key: "planingAndPreparation", name: "Planning & Preparation", count: 7 },
+                        { key: "classRoomEnvironment", name: "Classroom Environment", count: 5 },
+                        { key: "instruction", name: "Instruction", count: 10 },
+                      ].map((sec) => {
+                        const secDone = sectionStats[sec.key] || 0;
+                        const isComplete = secDone === sec.count;
+
+                        return (
+                          <Flex
+                            key={sec.key}
+                            as="button"
+                            type="button"
+                            onClick={() => {
+                              document.getElementById(`section-${sec.key}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+                            }}
+                            justify="space-between"
+                            align="center"
+                            px={2.5}
+                            py={1.5}
+                            borderRadius="lg"
+                            fontSize="xs"
+                            fontWeight="600"
+                            color={isComplete ? "#1a4d2e" : "gray.600"}
+                            bg={isComplete ? "green.50" : "transparent"}
+                            _hover={{ bg: isComplete ? "green.100" : "gray.50" }}
+                            transition="background 0.15s ease"
+                            textAlign="left"
+                            w="full"
+                          >
+                            <Text noOfLines={1} flex="1">
+                              {sec.name}
+                            </Text>
+                            <Badge
+                              fontSize="10px"
+                              fontWeight="700"
+                              colorScheme={isComplete ? "green" : "gray"}
+                              borderRadius="full"
+                              px={1.5}
+                            >
+                              {isComplete ? `${sec.count}/${sec.count} ✓` : `${secDone}/${sec.count}`}
+                            </Badge>
+                          </Flex>
+                        );
+                      })}
+                    </VStack>
+                  </Box>
+                </>
+              )}
+
+              <Divider borderColor="gray.100" />
+
+              {/* Rubric Quick Guide */}
+              <Box px={4} py={3} bg="gray.50">
+                <Text fontSize="10px" fontWeight="800" color="gray.400" textTransform="uppercase" letterSpacing="0.05em" mb={1.5}>
+                  Rubric Scoring Scale
                 </Text>
+                <SimpleGrid columns={2} spacing={1.5}>
+                  <Flex align="center" gap={1.5}>
+                    <Box w="8px" h="8px" borderRadius="full" bg="#EF4444" />
+                    <Text fontSize="10px" color="gray.600" fontWeight="600">1: Unsatisfactory</Text>
+                  </Flex>
+                  <Flex align="center" gap={1.5}>
+                    <Box w="8px" h="8px" borderRadius="full" bg="#F59E0B" />
+                    <Text fontSize="10px" color="gray.600" fontWeight="600">2: Basic</Text>
+                  </Flex>
+                  <Flex align="center" gap={1.5}>
+                    <Box w="8px" h="8px" borderRadius="full" bg="#3B82F6" />
+                    <Text fontSize="10px" color="gray.600" fontWeight="600">3: Proficient</Text>
+                  </Flex>
+                  <Flex align="center" gap={1.5}>
+                    <Box w="8px" h="8px" borderRadius="full" bg="#16A34A" />
+                    <Text fontSize="10px" color="gray.600" fontWeight="600">4: Distinguished</Text>
+                  </Flex>
+                </SimpleGrid>
+                <Flex align="center" gap={1.5} mt={1}>
+                  <Box w="8px" h="8px" borderRadius="full" bg="#64748B" />
+                  <Text fontSize="10px" color="gray.500" fontWeight="500">N/A: Excluded from score</Text>
+                </Flex>
               </Box>
             </Box>
           </Box>

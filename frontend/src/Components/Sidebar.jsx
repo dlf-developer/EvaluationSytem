@@ -2,6 +2,7 @@ import React, { useMemo, useState, useEffect } from "react";
 import { Menu } from "./Data";
 import { getUserId } from "../Utils/auth";
 import { isCuteMalkinThemeActive } from "../Utils/cuteMalkinTheme";
+import { isDevOrLocalEnv } from "../Utils/env";
 import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -54,7 +55,19 @@ function Sidebar({ collapsed, onCloseDrawer }) {
   const Role = userData?.access || "default";
   const userName = userData?.name || "User";
 
-  const menuItems = useMemo(() => Menu[Role] || [], [Role]);
+  const isDev = isDevOrLocalEnv();
+  const isAdmin = Role === "Superadmin";
+  const menuItems = useMemo(() => {
+    const rawItems = Menu[Role] || [];
+    // Only Superadmin (Admin) in Local/Dev mode has access to Audit Logs tab
+    if (isDev && isAdmin) return rawItems;
+    return rawItems.filter(
+      (item) =>
+        item.route !== "/audit-logs" &&
+        !item.label?.toLowerCase().includes("audit") &&
+        !item.label?.toLowerCase().includes("(dev)")
+    );
+  }, [Role, isDev, isAdmin]);
   const { session, changeSession, loading } = useSessionPicker();
   const [isCute, setIsCute] = useState(() => isCuteMalkinThemeActive());
 

@@ -146,7 +146,50 @@ const buildClassroomQueryAndPaginate = async (req, baseCondition = {}) => {
     queryFilter.isObserverCompleted = String(req.query.isObserverCompleted) === "true";
   }
 
-  // 7. Search by person name
+  // 7. Person & Name search
+  const andConditions = [];
+
+  if (req.query.teacherName) {
+    const terms = req.query.teacherName
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (terms.length > 0) {
+      const userConditions = terms.map((term) => ({
+        name: { $regex: term, $options: "i" },
+      }));
+      const matchedUsers = await User.find({ $or: userConditions }, "_id").lean();
+      const matchedIds = matchedUsers.map((u) => u._id);
+      andConditions.push({
+        $or: [
+          { teacherID: { $in: matchedIds } },
+          { "grenralDetails.NameoftheVisitingTeacher": { $in: matchedIds } },
+          { "grenralDetails.NameoftheTeacher": { $in: matchedIds } },
+        ],
+      });
+    }
+  }
+
+  if (req.query.observerName) {
+    const terms = req.query.observerName
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (terms.length > 0) {
+      const userConditions = terms.map((term) => ({
+        name: { $regex: term, $options: "i" },
+      }));
+      const matchedUsers = await User.find({ $or: userConditions }, "_id").lean();
+      const matchedIds = matchedUsers.map((u) => u._id);
+      andConditions.push({
+        $or: [
+          { createdBy: { $in: matchedIds } },
+          { "grenralDetails.NameofObserver": { $in: matchedIds } },
+        ],
+      });
+    }
+  }
+
   const search = req.query.search || req.query.searchName || req.query.personName;
   if (search) {
     const searchTerms = search
@@ -163,21 +206,25 @@ const buildClassroomQueryAndPaginate = async (req, baseCondition = {}) => {
       ).lean();
       const matchedIds = matchedUsers.map((u) => u._id);
 
-      const searchOr = [
-        { teacherID: { $in: matchedIds } },
-        { createdBy: { $in: matchedIds } },
-        { "grenralDetails.NameoftheVisitingTeacher": { $in: matchedIds } },
-      ];
+      andConditions.push({
+        $or: [
+          { teacherID: { $in: matchedIds } },
+          { createdBy: { $in: matchedIds } },
+          { "grenralDetails.NameoftheVisitingTeacher": { $in: matchedIds } },
+          { "grenralDetails.NameoftheTeacher": { $in: matchedIds } },
+        ],
+      });
+    }
+  }
 
-      if (queryFilter.$or) {
-        queryFilter.$and = [
-          { $or: queryFilter.$or },
-          { $or: searchOr },
-        ];
-        delete queryFilter.$or;
-      } else {
-        queryFilter.$or = searchOr;
-      }
+  if (andConditions.length > 0) {
+    if (queryFilter.$and) {
+      queryFilter.$and.push(...andConditions);
+    } else if (queryFilter.$or) {
+      queryFilter.$and = [{ $or: queryFilter.$or }, ...andConditions];
+      delete queryFilter.$or;
+    } else {
+      queryFilter.$and = andConditions;
     }
   }
 
@@ -202,8 +249,31 @@ const buildClassroomQueryAndPaginate = async (req, baseCondition = {}) => {
 
   const totalCount = await Form2.countDocuments(queryFilter);
 
+  // Parse sorting params
+  const { parseSortParams } = require("../utils/sortHelper");
+  const form2SortMap = {
+    observationDate: "grenralDetails.DateOfObservation",
+    date: "grenralDetails.DateOfObservation",
+    className: "grenralDetails.className",
+    section: "grenralDetails.Section",
+    subject: "grenralDetails.Subject",
+    topic: "grenralDetails.Topic",
+    personName: "grenralDetails.NameoftheVisitingTeacher",
+    teacherName: "grenralDetails.NameoftheVisitingTeacher",
+    observerName: "createdBy",
+    totalScores: "totalScores",
+    scoreOutof: "scoreOutof",
+    percentageScore: "percentageScore",
+    Grade: "Grade",
+    grade: "Grade",
+    isTeacherCompletes: "isTeacherCompletes",
+    isObserverCompleted: "isObserverCompleted",
+    createdAt: "createdAt",
+  };
+  const sortCriteria = parseSortParams(req.query, form2SortMap, { createdAt: -1 });
+
   let dbQuery = Form2.find(queryFilter)
-    .sort({ createdAt: -1 })
+    .sort(sortCriteria)
     .populate({
       path: "teacherID",
       select: "-password -mobile -employeeId -customId",
@@ -327,6 +397,8 @@ exports.createForm = async (req, res) => {
         // Save the form to the database
         const savedForm = await newForm.save();
 
+        const recipientUser = await User.findById(NameoftheVisitingTeacher);
+
         recordAuditLog({
             req,
             action: 'CREATE',
@@ -340,20 +412,19 @@ exports.createForm = async (req, res) => {
             reciverId: NameoftheVisitingTeacher,
         });
 
-
-
-        const recipientUser = await User.findById(NameoftheVisitingTeacher);
-        const route = `classroom-walkthrough/create/${savedForm._id}`;
-        const emailData = formInitiatedEmail({
-          recipientName: recipientUser?.name,
-          initiatorName: user.name,
-          formTitle: "Classroom Walkthrough",
-          formRoute: route,
-          className: resolvedClassName,
-          section: Section,
-          subject: Subject,
-        });
-        await sendEmail(recipientUser.email, emailData.subject, emailData.html);
+        if (recipientUser?.email) {
+            const route = `classroom-walkthrough/create/${savedForm._id}`;
+            const emailData = formInitiatedEmail({
+              recipientName: recipientUser?.name,
+              initiatorName: user.name,
+              formTitle: "Classroom Walkthrough",
+              formRoute: route,
+              className: resolvedClassName,
+              section: Section,
+              subject: Subject,
+            });
+            await sendEmail(recipientUser.email, emailData.subject, emailData.html);
+        }
 
         // Send success response
         res.status(201).json({ message: "Form created successfully", form: savedForm, status: true });

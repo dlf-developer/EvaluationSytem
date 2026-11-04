@@ -411,7 +411,7 @@ function NotebookPDF() {
             </Box>
           </SimpleGrid>
 
-          <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={8} mb={8}>
+          <SimpleGrid columns={{ base: 1, lg: formDataList?.observerComment ? 3 : 2 }} spacing={8} mb={8}>
             <Box
               bg="green.50"
               p={6}
@@ -452,9 +452,33 @@ function NotebookPDF() {
                 borderColor="gray.200"
                 whiteSpace="pre-wrap"
               >
-                {formDataList?.observerFeedback || formDataList?.observerComment || "No comments provided."}
+                {formDataList?.observerFeedback || "No comments provided."}
               </Text>
             </Box>
+            {formDataList?.observerComment && (
+              <Box
+                bg="purple.50"
+                p={6}
+                borderRadius="xl"
+                borderWidth="1px"
+                borderColor="purple.200"
+              >
+                <Heading size="sm" color="gray.800" mb={3}>
+                  Overview Comments
+                </Heading>
+                <Text
+                  color="gray.700"
+                  bg="white"
+                  p={4}
+                  borderRadius="md"
+                  borderWidth="1px"
+                  borderColor="gray.200"
+                  whiteSpace="pre-wrap"
+                >
+                  {formDataList.observerComment}
+                </Text>
+              </Box>
+            )}
           </SimpleGrid>
 
           <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={8}>

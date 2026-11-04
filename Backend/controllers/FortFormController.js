@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const User = require("../models/User");
 const sendEmail = require("../utils/emailService");
 const Form1 = require("../models/Form1");
@@ -86,58 +87,54 @@ exports.createForm = async (req, res) => {
   }
 };
 
-// Form Initiation
+// Form Initiation (Enforces strictly 1 teacher per form)
 exports.FormInitiation = async (req, res) => {
-  const { isTeacher, teacherIDs } = req.body;
+  const { isTeacher, teacherIDs, teacherID } = req.body;
   const userId = req?.user?.id;
 
   try {
-    if (isTeacher && Array.isArray(teacherIDs) && teacherIDs.length > 0) {
-      const forms = await Promise.all(
-        teacherIDs.map(async (id) => {
-          const teacher = await User.findById(id);
-          if (!teacher?.email) return null;
+    let rawId = teacherID || (Array.isArray(teacherIDs) ? teacherIDs[0] : teacherIDs);
+    if (rawId && typeof rawId === "object") {
+      rawId = rawId._id || rawId.value || rawId.id || null;
+    }
+    const cleanTeacherId = rawId ? String(rawId).trim() : "";
 
-          const formData = new Form1({
-            userId,
-            isTeacher,
-            isObserverInitiation: true,
-            observerForm: {},
-            teacherForm: {},
-            teacherID: teacher._id,
-          });
-
-          await formData.save();
-
-          const subject = "New Fortnightly Monitor Form Created";
-          const body = `A new Fortnightly Monitor Form has been created. 
-            Click here to fill the form: https://abcd.com/form/${formData._id}`;
-          // sendEmail(teacher.email, subject, body);
-
-          const notification = new Notification({
-            title: `You are invited to fill the Fortnightly Monitor Form`,
-            route: `fortnightly-monitor/initiate/create/${formData._id}`,
-            reciverId: teacher._id,
-            date: new Date(),
-            status: "unSeen",
-          });
-          await notification.save();
-
-          return formData;
-        }),
-      );
-
-      const validForms = forms.filter(Boolean);
-      if (validForms.length > 0) {
-        return res
-          .status(201)
-          .json({ message: "Forms created successfully!", forms: validForms });
-      }
+    if (!cleanTeacherId || !mongoose.Types.ObjectId.isValid(cleanTeacherId) || !/^[a-f\d]{24}$/i.test(cleanTeacherId)) {
+      return res.status(400).json({ message: "Please select a valid teacher." });
     }
 
+    if (userId && cleanTeacherId === userId.toString()) {
+      return res.status(400).json({ message: "You cannot initiate a form to yourself." });
+    }
+
+    const teacher = await User.findById(cleanTeacherId);
+    if (!teacher) {
+      return res.status(404).json({ message: "Selected teacher not found." });
+    }
+
+    const formData = new Form1({
+      userId,
+      isTeacher: true,
+      isObserverInitiation: true,
+      observerForm: {},
+      teacherForm: {},
+      teacherID: teacher._id,
+    });
+
+    await formData.save();
+
+    const notification = new Notification({
+      title: `You are invited to fill the Fortnightly Monitor Form`,
+      route: `fortnightly-monitor/initiate/create/${formData._id}`,
+      reciverId: teacher._id,
+      date: new Date(),
+      status: "unSeen",
+    });
+    await notification.save();
+
     return res
-      .status(400)
-      .json({ message: "Invalid data. Teacher IDs are required." });
+      .status(201)
+      .json({ message: "Form created successfully!", forms: [formData], form: formData });
   } catch (error) {
     console.error("Error initiating forms:", error);
     res.status(500).json({ message: "Error initiating forms.", error });
@@ -146,47 +143,8 @@ exports.FormInitiation = async (req, res) => {
 
 // Get Forms for User (Teacher View)
 exports.getUserForm = async (req, res) => {
-  const userId = req?.user?.id;
-
-  try {
-    const queryFilter = req.sessionDateFilter ? { createdAt: req.sessionDateFilter } : {};
-
-    // In teacher view, only fetch forms where user is the teacher or teacher-initiated
-    const assignedForms = await Form1.find({ teacherID: userId, ...queryFilter })
-      .sort({ date: -1 })
-      .populate("teacherID coordinatorID userId");
-
-    const selfInitiatedForms = await Form1.find({
-      userId,
-      isObserverInitiation: { $ne: true },
-      ...queryFilter,
-    })
-      .sort({ date: -1 })
-      .populate("teacherID coordinatorID userId");
-
-    // Combine both arrays while avoiding duplicates, then re-sort by date desc
-    const combinedForms = [
-      ...selfInitiatedForms,
-      ...assignedForms.filter(
-        (assignedForm) =>
-          !selfInitiatedForms.some(
-            (selfForm) =>
-              selfForm._id.toString() === assignedForm._id.toString(),
-          ),
-      ),
-    ].sort((a, b) => new Date(b.date) - new Date(a.date));
-
-    res
-      .status(200)
-      .json({
-        Combined: combinedForms,
-        Initiated: selfInitiatedForms,
-        Assigned: assignedForms,
-      });
-  } catch (error) {
-    console.error("Error fetching user forms:", error);
-    res.status(500).json({ message: "Error fetching user forms.", error });
-  }
+  const { getUserForm } = require("./FormOneController");
+  return getUserForm(req, res);
 };
 
 // Get Observer Dashboard
@@ -237,50 +195,8 @@ const populateOptions = [
 ];
 
 exports.GetObserverForm01 = async (req, res) => {
-  const userId = req?.user?.id; // Fetch user ID from the request
-
-  if (!userId) {
-    return res.status(403).json({ message: "You do not have permission." });
-  }
-
-  try {
-    const queryFilter = req.sessionDateFilter ? { createdAt: req.sessionDateFilter } : {};
-
-    // Query forms assigned to the user
-    const Assigned = await Form1.find({ coordinatorID: userId, ...queryFilter })
-      .populate(populateOptions)
-      .populate("className")
-      .sort({ date: -1 });
-
-    // Query forms with observer initiation
-    const Initiated = await Form1.find({ userId, isObserverInitiation: true, ...queryFilter })
-      .populate(populateOptions)
-      .populate("className")
-      .sort({ date: -1 });
-
-    // Combine both arrays while avoiding duplicates, then re-sort by date desc
-    const Combined = [
-      ...Assigned,
-      ...Initiated.filter(
-        (initiatedForm) =>
-          !Assigned.some(
-            (assignedForm) =>
-              assignedForm._id.toString() === initiatedForm._id.toString(),
-          ),
-      ),
-    ].sort((a, b) => new Date(b.date) - new Date(a.date));
-
-    // Return combined forms along with separate arrays
-    res.status(200).json({ Combined, Assigned, Initiated });
-  } catch (error) {
-    console.error("Error Getting Classroom Walkthrough:", error);
-    res
-      .status(500)
-      .json({
-        message: "Error Getting Classroom Walkthrough.",
-        error: error.message,
-      });
-  }
+  const { GetObserverForm01 } = require("./FormOneController");
+  return GetObserverForm01(req, res);
 };
 
 //teacher form 1 ko jab edit karta hai tab tab ye function kam karta hai
