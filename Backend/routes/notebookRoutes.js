@@ -13,7 +13,7 @@ router.get('/get', authMiddleware, sessionMiddleware, GetcreatedByID);
 router.get('/observer/get', authMiddleware, sessionMiddleware, GetObseverForm);
 router.put('/observer/edit/:id', authMiddleware, EditUpdateNotebook);
 router.get('/get-all', authMiddleware, sessionMiddleware, GetNootbookForms);
-router.put('/teacher/reflation/:id', updateTeacherReflationFeedback);
+router.put('/teacher/reflation/:id', authMiddleware, updateTeacherReflationFeedback);
 router.post('/reminder/:id', authMiddleware, ReminderFormThree);
 router.delete('/delete/:id', authMiddleware, deleteFormThree);
 router.post('/comment/:id', authMiddleware, addObserverComment);

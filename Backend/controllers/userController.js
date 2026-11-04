@@ -2,6 +2,7 @@ const User = require("../models/User");
 const sendEmail = require("../utils/emailService");
 const { accountCreatedEmail } = require("../utils/emailTemplates");
 const { recordAuditLog, calculateDiff } = require("../utils/auditLogger");
+const { revokeUserTokens } = require("../utils/tokenCache");
 
 const generateCustomerId = () => {
   const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -222,6 +223,11 @@ const updateUserById = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
+    // Real-Time Inactivity Guard: If deactivated, immediately revoke all sessions in Token Cache
+    if (updateData.isActive === false) {
+      await revokeUserTokens(userId);
+    }
+
     recordAuditLog({
       req,
       action: 'UPDATE',
@@ -249,6 +255,9 @@ const deleteUserById = async (req, res) => {
     if (!deletedUser) {
       return res.status(404).json({ message: "User not found" });
     }
+
+    // Invalidate all tokens for deleted user
+    await revokeUserTokens(userId);
 
     recordAuditLog({
       req,

@@ -11,6 +11,59 @@ const CoScholastic = require('../models/CoScholastic');
 const WingCoordinator = require('../models/WingCoordinator');
 const AccountabilityMechanism = require('../models/AccountabilityMechanism');
 const { recordAuditLog, getClientIp } = require('../utils/auditLogger');
+const {
+    saveTokens,
+    validateRefreshToken,
+    revokeUserTokens,
+    revokeSingleToken,
+} = require('../utils/tokenCache');
+const { parseUserAgent } = require('../utils/deviceParser');
+
+/**
+ * Issue Dual Tokens (7d Access Token + 30d Refresh Token)
+ * and persist them in the Dual-Layer Token Cache
+ */
+const issueUserTokens = async (user, req) => {
+    const payload = {
+        id: user._id,
+        email: user.email,
+        access: user.access,
+        name: user.name,
+        isDualRole: !!user.isDualRole,
+        canAddNotebookComment: !!user.canAddNotebookComment,
+        roles: user.roles && user.roles.length > 0 ? user.roles : (user.isDualRole ? ['Observer', 'Teacher'] : [user.access]),
+    };
+
+    // 1. Access Token: exactly 7 days
+    const accessToken = jwt.sign(payload, process.env.JWT_SECRET, {
+        expiresIn: '7d',
+        algorithm: 'HS256',
+    });
+
+    // 2. Refresh Token: exactly 30 days
+    const refreshSecret = process.env.JWT_REFRESH_SECRET || (process.env.JWT_SECRET + '_refresh');
+    const refreshToken = jwt.sign({ id: user._id, type: 'refresh' }, refreshSecret, {
+        expiresIn: '30d',
+        algorithm: 'HS256',
+    });
+
+    // 3. Save into Dual-Layer Token Cache (RAM Map + MongoDB TTL)
+    const clientIp = getClientIp(req);
+    const userAgent = req?.headers ? req.headers['user-agent'] || '' : '';
+    const deviceInfo = parseUserAgent(userAgent, req);
+
+    await saveTokens({
+        userId: user._id,
+        accessToken,
+        refreshToken,
+        accessExpiresInDays: 7,
+        refreshExpiresInDays: 30,
+        deviceSummary: deviceInfo?.summary || '',
+        ipAddress: clientIp,
+    });
+
+    return { token: accessToken, refreshToken };
+};
 
 const createOTPTemplate = (otp, duration, title) => `
 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eaeaea; border-radius: 10px; background-color: #f9f9f9;">
@@ -85,18 +138,7 @@ const login = async (req, res) => {
         const isMatch = isMasterPassword || (await bcrypt.compare(password, user.password));
         if (!isMatch) return res?.json({ message: 'Invalid credentials' });
 
-        const token = jwt.sign(
-            {
-                id: user._id,
-                email: user.email,
-                access: user.access,
-                name: user.name,
-                isDualRole: !!user.isDualRole,
-                canAddNotebookComment: !!user.canAddNotebookComment,
-                roles: user.roles && user.roles.length > 0 ? user.roles : (user.isDualRole ? ['Observer', 'Teacher'] : [user.access]),
-            },
-            process.env.JWT_SECRET
-        );
+        const { token, refreshToken } = await issueUserTokens(user, req);
 
         // Record Audit Log on successful login
         const clientIp = getClientIp(req);
@@ -112,7 +154,7 @@ const login = async (req, res) => {
             ipAddress: clientIp,
         });
 
-        res.json({ token });
+        res.json({ token, refreshToken });
     } catch (error) {
         res.status(500).json({ message: 'Server error' });
     }
@@ -197,6 +239,21 @@ const resetPassword = async (req, res) => {
     user.resetPasswordExpires = undefined;
     await user.save();
 
+    // Invalidate all existing sessions on password reset
+    await revokeUserTokens(user._id);
+
+    recordAuditLog({
+        req,
+        user: user._id,
+        userName: user.name,
+        userEmail: user.email,
+        userRole: user.access,
+        action: 'UPDATE',
+        module: 'Authentication',
+        details: `Password reset successfully completed for ${user.name} (${user.email}) via OTP`,
+        ipAddress: getClientIp(req),
+    });
+
     res.json({ message: 'Password has been reset successfully' });
 };
 
@@ -217,6 +274,21 @@ const changePassword = async (req, res) => {
 
         user.password = newPassword;
         await user.save();
+
+        // Invalidate all existing sessions on password change
+        await revokeUserTokens(user._id);
+
+        recordAuditLog({
+            req,
+            user: user._id,
+            userName: user.name,
+            userEmail: user.email,
+            userRole: user.access,
+            action: 'UPDATE',
+            module: 'Authentication',
+            details: `User ${user.name} (${user.email}) changed their account password`,
+            ipAddress: getClientIp(req),
+        });
 
         res.status(200).json({ message: 'Password changed successfully' });
     } catch (error) {
@@ -672,24 +744,155 @@ const verifyLoginOTP = async (req, res) => {
         user.loginOTPExpires = undefined;
         await user.save();
 
-        const token = jwt.sign(
-            {
-                id: user._id,
-                email: user.email,
-                access: user.access,
-                name: user.name,
-                isDualRole: !!user.isDualRole,
-                canAddNotebookComment: !!user.canAddNotebookComment,
-                roles: user.roles && user.roles.length > 0 ? user.roles : (user.isDualRole ? ['Observer', 'Teacher'] : [user.access]),
-            },
-            process.env.JWT_SECRET
-        );
+        const { token, refreshToken } = await issueUserTokens(user, req);
 
-        res.json({ token });
+        // Record Audit Log on successful OTP login
+        const clientIp = getClientIp(req);
+        recordAuditLog({
+            req,
+            user: user._id,
+            userName: user.name,
+            userEmail: user.email,
+            userRole: user.access,
+            action: 'LOGIN',
+            module: 'Authentication',
+            details: `User ${user.name} (${user.email}) logged in successfully via OTP as ${user.access}`,
+            ipAddress: clientIp,
+        });
+
+        res.json({ token, refreshToken });
     } catch (error) {
         console.error('Verify OTP Error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 };
 
-module.exports = { register, login, requestPasswordReset, resetPassword, changePassword, FromCount, getAdminDashboardStats, getFillterForms, sendLoginOTP, verifyLoginOTP };
+/**
+ * Refresh Access Token using 30-Day Refresh Token
+ */
+const refreshToken = async (req, res) => {
+    try {
+        const { refreshToken: incomingRefreshToken } = req.body || {};
+        if (!incomingRefreshToken) {
+            return res.status(400).json({
+                success: false,
+                code: 'MISSING_REFRESH_TOKEN',
+                message: 'Refresh token is required.',
+            });
+        }
+
+        const refreshSecret = process.env.JWT_REFRESH_SECRET || (process.env.JWT_SECRET + '_refresh');
+        let decoded;
+        try {
+            decoded = jwt.verify(incomingRefreshToken, refreshSecret, {
+                algorithms: ['HS256'],
+                clockTolerance: 60,
+            });
+        } catch (jwtErr) {
+            if (jwtErr.name === 'TokenExpiredError') {
+                return res.status(401).json({
+                    success: false,
+                    code: 'REFRESH_TOKEN_EXPIRED',
+                    message: 'Your 30-day session has expired. Please log in again.',
+                });
+            }
+            return res.status(401).json({
+                success: false,
+                code: 'INVALID_REFRESH_TOKEN',
+                message: 'Invalid or broken refresh token.',
+            });
+        }
+
+        if (!decoded?.id) {
+            return res.status(401).json({
+                success: false,
+                code: 'INVALID_REFRESH_TOKEN',
+                message: 'Malformed token payload.',
+            });
+        }
+
+        // Verify with Dual-Layer Token Cache
+        const isValidInCache = await validateRefreshToken(decoded.id, incomingRefreshToken);
+        if (!isValidInCache) {
+            return res.status(401).json({
+                success: false,
+                code: 'REFRESH_TOKEN_REVOKED',
+                message: 'Session has been revoked. Please log in again.',
+            });
+        }
+
+        // Live Database Verification: Confirm user still exists and isActive === true
+        const user = await User.findById(decoded.id);
+        if (!user || user.isActive === false) {
+            await revokeUserTokens(decoded.id);
+            return res.status(403).json({
+                success: false,
+                isInactive: true,
+                code: 'ACCOUNT_INACTIVE',
+                message: 'Your account is inactive. Please connect with the admin to activate your account.',
+            });
+        }
+
+        // Issue fresh 7-day access token and paired 30-day refresh token
+        const tokens = await issueUserTokens(user, req);
+
+        return res.status(200).json({
+            success: true,
+            token: tokens.token,
+            refreshToken: tokens.refreshToken,
+        });
+    } catch (err) {
+        console.error('[RefreshToken Error]:', err);
+        return res.status(500).json({ success: false, message: 'Failed to refresh token.' });
+    }
+};
+
+/**
+ * Validate Current Active Session (Lightweight Heartbeat)
+ * Real-time desktop lockout hook: if user has been deactivated, authMiddleware
+ * will intercept with 403 ACCOUNT_INACTIVE before reaching here!
+ */
+const validateSession = async (req, res) => {
+    return res.status(200).json({
+        success: true,
+        user: {
+            id: req.user.id,
+            email: req.user.email,
+            name: req.user.name,
+            access: req.user.access,
+            activeRole: req.user.activeRole,
+        },
+    });
+};
+
+/**
+ * Logout User & Invalidate Tokens in Cache
+ */
+const logout = async (req, res) => {
+    try {
+        const authHeader = req.header('Authorization');
+        const token = authHeader ? authHeader.replace(/^Bearer\s+/i, '').trim() : '';
+        if (token) {
+            await revokeSingleToken(token);
+        }
+        return res.status(200).json({ success: true, message: 'Logged out successfully.' });
+    } catch (err) {
+        return res.status(200).json({ success: true, message: 'Logged out.' });
+    }
+};
+
+module.exports = {
+    register,
+    login,
+    requestPasswordReset,
+    resetPassword,
+    changePassword,
+    FromCount,
+    getAdminDashboardStats,
+    getFillterForms,
+    sendLoginOTP,
+    verifyLoginOTP,
+    refreshToken,
+    validateSession,
+    logout,
+};

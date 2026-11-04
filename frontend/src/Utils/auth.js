@@ -5,21 +5,31 @@ import { recordRoleSwitchAudit } from "./auditLogger";
 
 export const getToken = () => {
   if (typeof window !== "undefined") {
-    const token = localStorage.getItem("token");
-    if (!token) return null;
-    try {
-      const decoded = jwtDecode(token);
-      if (decoded.exp && decoded.exp * 1000 < Date.now()) {
-        localStorage.removeItem("token");
-        return null;
-      }
-      return token;
-    } catch (e) {
-      localStorage.removeItem("token");
-      return null;
-    }
+    return localStorage.getItem("token") || null;
   }
   return null;
+};
+
+export const getRefreshToken = () => {
+  if (typeof window !== "undefined") {
+    return localStorage.getItem("refreshToken") || null;
+  }
+  return null;
+};
+
+export const setTokens = (accessToken, refreshToken = null) => {
+  if (typeof window !== "undefined") {
+    if (accessToken) localStorage.setItem("token", accessToken);
+    if (refreshToken) localStorage.setItem("refreshToken", refreshToken);
+  }
+};
+
+export const clearTokens = () => {
+  if (typeof window !== "undefined") {
+    localStorage.removeItem("token");
+    localStorage.removeItem("refreshToken");
+    localStorage.removeItem("userEmail");
+  }
 };
 
 export const isDualRoleUser = (user) => {

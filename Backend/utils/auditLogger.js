@@ -1,4 +1,5 @@
 const AuditLog = require('../models/AuditLog');
+const { parseUserAgent } = require('./deviceParser');
 
 /**
  * Determine whether the current environment / request is LOCAL or DEV ENVIRONMENT.
@@ -106,13 +107,44 @@ const recordAuditLog = async ({
 }) => {
   try {
     const resolvedUser = req?.user || {};
-    const finalUserId = user || resolvedUser.id || resolvedUser._id || null;
-    const finalUserName = userName || resolvedUser.name || 'Unknown User';
-    const finalUserEmail = userEmail || resolvedUser.email || 'unknown@dlps.co.in';
-    const finalUserRole = userRole || resolvedUser.activeRole || resolvedUser.access || 'User';
+    let finalUserId = user || resolvedUser.id || resolvedUser._id || null;
+    let finalUserName = userName || resolvedUser.name || '';
+    let finalUserEmail = userEmail || resolvedUser.email || '';
+    let finalUserRole = userRole || resolvedUser.activeRole || resolvedUser.access || '';
+
+    // If email is missing or generic, check request body (e.g. from client logger)
+    if ((!finalUserEmail || finalUserEmail === 'unknown@dlps.co.in') && req?.body?.userEmail) {
+      finalUserEmail = req.body.userEmail;
+    }
+    if ((!finalUserName || finalUserName === 'Unknown User') && req?.body?.userName) {
+      finalUserName = req.body.userName;
+    }
+
+    // Direct database lookup if email is still missing but we have userId
+    if ((!finalUserEmail || finalUserEmail === 'unknown@dlps.co.in' || !finalUserName) && finalUserId) {
+      try {
+        const User = require('../models/User');
+        const dbUser = await User.findById(finalUserId).select('name email access activeRole roles').lean();
+        if (dbUser) {
+          if (!finalUserName) finalUserName = dbUser.name || 'Unknown User';
+          if (!finalUserEmail || finalUserEmail === 'unknown@dlps.co.in') finalUserEmail = dbUser.email || 'unknown@dlps.co.in';
+          if (!finalUserRole) finalUserRole = dbUser.access || 'User';
+        }
+      } catch (lookupErr) {
+        // Non-blocking fallback
+      }
+    }
+
+    if (!finalUserName) finalUserName = 'Unknown User';
+    if (!finalUserEmail) finalUserEmail = 'unknown@dlps.co.in';
+    if (!finalUserRole) finalUserRole = 'User';
+
     const finalIp = ipAddress || getClientIp(req);
     const userAgent = req?.headers ? req.headers['user-agent'] || '' : '';
     const session = req?.headers ? req.headers['x-session-id'] || '' : '';
+
+    // Parse Device Information from User-Agent
+    const deviceInfo = parseUserAgent(userAgent, req);
 
     const newLog = new AuditLog({
       userId: finalUserId,
@@ -126,6 +158,7 @@ const recordAuditLog = async ({
       changes: Array.isArray(changes) ? changes : [],
       ipAddress: finalIp,
       userAgent,
+      deviceInfo,
       session,
     });
 

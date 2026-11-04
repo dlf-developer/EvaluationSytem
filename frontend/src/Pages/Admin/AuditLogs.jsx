@@ -67,6 +67,7 @@ export default function AuditLogs() {
   const [search, setSearch] = useState("");
   const [actionFilter, setActionFilter] = useState("");
   const [moduleFilter, setModuleFilter] = useState("");
+  const [deviceFilter, setDeviceFilter] = useState("");
 
   // Inspect Changes Modal state
   const { isOpen, onOpen, onClose } = useDisclosure();
@@ -113,6 +114,7 @@ export default function AuditLogs() {
       if (search.trim()) params.search = search.trim();
       if (actionFilter) params.action = actionFilter;
       if (moduleFilter) params.module = moduleFilter;
+      if (deviceFilter) params.deviceType = deviceFilter;
 
       const [logsRes, statsRes] = await Promise.all([
         axiosInstanceToken.get("/audit-logs", { params }),
@@ -130,7 +132,7 @@ export default function AuditLogs() {
     } finally {
       setLoading(false);
     }
-  }, [isAdminUnlocked, search, actionFilter, moduleFilter]);
+  }, [isAdminUnlocked, search, actionFilter, moduleFilter, deviceFilter]);
 
   useEffect(() => {
     if (isAdminUnlocked) {
@@ -296,6 +298,49 @@ export default function AuditLogs() {
             {val || "General"}
           </Badge>
         ),
+      },
+      {
+        title: "Device / Hardware",
+        dataIndex: "deviceInfo",
+        key: "deviceInfo",
+        width: 220,
+        render: (info, record) => {
+          const dev = info || {};
+          const isMobile = dev.deviceType === "Mobile";
+          const isTablet = dev.deviceType === "Tablet";
+          const isDesktop = !isMobile && !isTablet;
+
+          const badgeBg = isMobile ? "purple.50" : isTablet ? "orange.50" : "blue.50";
+          const badgeColor = isMobile ? "purple.700" : isTablet ? "orange.700" : "blue.700";
+          const badgeBorder = isMobile ? "purple.200" : isTablet ? "orange.200" : "blue.200";
+          const icon = isMobile ? "📱" : isTablet ? "📟" : "💻";
+
+          return (
+            <VStack align="start" spacing={0.5}>
+              <HStack spacing={1.5}>
+                <Badge
+                  bg={badgeBg}
+                  color={badgeColor}
+                  border="1px solid"
+                  borderColor={badgeBorder}
+                  fontSize="11px"
+                  fontWeight="bold"
+                  px={1.5}
+                  py={0.5}
+                  rounded="md"
+                >
+                  {icon} {dev.deviceType || "Desktop"}
+                </Badge>
+                <Text fontSize="12px" fontWeight="600" color="gray.800" noOfLines={1}>
+                  {dev.deviceModel || (isDesktop ? "Computer / PC" : "Phone")}
+                </Text>
+              </HStack>
+              <Text fontSize="10.5px" color="gray.500" noOfLines={1}>
+                {dev.os || "Unknown OS"} • {dev.browser || "Browser"}
+              </Text>
+            </VStack>
+          );
+        },
       },
       {
         title: "IP Address",
@@ -638,7 +683,20 @@ export default function AuditLogs() {
           <option value="Authentication">Authentication</option>
         </ChakraSelect>
 
-        {(search || actionFilter || moduleFilter) && (
+        <ChakraSelect
+          maxW={{ base: "100%", md: "160px" }}
+          value={deviceFilter}
+          onChange={(e) => setDeviceFilter(e.target.value)}
+          fontSize="13px"
+          rounded="lg"
+        >
+          <option value="">All Devices</option>
+          <option value="Mobile">📱 Mobile</option>
+          <option value="Desktop">💻 Desktop</option>
+          <option value="Tablet">📟 Tablet</option>
+        </ChakraSelect>
+
+        {(search || actionFilter || moduleFilter || deviceFilter) && (
           <ChakraButton
             size="sm"
             variant="ghost"
@@ -647,6 +705,7 @@ export default function AuditLogs() {
               setSearch("");
               setActionFilter("");
               setModuleFilter("");
+              setDeviceFilter("");
             }}
           >
             Reset Filters
@@ -683,6 +742,31 @@ export default function AuditLogs() {
           <ModalCloseButton />
 
           <ModalBody py={4} maxH="65vh" overflowY="auto">
+            {/* Device & Network Origin Metadata */}
+            <Box p={3} mb={3.5} rounded="xl" bg="gray.50" border="1px solid" borderColor="gray.200">
+              <SimpleGrid columns={{ base: 1, sm: 3 }} spacing={2} fontSize="11.5px">
+                <Box>
+                  <Text color="gray.500" fontWeight="600" textTransform="uppercase" fontSize="10px">Device & Hardware</Text>
+                  <Text color="gray.800" fontWeight="bold">
+                    {activeLog?.deviceInfo?.deviceType === "Mobile" ? "📱 " : activeLog?.deviceInfo?.deviceType === "Tablet" ? "📟 " : "💻 "}
+                    {activeLog?.deviceInfo?.deviceModel || "Computer / PC"}
+                  </Text>
+                </Box>
+                <Box>
+                  <Text color="gray.500" fontWeight="600" textTransform="uppercase" fontSize="10px">OS & Browser</Text>
+                  <Text color="gray.800" fontWeight="bold">
+                    {activeLog?.deviceInfo?.os || "Unknown OS"} • {activeLog?.deviceInfo?.browser || "Browser"}
+                  </Text>
+                </Box>
+                <Box>
+                  <Text color="gray.500" fontWeight="600" textTransform="uppercase" fontSize="10px">IP & Email</Text>
+                  <Text color="gray.800" fontWeight="bold" noOfLines={1} title={activeLog?.userEmail}>
+                    {activeLog?.ipAddress || "Unknown"} • {activeLog?.userEmail}
+                  </Text>
+                </Box>
+              </SimpleGrid>
+            </Box>
+
             {activeLog?.changes && activeLog.changes.length > 0 ? (
               <VStack spacing={3} align="stretch">
                 {activeLog.changes.map((change, idx) => (

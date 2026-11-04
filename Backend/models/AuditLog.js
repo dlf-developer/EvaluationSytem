@@ -67,6 +67,13 @@ const auditLogSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    deviceInfo: {
+      deviceType: { type: String, default: 'Desktop' },
+      deviceModel: { type: String, default: 'Computer / PC' },
+      os: { type: String, default: 'Unknown OS' },
+      browser: { type: String, default: 'Unknown Browser' },
+      summary: { type: String, default: '' },
+    },
     session: {
       type: String,
       default: '',

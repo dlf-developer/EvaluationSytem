@@ -1,25 +1,20 @@
 const AuditLog = require('../models/AuditLog');
-const { isLocalDev, recordAuditLog } = require('../utils/auditLogger');
+const { recordAuditLog } = require('../utils/auditLogger');
+const { parseUserAgent } = require('../utils/deviceParser');
 
 /**
  * Fetch all audit logs with pagination and multi-field search/filtering.
- * Strictly gated to LOCAL DEV.
+ * Protected by requireSuperadmin middleware in auditLogRoutes.
  */
 exports.getAuditLogs = async (req, res) => {
   try {
-    if (!isLocalDev(req)) {
-      return res.status(403).json({
-        success: false,
-        message: 'Audit logs are restricted to Local Development mode only.',
-      });
-    }
-
     const {
       page = 1,
       limit = 50,
       search = '',
       action = '',
       module: logModule = '',
+      deviceType = '',
       startDate,
       endDate,
     } = req.query;
@@ -39,6 +34,10 @@ exports.getAuditLogs = async (req, res) => {
       query.module = logModule;
     }
 
+    if (deviceType) {
+      query['deviceInfo.deviceType'] = deviceType;
+    }
+
     if (search && search.trim()) {
       const searchRegex = new RegExp(search.trim(), 'i');
       query.$or = [
@@ -49,6 +48,10 @@ exports.getAuditLogs = async (req, res) => {
         { details: searchRegex },
         { ipAddress: searchRegex },
         { targetId: searchRegex },
+        { 'deviceInfo.deviceModel': searchRegex },
+        { 'deviceInfo.os': searchRegex },
+        { 'deviceInfo.browser': searchRegex },
+        { 'deviceInfo.summary': searchRegex },
       ];
     }
 
@@ -81,6 +84,7 @@ exports.getAuditLogs = async (req, res) => {
 
     const [logs, total] = await Promise.all([
       AuditLog.find(query)
+        .populate('userId', 'name email access')
         .sort(sortCriteria)
         .skip(skip)
         .limit(limitNum)
@@ -88,9 +92,27 @@ exports.getAuditLogs = async (req, res) => {
       AuditLog.countDocuments(query),
     ]);
 
+    // Format logs: resolve email if generic & parse device info if missing
+    const enrichedLogs = logs.map((log) => {
+      // Resolve user email and name if previously unknown
+      if ((!log.userEmail || log.userEmail === 'unknown@dlps.co.in') && log.userId?.email) {
+        log.userEmail = log.userId.email;
+        if (!log.userName || log.userName === 'Unknown User') {
+          log.userName = log.userId.name || log.userName;
+        }
+      }
+
+      // Ensure deviceInfo exists
+      if (!log.deviceInfo || !log.deviceInfo.deviceType) {
+        log.deviceInfo = parseUserAgent(log.userAgent);
+      }
+
+      return log;
+    });
+
     res.status(200).json({
       success: true,
-      data: logs,
+      data: enrichedLogs,
       pagination: {
         total,
         page: pageNum,
@@ -110,16 +132,10 @@ exports.getAuditLogs = async (req, res) => {
 
 /**
  * Summary statistics for the audit logs dashboard
+ * Protected by requireSuperadmin middleware in auditLogRoutes.
  */
 exports.getAuditStats = async (req, res) => {
   try {
-    if (!isLocalDev(req)) {
-      return res.status(403).json({
-        success: false,
-        message: 'Audit logs are restricted to Local Development mode only.',
-      });
-    }
-
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
 

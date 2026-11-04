@@ -12,12 +12,14 @@ export const recordClientAudit = async ({
   changes = [],
 }) => {
   try {
+    const storedEmail = (localStorage.getItem("userEmail") || "").toLowerCase().trim();
     const payload = {
       action: String(action || "DOWNLOAD").toUpperCase(),
       module: module || "General",
       targetId: targetId ? String(targetId) : null,
       details: details || "",
       changes: Array.isArray(changes) ? changes : [],
+      userEmail: storedEmail || undefined,
     };
 
     // Post to the backend record endpoint

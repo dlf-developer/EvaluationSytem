@@ -169,6 +169,7 @@ function Login() {
       const res = await dispatch(UserLogin({ email, password })).unwrap();
       if (res?.token) {
         localStorage.setItem("token", res.token);
+        if (res?.refreshToken) localStorage.setItem("refreshToken", res.refreshToken);
         if (email) localStorage.setItem("userEmail", email.toLowerCase().trim());
         message.success("Logged in successfully!");
         redirectToTarget();
@@ -231,6 +232,7 @@ function Login() {
       ).unwrap();
       if (res?.token) {
         localStorage.setItem("token", res.token);
+        if (res?.refreshToken) localStorage.setItem("refreshToken", res.refreshToken);
         if (email) localStorage.setItem("userEmail", email.toLowerCase().trim());
         message.success("Logging in...");
         redirectToTarget();

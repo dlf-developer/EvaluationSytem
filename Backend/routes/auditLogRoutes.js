@@ -7,7 +7,6 @@ const {
   recordClientAuditLog,
   rejectMutation,
 } = require('../controllers/auditLogController');
-const { isLocalDev } = require('../utils/auditLogger');
 
 // Middleware to restrict access to Superadmin (Admin)
 const requireSuperadmin = (req, res, next) => {
