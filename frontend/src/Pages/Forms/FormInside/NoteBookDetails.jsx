@@ -27,6 +27,7 @@ import {
 import { getUserId, getUserRoleTag } from "../../../Utils/auth";
 import { UserRole } from "../../../config/config";
 import { CreateActivityApi } from "../../../redux/Activity/activitySlice";
+import ChoiceScaleSelector from "../../../Components/Forms/ChoiceScaleSelector";
 
 const { Option } = Select;
 
@@ -281,15 +282,7 @@ const NoteBookDetails = () => {
           }
           rules={[{ required: true, message: "Please select an answer!" }]}
         >
-          <Radio.Group
-            size="large"
-            options={yesNoNAOptions.map((option) => ({
-              label: option.label,
-              value: option.value,
-            }))}
-            optionType="button"
-            buttonStyle="solid"
-          />
+          <ChoiceScaleSelector options={["1", "2", "3", "N/A"]} size="large" />
         </Form.Item>
         <Button
           type="link"

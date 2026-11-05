@@ -19,6 +19,7 @@ import { EditNoteBook, GetNoteBookForm } from "../../redux/Form/noteBookSlice";
 import { getAllTimes } from "../../Utils/auth";
 import { getCreateClassSection } from "../../redux/userSlice";
 import CommonStepper from "../../Components/CommonStepper";
+import ChoiceScaleSelector from "../../Components/Forms/ChoiceScaleSelector";
 
 const { Option } = Select;
 
@@ -303,15 +304,7 @@ function TC_Notebook() {
           rules={[{ required: true, message: "Please select an answer!" }]}
           className="mb-0"
         >
-          <Radio.Group
-            size="large"
-            options={yesNoNAOptions.map((option) => ({
-              label: option.label,
-              value: option.value,
-            }))}
-            optionType="button"
-            buttonStyle="solid"
-          />
+          <ChoiceScaleSelector options={["1", "2", "3", "N/A"]} size="large" />
         </Form.Item>
         <Button
           type="link"

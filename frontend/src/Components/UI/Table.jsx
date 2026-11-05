@@ -40,24 +40,26 @@ export const Table = ({
     return obj?.[path];
   };
 
+  const safeData = Array.isArray(dataSource) ? dataSource : [];
+
   const total =
     typeof pagination === "object" && pagination.total !== undefined
       ? pagination.total
-      : dataSource.length;
+      : safeData.length;
 
   const paginatedData = useMemo(() => {
-    if (!isPaginationEnabled) return dataSource;
+    if (!isPaginationEnabled) return safeData;
     // If external total is controlled and different from dataSource length, assume server-side
     if (
       typeof pagination === "object" &&
       pagination.total !== undefined &&
-      pagination.total !== dataSource.length
+      pagination.total !== safeData.length
     ) {
-      return dataSource;
+      return safeData;
     }
     const start = (currentPage - 1) * pageSize;
-    return dataSource.slice(start, start + pageSize);
-  }, [dataSource, isPaginationEnabled, currentPage, pageSize, pagination]);
+    return safeData.slice(start, start + pageSize);
+  }, [safeData, isPaginationEnabled, currentPage, pageSize, pagination]);
 
   const totalPages = Math.ceil(total / pageSize) || 1;
 

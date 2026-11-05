@@ -1,7 +1,7 @@
 import React, { useEffect, useCallback, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useParams } from "react-router-dom";
-import { Button, Spin, Table, Tag } from "../../Components/UI";
+import { useParams, useNavigate } from "react-router-dom";
+import { Button, Spin, Table, Tag, TextArea, message } from "../../Components/UI";
 import { DownloadOutlined } from "../../Components/UI/Icons";
 import {
   Box,
@@ -16,13 +16,14 @@ import {
 } from "@chakra-ui/react";
 import ReactPDF from "@react-pdf/renderer";
 import { LOGO_BASE64, BANNER_BASE64 } from "./logoAssets";
-import { GetNoteBookForm } from "../../redux/Form/noteBookSlice";
+import { GetNoteBookForm, EditNoteBook } from "../../redux/Form/noteBookSlice";
 import NoteBookDoc from "./Documents/NoteBookDoc";
-import { getAllTimes } from "../../Utils/auth";
+import { getAllTimes, getUserId } from "../../Utils/auth";
 import DynamicScroreThree from "../../Components/DynamicScroreThree";
 import { recordFileDownloadAudit } from "../../Utils/auditLogger";
+import { Edit3, Check, MessageSquare } from "lucide-react";
 
-const TableCard = React.memo(({ title, dataSource }) => (
+const TableCard = React.memo(({ title, dataSource = [] }) => (
   <Box
     bg="white"
     mt={6}
@@ -46,7 +47,7 @@ const TableCard = React.memo(({ title, dataSource }) => (
     <Box>
       <Table
         pagination={false}
-        dataSource={dataSource}
+        dataSource={Array.isArray(dataSource) ? dataSource : []}
         columns={[
           {
             title: "Questions",
@@ -88,8 +89,51 @@ const TableCard = React.memo(({ title, dataSource }) => (
 
 function NotebookPDF() {
   const { id: Id } = useParams();
+  const navigate = useNavigate();
   const dispatch = useDispatch();
+  const user = getUserId();
   const { formDataList, isLoading } = useSelector((state) => state?.notebook);
+
+  const [isEditingFeedback, setIsEditingFeedback] = useState(false);
+  const [feedbackDraft, setFeedbackDraft] = useState("");
+  const [savingFeedback, setSavingFeedback] = useState(false);
+
+  useEffect(() => {
+    if (formDataList?.observerFeedback !== undefined) {
+      setFeedbackDraft(formDataList.observerFeedback || "");
+    }
+  }, [formDataList]);
+
+  const canEdit = Boolean(
+    user?.access === "Superadmin" ||
+      user?.access === "Admin" ||
+      user?.access === "Observer" ||
+      user?.id === (formDataList?.grenralDetails?.NameofObserver?._id || formDataList?.grenralDetails?.NameofObserver)
+  );
+
+  const handleSaveFeedback = async () => {
+    setSavingFeedback(true);
+    try {
+      const response = await dispatch(
+        EditNoteBook({
+          id: Id,
+          data: { observerFeedback: feedbackDraft },
+        })
+      );
+      if (response?.payload?.success) {
+        message.success("Observer comments updated successfully!");
+        setIsEditingFeedback(false);
+        dispatch(GetNoteBookForm(Id));
+      } else {
+        message.error(response?.payload?.message || "Failed to update comments.");
+      }
+    } catch (e) {
+      console.error(e);
+      message.error("Error saving observer comments.");
+    } finally {
+      setSavingFeedback(false);
+    }
+  };
 
   const downloadPDF = useCallback(async () => {
     const blob = await ReactPDF.pdf(
@@ -121,15 +165,12 @@ function NotebookPDF() {
     }
   }, [Id, dispatch]);
 
-  const keyObject = [
-    "Maintenance Of Notebooks",
-    "Quality Of Opportunities",
-    "Quality Of Teacher Feedback",
-    "Quality Of Learner",
+  const notebookSections = [
+    { title: "Maintenance Of Notebooks", field: "maintenanceOfNotebooks" },
+    { title: "Quality Of Opportunities", field: "qualityOfOppurtunities" },
+    { title: "Quality Of Teacher Feedback", field: "qualityOfTeacherFeedback" },
+    { title: "Quality Of Learner", field: "qualityOfLearner" },
   ];
-
-  const getField = (field, type = "ObserverForm") =>
-    formDataList?.[type]?.[field];
 
   return (
     <Box p={{ base: 4, md: 8 }} minH="100vh" bg="gray.50" position="relative">
@@ -148,7 +189,7 @@ function NotebookPDF() {
       )}
 
       <Box maxW="1200px" mx="auto">
-        <Flex justify="flex-start" mb={6}>
+        <Flex justify="space-between" align="center" mb={6} flexWrap="wrap" gap={3}>
           <Button
             type="primary"
             size="large"
@@ -157,6 +198,17 @@ function NotebookPDF() {
           >
             <DownloadOutlined /> Download PDF
           </Button>
+
+          {canEdit && (
+            <Button
+              size="large"
+              variant="outline"
+              onClick={() => navigate(`/notebook-checking-proforma/edit/${Id}`)}
+              className="border-gray-300 text-gray-700 hover:bg-gray-50 flex items-center gap-2 rounded-xl"
+            >
+              <Edit3 size={16} /> Edit Full Evaluation
+            </Button>
+          )}
         </Flex>
 
         <Box
@@ -373,14 +425,11 @@ function NotebookPDF() {
                 Teacher Response
               </Heading>
               <VStack align="stretch" spacing={0}>
-                {keyObject.map((title, index) => (
+                {notebookSections.map((sec, index) => (
                   <TableCard
                     key={`t-${index}`}
-                    title={title}
-                    dataSource={getField(
-                      Object.keys(formDataList?.TeacherForm || {})[index],
-                      "TeacherForm",
-                    )}
+                    title={sec.title}
+                    dataSource={formDataList?.TeacherForm?.[sec.field] || []}
                   />
                 ))}
               </VStack>
@@ -398,13 +447,11 @@ function NotebookPDF() {
                 Observer Response
               </Heading>
               <VStack align="stretch" spacing={0}>
-                {keyObject.map((title, index) => (
+                {notebookSections.map((sec, index) => (
                   <TableCard
                     key={`o-${index}`}
-                    title={title}
-                    dataSource={getField(
-                      Object.keys(formDataList?.ObserverForm || {})[index],
-                    )}
+                    title={sec.title}
+                    dataSource={formDataList?.ObserverForm?.[sec.field] || []}
                   />
                 ))}
               </VStack>
@@ -440,20 +487,79 @@ function NotebookPDF() {
               borderWidth="1px"
               borderColor="blue.200"
             >
-              <Heading size="sm" color="gray.800" mb={3}>
-                Observer Comments
-              </Heading>
-              <Text
-                color="gray.700"
-                bg="white"
-                p={4}
-                borderRadius="md"
-                borderWidth="1px"
-                borderColor="gray.200"
-                whiteSpace="pre-wrap"
-              >
-                {formDataList?.observerFeedback || "No comments provided."}
-              </Text>
+              <Flex align="center" justify="space-between" mb={3}>
+                <Flex align="center" gap={2}>
+                  <MessageSquare size={16} className="text-blue-700" />
+                  <Heading size="sm" color="gray.800">
+                    Observer Comments
+                  </Heading>
+                </Flex>
+                {canEdit && !isEditingFeedback && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      setFeedbackDraft(formDataList?.observerFeedback || "");
+                      setIsEditingFeedback(true);
+                    }}
+                    className="text-xs text-blue-700 hover:text-blue-900 flex items-center gap-1.5 p-0"
+                  >
+                    <Edit3 size={13} />
+                    {formDataList?.observerFeedback ? "Edit Comment" : "Add Comment"}
+                  </Button>
+                )}
+              </Flex>
+
+              {isEditingFeedback ? (
+                <Box
+                  bg="white"
+                  p={4}
+                  borderRadius="lg"
+                  borderWidth="1px"
+                  borderColor="blue.300"
+                  boxShadow="sm"
+                >
+                  <TextArea
+                    rows={4}
+                    value={feedbackDraft}
+                    onChange={(e) => setFeedbackDraft(e.target.value)}
+                    placeholder="Enter your observation comments, strengths, and recommendations..."
+                    className="text-sm rounded-lg mb-3"
+                  />
+                  <Flex justify="flex-end" gap={2}>
+                    <Button
+                      size="sm"
+                      onClick={() => setIsEditingFeedback(false)}
+                      disabled={savingFeedback}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      size="sm"
+                      type="primary"
+                      onClick={handleSaveFeedback}
+                      loading={savingFeedback}
+                      style={{ background: "#1a4d2e" }}
+                      className="flex items-center gap-1.5 text-white"
+                    >
+                      <Check size={14} /> Save Comment
+                    </Button>
+                  </Flex>
+                </Box>
+              ) : (
+                <Text
+                  color={formDataList?.observerFeedback ? "gray.700" : "gray.400"}
+                  bg="white"
+                  p={4}
+                  borderRadius="md"
+                  borderWidth="1px"
+                  borderColor="gray.200"
+                  whiteSpace="pre-wrap"
+                  fontStyle={formDataList?.observerFeedback ? "normal" : "italic"}
+                >
+                  {formDataList?.observerFeedback || "No comments provided."}
+                </Text>
+              )}
             </Box>
             {formDataList?.observerComment && (
               <Box

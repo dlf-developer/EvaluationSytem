@@ -26,7 +26,7 @@ import { CreateActivityApi } from "../../redux/Activity/activitySlice";
 import DynamicScroreThree from "../../Components/DynamicScroreThree";
 
 /* ── Shared table card — identical to NotebookPDF ── */
-const TableCard = React.memo(({ title, dataSource }) => (
+const TableCard = React.memo(({ title, dataSource = [] }) => (
   <Box
     bg="white"
     mt={6}
@@ -50,7 +50,7 @@ const TableCard = React.memo(({ title, dataSource }) => (
     <Box>
       <Table
         pagination={false}
-        dataSource={dataSource}
+        dataSource={Array.isArray(dataSource) ? dataSource : []}
         columns={[
           {
             title: "Questions",
@@ -148,15 +148,12 @@ function NotebookComplete() {
     }
   };
 
-  const keyObject = [
-    "Maintenance Of Notebooks",
-    "Quality Of Opportunities",
-    "Quality Of Teacher Feedback",
-    "Quality Of Learner",
+  const notebookSections = [
+    { title: "Maintenance Of Notebooks", field: "maintenanceOfNotebooks" },
+    { title: "Quality Of Opportunities", field: "qualityOfOppurtunities" },
+    { title: "Quality Of Teacher Feedback", field: "qualityOfTeacherFeedback" },
+    { title: "Quality Of Learner", field: "qualityOfLearner" },
   ];
-
-  const getField = (field, type = "ObserverForm") =>
-    formDataList?.[type]?.[field];
 
   return (
     <Box p={{ base: 4, md: 8 }} minH="100vh" bg="gray.50" position="relative">
@@ -391,14 +388,11 @@ function NotebookComplete() {
                 Teacher Response
               </Heading>
               <VStack align="stretch" spacing={0}>
-                {keyObject.map((title, index) => (
+                {notebookSections.map((sec, index) => (
                   <TableCard
                     key={`t-${index}`}
-                    title={title}
-                    dataSource={getField(
-                      Object.keys(formDataList?.TeacherForm || {})[index],
-                      "TeacherForm",
-                    )}
+                    title={sec.title}
+                    dataSource={formDataList?.TeacherForm?.[sec.field] || []}
                   />
                 ))}
               </VStack>
@@ -416,13 +410,11 @@ function NotebookComplete() {
                 Observer Response
               </Heading>
               <VStack align="stretch" spacing={0}>
-                {keyObject.map((title, index) => (
+                {notebookSections.map((sec, index) => (
                   <TableCard
                     key={`o-${index}`}
-                    title={title}
-                    dataSource={getField(
-                      Object.keys(formDataList?.ObserverForm || {})[index],
-                    )}
+                    title={sec.title}
+                    dataSource={formDataList?.ObserverForm?.[sec.field] || []}
                   />
                 ))}
               </VStack>

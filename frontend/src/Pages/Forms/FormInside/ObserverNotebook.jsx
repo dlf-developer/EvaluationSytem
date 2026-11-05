@@ -1,35 +1,150 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   GetNoteBookForm,
   ObserverNotebookComplete,
 } from "../../../redux/Form/noteBookSlice";
-import { Button, Form, Input, message, Radio, Spin, TextArea } from "../../../Components/UI";
-import { Box, Flex, SimpleGrid, Heading, Text, VStack } from "@chakra-ui/react";
-import { getAllTimes, getUserId } from "../../../Utils/auth";
-import { BsEmojiFrown, BsEmojiNeutral, BsEmojiSmile } from "react-icons/bs";
-import "./css/Walkthrough.css";
+import { Button, Form, Input, message, Spin, TextArea } from "../../../Components/UI";
+import {
+  Box,
+  Flex,
+  SimpleGrid,
+  Heading,
+  Text,
+  VStack,
+  Badge,
+} from "@chakra-ui/react";
+import { getUserId } from "../../../Utils/auth";
 import { CreateActivityApi } from "../../../redux/Activity/activitySlice";
+import ChoiceScaleSelector from "../../../Components/Forms/ChoiceScaleSelector";
+import {
+  BookOpen,
+  BookCheck,
+  Users,
+  UserX,
+  AlertTriangle,
+  ChevronLeft,
+  Check,
+  Clock,
+  UserCheck,
+  MessageSquare,
+  Sparkles,
+  GraduationCap,
+  FileText,
+} from "lucide-react";
+import "./css/Walkthrough.css";
+
+const SCALE_OPTIONS = ["1", "2", "3", "N/A"];
+
+const SECTIONS_CONFIG = [
+  {
+    title: "Maintenance Of Notebooks",
+    namePrefix: "maintenanceOfNotebooks",
+    icon: <BookCheck size={20} />,
+    accent: "#1a4d2e",
+    questions: [
+      "I have checked that NBs are in a good physical condition.",
+      "I have checked that the work presentation is neat.",
+      "I have ensured that the work of the learners is complete.",
+      "I have checked the appropriateness of Headings / CW / HW.",
+      "There is no scribbling on the last page/any pages thereof.",
+      "I have ensured that the child has implemented the previous feedback and done the correction work.",
+    ],
+  },
+  {
+    title: "Quality Of Opportunities",
+    namePrefix: "qualityOfOppurtunities",
+    icon: <Sparkles size={20} />,
+    accent: "#2563EB",
+    questions: [
+      "I have provided HOTs and VBQs with every chapter.",
+      "I have made app. remarks about the quality of answers.",
+      "I have developed vocab of students (pre-post activities).",
+      "I have taken up at least 2 CSPs fortnightly with clear LOs.",
+      "The quality questions given by me offer a scope for original thinking by learners.",
+      "The writing tasks / questions given by me provide a scope for independent encounters.",
+    ],
+  },
+  {
+    title: "Quality Of Teacher Feedback",
+    namePrefix: "qualityOfTeacherFeedback",
+    icon: <MessageSquare size={20} />,
+    accent: "#D97706",
+    questions: [
+      "I have provided timely and regular feedback.",
+      "I have corrected all the notebook work.",
+      "I have provided positive reinforcement.",
+      "I have provided personalized feedback.",
+      "My feedback provides learners directions for improvement.",
+      "My feedback facilitates learners with clear directions on what good work looks like.",
+    ],
+  },
+  {
+    title: "Quality Of Learner",
+    namePrefix: "qualityOfLearner",
+    icon: <GraduationCap size={20} />,
+    accent: "#7C3AED",
+    questions: [
+      "I have checked / addressed the common misconceptions",
+      "I have given remarks if the answers are copied or if there are common errors.",
+    ],
+  },
+];
+
 function ObserverNotebook() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({});
   const FormId = useParams()?.id;
 
   const { isLoading, formDataList } = useSelector((state) => state?.notebook);
   const [form] = Form.useForm();
-  const Fectch = async () => {
-    const data = await dispatch(GetNoteBookForm(FormId));
-    const isObserverComplete = data?.payload?.isObserverComplete || false;
-    
-    if (isObserverComplete) {
-      navigate(`/notebook-checking-proforma/report/${FormId}`);
+  const [submitting, setSubmitting] = useState(false);
+
+  const fetchFormData = async () => {
+    try {
+      const res = await dispatch(GetNoteBookForm(FormId));
+      const data = res?.payload;
+      if (data?.isObserverComplete) {
+        navigate(`/notebook-checking-proforma/report/${FormId}`);
+        return;
+      }
+      if (data) {
+        form.setFieldsValue({
+          ClassStrength:
+            data?.NotebooksObserver?.ClassStrength ||
+            data?.NotebooksTeacher?.ClassStrength ||
+            "",
+          NotebooksSubmitted:
+            data?.NotebooksObserver?.NotebooksSubmitted ||
+            data?.NotebooksTeacher?.NotebooksSubmitted ||
+            "",
+          Absentees:
+            data?.NotebooksObserver?.Absentees ||
+            data?.NotebooksTeacher?.Absentees ||
+            "",
+          Defaulters:
+            data?.NotebooksObserver?.Defaulters ||
+            data?.NotebooksTeacher?.Defaulters ||
+            "",
+          maintenanceOfNotebooks: data?.ObserverForm?.maintenanceOfNotebooks || [],
+          qualityOfOppurtunities: data?.ObserverForm?.qualityOfOppurtunities || [],
+          qualityOfTeacherFeedback:
+            data?.ObserverForm?.qualityOfTeacherFeedback || [],
+          qualityOfLearner: data?.ObserverForm?.qualityOfLearner || [],
+          observerFeedback:
+            data?.observerFeedback || data?.observerComment || "",
+        });
+      }
+    } catch (err) {
+      console.error("Failed to load notebook form:", err);
+      message.error("Error loading notebook form details.");
     }
   };
+
   useEffect(() => {
     if (FormId) {
-      Fectch();
+      fetchFormData();
     }
   }, [dispatch, FormId]);
 
@@ -37,116 +152,247 @@ function ObserverNotebook() {
   const loggedInUser = getUserId();
   const canAddComment = Boolean(
     loggedInUser?.canAddNotebookComment === true ||
-    loggedInUser?.canAddNotebookComment === "true" ||
-    observerUser?.canAddNotebookComment === true ||
-    observerUser?.canAddNotebookComment === "true"
+      loggedInUser?.canAddNotebookComment === "true" ||
+      observerUser?.canAddNotebookComment === true ||
+      observerUser?.canAddNotebookComment === "true"
   );
 
-  const yesNoNAOptions = [
-    { value: "1", label: "1" },
-    { value: "2", label: "2" },
-    { value: "3", label: "3" },
-    { value: "N/A", label: "N/A" },
-  ];
+  const teacherName =
+    formDataList?.teacherID?.name ||
+    formDataList?.createdBy?.name ||
+    formDataList?.grenralDetails?.teacherIDs?.name ||
+    "Assigned Teacher";
+  const observerName =
+    formDataList?.grenralDetails?.NameofObserver?.name ||
+    loggedInUser?.name ||
+    "Observer";
+  const className = formDataList?.grenralDetails?.className || "-";
+  const section = formDataList?.grenralDetails?.Section || "";
+  const subject = formDataList?.grenralDetails?.Subject || "-";
+  const isTeacherComplete = Boolean(formDataList?.isTeacherComplete);
 
-  const generalDetailsConfig = [
-    { name: "ClassStrength", label: "Class Strength", type: "input", required: true },
-    { name: "NotebooksSubmitted", label: "Notebooks Submitted", type: "input", required: true },
-    { name: "Absentees", label: "Absentees", type: "input", required: true },
-    { name: "Defaulters", label: "Defaulters", type: "input", required: true },
-  ];
+  const handleNext = () => {
+    form
+      .validateFields()
+      .then((values) => {
+        handleSubmit(values);
+      })
+      .catch((err) => {
+        console.error("Validation error:", err);
+        message.error("Please fill in all required attendance stats and criteria ratings.");
+      });
+  };
 
-  const generalDetailsConfig2 = [
-    {
-      name: "observerFeedback",
-      label: "Observer Comments",
-      type: "textarea",
-      required: false,
-      placeholder: "Write your evaluation comments, strengths, and areas of improvement...",
-    },
-  ];
+  const handleSubmit = async (values) => {
+    setSubmitting(true);
+    try {
+      const payload = {
+        data: values,
+        id: FormId,
+      };
+      const response = await dispatch(ObserverNotebookComplete(payload));
+      if (response?.payload?.success) {
+        message.success(
+          response?.payload?.message ||
+            "Notebook Evaluation completed successfully!"
+        );
 
-  const renderFormItem = ({ name, label, type, required = true, placeholder }) => {
-    const inputProps = {
-      input: (
-        <Input size="large" placeholder={placeholder || `Enter ${label.toLowerCase()}`} />
-      ),
-      textarea: (
-        <TextArea size="large" rows={4} placeholder={placeholder || `Enter ${label.toLowerCase()}`} />
-      ),
+        const userInfo = response?.payload?.data?.grenralDetails;
+        const activity = {
+          observerMessage: `You have completed Notebook Checking Proforma Form For ${
+            userInfo?.className || className
+          } | ${userInfo?.Subject || subject} | ${userInfo?.Section || section}.`,
+          teacherMessage: `${loggedInUser?.name} has completed the Notebook Checking Proforma Form For ${
+            userInfo?.className || className
+          } | ${userInfo?.Subject || subject} | ${userInfo?.Section || section}.`,
+          route: `/notebook-checking-proforma/report/${
+            response?.payload?.data?._id || FormId
+          }`,
+          date: new Date(),
+          reciverId:
+            response?.payload?.data?.createdBy ||
+            response?.payload?.data?.teacherID ||
+            formDataList?.createdBy?._id ||
+            formDataList?.teacherID?._id,
+          senderId: loggedInUser?.id,
+          fromNo: 3,
+          data: response?.payload?.data,
+        };
+
+        try {
+          await dispatch(CreateActivityApi(activity));
+        } catch (actErr) {
+          console.error("Activity record warning:", actErr);
+        }
+
+        navigate(`/notebook-checking-proforma/report/${FormId}`);
+      } else {
+        message.error(
+          response?.payload?.message ||
+            response?.error?.message ||
+            "Failed to submit evaluation."
+        );
+      }
+    } catch (error) {
+      console.error("Error submitting notebook evaluation:", error);
+      message.error("Error submitting notebook evaluation.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Render teacher's self-evaluation preview
+  const renderTeacherResponse = (teacherData) => {
+    const hasResponse = Boolean(teacherData?.answer);
+    if (!hasResponse) {
+      return (
+        <Box
+          p={3.5}
+          bg="gray.50"
+          borderRadius="xl"
+          border="1px dashed"
+          borderColor="gray.200"
+          h="full"
+          display="flex"
+          flexDirection="column"
+          justifyContent="center"
+        >
+          <Flex align="center" gap={1.5} color="gray.400" mb={1}>
+            <Clock size={13} />
+            <Text
+              fontSize="11px"
+              fontWeight="700"
+              textTransform="uppercase"
+              letterSpacing="0.5px"
+            >
+              Teacher Response
+            </Text>
+          </Flex>
+          <Text fontSize="xs" color="gray.500" fontStyle="italic">
+            Awaiting teacher self-assessment
+          </Text>
+        </Box>
+      );
+    }
+
+    const ratingTheme = {
+      "1": {
+        bg: "#FEF2F2",
+        text: "#991B1B",
+        border: "#FCA5A5",
+        label: "1 • Unsatisfactory",
+      },
+      "2": {
+        bg: "#FFFBEB",
+        text: "#92400E",
+        border: "#FDE68A",
+        label: "2 • Basic",
+      },
+      "3": {
+        bg: "#EFF6FF",
+        text: "#1E40AF",
+        border: "#BFDBFE",
+        label: "3 • Proficient",
+      },
+      "N/A": {
+        bg: "#F8FAFC",
+        text: "#475569",
+        border: "#E2E8F0",
+        label: "N/A",
+      },
+    }[teacherData.answer] || {
+      bg: "#F1F5F9",
+      text: "#334155",
+      border: "#CBD5E1",
+      label: teacherData.answer,
     };
 
     return (
-      <Form.Item
-        name={name}
-        label={
-          <span className="text-gray-700 font-semibold text-sm">
-            {label}
-          </span>
-        }
-        rules={
-          required
-            ? [
-                {
-                  required: true,
-                  message: `Please provide a valid ${label.toLowerCase()}!`,
-                },
-              ]
-            : []
-        }
+      <Box
+        p={3.5}
+        bg="blue.50"
+        borderRadius="xl"
+        border="1px solid"
+        borderColor="blue.100"
+        h="full"
+        display="flex"
+        flexDirection="column"
+        justifyContent="space-between"
+        gap={2}
       >
-        {inputProps[type]}
-      </Form.Item>
+        <Box>
+          <Flex align="center" justify="space-between" mb={1.5}>
+            <Flex align="center" gap={1.5} color="blue.700">
+              <UserCheck size={13} />
+              <Text
+                fontSize="11px"
+                fontWeight="700"
+                textTransform="uppercase"
+                letterSpacing="0.5px"
+              >
+                Teacher Self-Assessment
+              </Text>
+            </Flex>
+            <Badge
+              px={2}
+              py={0.5}
+              borderRadius="md"
+              fontSize="xs"
+              fontWeight="700"
+              style={{
+                background: ratingTheme.bg,
+                color: ratingTheme.text,
+                border: `1px solid ${ratingTheme.border}`,
+              }}
+            >
+              {ratingTheme.label}
+            </Badge>
+          </Flex>
+        </Box>
+
+        {teacherData?.remark ? (
+          <Box
+            p={2}
+            bg="white"
+            borderRadius="md"
+            borderLeft="3px solid"
+            borderColor="blue.400"
+            fontSize="xs"
+            color="gray.600"
+          >
+            <Text
+              fontWeight="600"
+              color="gray.500"
+              fontSize="10px"
+              textTransform="uppercase"
+            >
+              Teacher Remark:
+            </Text>
+            <Text fontStyle="italic">"{teacherData.remark}"</Text>
+          </Box>
+        ) : (
+          <Text fontSize="11px" color="gray.400" fontStyle="italic">
+            No remark provided
+          </Text>
+        )}
+      </Box>
     );
   };
 
-  const renderGeneralDetails = () => (
-    <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={6} mb={8}>
-      {generalDetailsConfig.map((item) => (
-        <Box key={item.name}>{renderFormItem(item)}</Box>
-      ))}
-    </SimpleGrid>
-  );
-
-  const renderGeneralDetails2 = () => (
-    <Box mt={6}>
-      {generalDetailsConfig2.map((item) => (
-        <Box key={item.name}>{renderFormItem(item)}</Box>
-      ))}
-    </Box>
-  );
-
-  const RenderRadioFormItem = ({ name, label, question, isTextArea }) => {
+  // Render question with ChoiceScaleSelector and Remark toggle
+  const RenderRadioFormItem = ({ name, question }) => {
     const [showRemark, setShowRemark] = useState(false);
+
     return (
-      <>
+      <Box>
         <Form.Item
-          className="mb-0 "
           name={[...name, "answer"]}
-          // label={<h6 className="text-gray" style={{ fontSize: 16 }}>{label}</h6>}
-          rules={[{ required: true, message: "Please select an answer!" }]}
+          rules={[{ required: true, message: "Please select a rating!" }]}
+          className="mb-2"
         >
-          <>
-            <Radio.Group
-              size="middle"
-              className="radio-button-box"
-              options={yesNoNAOptions.map((value) => ({
-                label: value.label,
-                value: value.value,
-              }))}
-              optionType="button"
-              buttonStyle="solid"
-            />
-          </>
+          <ChoiceScaleSelector options={SCALE_OPTIONS} size="large" />
         </Form.Item>
-        <Button
-          className="mt-2"
-          type="link"
-          onClick={() => setShowRemark(!showRemark)}
-          style={{ padding: 0 }}
-        >
-          {showRemark ? "Hide Remark" : "Add Remark"}
-        </Button>
+
         <Form.Item
           className="hidden"
           hidden
@@ -155,149 +401,35 @@ function ObserverNotebook() {
         >
           <Input />
         </Form.Item>
+
+        <Flex align="center" gap={2} mt={2}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowRemark(!showRemark)}
+            className="text-xs text-brand-700 hover:text-brand-900 flex items-center gap-1.5 p-0"
+          >
+            <MessageSquare size={13} />
+            {showRemark ? "Hide Remark" : "Add Remark"}
+          </Button>
+        </Flex>
+
         {showRemark && (
           <Form.Item
             name={[...name, "remark"]}
             rules={[{ required: false }]}
-            style={{ marginTop: "1rem" }}
+            className="mt-3 mb-0"
           >
-            <Input.TextArea rows={3} placeholder="Add your remark here" />
+            <TextArea
+              rows={2}
+              placeholder="Add your observation remark for this criteria..."
+              className="text-sm rounded-lg"
+            />
           </Form.Item>
         )}
-      </>
+      </Box>
     );
-  };
-
-  const renderSections = (title, questions, namePrefix) => (
-    <Box w="100%" mb={8}>
-      <Heading
-        size="md"
-        color="brand.primary"
-        bg="gray.50"
-        p={4}
-        borderRadius="lg"
-        mb={6}
-      >
-        {title}
-      </Heading>
-
-      <SimpleGrid columns={1} spacing={6}>
-        {questions?.map((question, index) => (
-          <Box
-            key={`${namePrefix}${index}`}
-            bg="white"
-            p={6}
-            borderRadius="xl"
-            boxShadow="sm"
-            borderWidth="1px"
-            borderColor="gray.100"
-          >
-            <Flex
-              direction={{ base: "column", md: "row" }}
-              gap={6}
-              align={{ base: "stretch", md: "flex-start" }}
-            >
-              <Box flex={{ base: "1", md: "2" }}>
-                <Text fontWeight="bold" color="gray.800" fontSize="lg" mb={4}>
-                  {question}
-                </Text>
-                <RenderRadioFormItem
-                  question={question}
-                  name={[namePrefix, index]}
-                  label={question}
-                  isTextArea={true}
-                />
-              </Box>
-
-              <Flex direction="column" flex="1" gap={4}>
-                <Box
-                  p={3}
-                  bg="blue.50"
-                  borderRadius="md"
-                  borderLeft="4px solid"
-                  borderColor="blue.400"
-                >
-                  <Text
-                    fontSize="xs"
-                    color="gray.500"
-                    textTransform="uppercase"
-                    fontWeight="bold"
-                  >
-                    Teacher Response
-                  </Text>
-                  <Text fontWeight="bold" mt={1}>
-                    {formDataList?.TeacherForm?.[namePrefix]?.[index]?.answer ??
-                      "No response"}
-                  </Text>
-                </Box>
-                <Box
-                  p={3}
-                  bg="gray.50"
-                  borderRadius="md"
-                  borderLeft="4px solid"
-                  borderColor="gray.400"
-                >
-                  <Text
-                    fontSize="xs"
-                    color="gray.500"
-                    textTransform="uppercase"
-                    fontWeight="bold"
-                  >
-                    Teacher Remarks
-                  </Text>
-                  <Text mt={1}>
-                    {formDataList?.TeacherForm?.[namePrefix]?.[index]?.remark ??
-                      "No remark"}
-                  </Text>
-                </Box>
-              </Flex>
-            </Flex>
-          </Box>
-        ))}
-      </SimpleGrid>
-    </Box>
-  );
-
-  const handleNext = () => {
-    form
-      .validateFields()
-      .then((values) => {
-        setFormData((prev) => ({ ...prev, ...values }));
-        handleSubmit({ ...formData, ...values });
-      })
-      .catch(() => message.error("Please complete all required fields."));
-  };
-
-  const handleSubmit = async (data) => {
-    const payload = {
-      data,
-      id: FormId,
-    };
-    const response = await dispatch(ObserverNotebookComplete(payload));
-    if (response?.payload?.success) {
-      message.success(response?.payload?.message);
-
-      const userInfo = response?.payload?.data?.grenralDetails;
-      const activity = {
-        observerMessage: `You have completed Notebook Checking Proforma Form For ${userInfo?.className} | ${userInfo?.Subject} | ${userInfo?.Section}.`,
-        teacherMessage: `${getUserId()?.name} has completed the Notebook Checking Proforma Form For ${userInfo?.className} | ${userInfo?.Subject} | ${userInfo?.Section}.`,
-        route: `/notebook-checking-proforma/report/${response?.payload?.data?._id}`,
-        date: new Date(),
-        reciverId: response?.payload?.data?.createdBy,
-        senderId: getUserId()?.id,
-        fromNo: 3,
-        data: response?.payload?.data,
-      };
-
-      const activitiRecord = await dispatch(CreateActivityApi(activity));
-      if (!activitiRecord?.payload?.success) {
-        message.error("Error on Activity Record");
-      }
-
-      navigate(`/notebook-checking-proforma/report/${FormId}`);
-    } else {
-      message.error(response?.payload?.message || response?.error?.message || "Failed to submit form.");
-    }
   };
 
   return (
@@ -308,168 +440,431 @@ function ObserverNotebook() {
             <Spin size="large" />
           </Flex>
         )}
+
         <Form form={form} layout="vertical">
+          {/* Top Header & Context Metadata Banner */}
+          <Flex
+            direction={{ base: "column", md: "row" }}
+            justify="space-between"
+            align={{ base: "flex-start", md: "center" }}
+            gap={4}
+            mb={6}
+          >
+            <Box>
+              <Flex align="center" gap={2} mb={1}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigate("/notebook-checking-proforma")}
+                  className="text-gray-500 hover:text-gray-800 flex items-center gap-1.5 p-0"
+                >
+                  <ChevronLeft size={16} />
+                  Back to All Notebook Forms
+                </Button>
+              </Flex>
+              <Heading size="lg" color="gray.800" fontWeight="700">
+                Notebook Checking Proforma
+              </Heading>
+              <Text fontSize="sm" color="gray.500" mt={0.5}>
+                Evaluate notebook maintenance, grading quality, and teacher feedback
+              </Text>
+            </Box>
+
+            {/* Quick Meta Chips */}
+            <Flex wrap="wrap" gap={2}>
+              <Badge
+                px={3}
+                py={1.5}
+                borderRadius="full"
+                bg="white"
+                borderWidth="1px"
+                borderColor="gray.200"
+                color="gray.700"
+                display="flex"
+                alignItems="center"
+                gap={1.5}
+              >
+                <Users size={13} className="text-emerald-700" />
+                Teacher: <b>{teacherName}</b>
+              </Badge>
+              <Badge
+                px={3}
+                py={1.5}
+                borderRadius="full"
+                bg="white"
+                borderWidth="1px"
+                borderColor="gray.200"
+                color="gray.700"
+              >
+                Class: <b>{className} {section}</b>
+              </Badge>
+              <Badge
+                px={3}
+                py={1.5}
+                borderRadius="full"
+                bg="white"
+                borderWidth="1px"
+                borderColor="gray.200"
+                color="gray.700"
+              >
+                Subject: <b>{subject}</b>
+              </Badge>
+              <Badge
+                px={3}
+                py={1.5}
+                borderRadius="full"
+                bg={isTeacherComplete ? "green.50" : "amber.50"}
+                color={isTeacherComplete ? "green.700" : "amber.700"}
+                borderWidth="1px"
+                borderColor={isTeacherComplete ? "green.200" : "amber.200"}
+              >
+                {isTeacherComplete
+                  ? "Teacher Submitted"
+                  : "Awaiting Teacher Evaluation"}
+              </Badge>
+            </Flex>
+          </Flex>
+
+          {/* Notebook & Attendance Statistics Card */}
           <Box
             bg="white"
-            p={{ base: 4, md: 8 }}
+            p={{ base: 5, md: 6 }}
             borderRadius="2xl"
             boxShadow="sm"
             borderWidth="1px"
             borderColor="gray.100"
             mb={8}
           >
-            <Heading
-              size="md"
-              color="gray.800"
-              mb={6}
-              pb={4}
+            <Flex
+              align="center"
+              justify="space-between"
+              mb={4}
+              pb={3}
               borderBottom="1px solid"
               borderColor="gray.100"
             >
-              Teacher Overview
-            </Heading>
+              <Flex align="center" gap={2.5}>
+                <Box p={2} bg="emerald.50" color="#1a4d2e" borderRadius="lg">
+                  <BookOpen size={18} />
+                </Box>
+                <Box>
+                  <Heading size="sm" color="gray.800">
+                    Notebook Statistics & Attendance
+                  </Heading>
+                  <Text fontSize="xs" color="gray.500">
+                    Record student attendance and notebook submissions for this evaluation session
+                  </Text>
+                </Box>
+              </Flex>
+            </Flex>
 
-            <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={6} mb={8}>
+            <SimpleGrid columns={{ base: 1, sm: 2, lg: 4 }} spacing={4}>
               <Box
-                p={5}
-                bg="blue.50"
-                borderRadius="lg"
-                borderWidth="1px"
-                borderColor="blue.100"
-              >
-                <VStack align="flex-start" spacing={3}>
-                  <Flex align="center">
-                    <Text fontWeight="bold" w="150px">
-                      Name:
-                    </Text>
-                    <Text>
-                      {formDataList?.grenralDetails?.NameofObserver?.name}
-                    </Text>
-                  </Flex>
-                  <Flex align="center">
-                    <Text fontWeight="bold" w="150px">
-                      Observation Date:
-                    </Text>
-                    <Text>
-                      {
-                        getAllTimes(
-                          formDataList?.grenralDetails?.DateOfObservation,
-                        ).formattedDate2
-                      }
-                    </Text>
-                  </Flex>
-                </VStack>
-              </Box>
-
-              <Box
-                p={5}
+                p={4}
                 bg="gray.50"
-                borderRadius="lg"
+                borderRadius="xl"
                 borderWidth="1px"
                 borderColor="gray.200"
               >
-                <VStack align="flex-start" spacing={3}>
-                  <Flex align="center">
-                    <Text fontWeight="bold" w="180px">
-                      Absentees:
-                    </Text>
-                    <Text>{formDataList?.NotebooksTeacher?.Absentees}</Text>
-                  </Flex>
-                  <Flex align="center">
-                    <Text fontWeight="bold" w="180px">
-                      Class Strength:
-                    </Text>
-                    <Text>{formDataList?.NotebooksTeacher?.ClassStrength}</Text>
-                  </Flex>
-                  <Flex align="center">
-                    <Text fontWeight="bold" w="180px">
-                      Defaulters:
-                    </Text>
-                    <Text>{formDataList?.NotebooksTeacher?.Defaulters}</Text>
-                  </Flex>
-                  <Flex align="center">
-                    <Text fontWeight="bold" w="180px">
-                      Notebooks Submitted:
-                    </Text>
-                    <Text>
-                      {formDataList?.NotebooksTeacher?.NotebooksSubmitted}
-                    </Text>
-                  </Flex>
-                </VStack>
+                <Flex align="center" gap={2} mb={2}>
+                  <Users size={16} className="text-gray-500" />
+                  <Text
+                    fontSize="xs"
+                    fontWeight="700"
+                    color="gray.600"
+                    textTransform="uppercase"
+                  >
+                    Class Strength *
+                  </Text>
+                </Flex>
+                <Form.Item
+                  name="ClassStrength"
+                  rules={[{ required: true, message: "Required" }]}
+                  className="mb-0"
+                >
+                  <Input
+                    size="large"
+                    type="number"
+                    placeholder="e.g. 40"
+                    className="bg-white"
+                  />
+                </Form.Item>
+              </Box>
+
+              <Box
+                p={4}
+                bg="gray.50"
+                borderRadius="xl"
+                borderWidth="1px"
+                borderColor="gray.200"
+              >
+                <Flex align="center" gap={2} mb={2}>
+                  <BookCheck size={16} className="text-emerald-600" />
+                  <Text
+                    fontSize="xs"
+                    fontWeight="700"
+                    color="gray.600"
+                    textTransform="uppercase"
+                  >
+                    Notebooks Submitted *
+                  </Text>
+                </Flex>
+                <Form.Item
+                  name="NotebooksSubmitted"
+                  rules={[{ required: true, message: "Required" }]}
+                  className="mb-0"
+                >
+                  <Input
+                    size="large"
+                    type="number"
+                    placeholder="e.g. 36"
+                    className="bg-white"
+                  />
+                </Form.Item>
+              </Box>
+
+              <Box
+                p={4}
+                bg="gray.50"
+                borderRadius="xl"
+                borderWidth="1px"
+                borderColor="gray.200"
+              >
+                <Flex align="center" gap={2} mb={2}>
+                  <UserX size={16} className="text-amber-600" />
+                  <Text
+                    fontSize="xs"
+                    fontWeight="700"
+                    color="gray.600"
+                    textTransform="uppercase"
+                  >
+                    Absentees *
+                  </Text>
+                </Flex>
+                <Form.Item
+                  name="Absentees"
+                  rules={[{ required: true, message: "Required" }]}
+                  className="mb-0"
+                >
+                  <Input
+                    size="large"
+                    type="number"
+                    placeholder="e.g. 3"
+                    className="bg-white"
+                  />
+                </Form.Item>
+              </Box>
+
+              <Box
+                p={4}
+                bg="gray.50"
+                borderRadius="xl"
+                borderWidth="1px"
+                borderColor="gray.200"
+              >
+                <Flex align="center" gap={2} mb={2}>
+                  <AlertTriangle size={16} className="text-red-500" />
+                  <Text
+                    fontSize="xs"
+                    fontWeight="700"
+                    color="gray.600"
+                    textTransform="uppercase"
+                  >
+                    Defaulters *
+                  </Text>
+                </Flex>
+                <Form.Item
+                  name="Defaulters"
+                  rules={[{ required: true, message: "Required" }]}
+                  className="mb-0"
+                >
+                  <Input
+                    size="large"
+                    type="number"
+                    placeholder="e.g. 1"
+                    className="bg-white"
+                  />
+                </Form.Item>
               </Box>
             </SimpleGrid>
+          </Box>
 
-            {renderGeneralDetails()}
-
-            {renderSections(
-              "Maintenance Of Notebooks",
-              [
-                "I have checked that NBs are in a good physical condition.",
-                "I have checked that the work presentation is neat.",
-                "I have ensured that the work of the learners is complete.",
-                "I have checked the appropriateness of Headings / CW / HW.",
-                "There is no scribbling on the last page/any pages thereof.",
-                "I have ensured that the child has implemented the previous feedback and done the correction work.",
-              ],
-              "maintenanceOfNotebooks",
-            )}
-
-            {renderSections(
-              "Quality Of Oppurtunities",
-              [
-                "I have provided HOTs and VBQs with every chapter.",
-                "I have made app. remarks about the quality of answers.",
-                "I have developed vocab of students (pre-post activities).",
-                "I have taken up at least 2 CSPs fortnightly with clear LOs.",
-                "The quality questions given by me offer a scope for original thinking by learners.",
-                "The writing tasks / questions given by me provide a scope for independent encounters.",
-              ],
-              "qualityOfOppurtunities",
-            )}
-
-            {renderSections(
-              "Quality Of Teacher Feedback",
-              [
-                "I have provided timely and regular feedback.",
-                "I have corrected all the notebook work.",
-                "I have provided positive reinforcement.",
-                "I have provided personalized feedback.",
-                "My feedback provides learners directions for improvement.",
-                "My feedback facilitates learners with clear directions on what good work looks like.",
-              ],
-              "qualityOfTeacherFeedback",
-            )}
-
-            {renderSections(
-              "Quality Of Learner",
-              [
-                "I have checked / addressed the common misconceptions",
-                "I have given remarks if the answers are copied or if there are common errors.",
-              ],
-              "qualityOfLearner",
-            )}
-
-            {canAddComment && (
-              <Box bg="gray.50" p={6} borderRadius="xl" mt={8} borderWidth="1px" borderColor="gray.200">
-                <Heading size="sm" mb={4} color="#1a4d2e">
-                  Observer Comments
-                </Heading>
-                {renderGeneralDetails2()}
-              </Box>
-            )}
-
-            <Flex justify="flex-end" mt={8}>
-              <Button
-                size="large"
-                type="primary"
-                onClick={handleNext}
-                style={{
-                  minWidth: "200px",
-                  borderRadius: "8px",
-                  background: "#1a4d2e",
-                }}
+          {/* Evaluation Sections */}
+          {SECTIONS_CONFIG.map((sec) => (
+            <Box key={sec.namePrefix} mb={8}>
+              {/* Section Header Banner */}
+              <Flex
+                align="center"
+                justify="space-between"
+                bg="white"
+                p={4}
+                px={6}
+                borderRadius="xl"
+                borderWidth="1px"
+                borderColor="gray.200"
+                boxShadow="sm"
+                mb={4}
               >
-                Submit
+                <Flex align="center" gap={3}>
+                  <Box
+                    p={2.5}
+                    bg="emerald.50"
+                    color="#1a4d2e"
+                    borderRadius="lg"
+                  >
+                    {sec.icon}
+                  </Box>
+                  <Box>
+                    <Heading size="md" color="gray.800" fontWeight="700">
+                      {sec.title}
+                    </Heading>
+                    <Text fontSize="xs" color="gray.500">
+                      Evaluate all {sec.questions.length} criteria on a scale of 1 to 3, or N/A
+                    </Text>
+                  </Box>
+                </Flex>
+                <Badge
+                  colorScheme="green"
+                  px={3}
+                  py={1}
+                  borderRadius="full"
+                  fontSize="xs"
+                  fontWeight="600"
+                >
+                  {sec.questions.length} Criteria
+                </Badge>
+              </Flex>
+
+              {/* Question Cards */}
+              <VStack spacing={4} align="stretch">
+                {sec.questions.map((question, index) => (
+                  <Box
+                    key={`${sec.namePrefix}_${index}`}
+                    bg="white"
+                    p={{ base: 4, md: 5 }}
+                    borderRadius="xl"
+                    borderWidth="1px"
+                    borderColor="gray.200"
+                    boxShadow="sm"
+                    _hover={{ borderColor: "brand.300", boxShadow: "md" }}
+                    transition="all 0.18s ease-in-out"
+                  >
+                    <SimpleGrid
+                      columns={{ base: 1, lg: 12 }}
+                      spacing={5}
+                      alignItems="center"
+                    >
+                      {/* Left: Question + Rating (8 columns on desktop) */}
+                      <Box gridColumn={{ lg: "span 8" }}>
+                        <Flex align="flex-start" gap={3} mb={3}>
+                          <Badge
+                            bg="gray.100"
+                            color="gray.700"
+                            px={2}
+                            py={0.5}
+                            borderRadius="md"
+                            fontSize="xs"
+                            fontWeight="700"
+                            mt={0.5}
+                          >
+                            #{index + 1}
+                          </Badge>
+                          <Text
+                            fontWeight="600"
+                            color="gray.800"
+                            fontSize="15px"
+                            lineHeight="1.4"
+                          >
+                            {question}
+                          </Text>
+                        </Flex>
+
+                        <RenderRadioFormItem
+                          name={[sec.namePrefix, index]}
+                          question={question}
+                        />
+                      </Box>
+
+                      {/* Right: Teacher Response Comparison (4 columns on desktop) */}
+                      <Box gridColumn={{ lg: "span 4" }} h="full">
+                        {renderTeacherResponse(
+                          formDataList?.TeacherForm?.[sec.namePrefix]?.[index]
+                        )}
+                      </Box>
+                    </SimpleGrid>
+                  </Box>
+                ))}
+              </VStack>
+            </Box>
+          ))}
+
+          {/* Observer Overall Feedback Comments */}
+          <Box
+            bg="white"
+            p={{ base: 5, md: 6 }}
+            borderRadius="2xl"
+            borderWidth="1px"
+            borderColor="gray.200"
+            boxShadow="sm"
+            mb={8}
+          >
+            <Flex align="center" gap={2.5} mb={3}>
+              <Box p={2} bg="emerald.50" color="#1a4d2e" borderRadius="lg">
+                <MessageSquare size={18} />
+              </Box>
+              <Box>
+                <Heading size="sm" color="gray.800">
+                  Observer Evaluation Comments & Recommendations
+                </Heading>
+                <Text fontSize="xs" color="gray.500">
+                  Provide holistic qualitative feedback, strengths observed in notebooks, and areas for teacher improvement
+                </Text>
+              </Box>
+            </Flex>
+            <Form.Item name="observerFeedback" className="mb-0">
+              <TextArea
+                rows={4}
+                placeholder="Write your comprehensive evaluation comments, strengths observed in notebooks, and actionable areas for improvement..."
+                className="rounded-xl p-3 text-sm"
+              />
+            </Form.Item>
+          </Box>
+
+          {/* Bottom Action Footer */}
+          <Box
+            bg="white"
+            p={4}
+            px={6}
+            borderRadius="2xl"
+            borderWidth="1px"
+            borderColor="gray.200"
+            boxShadow="0 4px 20px -2px rgba(0,0,0,0.06)"
+            mt={8}
+          >
+            <Flex
+              justify="space-between"
+              align="center"
+              direction={{ base: "column", sm: "row" }}
+              gap={4}
+            >
+              <Button
+                variant="outline"
+                onClick={() => navigate("/notebook-checking-proforma")}
+                className="border-gray-300 text-gray-700 hover:bg-gray-50 px-6 py-2 rounded-xl"
+              >
+                Cancel & Return to Table
+              </Button>
+
+              <Button
+                type="primary"
+                size="large"
+                onClick={handleNext}
+                loading={submitting}
+                className="bg-brand-800 hover:bg-brand-900 text-white font-semibold px-8 py-2.5 rounded-xl flex items-center gap-2 shadow-sm"
+                style={{ background: "#1a4d2e" }}
+              >
+                <Check size={18} />
+                Submit Completed Evaluation
               </Button>
             </Flex>
           </Box>

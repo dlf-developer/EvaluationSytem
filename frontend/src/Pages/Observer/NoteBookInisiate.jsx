@@ -84,12 +84,21 @@ function NoteBookInisiate() {
     try {
       const response = await dispatch(createInitiate(payload)).unwrap();
       if (response?.status) {
-        message.success(response?.message);
+        message.success(response?.message || "Notebook Checking Form initiated successfully!");
+
+        const newFormId =
+          response?.form?.[0]?._id ||
+          response?.form?._id ||
+          response?.data?.[0]?._id ||
+          response?.data?._id ||
+          null;
 
         const activity = {
           observerMessage: `You have Initiated Notebook Checking Proforma Form.`,
           teacherMessage: `${getUserId()?.name} has Initiated Notebook Checking Proforma Form.`,
-          route: `/notebook-checking-proforma`,
+          route: newFormId
+            ? `/notebook-checking-proforma/create/${newFormId}`
+            : `/notebook-checking-proforma`,
           date: new Date(),
           reciverId: payload?.teacherIDs,
           senderId: getUserId()?.id,
@@ -102,7 +111,11 @@ function NoteBookInisiate() {
           message.error("Error on Activity Record");
         }
         form.resetFields(); // Reset the form fields after submission
-        navigate(`/notebook-checking-proforma`);
+        if (newFormId) {
+          navigate(`/notebook-checking-proforma/create/${newFormId}`);
+        } else {
+          navigate(`/notebook-checking-proforma`);
+        }
       } else {
         message.error("Somthing went wrong");
       }
