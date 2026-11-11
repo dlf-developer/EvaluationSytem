@@ -114,11 +114,25 @@ export const Steps = ({
 };
 Steps.Step = ({ children }) => children;
 
+const flattenElementChildren = (nodes) => {
+  const result = [];
+  React.Children.forEach(nodes, (child) => {
+    if (child === null || child === undefined || typeof child === "boolean") return;
+    if (React.isValidElement(child) && child.type === React.Fragment) {
+      result.push(...flattenElementChildren(child.props.children));
+    } else if (React.isValidElement(child)) {
+      result.push(child);
+    }
+  });
+  return result;
+};
+
 export const Collapse = ({
   items,
   children,
   defaultActiveKey,
   activeKey,
+  accordion = false,
   onChange,
   className = "",
   style,
@@ -136,19 +150,26 @@ export const Collapse = ({
       : internalActive;
 
   const toggle = (key) => {
-    const next = currentActive.includes(key)
-      ? currentActive.filter((k) => k !== key)
-      : [...currentActive, key];
+    let next;
+    if (accordion) {
+      next = currentActive.includes(key) ? [] : [key];
+    } else {
+      next = currentActive.includes(key)
+        ? currentActive.filter((k) => k !== key)
+        : [...currentActive, key];
+    }
     setInternalActive(next);
-    onChange?.(next);
+    onChange?.(accordion ? next[0] ?? "" : next);
   };
 
   let panelList = items;
   if (!panelList && children) {
-    panelList = React.Children.map(children, (child, idx) => ({
-      key: child?.key || String(idx),
-      label: child?.props?.header,
-      children: child?.props?.children,
+    panelList = flattenElementChildren(children).map((child, idx) => ({
+      key: child.key !== null && child.key !== undefined ? String(child.key) : String(idx),
+      label: child.props?.header,
+      children: child.props?.children,
+      extra: child.props?.extra,
+      forceRender: Boolean(child.props?.forceRender),
     }));
   }
   panelList = panelList || [];
@@ -161,6 +182,7 @@ export const Collapse = ({
       {panelList.map((item, idx) => {
         const itemKey = item.key ?? String(idx);
         const isOpen = currentActive.includes(itemKey);
+        const shouldMountBody = isOpen || item.forceRender;
         return (
           <div key={itemKey} className="w-full">
             <button
@@ -178,7 +200,14 @@ export const Collapse = ({
               </div>
               {item.extra && <div onClick={(e) => e.stopPropagation()}>{item.extra}</div>}
             </button>
-            {isOpen && <div className="p-5 text-sm text-gray-700 bg-white">{item.children}</div>}
+            {shouldMountBody && (
+              <div
+                className="p-5 text-sm text-gray-700 bg-white"
+                style={isOpen ? undefined : { display: "none" }}
+              >
+                {item.children}
+              </div>
+            )}
           </div>
         );
       })}
@@ -190,17 +219,33 @@ Collapse.Panel = ({ children }) => children;
 export const Statistic = ({
   title,
   value,
+  precision,
+  valueStyle,
   prefix,
   suffix,
   className = "",
   style,
 }) => {
+  let formattedValue = value;
+  if (
+    typeof precision === "number" &&
+    value !== undefined &&
+    value !== null &&
+    value !== "" &&
+    !Number.isNaN(Number(value))
+  ) {
+    formattedValue = Number(value).toFixed(precision);
+  }
+
   return (
     <div className={`flex flex-col ${className}`} style={style}>
       {title && <span className="text-xs font-medium text-gray-500 mb-1">{title}</span>}
-      <div className="flex items-baseline gap-1.5 text-2xl font-bold text-gray-900">
+      <div
+        className="flex items-baseline gap-1.5 text-2xl font-bold text-gray-900"
+        style={valueStyle}
+      >
         {prefix && <span className="text-lg text-gray-500">{prefix}</span>}
-        <span>{value}</span>
+        <span>{formattedValue}</span>
         {suffix && <span className="text-sm text-gray-500">{suffix}</span>}
       </div>
     </div>
@@ -212,14 +257,17 @@ export const Descriptions = ({
   items,
   children,
   bordered = false,
+  column,
+  labelStyle,
+  contentStyle,
   className = "",
   style,
 }) => {
   let itemList = items;
   if (!itemList && children) {
-    itemList = React.Children.map(children, (child) => ({
-      label: child?.props?.label,
-      children: child?.props?.children,
+    itemList = flattenElementChildren(children).map((child) => ({
+      label: child.props?.label,
+      children: child.props?.children,
     }));
   }
   itemList = itemList || [];
@@ -237,7 +285,11 @@ export const Descriptions = ({
             <dt className="text-xs font-semibold uppercase tracking-wider text-gray-500 min-w-[120px]">
               {item.label}:
             </dt>
-            <dd className="text-sm font-medium text-gray-900">{item.children || "-"}</dd>
+            <dd className="text-sm font-medium text-gray-900">
+              {item.children !== undefined && item.children !== null && item.children !== ""
+                ? item.children
+                : "-"}
+            </dd>
           </div>
         ))}
       </dl>

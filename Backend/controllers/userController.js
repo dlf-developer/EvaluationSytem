@@ -21,6 +21,27 @@ const generateCustomerId = () => {
   return randomLetters1 + randomDigits + randomLetters2;
 };
 
+const VALID_USER_ROLES = ["Superadmin", "Observer", "Teacher"];
+
+const isTruthyFlag = (value) => value === true || value === "true";
+
+/**
+ * Resolve role and Observer-only special privileges (`isDualRole` / OT and `canAddNotebookComment`).
+ * OT is never a standalone role; it can only be enabled as a privilege on an Observer account.
+ */
+const resolveRoleAndPrivileges = ({ access, isDualRole, canAddNotebookComment }) => {
+  const normalizedAccess = access === "OT" ? "Observer" : access;
+  const isObserver = normalizedAccess === "Observer";
+  const resolvedDualRole = isObserver && isTruthyFlag(isDualRole);
+  const resolvedNotebookComment = isObserver && isTruthyFlag(canAddNotebookComment);
+  return {
+    access: normalizedAccess,
+    isDualRole: resolvedDualRole,
+    canAddNotebookComment: resolvedNotebookComment,
+    roles: resolvedDualRole ? ["Observer", "Teacher"] : [normalizedAccess],
+  };
+};
+
 const createUser = async (req, res) => {
   try {
     if (req.user.access !== "Superadmin") {
@@ -45,11 +66,26 @@ const createUser = async (req, res) => {
       password,
     } = req.body;
 
+    if (!VALID_USER_ROLES.includes(access)) {
+      return res.status(400).json({
+        message:
+          access === "OT"
+            ? "OT is not a role. Select role 'Observer' and enable the OT (Dual Role) privilege instead."
+            : `Invalid access role '${access}'. Allowed roles are: ${VALID_USER_ROLES.join(", ")}.`,
+      });
+    }
+
     const email = req.body.email?.toLowerCase().trim();
     const customId = generateCustomerId();
     const existingUser = await User.findOne({ email });
     if (existingUser)
       return res.status(409).json({ message: "User already exists" });
+
+    const roleFields = resolveRoleAndPrivileges({
+      access,
+      isDualRole: req.body.isDualRole,
+      canAddNotebookComment: req.body.canAddNotebookComment,
+    });
 
     const newUser = new User({
       employeeId,
@@ -57,10 +93,7 @@ const createUser = async (req, res) => {
       name,
       email,
       mobile,
-      access,
-      isDualRole: Boolean(req.body.isDualRole || access === "OT"),
-      canAddNotebookComment: Boolean(req.body.canAddNotebookComment),
-      roles: Boolean(req.body.isDualRole || access === "OT") ? ['Observer', 'Teacher'] : [access],
+      ...roleFields,
       isActive: req.body.isActive !== undefined ? Boolean(req.body.isActive) : true,
       designation,
       coordinator,
@@ -78,7 +111,7 @@ const createUser = async (req, res) => {
       action: 'CREATE',
       module: 'User Management',
       targetId: newUser._id,
-      details: `Created user ${name} (${email} - ${access})`,
+      details: `Created user ${name} (${email} - ${roleFields.access}${roleFields.isDualRole ? ' with OT privilege' : ''})`,
     });
 
     const emailData = accountCreatedEmail({ recipientName: name, email, password });
@@ -188,29 +221,59 @@ const getUserById = async (req, res) => {
 const updateUserById = async (req, res) => {
   try {
     const { userId } = req.params;
-    const updateData = req.body;
+    const updateData = { ...req.body };
+
+    if (updateData.access !== undefined && !VALID_USER_ROLES.includes(updateData.access)) {
+      return res.status(400).json({
+        message:
+          updateData.access === "OT"
+            ? "OT is not a role. Assign role 'Observer' and enable the OT (Dual Role) privilege instead."
+            : `Invalid access role '${updateData.access}'. Allowed roles are: ${VALID_USER_ROLES.join(", ")}.`,
+      });
+    }
+
+    const existingUser = await User.findById(userId).select('-password');
+    if (!existingUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
 
     if (updateData.isActive !== undefined) {
       updateData.isActive = Boolean(updateData.isActive);
     }
 
-    if (updateData.canAddNotebookComment !== undefined) {
-      updateData.canAddNotebookComment = Boolean(updateData.canAddNotebookComment);
+    if (
+      updateData.access !== undefined ||
+      updateData.isDualRole !== undefined ||
+      updateData.canAddNotebookComment !== undefined ||
+      existingUser.access === "OT"
+    ) {
+      const effectiveAccess =
+        updateData.access !== undefined
+          ? updateData.access
+          : existingUser.access === "OT"
+            ? "Observer"
+            : existingUser.access;
+      const effectiveDualRole =
+        updateData.isDualRole !== undefined
+          ? updateData.isDualRole
+          : existingUser.access === "OT" || existingUser.isDualRole;
+      const effectiveNotebookComment =
+        updateData.canAddNotebookComment !== undefined
+          ? updateData.canAddNotebookComment
+          : existingUser.canAddNotebookComment;
+
+      const resolved = resolveRoleAndPrivileges({
+        access: effectiveAccess,
+        isDualRole: effectiveDualRole,
+        canAddNotebookComment: effectiveNotebookComment,
+      });
+
+      updateData.access = resolved.access;
+      updateData.isDualRole = resolved.isDualRole;
+      updateData.canAddNotebookComment = resolved.canAddNotebookComment;
+      updateData.roles = resolved.roles;
     }
 
-    if (updateData.isDualRole !== undefined || updateData.access === "OT") {
-      if (updateData.access === "OT") {
-        updateData.isDualRole = true;
-      }
-      updateData.isDualRole = Boolean(updateData.isDualRole);
-      const targetUser = await User.findById(userId);
-      const baseAccess = updateData.access || targetUser?.access || "Observer";
-      updateData.roles = updateData.isDualRole
-        ? ["Observer", "Teacher"]
-        : [baseAccess];
-    }
-
-    const existingUser = await User.findById(userId).select('-password');
     const userDiff = calculateDiff(existingUser, updateData, ['password', '_id', '__v']);
 
     const updatedUser = await User.findByIdAndUpdate(userId, updateData, {
@@ -276,15 +339,36 @@ const deleteUserById = async (req, res) => {
 
 // app.post("/api/users/bulk-upload", async (req, res) => {
 const BulkUserCreate = async (req, res) => {
-  const users = req.body;
+  const users = Array.isArray(req.body) ? req.body : [];
 
   try {
-    // Normalize emails to lowercase and assign custom IDs
-    const usersWithCustomIds = users.map((user) => ({
-      ...user,
-      email: user.email?.toLowerCase().trim(),
-      customId: generateCustomerId(),
-    }));
+    for (const user of users) {
+      const rawAccess = typeof user?.access === "string" ? user.access.trim() : user?.access;
+      if (!VALID_USER_ROLES.includes(rawAccess)) {
+        return res.status(400).json({
+          message:
+            rawAccess === "OT"
+              ? "OT is not a valid role in bulk upload. Set access to 'Observer' (with optional isDualRole = true)."
+              : `Invalid access role '${rawAccess}' in bulk upload. Allowed roles: ${VALID_USER_ROLES.join(", ")}.`,
+        });
+      }
+    }
+
+    // Normalize emails, role privileges, and assign custom IDs
+    const usersWithCustomIds = users.map((user) => {
+      const rawAccess = typeof user?.access === "string" ? user.access.trim() : user?.access;
+      const roleFields = resolveRoleAndPrivileges({
+        access: rawAccess,
+        isDualRole: user?.isDualRole,
+        canAddNotebookComment: user?.canAddNotebookComment,
+      });
+      return {
+        ...user,
+        ...roleFields,
+        email: user.email?.toLowerCase().trim(),
+        customId: generateCustomerId(),
+      };
+    });
 
     // Send emails asynchronously for each user
     for (const user of usersWithCustomIds) {

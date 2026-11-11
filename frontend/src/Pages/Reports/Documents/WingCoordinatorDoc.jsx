@@ -195,11 +195,12 @@ const getColumnWidths = (columns = []) => {
       lower === "date" ||
       lower.includes("date of") ||
       lower === "class" ||
+      lower === "classes" ||
       lower === "section" ||
       lower === "class section" ||
       lower === "class on duty"
     ) {
-      return 1.1;
+      return lower === "classes" ? 1.2 : 1.1;
     }
     if (
       lower.includes("diagnosis") ||
@@ -210,7 +211,9 @@ const getColumnWidths = (columns = []) => {
       lower.includes("reason") ||
       lower.includes("highlights") ||
       lower.includes("feedback") ||
-      lower.includes("issues")
+      lower.includes("issues") ||
+      lower.includes("what went well") ||
+      lower.includes("what could")
     ) {
       return 2.8;
     }

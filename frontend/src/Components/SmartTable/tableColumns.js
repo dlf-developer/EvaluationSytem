@@ -15,7 +15,7 @@ import React from "react";
 import { Box, Text, Flex, Tag, Stack, Button } from "@chakra-ui/react";
 import { Link } from "react-router-dom";
 import { DeleteFilled, EditOutlined, CommentOutlined } from "../UI/Icons";
-import { getAllTimes } from "../../Utils/auth";
+import { getAllTimes, isDualRoleUser, normalizeUserAccess } from "../../Utils/auth";
 import { UserRole } from "../../config/config";
 import Reminder from "../Reminder";
 
@@ -64,14 +64,7 @@ const extractClassName = (val) => {
 
 export const UserRoleBadge = ({ user }) => {
   if (!user || typeof user !== "object") return null;
-  const isDual =
-    user?.isDualRole === true ||
-    user?.isDualRole === "true" ||
-    user?.access === "OT" ||
-    user?.role === "OT" ||
-    (Array.isArray(user?.roles) &&
-      user.roles.includes("Observer") &&
-      user.roles.includes("Teacher"));
+  const isDual = isDualRoleUser(user);
 
   const badgeProps = {
     size: "sm",
@@ -98,13 +91,13 @@ export const UserRoleBadge = ({ user }) => {
         {...badgeProps}
         colorScheme="teal"
         variant="solid"
-        title="Observer & Teacher (Dual Role)"
+        title="Observer (with OT Special Privilege)"
       >
         OT
       </Tag>
     );
   }
-  const access = user?.access || user?.role || user?.roleName;
+  const access = normalizeUserAccess(user?.access || user?.role || user?.roleName);
   if (access === "Teacher") {
     return (
       <Tag
@@ -294,7 +287,7 @@ export const getFortnightlyColumns = ({
         record;
       const renderAction = () => {
         const canContinue =
-          (currentUserRole === UserRole[2] && !isTeacherComplete && isObserverInitiation) ||
+          (currentUserRole === UserRole[2] && !isTeacherComplete) ||
           (currentUserRole === UserRole[1] && isTeacherComplete && !isCoordinatorComplete);
 
         const canEdit =
@@ -584,7 +577,7 @@ export const getClassroomColumns = ({
                 </Button>
               </Link>
             )}
-            {currentUserRole === UserRole[2] && (!isTeacherCompletes || !isObserverCompleted) && (
+            {currentUserRole === UserRole[2] && !isTeacherCompletes && (
               <Link to={`/classroom-walkthrough/create/${record._id}`}>
                 <Button
                   size="sm"
@@ -877,45 +870,8 @@ export const getNotebookColumns = ({
       const { isObserverComplete, isTeacherComplete, isReflation } = record;
 
       const renderAction = () => {
-        // ── Step 3 zone: Observer has completed their form ──────────────────
-        if (isObserverComplete) {
-          // Fully done (Teacher reflection submitted) → everyone sees View Report
-          if (isReflation) {
-            return (
-              <Flex gap={2} align="center" flexWrap="nowrap">
-                <Link to={`/notebook-checking-proforma/report/${record._id}`}>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    colorScheme="blue"
-                    fontWeight="medium"
-                    flexShrink={0}
-                  >
-                    View Report
-                  </Button>
-                </Link>
-              </Flex>
-            );
-          }
-
-          // Teacher still needs to submit reflection (Step 3)
-          if (currentUserRole === UserRole[2]) {
-            return (
-              <Link to={`/notebook-checking-proforma/complete/${record._id}`}>
-                <Button
-                  size="sm"
-                  variant="solid"
-                  colorScheme="orange"
-                  fontWeight="medium"
-                  flexShrink={0}
-                >
-                  Give Reflection
-                </Button>
-              </Link>
-            );
-          }
-
-          // Observer already done — show View Report
+        // ── 1. If EVERYTHING is completed (Teacher, Observer, and Reflection submitted) ──
+        if (isTeacherComplete && isObserverComplete && isReflation) {
           return (
             <Flex gap={2} align="center" flexWrap="nowrap">
               <Link to={`/notebook-checking-proforma/report/${record._id}`}>
@@ -933,9 +889,60 @@ export const getNotebookColumns = ({
           );
         }
 
-        // ── Step 2 zone: Teacher done, waiting for Observer ─────────────────
-        if (isTeacherComplete) {
-          if (currentUserRole === UserRole[1]) {
+        // ── 2. Teacher Actions ──
+        if (currentUserRole === UserRole[2]) {
+          // If Teacher has NOT completed their form, ALWAYS show Continue Form
+          if (!isTeacherComplete) {
+            return (
+              <Link to={`/notebook-checking-proforma/edit/${record._id}`}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  colorScheme="orange"
+                  fontWeight="medium"
+                  flexShrink={0}
+                >
+                  Continue Form
+                </Button>
+              </Link>
+            );
+          }
+
+          // If Teacher has completed form, check Observer completion:
+          if (isObserverComplete) {
+            // Observer is done, reflection is pending -> Give Reflection
+            if (!isReflation) {
+              return (
+                <Link to={`/notebook-checking-proforma/complete/${record._id}`}>
+                  <Button
+                    size="sm"
+                    variant="solid"
+                    colorScheme="orange"
+                    fontWeight="medium"
+                    flexShrink={0}
+                  >
+                    Give Reflection
+                  </Button>
+                </Link>
+              );
+            }
+          } else {
+            // Observer has not completed yet -> Teacher waits
+            return <Reminder id={record?._id} type="form3" size="sm" />;
+          }
+
+          return (
+            <Link to={`/notebook-checking-proforma/report/${record._id}`}>
+              <Button size="sm" variant="outline" colorScheme="blue" fontWeight="medium" flexShrink={0}>
+                View Report
+              </Button>
+            </Link>
+          );
+        }
+
+        // ── 3. Observer Actions ──
+        if (currentUserRole === UserRole[1]) {
+          if (!isObserverComplete) {
             return (
               <Link to={`/notebook-checking-proforma/create/${record._id}`}>
                 <Button
@@ -949,29 +956,29 @@ export const getNotebookColumns = ({
                 </Button>
               </Link>
             );
-          } else {
+          }
+
+          if (!isTeacherComplete || !isReflation) {
             return <Reminder id={record?._id} type="form3" size="sm" />;
           }
-        }
 
-        // ── Step 1 zone: Teacher hasn't filled yet ──────────────────────────
-        if (currentUserRole === UserRole[2]) {
           return (
-            <Link to={`/notebook-checking-proforma/edit/${record._id}`}>
-              <Button
-                size="sm"
-                variant="outline"
-                colorScheme="blue"
-                fontWeight="medium"
-                flexShrink={0}
-              >
-                Continue Form
+            <Link to={`/notebook-checking-proforma/report/${record._id}`}>
+              <Button size="sm" variant="outline" colorScheme="blue" fontWeight="medium" flexShrink={0}>
+                View Report
               </Button>
             </Link>
           );
         }
 
-        return <Reminder id={record?._id} type="form3" size="sm" />;
+        // ── 4. Admin / Fallback ──
+        return (
+          <Link to={`/notebook-checking-proforma/report/${record._id}`}>
+            <Button size="sm" variant="outline" colorScheme="blue" fontWeight="medium" flexShrink={0}>
+              View Report
+            </Button>
+          </Link>
+        );
       };
 
       return (
@@ -1145,15 +1152,11 @@ export const getUserColumns = ({ onEdit, onDelete }) => [
     title: "Access",
     key: "access",
     dataIndex: "access",
-    width: "140px",
+    width: "155px",
     render: (val, record) => {
-      const isDual =
-        record?.isDualRole === true ||
-        record?.isDualRole === "true" ||
-        (Array.isArray(record?.roles) &&
-          record.roles.includes("Observer") &&
-          record.roles.includes("Teacher"));
-      if (val === "Superadmin") {
+      const effectiveAccess = normalizeUserAccess(val || record?.access);
+      const isDual = effectiveAccess === "Observer" && isDualRoleUser(record);
+      if (effectiveAccess === "Superadmin") {
         return (
           <Tag colorScheme="purple" variant="subtle" fontWeight="bold">
             Superadmin
@@ -1162,17 +1165,27 @@ export const getUserColumns = ({ onEdit, onDelete }) => [
       }
       if (isDual) {
         return (
-          <Tag
-            colorScheme="teal"
-            variant="solid"
-            fontWeight="bold"
-            title="Observer & Teacher (Dual Role)"
-          >
-            OT
-          </Tag>
+          <Flex align="center" gap={1.5}>
+            <Tag
+              colorScheme="blue"
+              variant="subtle"
+              fontWeight="bold"
+              title="Observer"
+            >
+              O
+            </Tag>
+            <Tag
+              colorScheme="teal"
+              variant="solid"
+              fontWeight="bold"
+              title="Special Privilege: OT (Observer + Teacher)"
+            >
+              OT
+            </Tag>
+          </Flex>
         );
       }
-      if (val === "Teacher") {
+      if (effectiveAccess === "Teacher") {
         return (
           <Tag
             colorScheme="green"
@@ -1197,19 +1210,13 @@ export const getUserColumns = ({ onEdit, onDelete }) => [
     },
     filterConfig: {
       type: "select",
-      options: ["Superadmin", "Observer", "Teacher", "OT"],
+      options: ["Superadmin", "Observer", "Teacher", "OT (Privilege)"],
       matchFn: (record, vals) => {
-        const isDual =
-          record?.isDualRole === true ||
-          record?.isDualRole === "true" ||
-          (Array.isArray(record?.roles) &&
-            record.roles.includes("Observer") &&
-            record.roles.includes("Teacher"));
-        const tag = isDual ? "OT" : record?.access === "Teacher" ? "T" : record?.access === "Observer" ? "O" : record?.access;
+        const effectiveAccess = normalizeUserAccess(record?.access);
+        const isDual = effectiveAccess === "Observer" && isDualRoleUser(record);
         return (
-          vals.includes(tag) ||
-          vals.includes(record?.access) ||
-          (isDual && vals.includes("OT"))
+          vals.includes(effectiveAccess) ||
+          (isDual && (vals.includes("OT (Privilege)") || vals.includes("OT")))
         );
       },
     },

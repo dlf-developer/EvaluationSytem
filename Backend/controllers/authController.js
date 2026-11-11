@@ -24,14 +24,26 @@ const { parseUserAgent } = require('../utils/deviceParser');
  * and persist them in the Dual-Layer Token Cache
  */
 const issueUserTokens = async (user, req) => {
+    const effectiveAccess = user.access === 'OT' ? 'Observer' : user.access;
+    const isObserver = effectiveAccess === 'Observer';
+    const effectiveDualRole =
+        isObserver &&
+        Boolean(
+            user.isDualRole === true ||
+            user.isDualRole === 'true' ||
+            user.access === 'OT' ||
+            (Array.isArray(user.roles) &&
+                user.roles.includes('Observer') &&
+                user.roles.includes('Teacher'))
+        );
     const payload = {
         id: user._id,
         email: user.email,
-        access: user.access,
+        access: effectiveAccess,
         name: user.name,
-        isDualRole: !!user.isDualRole,
-        canAddNotebookComment: !!user.canAddNotebookComment,
-        roles: user.roles && user.roles.length > 0 ? user.roles : (user.isDualRole ? ['Observer', 'Teacher'] : [user.access]),
+        isDualRole: effectiveDualRole,
+        canAddNotebookComment: isObserver && !!user.canAddNotebookComment,
+        roles: effectiveDualRole ? ['Observer', 'Teacher'] : [effectiveAccess],
     };
 
     // 1. Access Token: exactly 7 days
@@ -87,11 +99,30 @@ const createOTPTemplate = (otp, duration, title) => `
 const register = async (req, res) => {
     try {
         const { employeeId, customerId, name, mobile, access, designation, password } = req.body;
+        if (!['Superadmin', 'Observer', 'Teacher'].includes(access)) {
+            return res.status(400).json({
+                message: access === 'OT'
+                    ? "OT is not a role. Set access to 'Observer' with isDualRole privilege instead."
+                    : 'Invalid access role.',
+            });
+        }
         const email = req.body.email?.toLowerCase().trim();
         const existingUser = await User.findOne({ email });
         if (existingUser) return res.status(400).json({ message: 'User already exists' });
 
-        const newUser = new User({ employeeId, customerId, name, email, mobile, access, designation, password });
+        const isDualRole = access === 'Observer' && Boolean(req.body.isDualRole === true || req.body.isDualRole === 'true');
+        const newUser = new User({
+            employeeId,
+            customerId,
+            name,
+            email,
+            mobile,
+            access,
+            isDualRole,
+            roles: isDualRole ? ['Observer', 'Teacher'] : [access],
+            designation,
+            password,
+        });
         await newUser.save();
         res.status(201).json({ message: 'User registered successfully' });
     } catch (error) {

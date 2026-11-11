@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import Fillter_Wing from "./Fillter_Wing";
 import { getAllTimes } from "../../../../Utils/auth";
@@ -9,7 +9,11 @@ import {
   syncWingForm,
 } from "../../../../redux/userSlice";
 import { useNavigate, useParams } from "react-router-dom";
-import { inputsWing } from "./wing";
+import {
+  getWingInputs,
+  mergeWingReportItems,
+  sanitizeTableData,
+} from "./wing";
 import {
   Box,
   Flex,
@@ -41,12 +45,6 @@ const FORM_TITLES = [
   { key: "form5", label: "Co-Scholastic Classroom Observation", color: "teal" },
   { key: "form4", label: "Learning Progress Checklist", color: "orange" },
 ];
-
-const sanitizeTableData = (raw) => {
-  if (!Array.isArray(raw) || raw.length === 0) return [{}];
-  const cleaned = raw.map((r) => (r && typeof r === "object" ? r : {}));
-  return cleaned.length > 0 ? cleaned : [{}];
-};
 
 // ── Score helpers ─────────────────────────────────────────────────────────────
 const getTotalScore = (items, type, formType) => {
@@ -396,22 +394,20 @@ function OB_Wing() {
   const [currStep, setCurrStep] = useState(1);
   const [syncing, setSyncing] = useState({});
   const [syncingAll, setSyncingAll] = useState(false);
+  const [schoolPortalHint, setSchoolPortalHint] = useState(null);
+  const wingQuestions = useMemo(
+    () => getWingInputs(schoolPortalHint),
+    [schoolPortalHint]
+  );
 
   // Custom React form state
   const [formName, setFormName] = useState("");
   const [monthlyReport, setMonthlyReport] = useState(() =>
-    inputsWing.map((inp) => ({
-      question: inp.question,
-      type: inp.type,
-      columns: inp.columns,
-      allowFileUpload: inp.allowFileUpload,
-      answer: "",
-      tableData: [{}],
-      files: [],
-    }))
+    mergeWingReportItems(getWingInputs())
   );
   const [validationErrors, setValidationErrors] = useState({});
   const [isInitialized, setIsInitialized] = useState(false);
+  const restoredToastShownRef = useRef(false);
   const [lastSavedTime, setLastSavedTime] = useState(null);
   const toast = useToast();
   const [saving, setSaving] = useState(false);
@@ -626,6 +622,9 @@ function OB_Wing() {
           if (res.payload.data?.isComplete && !res.payload.data?.isDraft) {
             navigate("/wing-coordinator");
           } else {
+            if (res.payload.schoolPortal) {
+              setSchoolPortalHint(res.payload.schoolPortal);
+            }
             setCurrForm(res.payload.data);
           }
         } else {
@@ -650,22 +649,7 @@ function OB_Wing() {
     if (currForm) {
       setFormName(currForm.formName || "");
       const serverReport = Array.isArray(currForm.monthlyReport) ? currForm.monthlyReport : [];
-      let initialReport = inputsWing.map((inp, idx) => {
-        const existing = serverReport[idx];
-        return {
-          question: inp.question,
-          type: inp.type,
-          columns: inp.columns,
-          allowFileUpload: inp.allowFileUpload,
-          answer: existing?.answer || "",
-          tableData: sanitizeTableData(existing?.tableData),
-          files: Array.isArray(existing?.files)
-            ? existing.files
-            : existing?.files && typeof existing.files === "object"
-            ? Object.values(existing.files)
-            : [],
-        };
-      });
+      let initialReport = mergeWingReportItems(wingQuestions, serverReport);
 
       setSelectedItems({
         form1: currForm?.form1 || [],
@@ -684,32 +668,24 @@ function OB_Wing() {
             setFormName(draft.formName);
           }
           if (Array.isArray(draft?.monthlyReport) && draft.monthlyReport.length > 0) {
-            initialReport = inputsWing.map((inp, idx) => {
-              const draftItem = draft.monthlyReport[idx] || initialReport[idx];
-              return {
-                question: inp.question,
-                type: inp.type,
-                columns: inp.columns,
-                allowFileUpload: inp.allowFileUpload,
-                answer: draftItem?.answer ?? initialReport[idx]?.answer ?? "",
-                tableData: sanitizeTableData(
-                  draftItem?.tableData || initialReport[idx]?.tableData
-                ),
-                files: Array.isArray(draftItem?.files)
-                  ? draftItem.files
-                  : initialReport[idx]?.files || [],
-              };
-            });
+            initialReport = mergeWingReportItems(
+              wingQuestions,
+              draft.monthlyReport,
+              initialReport
+            );
             if (draft?.lastSaved) {
               setLastSavedTime(new Date(draft.lastSaved));
             }
-            toast({
-              title: "Draft Restored",
-              description: "📋 Draft restored from your last session.",
-              status: "info",
-              duration: 3000,
-              isClosable: true,
-            });
+            if (!restoredToastShownRef.current) {
+              restoredToastShownRef.current = true;
+              toast({
+                title: "Draft Restored",
+                description: "📋 Draft restored from your last session.",
+                status: "info",
+                duration: 3000,
+                isClosable: true,
+              });
+            }
           }
         }
       } catch (_) {}
@@ -717,7 +693,7 @@ function OB_Wing() {
       setMonthlyReport(initialReport);
       setIsInitialized(true);
     }
-  }, [currForm]);
+  }, [currForm, wingQuestions]);
 
   const handleSelect = (checked, item, type) => {
     setSelectedItems((prev) => ({
@@ -815,7 +791,7 @@ function OB_Wing() {
     if (!formName || !formName.trim()) {
       errors.formName = "Please enter a form name!";
     }
-    inputsWing.forEach((item, i) => {
+    wingQuestions.forEach((item, i) => {
       if (item.type === "text") {
         const ans = monthlyReport[i]?.answer;
         if (!ans || !ans.trim()) {
@@ -877,7 +853,7 @@ function OB_Wing() {
       </div>
 
       <div className="space-y-4">
-        {inputsWing.map((item, index) => {
+        {wingQuestions.map((item, index) => {
           const reportItem = monthlyReport[index] || {};
           const tableRows = sanitizeTableData(reportItem.tableData);
 
@@ -1515,14 +1491,17 @@ function OB_Wing() {
             Monthly Report
           </Text>
           <VStack spacing={2} align="stretch">
-            {(monthlyReport || []).map((item, i) =>
-              item?.question ? (
+            {(monthlyReport || []).map((item, i) => {
+              const qDef = wingQuestions[i];
+              const qType = qDef?.type || item?.type;
+              const qCols = qDef?.columns || item?.columns || [];
+              return item?.question ? (
                 <Box key={i}>
                   <Text fontSize="xs" color="gray.500" fontWeight="500">
                     {item.question}
                   </Text>
 
-                  {inputsWing[i]?.type === "text" ? (
+                  {qType === "text" ? (
                     <Text
                       fontSize="sm"
                       color="brand.text"
@@ -1542,7 +1521,7 @@ function OB_Wing() {
                               <th className="px-3 py-2 text-left font-semibold text-slate-500 w-12">
                                 S.No.
                               </th>
-                              {(inputsWing[i]?.columns || []).map((col, cIdx) => (
+                              {qCols.map((col, cIdx) => (
                                 <th
                                   key={cIdx}
                                   className="px-3 py-2 text-left font-semibold text-slate-500"
@@ -1560,7 +1539,7 @@ function OB_Wing() {
                                   <td className="px-3 py-2 text-slate-500 font-medium">
                                     {rIdx + 1}
                                   </td>
-                                  {(inputsWing[i]?.columns || []).map((col, cIdx) => {
+                                  {qCols.map((col, cIdx) => {
                                     const val = safeRow[`col_${cIdx}`];
                                     return (
                                       <td key={cIdx} className="px-3 py-2 text-slate-700">
@@ -1583,8 +1562,8 @@ function OB_Wing() {
                     </div>
                   )}
                 </Box>
-              ) : null,
-            )}
+              ) : null;
+            })}
           </VStack>
         </Box>
       </VStack>

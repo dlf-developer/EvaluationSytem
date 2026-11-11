@@ -39,8 +39,9 @@ export const Button = React.forwardRef(
       if (type === "primary") {
         variantClasses =
           "text-white shadow-xs hover:brightness-105 active:scale-[0.985] active:brightness-95 focus:ring-2 focus:ring-rose-500/30 cursor-pointer";
-        inlineStyles.background =
-          inlineStyles.background || "linear-gradient(180deg, #e11d48 0%, #be123c 100%)";
+        if (!inlineStyles.background && !inlineStyles.backgroundColor) {
+          inlineStyles.background = "linear-gradient(180deg, #e11d48 0%, #be123c 100%)";
+        }
         inlineStyles.borderColor = inlineStyles.borderColor || "#9f1239";
         inlineStyles.color = inlineStyles.color || "#ffffff";
         inlineStyles.boxShadow =
@@ -55,9 +56,10 @@ export const Button = React.forwardRef(
         case "primary":
           variantClasses =
             "text-white shadow-xs hover:brightness-105 hover:shadow-md hover:shadow-[#1a4d2e]/25 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.985] active:brightness-95 focus:ring-2 focus:ring-[#1a4d2e]/30 focus:ring-offset-1 cursor-pointer transition-all duration-150";
-          inlineStyles.background =
-            inlineStyles.background ||
-            "linear-gradient(180deg, #225934 0%, #174528 100%)";
+          if (!inlineStyles.background && !inlineStyles.backgroundColor) {
+            inlineStyles.background =
+              "linear-gradient(180deg, #225934 0%, #174528 100%)";
+          }
           inlineStyles.borderColor = inlineStyles.borderColor || "#133c23";
           inlineStyles.color = inlineStyles.color || "#ffffff";
           inlineStyles.boxShadow =

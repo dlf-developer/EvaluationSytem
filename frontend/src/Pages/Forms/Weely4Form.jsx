@@ -204,8 +204,11 @@ function Weekly4Form() {
     } else if (step === 2) {
       await form.validateFields([
         ["FormData", 4, "answer"],
-        ["FormData", 4, "textArea"],
       ]);
+      const ans4 = form.getFieldValue(["FormData", 4, "answer"]);
+      if (ans4 === "Yes") {
+        await form.validateFields([["FormData", 4, "textArea"]]);
+      }
       return true;
     }
     return true;

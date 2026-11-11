@@ -234,6 +234,8 @@ const protects = {
         { path: "/weekly4form", element: <Weekly /> },
         { path: "/weekly4form/report/:id", element: <Weekly4FormReport /> },
         { path: "/wing-coordinator", element: <WingCoordinator /> },
+        { path: "/wing-coordinator/:id", element: <OB_Wing /> },
+        { path: "/wing-coordinator/report/:id", element: <WingCoordinatorReport /> },
         { path: "/accountability", element: <AccountabilityMechanism /> },
         { path: "/accountability/:id", element: <AccountabilityForm /> },
         { path: "/accountability/report/:id", element: <AccountabilityReport /> },

@@ -45,5 +45,49 @@ export const isDevOrLocalEnv = () => {
 };
 
 export const isLocalDev = isDevOrLocalEnv;
+
+/**
+ * Detects which school portal (DLWS or DLPS) the app is running for.
+ * Priority:
+ * 1. Explicit env override (`REACT_APP_SCHOOL` = "DLWS" | "DLPS")
+ * 2. Configured API URL (`REACT_APP_API_URL` containing "dlws" or "dlps")
+ * 3. Browser hostname (`window.location.hostname` containing "dlws" or "dlps")
+ * 4. Optional backend-provided portal hint (useful when testing locally against switched DBs)
+ * 5. Safe default ("DLPS")
+ */
+export const detectConfiguredSchoolPortal = () => {
+  const explicitSchool = (process.env.REACT_APP_SCHOOL || "").trim().toUpperCase();
+  if (explicitSchool === "DLWS" || explicitSchool === "DLPS") {
+    return explicitSchool;
+  }
+
+  const apiUrl = (process.env.REACT_APP_API_URL || "").toLowerCase();
+  if (apiUrl.includes("dlws")) return "DLWS";
+  if (apiUrl.includes("dlps")) return "DLPS";
+
+  if (typeof window !== "undefined") {
+    const host = (window.location.hostname || "").toLowerCase();
+    if (host.includes("dlws")) return "DLWS";
+    if (host.includes("dlps")) return "DLPS";
+  }
+
+  return null;
+};
+
+export const getSchoolPortal = (backendHint) => {
+  const configured = detectConfiguredSchoolPortal();
+  if (configured) return configured;
+
+  const hint = typeof backendHint === "string" ? backendHint.trim().toUpperCase() : "";
+  if (hint === "DLWS" || hint === "DLPS") {
+    return hint;
+  }
+
+  return "DLPS";
+};
+
+export const isDLWS = (backendHint) => getSchoolPortal(backendHint) === "DLWS";
+export const isDLPS = (backendHint) => getSchoolPortal(backendHint) === "DLPS";
+
 export default isDevOrLocalEnv;
 

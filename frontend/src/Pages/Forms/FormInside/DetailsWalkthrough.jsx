@@ -721,6 +721,46 @@ function DetailsWalkthrough() {
       .validateFields()
       .then(async (values) => {
         const mergedData = { ...formData, ...values };
+
+        // Strict Step-by-Step validation
+        if (currStep === 0) {
+          if (
+            !mergedData.NameoftheVisitingTeacher ||
+            !mergedData.className ||
+            !mergedData.Section ||
+            !mergedData.Subject ||
+            !mergedData.DateOfObservation
+          ) {
+            message.error("Please complete all general observation details before continuing.");
+            return;
+          }
+        } else if (currStep === 1) {
+          // Check that all 4 categories have all questions answered
+          const totalRequired =
+            WALKTHROUGH_QUESTIONS.essentialAggrements.length +
+            WALKTHROUGH_QUESTIONS.planingAndPreparation.length +
+            WALKTHROUGH_QUESTIONS.classRoomEnvironment.length +
+            WALKTHROUGH_QUESTIONS.instruction.length;
+
+          let answeredCount = 0;
+          ["essentialAggrements", "planingAndPreparation", "classRoomEnvironment", "instruction"].forEach((sec) => {
+            if (Array.isArray(mergedData[sec])) {
+              mergedData[sec].forEach((item) => {
+                if (item?.answer !== undefined && item?.answer !== null && item?.answer !== "") {
+                  answeredCount++;
+                }
+              });
+            }
+          });
+
+          if (answeredCount < totalRequired) {
+            message.error(
+              `Please evaluate all criteria (${answeredCount}/${totalRequired} completed) before proceeding to the final step.`
+            );
+            return;
+          }
+        }
+
         setFormData(mergedData);
         if (currStep < steps.length - 1) {
           await saveDraftData(mergedData, currStep + 1);

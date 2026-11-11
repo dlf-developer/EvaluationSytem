@@ -8,7 +8,7 @@ import { Button, Space, Spin, Table, Tag } from "../../Components/UI";
 import React, { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Link } from "react-router-dom";
-import { getAllTimes } from "../../Utils/auth";
+import { getAllTimes, isDualRoleUser, normalizeUserAccess } from "../../Utils/auth";
 import { GetUserList } from "../../redux/userSlice";
 import { axiosInstanceToken } from "../../redux/instence";
 import { Box, SimpleGrid, Flex, Heading, Text } from "@chakra-ui/react";
@@ -66,15 +66,18 @@ function AdminDashboard() {
         dataIndex: "access",
         key: "access",
         render: (text, record) => {
-          const isDual =
-            record?.isDualRole === true ||
-            record?.isDualRole === "true" ||
-            (Array.isArray(record?.roles) &&
-              record.roles.includes("Observer") &&
-              record.roles.includes("Teacher"));
-          if (text === "Superadmin") return <Tag color="purple">Superadmin</Tag>;
-          if (isDual) return <Tag color="cyan">OT</Tag>;
-          if (text === "Teacher") return <Tag color="green">T</Tag>;
+          const effectiveAccess = normalizeUserAccess(text || record?.access);
+          const isDual = effectiveAccess === "Observer" && isDualRoleUser(record);
+          if (effectiveAccess === "Superadmin") return <Tag color="purple">Superadmin</Tag>;
+          if (isDual) {
+            return (
+              <Space size={4}>
+                <Tag color="blue">O</Tag>
+                <Tag color="cyan" title="Special Privilege: OT (Observer + Teacher)">OT</Tag>
+              </Space>
+            );
+          }
+          if (effectiveAccess === "Teacher") return <Tag color="green">T</Tag>;
           return <Tag color="blue">O</Tag>;
         },
       },

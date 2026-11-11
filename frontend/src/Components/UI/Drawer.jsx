@@ -22,14 +22,28 @@ export const Drawer = ({
 
   if (!open) return null;
 
+  const placementContainerClass =
+    placement === "right"
+      ? "inset-y-0 right-0 max-w-full flex"
+      : placement === "top"
+      ? "inset-x-0 top-0 max-h-full flex"
+      : placement === "bottom"
+      ? "inset-x-0 bottom-0 max-h-full flex"
+      : "inset-y-0 left-0 max-w-full flex";
+
+  const panelSizeClass =
+    placement === "top" || placement === "bottom"
+      ? "w-full max-h-[85vh]"
+      : "w-80 max-w-xs";
+
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">
       <div
         className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
         onClick={onClose}
       />
-      <div className="fixed inset-y-0 left-0 max-w-full flex">
-        <div className={`relative w-80 max-w-xs bg-white shadow-xl flex flex-col ${className}`}>
+      <div className={`fixed ${placementContainerClass}`}>
+        <div className={`relative ${panelSizeClass} bg-white shadow-xl flex flex-col ${className}`}>
           {closable && (
             <div className="absolute top-3 right-3 z-10">
               <button

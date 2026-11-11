@@ -448,6 +448,20 @@ const Details = () => {
 
   const handleStepClick = async (targetStep) => {
     if (targetStep === currStep) return;
+
+    // If attempting to jump forward, strictly validate all preceding steps first
+    if (targetStep > currStep) {
+      for (let s = 0; s < targetStep; s++) {
+        const isValid = validateStep(s);
+        if (!isValid) {
+          if (s !== currStep) {
+            setCurrStep(s);
+          }
+          return;
+        }
+      }
+    }
+
     // Always save draft before jumping
     await saveDraft(answers, targetStep, false);
     setCurrStep(targetStep);

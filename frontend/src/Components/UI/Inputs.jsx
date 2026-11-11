@@ -1,4 +1,4 @@
-import React, { forwardRef, useState } from "react";
+import React, { forwardRef, useEffect, useRef, useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { Select, Option } from "./Select";
 
@@ -65,18 +65,70 @@ export const TextArea = Input.TextArea;
 export const Password = Input.Password;
 
 export const InputNumber = forwardRef(
-  ({ size = "middle", className = "", ...props }, ref) => {
+  ({ size = "middle", className = "", value, onChange, error, ...props }, ref) => {
+    const innerRef = useRef(null);
+
+    const setMergedRef = (el) => {
+      innerRef.current = el;
+      if (typeof ref === "function") ref(el);
+      else if (ref) ref.current = el;
+    };
+
+    useEffect(() => {
+      const el = innerRef.current;
+      if (!el) return;
+      if (el.validity?.badInput) return;
+
+      const isEmptyValue = value === null || value === undefined || value === "";
+      if (isEmptyValue) {
+        if (el.value !== "") {
+          el.value = "";
+        }
+        return;
+      }
+
+      const numVal = Number(value);
+      if (Number.isNaN(numVal)) {
+        return;
+      }
+
+      if (el.value === "" || Number(el.value) !== numVal) {
+        el.value = String(numVal);
+      }
+    }, [value]);
+
+    const handleChange = (e) => {
+      const raw = e.target.value;
+      if (raw === "") {
+        if (e.target.validity?.badInput) {
+          return;
+        }
+        onChange?.(null);
+        return;
+      }
+      const parsed = Number(raw);
+      onChange?.(Number.isNaN(parsed) ? null : parsed);
+    };
+
     return (
       <Input
-        ref={ref}
+        ref={setMergedRef}
         type="number"
         size={size}
+        error={error}
+        defaultValue={
+          value !== null && value !== undefined && !Number.isNaN(Number(value))
+            ? String(value)
+            : ""
+        }
+        onChange={handleChange}
         className={className}
         {...props}
       />
     );
   }
 );
+InputNumber.displayName = "CustomInputNumber";
 
 export const Switch = forwardRef(
   (
@@ -88,6 +140,7 @@ export const Switch = forwardRef(
       unCheckedChildren,
       className = "",
       size = "middle",
+      error: _error,
       ...props
     },
     ref
@@ -172,7 +225,7 @@ export const Switch = forwardRef(
 );
 
 export const Checkbox = forwardRef(
-  ({ checked, onChange, children, disabled = false, className = "", ...props }, ref) => {
+  ({ checked, onChange, children, disabled = false, error: _error, className = "", ...props }, ref) => {
     return (
       <label className={`inline-flex items-center gap-2 cursor-pointer ${disabled ? "opacity-50 cursor-not-allowed" : ""} ${className}`}>
         <input
@@ -180,7 +233,7 @@ export const Checkbox = forwardRef(
           type="checkbox"
           checked={checked}
           disabled={disabled}
-          onChange={(e) => onChange?.(e.target.checked, e)}
+          onChange={(e) => onChange?.(e)}
           className="h-4 w-4 rounded border-gray-300 text-brand-800 focus:ring-brand-500"
           {...props}
         />
@@ -191,7 +244,7 @@ export const Checkbox = forwardRef(
 );
 
 export const Radio = forwardRef(
-  ({ value, checked, onChange, children, disabled = false, className = "", ...props }, ref) => {
+  ({ value, checked, onChange, children, disabled = false, error: _error, className = "", ...props }, ref) => {
     return (
       <label className={`inline-flex items-center gap-2 cursor-pointer ${disabled ? "opacity-50 cursor-not-allowed" : ""} ${className}`}>
         <input
@@ -210,7 +263,18 @@ export const Radio = forwardRef(
   }
 );
 
-Radio.Group = ({ value, onChange, children, className = "", options, ...props }) => {
+Radio.Group = ({
+  value,
+  onChange,
+  children,
+  className = "",
+  options,
+  error: _error,
+  size: _size,
+  optionType: _optionType,
+  buttonStyle: _buttonStyle,
+  ...props
+}) => {
   return (
     <div className={`flex flex-wrap items-center gap-4 ${className}`} {...props}>
       {options

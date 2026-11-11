@@ -30,13 +30,25 @@ const getWingCoordinators = async (req, res) => {
     }
 };
 
+const getBackendSchoolPortal = () => {
+    const explicit = (process.env.SCHOOL_PORTAL || '').trim().toUpperCase();
+    if (explicit === 'DLWS' || explicit === 'DLPS') return explicit;
+    const appUrl = (process.env.APP_URL || '').toLowerCase();
+    if (appUrl.includes('dlws')) return 'DLWS';
+    if (appUrl.includes('dlps')) return 'DLPS';
+    const mongoUri = (process.env.MONGO_URI || '').toLowerCase();
+    if (mongoUri.includes('dlws')) return 'DLWS';
+    if (mongoUri.includes('dlps')) return 'DLPS';
+    return 'DLPS';
+};
+
 // ✅ Get a single WingCoordinator entry by ID
 const getSingleWingCoordinatorById = async (req, res) => {
     try {
         const wing = await WingCoordinator.findById(req.params.id).populate("userId","-password -coordinator -designation -email -updatedAt -__v");
         if (!wing) return res.status(404).json({ success: false, message: 'WingCoordinator not found' });
 
-        res.status(200).json({ success: true, data: wing });
+        res.status(200).json({ success: true, data: wing, schoolPortal: getBackendSchoolPortal() });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Error fetching WingCoordinator', error: error.message });
     }

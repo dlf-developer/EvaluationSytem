@@ -56,14 +56,25 @@ function Users() {
   }, [dispatch]);
 
   const DeleteUserRow = (userId) => {
-    setLoadingAction(true);
-    dispatch(DeleteUser(userId))
-      .then(() => {
-        message.success("User deleted successfully.");
-        fetchUsers();
-      })
-      .catch(() => message.error("Failed to delete user."))
-      .finally(() => setLoadingAction(false));
+    Modal.confirm({
+      title: "Delete User?",
+      content: "Are you sure you want to delete this user? This action cannot be undone.",
+      okText: "Yes, Delete",
+      okType: "danger",
+      cancelText: "Cancel",
+      onOk: async () => {
+        setLoadingAction(true);
+        try {
+          await dispatch(DeleteUser(userId)).unwrap();
+          message.success("User deleted successfully.");
+          fetchUsers();
+        } catch (err) {
+          message.error(err?.message || "Failed to delete user.");
+        } finally {
+          setLoadingAction(false);
+        }
+      },
+    });
   };
 
   const handleEditUser = (user) => {
@@ -102,6 +113,18 @@ function Users() {
           message.error("Invalid file structure. Please check the template.");
           return;
         }
+        const invalidRoleRow = jsonData.find(
+          (row) => !["Superadmin", "Observer", "Teacher"].includes(String(row.access).trim())
+        );
+        if (invalidRoleRow) {
+          const badRole = String(invalidRoleRow.access).trim();
+          message.error(
+            badRole === "OT"
+              ? "OT is not a role. Set 'access' to Observer (and optional isDualRole = true for OT privilege)."
+              : `Invalid role '${badRole}' in file. Allowed roles: Observer, Teacher, Superadmin.`
+          );
+          return;
+        }
         setExcelData(jsonData);
         message.success("File processed successfully.");
       } catch {
@@ -112,16 +135,22 @@ function Users() {
     return false;
   };
 
-  const uploadToAPI = () => {
+  const uploadToAPI = async () => {
     if (excelData.length === 0) {
       message.warning("No data to upload. Please upload a valid file.");
       return;
     }
     setLoadingAction(true);
-    dispatch(BulkUserCreate(excelData))
-      .then(() => { message.success("Data uploaded successfully."); fetchUsers(); })
-      .catch(() => message.error("Failed to upload data."))
-      .finally(() => { setLoadingAction(false); setOpen2(false); });
+    try {
+      await dispatch(BulkUserCreate(excelData)).unwrap();
+      message.success("Data uploaded successfully.");
+      fetchUsers();
+    } catch (err) {
+      message.error(err?.message || "Failed to upload data.");
+    } finally {
+      setLoadingAction(false);
+      setOpen2(false);
+    }
   };
 
   return (

@@ -727,8 +727,48 @@ function CoScholasticDetails() {
   /* ─── Navigation ─────────────────────────────────────────────────── */
   const handleNext = async () => {
     try {
-      const fields = getStepFields(currStep);
-      await form.validateFields(fields);
+      if (currStep === 0) {
+        await form.validateFields([
+          "NameoftheVisitingTeacher",
+          "DateOfObservation",
+          "className",
+          "Section",
+          "Subject",
+          "Topic",
+        ]);
+      } else if (currStep === 1) {
+        const values = form.getFieldsValue(true);
+        const sectionsList = [
+          { key: "classroomManagement", count: 3 },
+          { key: "planningAndExecution", count: 3 },
+          { key: "studentEngagement", count: 3 },
+          { key: "instructionAndFacilitation", count: 3 },
+        ];
+        let answered = 0;
+        sectionsList.forEach((s) => {
+          const list = values[s.key];
+          if (Array.isArray(list)) {
+            list.forEach((item) => {
+              if (item?.answer !== undefined && item?.answer !== null && item?.answer !== "") {
+                answered++;
+              }
+            });
+          }
+        });
+        if (answered < 12) {
+          message.error(
+            `Please evaluate all 12 criteria (${answered}/12 completed) before proceeding to the final step.`
+          );
+          return;
+        }
+      } else if (currStep === 2) {
+        const values = form.getFieldsValue(true);
+        const fb = values.ObserverFeedback;
+        if (!Array.isArray(fb) || !fb[0]?.answer || !fb[1]?.answer) {
+          message.error("Please provide both feedback notes before final submission.");
+          return;
+        }
+      }
 
       setIsSavingDraft(true);
       const nextStep = currStep + 1;

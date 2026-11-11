@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Form, Input, Password, Select, Row, Col, Button, Switch, message } from "./UI";
 import { useDispatch } from "react-redux";
 import { CreateUserList, GetUserList } from "../redux/userSlice";
+import { buildUserRolePayload } from "../Utils/auth";
 
 const { Option } = Select;
 
@@ -11,19 +12,24 @@ function CreateUserForm({ onOk, onCancel, Payload }) {
   const dispatch = useDispatch();
 
   const selectedAccess = Form.useWatch("access", form);
-  const isObserverRole = selectedAccess === "Observer" || selectedAccess === "OT";
+  const isObserverRole = selectedAccess === "Observer";
+
+  useEffect(() => {
+    if (selectedAccess && selectedAccess !== "Observer") {
+      form.setFieldsValue({
+        isDualRole: false,
+        canAddNotebookComment: false,
+      });
+    }
+  }, [selectedAccess, form]);
 
   const handleFinish = async (values) => {
     setIsLoading(true);
     try {
-      const isObserver = values.access === "Observer" || values.access === "OT";
-      const isDualRole = isObserver && Boolean(values.isDualRole || values.access === "OT");
-      const canAddNotebookComment = isObserver && Boolean(values.canAddNotebookComment);
+      const rolePayload = buildUserRolePayload(values);
       const payload = {
         ...values,
-        isDualRole,
-        canAddNotebookComment,
-        roles: isDualRole ? ["Observer", "Teacher"] : [values.access],
+        ...rolePayload,
       };
       await dispatch(CreateUserList(payload)).unwrap();
       dispatch(GetUserList());
@@ -152,7 +158,6 @@ function CreateUserForm({ onOk, onCancel, Payload }) {
               <Select>
                 <Option value="Observer">Observer</Option>
                 <Option value="Teacher">Teacher</Option>
-                <Option value="OT">OT (Dual Role)</Option>
                 <Option value="Superadmin">Superadmin</Option>
               </Select>
             </Form.Item>
@@ -171,10 +176,10 @@ function CreateUserForm({ onOk, onCancel, Payload }) {
                 <div className="p-3 rounded-xl border border-gray-200/90 bg-white hover:border-[#1a4d2e]/40 shadow-xs transition-all flex items-center justify-between gap-3 h-full">
                   <div className="pr-2">
                     <div className="text-xs font-semibold text-gray-900">
-                      Dual Role (OT)
+                      OT Privilege (Observer + Teacher)
                     </div>
                     <p className="text-[11px] text-gray-500 mt-0.5 leading-tight">
-                      Allows switching between Observer and Teacher modes
+                      Special privilege allowing this Observer to switch between Observer and Teacher modes
                     </p>
                   </div>
                   <Form.Item name="isDualRole" valuePropName="checked" className="mb-0 shrink-0">

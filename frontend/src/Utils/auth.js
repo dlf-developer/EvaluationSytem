@@ -32,16 +32,38 @@ export const clearTokens = () => {
   }
 };
 
+export const normalizeUserAccess = (access) => {
+  if (access === "OT") return "Observer";
+  return access || "";
+};
+
 export const isDualRoleUser = (user) => {
   if (!user) return false;
+  const rawAccess = user.access || user.primaryAccess || user.role || user.roleName;
+  const normalizedAccess = normalizeUserAccess(rawAccess);
+  if (normalizedAccess && normalizedAccess !== "Observer") return false;
   return (
     user.isDualRole === true ||
     user.isDualRole === "true" ||
     user.access === "OT" ||
+    user.role === "OT" ||
     (Array.isArray(user.roles) &&
       user.roles.includes("Observer") &&
       user.roles.includes("Teacher"))
   );
+};
+
+export const buildUserRolePayload = ({ access, isDualRole, canAddNotebookComment }) => {
+  const normalizedAccess = normalizeUserAccess(access) || "Observer";
+  const isObserver = normalizedAccess === "Observer";
+  const resolvedDualRole = isObserver && Boolean(isDualRole);
+  const resolvedCommentAccess = isObserver && Boolean(canAddNotebookComment);
+  return {
+    access: normalizedAccess,
+    isDualRole: resolvedDualRole,
+    canAddNotebookComment: resolvedCommentAccess,
+    roles: resolvedDualRole ? ["Observer", "Teacher"] : [normalizedAccess],
+  };
 };
 
 export const isTeacherEligible = (user) => {
@@ -79,14 +101,13 @@ export const getActiveRole = () => {
     if (!token) return null;
     try {
       const decoded = jwtDecode(token);
-      const isDual =
-        decoded?.isDualRole ||
-        (Array.isArray(decoded?.roles) && decoded.roles.length > 1);
+      const baseAccess = normalizeUserAccess(decoded?.access);
+      const isDual = isDualRoleUser(decoded);
       const saved = localStorage.getItem("activeRole");
       if (isDual && saved && ["Observer", "Teacher"].includes(saved)) {
         return saved;
       }
-      return decoded?.access || null;
+      return baseAccess || null;
     } catch (e) {
       return null;
     }
@@ -122,23 +143,21 @@ export const getUserId = () => {
       decoded.canAddNotebookComment === true ||
       decoded.canAddNotebookComment === "true"
     );
-    const isDual =
-      decoded?.isDualRole ||
-      (Array.isArray(decoded?.roles) &&
-        decoded.roles.includes("Observer") &&
-        decoded.roles.includes("Teacher"));
+    const isDual = isDualRoleUser(decoded);
+    const normalizedAccess = normalizeUserAccess(decoded?.access);
     decoded.isDualRole = !!isDual;
-    decoded.primaryAccess = decoded.access;
+    decoded.primaryAccess = normalizedAccess;
+    decoded.access = normalizedAccess;
     if (isDual && typeof window !== "undefined") {
       const saved = localStorage.getItem("activeRole");
       if (saved && ["Observer", "Teacher"].includes(saved)) {
         decoded.access = saved;
         decoded.activeRole = saved;
       } else {
-        decoded.activeRole = decoded.access;
+        decoded.activeRole = normalizedAccess;
       }
     } else {
-      decoded.activeRole = decoded.access;
+      decoded.activeRole = normalizedAccess;
     }
     return decoded;
   } catch (e) {

@@ -28,6 +28,11 @@ export const Select = forwardRef(
       placement = "bottom", // "bottom" or "top"
       dropdownClassName = "",
       dropdownStyle,
+      optionFilterProp: _optionFilterProp,
+      notFoundContent,
+      defaultValue: _defaultValue,
+      popupMatchSelectWidth: _popupMatchSelectWidth,
+      dropdownMatchSelectWidth: _dropdownMatchSelectWidth,
       ...props
     },
     ref
@@ -41,9 +46,12 @@ export const Select = forwardRef(
     // Normalize selected value(s)
     const selectedValues = useMemo(() => {
       if (value === undefined || value === null) return [];
-      if (Array.isArray(value)) return value;
+      if (isMultiple && !Array.isArray(value)) {
+        return value === "" ? [] : [value];
+      }
+      if (Array.isArray(value)) return value.filter((v) => v !== undefined && v !== null);
       return [value];
-    }, [value]);
+    }, [value, isMultiple]);
 
     // Extract options from either props.options or props.children (<Option />)
     const normalizedOptions = useMemo(() => {
@@ -363,7 +371,7 @@ export const Select = forwardRef(
                       <span>Loading options...</span>
                     </div>
                   ) : (
-                    "No options found"
+                    notFoundContent || "No options found"
                   )}
                 </div>
               )}
@@ -380,6 +388,7 @@ export const Select = forwardRef(
   }
 );
 
+Select.displayName = "CustomSelect";
 Select.Option = Option;
 
 export default Select;

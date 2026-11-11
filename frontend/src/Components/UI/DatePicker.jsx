@@ -255,6 +255,7 @@ export const DatePicker = ({
   style,
   size = "middle",
   allowClear = true,
+  error = false,
   ...props
 }) => {
   const selectedDate = parseToDate(value);
@@ -287,7 +288,9 @@ export const DatePicker = ({
       <div
         ref={ref}
         onClick={!disabled ? onClick : undefined}
-        className={`group relative flex items-center justify-between w-full rounded-lg border border-gray-300 bg-white px-3 transition-all cursor-pointer hover:border-[#1a4d2e] focus-within:border-[#1a4d2e] focus-within:ring-2 focus-within:ring-[#1a4d2e]/15 ${
+        className={`group relative flex items-center justify-between w-full rounded-lg border ${
+          error ? "border-red-500 ring-1 ring-red-500" : "border-gray-300"
+        } bg-white px-3 transition-all cursor-pointer hover:border-[#1a4d2e] focus-within:border-[#1a4d2e] focus-within:ring-2 focus-within:ring-[#1a4d2e]/15 ${
           sizeClasses[size] || sizeClasses.middle
         } ${disabled ? "bg-gray-100 opacity-60 cursor-not-allowed" : ""} ${className}`}
         style={style}
@@ -348,6 +351,7 @@ export const RangePicker = ({
   placeholder = ["Start date", "End date"],
   disabledDate,
   allowClear = true,
+  error = false,
   ...props
 }) => {
   const initialStart = Array.isArray(value) && value[0] ? parseToDate(value[0]) : null;
@@ -403,7 +407,9 @@ export const RangePicker = ({
       <div
         ref={ref}
         onClick={!disabled ? onClick : undefined}
-        className={`group relative flex items-center justify-between w-full rounded-lg border border-gray-300 bg-white px-3 transition-all cursor-pointer hover:border-[#1a4d2e] focus-within:border-[#1a4d2e] focus-within:ring-2 focus-within:ring-[#1a4d2e]/15 ${
+        className={`group relative flex items-center justify-between w-full rounded-lg border ${
+          error ? "border-red-500 ring-1 ring-red-500" : "border-gray-300"
+        } bg-white px-3 transition-all cursor-pointer hover:border-[#1a4d2e] focus-within:border-[#1a4d2e] focus-within:ring-2 focus-within:ring-[#1a4d2e]/15 ${
           sizeClasses[size] || sizeClasses.middle
         } ${disabled ? "bg-gray-100 opacity-60 cursor-not-allowed" : ""} ${className}`}
         style={style}
@@ -466,6 +472,8 @@ export const RangePicker = ({
   );
 };
 
+DatePicker.displayName = "CustomDatePicker";
+RangePicker.displayName = "CustomRangePicker";
 DatePicker.RangePicker = RangePicker;
 
 export default DatePicker;

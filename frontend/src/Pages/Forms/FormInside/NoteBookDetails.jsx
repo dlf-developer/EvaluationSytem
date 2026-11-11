@@ -472,6 +472,51 @@ const NoteBookDetails = () => {
       .validateFields()
       .then(async (values) => {
         const mergedData = { ...formData, ...values };
+
+        // Step-specific strict checks
+        if (currStep === 0) {
+          if (!mergedData.className || !mergedData.Section || !mergedData.Subject) {
+            message.error("Please complete all class details before proceeding.");
+            return;
+          }
+          if (
+            mergedData.ClassStrength === undefined ||
+            mergedData.ClassStrength === null ||
+            mergedData.ClassStrength === "" ||
+            mergedData.NotebooksSubmitted === undefined ||
+            mergedData.NotebooksSubmitted === null ||
+            mergedData.NotebooksSubmitted === ""
+          ) {
+            message.error("Please provide valid student & notebook count details.");
+            return;
+          }
+        } else if (currStep === 1) {
+          const sections = [
+            { key: "maintenanceOfNotebooks", count: 6 },
+            { key: "qualityOfOppurtunities", count: 4 },
+            { key: "qualityOfTeacherFeedback", count: 4 },
+            { key: "qualityOfLearner", count: 2 },
+          ];
+          let totalAnswered = 0;
+          sections.forEach((s) => {
+            const list = mergedData[s.key];
+            if (Array.isArray(list)) {
+              list.forEach((item) => {
+                if (item?.answer !== undefined && item?.answer !== null && item?.answer !== "") {
+                  totalAnswered++;
+                }
+              });
+            }
+          });
+
+          if (totalAnswered < 16) {
+            message.error(
+              `Please evaluate all 16 notebook criteria (${totalAnswered}/16 completed) before submitting.`
+            );
+            return;
+          }
+        }
+
         setFormData(mergedData);
 
         const isLastStep = currStep >= steps.length - 1;

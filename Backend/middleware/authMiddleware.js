@@ -93,17 +93,23 @@ const authMiddleware = async (req, res, next) => {
             });
         }
 
-        // 4. Dual-Role Resolution
+        // 4. Dual-Role Privilege Resolution (OT is strictly an Observer privilege)
         const activeRoleHeader = req.header('x-active-role');
+        const normalizedAccess = user?.access === 'OT' ? 'Observer' : (user?.access || decoded.access);
         const isDual =
-            user?.isDualRole === true ||
-            user?.isDualRole === 'true' ||
-            (Array.isArray(user?.roles) && user.roles.includes('Observer') && user.roles.includes('Teacher'));
+            normalizedAccess === 'Observer' &&
+            (user?.isDualRole === true ||
+                user?.isDualRole === 'true' ||
+                user?.access === 'OT' ||
+                (Array.isArray(user?.roles) && user.roles.includes('Observer') && user.roles.includes('Teacher')));
+
+        req.user.access = normalizedAccess;
+        req.user.isDualRole = isDual;
 
         if (isDual && activeRoleHeader && ['Teacher', 'Observer'].includes(activeRoleHeader)) {
             req.user.activeRole = activeRoleHeader;
         } else {
-            req.user.activeRole = user?.access || decoded.access;
+            req.user.activeRole = normalizedAccess;
         }
 
         next();

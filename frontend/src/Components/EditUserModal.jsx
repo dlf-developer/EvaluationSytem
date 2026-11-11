@@ -14,6 +14,7 @@ import { useDispatch } from "react-redux";
 import { UpdateUser } from "../redux/userSlice";
 import { UserRoleBadge } from "./SmartTable/tableColumns";
 import { EditOutlined, SaveOutlined } from "./UI/Icons";
+import { buildUserRolePayload, isDualRoleUser, normalizeUserAccess } from "../Utils/auth";
 
 const { Option } = Select;
 
@@ -26,23 +27,21 @@ function EditUserModal({ open, user, onCancel, onSuccess }) {
 
   useEffect(() => {
     if (user && open) {
+      const normalizedAccess = normalizeUserAccess(user?.access) || "Observer";
+      const isObserver = normalizedAccess === "Observer";
       form.setFieldsValue({
         employeeId: user?.employeeId || "",
         name: user?.name || "",
         email: user?.email || "",
         mobile: user?.mobile || "",
-        access: user?.access || "Observer",
-        isDualRole: Boolean(
-          user?.isDualRole === true ||
-            user?.isDualRole === "true" ||
-            (Array.isArray(user?.roles) &&
-              user.roles.includes("Observer") &&
-              user.roles.includes("Teacher"))
-        ),
-        canAddNotebookComment: Boolean(
-          user?.canAddNotebookComment === true ||
-          user?.canAddNotebookComment === "true"
-        ),
+        access: normalizedAccess,
+        isDualRole: isObserver && isDualRoleUser(user),
+        canAddNotebookComment:
+          isObserver &&
+          Boolean(
+            user?.canAddNotebookComment === true ||
+              user?.canAddNotebookComment === "true"
+          ),
         isActive: user?.isActive !== false,
         designation: user?.designation || "",
         sclass: user?.sclass || "",
@@ -57,23 +56,28 @@ function EditUserModal({ open, user, onCancel, onSuccess }) {
     }
   }, [user, open, form]);
 
-  const currentRole = selectedAccess || user?.access;
-  const isObserverRole = currentRole === "Observer" || currentRole === "OT";
+  useEffect(() => {
+    if (open && selectedAccess && selectedAccess !== "Observer") {
+      form.setFieldsValue({
+        isDualRole: false,
+        canAddNotebookComment: false,
+      });
+    }
+  }, [open, selectedAccess, form]);
+
+  const currentRole = selectedAccess || normalizeUserAccess(user?.access);
+  const isObserverRole = currentRole === "Observer";
 
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
       setIsLoading(true);
-      const isObserver = values.access === "Observer" || values.access === "OT";
-      const isDualRole = isObserver && Boolean(values.isDualRole || values.access === "OT");
-      const canAddNotebookComment = isObserver && Boolean(values.canAddNotebookComment);
+      const rolePayload = buildUserRolePayload(values);
       await dispatch(
         UpdateUser({
           id: user?._id,
           ...values,
-          isDualRole,
-          canAddNotebookComment,
-          roles: isDualRole ? ["Observer", "Teacher"] : [values.access],
+          ...rolePayload,
           isActive: Boolean(values.isActive),
         })
       ).unwrap();
@@ -220,7 +224,6 @@ function EditUserModal({ open, user, onCancel, onSuccess }) {
                 <Select>
                   <Option value="Teacher">Teacher</Option>
                   <Option value="Observer">Observer</Option>
-                  <Option value="OT">OT (Dual Role)</Option>
                   <Option value="Superadmin">Superadmin</Option>
                 </Select>
               </Form.Item>
@@ -282,10 +285,10 @@ function EditUserModal({ open, user, onCancel, onSuccess }) {
                   <div className="p-3 rounded-xl border border-gray-200/90 bg-white hover:border-[#1a4d2e]/40 shadow-xs transition-all flex items-center justify-between gap-3 h-full">
                     <div className="pr-2">
                       <div className="text-xs font-semibold text-gray-900">
-                        Dual Role (OT)
+                        OT Privilege (Observer + Teacher)
                       </div>
                       <p className="text-[11px] text-gray-500 mt-0.5 leading-tight">
-                        Allows switching between Observer and Teacher modes
+                        Special privilege allowing this Observer to switch between Observer and Teacher modes
                       </p>
                     </div>
                     <Form.Item name="isDualRole" valuePropName="checked" className="mb-0 shrink-0">

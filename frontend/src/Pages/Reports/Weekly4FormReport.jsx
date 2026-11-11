@@ -30,7 +30,7 @@ function Weekly4FormReport() {
           }
         }
       } catch (error) {
-        message.error("Error fetching form data:", error);
+        message.error(error?.message || "Error fetching form data");
         if (isMounted) navigate("/weekly4form");
       }
     };

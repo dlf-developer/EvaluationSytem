@@ -15,6 +15,11 @@ import {
 } from "../../Components/UI";
 import { UserRole } from "../../config/config";
 import {
+  buildUserRolePayload,
+  isDualRoleUser,
+  normalizeUserAccess,
+} from "../../Utils/auth";
+import {
   Box,
   Flex,
   Heading,
@@ -84,11 +89,18 @@ const UserDetails = () => {
       [field]: error,
     }));
 
-    // Update modified data
-    setModifiedData((prevData) => ({
-      ...prevData,
-      [field]: value,
-    }));
+    // Update modified data (and clear Observer-only privileges if role leaves Observer)
+    setModifiedData((prevData) => {
+      const next = {
+        ...prevData,
+        [field]: value,
+      };
+      if (field === "access" && value !== "Observer") {
+        next.isDualRole = false;
+        next.canAddNotebookComment = false;
+      }
+      return next;
+    });
   };
 
   const validateField = (value, rules) => {
@@ -119,7 +131,29 @@ const UserDetails = () => {
     }
 
     try {
-      await dispatch(UpdateUser({ id, ...modifiedData }));
+      const normalizedUserAccess = normalizeUserAccess(userData?.access);
+      const userHasOTPrivilege =
+        normalizedUserAccess === "Observer" && isDualRoleUser(userData);
+      const payload = { id, ...modifiedData };
+      if (
+        payload.access !== undefined ||
+        payload.isDualRole !== undefined ||
+        payload.canAddNotebookComment !== undefined ||
+        userData?.access === "OT"
+      ) {
+        const rolePayload = buildUserRolePayload({
+          access: payload.access !== undefined ? payload.access : normalizedUserAccess,
+          isDualRole:
+            payload.isDualRole !== undefined ? payload.isDualRole : userHasOTPrivilege,
+          canAddNotebookComment:
+            payload.canAddNotebookComment !== undefined
+              ? payload.canAddNotebookComment
+              : userData?.canAddNotebookComment,
+        });
+        Object.assign(payload, rolePayload);
+      }
+
+      await dispatch(UpdateUser(payload));
       message.success("User details updated successfully.");
       setLoading(true);
       const res = await dispatch(GetSignleUser(id));
@@ -173,6 +207,17 @@ const UserDetails = () => {
       </Flex>
     );
   }
+
+  const normalizedUserAccess = normalizeUserAccess(userData.access);
+  const userHasOTPrivilege =
+    normalizedUserAccess === "Observer" && isDualRoleUser(userData);
+  const currentEditAccess =
+    modifiedData.access !== undefined ? modifiedData.access : normalizedUserAccess;
+  const currentEditIsDualRole =
+    currentEditAccess === "Observer" &&
+    (modifiedData.isDualRole !== undefined
+      ? modifiedData.isDualRole
+      : userHasOTPrivilege);
 
   const renderRoleSpecificFields = (role) => {
     switch (role) {
@@ -338,11 +383,11 @@ const UserDetails = () => {
               </Badge>
               <Badge
                 colorScheme={
-                  userData.access === "Superadmin"
+                  normalizedUserAccess === "Superadmin"
                     ? "purple"
-                    : userData.isDualRole
+                    : userHasOTPrivilege
                       ? "teal"
-                      : userData.access === "Teacher"
+                      : normalizedUserAccess === "Teacher"
                         ? "green"
                         : "blue"
                 }
@@ -351,13 +396,13 @@ const UserDetails = () => {
                 borderRadius="full"
                 fontSize="sm"
               >
-                {userData.isDualRole
-                  ? "OT (Observer & Teacher)"
-                  : userData.access === "Teacher"
+                {userHasOTPrivilege
+                  ? "Observer (OT Privilege)"
+                  : normalizedUserAccess === "Teacher"
                     ? "T (Teacher)"
-                    : userData.access === "Observer"
+                    : normalizedUserAccess === "Observer"
                       ? "O (Observer)"
-                      : userData.access}
+                      : normalizedUserAccess}
               </Badge>
             </HStack>
           </Flex>
@@ -425,7 +470,7 @@ const UserDetails = () => {
             <Descriptions.Item label="Access Level">
               {editStatus ? (
                 <AntdSelect
-                  value={modifiedData.access || userData.access}
+                  value={currentEditAccess}
                   onChange={(val) => handleFieldChange("access", val, {})}
                   style={{ width: "100%" }}
                   options={[
@@ -435,33 +480,28 @@ const UserDetails = () => {
                   ]}
                 />
               ) : (
-                userData.access || "N/A"
+                normalizedUserAccess || "N/A"
               )}
             </Descriptions.Item>
-            {((modifiedData.access !== undefined ? modifiedData.access : userData.access) === "Observer" ||
-              (modifiedData.access !== undefined ? modifiedData.access : userData.access) === "OT") && (
+            {currentEditAccess === "Observer" && (
               <>
-                <Descriptions.Item label="Dual Role (OT)">
+                <Descriptions.Item label="OT Privilege (Dual Role)">
                   {editStatus ? (
                     <AntdSelect
-                      value={
-                        modifiedData.isDualRole !== undefined
-                          ? modifiedData.isDualRole
-                          : Boolean(userData.isDualRole)
-                      }
+                      value={currentEditIsDualRole}
                       onChange={(val) => handleFieldChange("isDualRole", val, {})}
                       style={{ width: "100%" }}
                       options={[
-                        { value: true, label: "Enabled (OT - Observer & Teacher)" },
-                        { value: false, label: "Disabled (Single Role)" },
+                        { value: true, label: "Enabled (Observer with Teacher Privilege)" },
+                        { value: false, label: "Disabled (Observer Only)" },
                       ]}
                     />
                   ) : (
                     <Tag
-                      colorScheme={userData.isDualRole ? "teal" : "gray"}
-                      variant={userData.isDualRole ? "solid" : "subtle"}
+                      colorScheme={userHasOTPrivilege ? "teal" : "gray"}
+                      variant={userHasOTPrivilege ? "solid" : "subtle"}
                     >
-                      {userData.isDualRole ? "OT Enabled" : "Disabled"}
+                      {userHasOTPrivilege ? "OT Privilege Enabled" : "Disabled"}
                     </Tag>
                   )}
                 </Descriptions.Item>
@@ -523,7 +563,7 @@ const UserDetails = () => {
                 {},
               )}
             </Descriptions.Item>
-            {renderRoleSpecificFields(userData.access)}
+            {renderRoleSpecificFields(normalizedUserAccess)}
             <Descriptions.Item label="Class">
               {renderEditableField("Class", userData.sclass, "sclass", {})}
             </Descriptions.Item>

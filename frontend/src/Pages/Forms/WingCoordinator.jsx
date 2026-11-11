@@ -70,8 +70,7 @@ function WingCoordinator() {
             message.success("Form deleted successfully");
             dispatch(GetWingFrom(id));
           } else {
-            message.success("Form deleted successfully");
-            dispatch(GetWingFrom(id));
+            message.error(res?.message || "Failed to delete form");
           }
         } catch (error) {
           message.error("An error occurred while deleting");
