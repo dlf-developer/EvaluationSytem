@@ -25,6 +25,7 @@ import {
   BarChart3,
   Sparkles,
   History,
+  BookOpenCheck,
 } from "lucide-react";
 import {
   Box,
@@ -63,6 +64,8 @@ const iconMap = {
   "Analytics & Insights (Dev)": BarChart3,
   "Audit Logs": History,
   "Growth Portfolio (Dev)": Sparkles,
+  "Best Practices": BookOpenCheck,
+  "Best Practices for Teachers": BookOpenCheck,
 };
 
 function Sidebar({ collapsed, onCloseDrawer }) {

@@ -48,6 +48,7 @@ import Weely4Form from "../Pages/Forms/Weely4Form";
 import NoteBookInisiate from "../Pages/Observer/NoteBookInisiate";
 import Weekly4FormReport from "../Pages/Reports/Weekly4FormReport";
 import Fortnightly from "../Pages/Admin/Fortnightly";
+import BestPractices from "../Pages/BestPractices/BestPractices";
 import ClassRoom from "../Pages/Admin/ClassRoom";
 import NoteBook from "../Pages/Admin/NootBook";
 import Weekly from "../Pages/Admin/Weekly";
@@ -148,6 +149,7 @@ const protects = {
           element: <NotebookComplete />,
         },
         { path: "/my-portfolio", element: <TeacherPortfolio /> },
+        { path: "/best-practices", element: <BestPractices /> },
         { path: "*", element: <NotFound404 /> },
       ],
     },
@@ -242,6 +244,7 @@ const protects = {
         { path: "/class-section", element: <ClassSectionPage /> },
         { path: "/audit-logs", element: <AuditLogs /> },
         { path: "/analytics-insights", element: <ExecutiveAnalytics /> },
+        { path: "/best-practices", element: <BestPractices /> },
         { path: "*", element: <NotFound404 /> },
       ],
     },

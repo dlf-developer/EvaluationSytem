@@ -86,6 +86,12 @@ export const Menu = {
       route: "/audit-logs",
       icon: <HistoryOutlined />,
     },
+    { label: "Resources" },
+    {
+      name: "Best Practices",
+      route: "/best-practices",
+      icon: <BookFilled />,
+    },
   ],
   Observer: [
     { name: "Dashboard", route: "/dashboard", icon: <AppstoreAddOutlined /> },
@@ -167,6 +173,12 @@ export const Menu = {
       name: "Learning Progress Checklist",
       route: "/weekly4form",
       icon: <DatabaseFilled />,
+    },
+    { label: "Resources" },
+    {
+      name: "Best Practices",
+      route: "/best-practices",
+      icon: <BookFilled />,
     },
     ...(isLocalDev()
       ? [

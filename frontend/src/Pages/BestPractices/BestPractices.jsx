@@ -1,0 +1,1799 @@
+import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { createPortal } from "react-dom";
+import {
+  Search,
+  Bookmark,
+  Clock,
+  Compass,
+  Image as ImageIcon,
+  Play,
+  CheckCircle2,
+  Target,
+  Lightbulb,
+  Award,
+  Share2,
+  Check,
+  X,
+  ChevronRight,
+  ChevronLeft,
+  ChevronDown,
+  ChevronUp,
+  SlidersHorizontal,
+  Filter,
+  ArrowRight,
+  Sparkles,
+  Layers,
+  GraduationCap,
+  RotateCcw,
+  BookOpen,
+  Info,
+  Plus,
+} from "lucide-react";
+import {
+  THEME_CONFIG,
+  FILTER_OPTIONS,
+} from "./bestPracticesData";
+import { getUserId } from "../../Utils/auth";
+import {
+  fetchAllBestPractices,
+  createBestPracticeApi,
+} from "../../redux/bestPracticesApi";
+import AddBestPracticeModal from "./AddBestPracticeModal";
+
+// Helper to get initials from teacher name (strips prefixes like Dr., Ms., Mr.)
+const getTeacherInitials = (name = "") => {
+  const clean = name.replace(/^(Ms\.|Mr\.|Dr\.)\s*/i, "").trim();
+  const parts = clean.split(/\s+/);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+};
+
+// Helper for theme styling
+const getThemeStyle = (themeName) => {
+  const conf = THEME_CONFIG[themeName];
+  if (conf) {
+    return {
+      color: conf.color,
+      backgroundColor: conf.bg,
+      borderColor: conf.border,
+    };
+  }
+  return {
+    color: "#4A6741",
+    backgroundColor: "rgba(74, 103, 65, 0.10)",
+    borderColor: "rgba(74, 103, 65, 0.25)",
+  };
+};
+
+const STEP_LABELS = [
+  "Set the Stage",
+  "Get Started",
+  "Core Activity",
+  "Wrap Up & Reflect",
+  "Extension & Follow-up",
+];
+
+// Accessible custom-styled checkbox row aligned with DLF Brand Theme (#4A6741)
+// NOTE: outer element is a <div> (not <label>) to bypass Bootstrap's
+// global `label { display: inline-block }` rule that collapses flex layout.
+const FilterOptionRow = ({ label, count, isChecked, onToggle }) => (
+  <div
+    role="checkbox"
+    aria-checked={isChecked}
+    tabIndex={0}
+    onClick={onToggle}
+    onKeyDown={(e) => {
+      if (e.key === " " || e.key === "Enter") {
+        e.preventDefault();
+        onToggle();
+      }
+    }}
+    style={{
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      width: "100%",
+      boxSizing: "border-box",
+      cursor: "pointer",
+      userSelect: "none",
+    }}
+    className={`group transition-all rounded-xl text-xs px-3 py-2.5 focus-visible:ring-2 focus-visible:ring-[#4A6741]/40 focus-visible:outline-none ${
+      isChecked
+        ? "bg-[#4A6741]/10 border border-[#4A6741] text-[#1F2E1B] font-semibold"
+        : "bg-white/90 border border-stone-200 text-[#2D2A26] hover:border-[#4A6741]/50 hover:bg-[#F5F0E8]/50"
+    }`}
+  >
+    {/* Hidden real checkbox for screen-reader semantics */}
+    <input
+      type="checkbox"
+      checked={isChecked}
+      onChange={onToggle}
+      aria-label={label}
+      tabIndex={-1}
+      className="sr-only"
+    />
+
+    {/* Left: custom visual checkbox + label text */}
+    <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0, flex: "1 1 auto" }}>
+      <div
+        style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0, width: "16px", height: "16px" }}
+        className={`rounded-md transition-all ${
+          isChecked
+            ? "bg-[#4A6741] border border-[#4A6741]"
+            : "border border-stone-400 bg-white group-hover:border-[#4A6741]"
+        }`}
+      >
+        {isChecked && <Check className="w-2.5 h-2.5 text-white stroke-[3]" />}
+      </div>
+      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} className="text-xs font-medium" title={label}>
+        {label}
+      </span>
+    </div>
+
+    {/* Right: count badge — stays inline because parent is a <div>, not <label> */}
+    <span
+      style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginLeft: "6px", lineHeight: 1 }}
+      className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full transition-colors ${
+        isChecked
+          ? "bg-[#4A6741] text-white"
+          : "bg-stone-100 text-stone-500 group-hover:bg-stone-200"
+      }`}
+    >
+      {count}
+    </span>
+  </div>
+);
+
+export default function BestPractices() {
+  const userData = getUserId();
+  const isAdmin = userData?.access === "Superadmin";
+
+  // All data comes from the database — no static fallback
+  const [practicesList, setPracticesList] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
+
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+
+  useEffect(() => {
+    setIsLoading(true);
+    setLoadError(null);
+    fetchAllBestPractices()
+      .then((list) => {
+        setPracticesList(Array.isArray(list) ? list : []);
+      })
+      .catch((err) => {
+        console.error("[BestPractices] Failed to load from API:", err.message);
+        setLoadError("Could not load practices. Please check your connection and try again.");
+      })
+      .finally(() => setIsLoading(false));
+  }, []);
+
+  // State
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeFilters, setActiveFilters] = useState({
+    grade: [],
+    pedagogy: [],
+    theme: [],
+    atype: [],
+    nep: [],
+  });
+  const [onlyBookmarks, setOnlyBookmarks] = useState(false);
+  const [isFilterAccordionOpen, setIsFilterAccordionOpen] = useState(false);
+
+  // Selected practice for modal
+  const [selectedPractice, setSelectedPractice] = useState(null);
+  const [activeTab, setActiveTab] = useState(0); // 0: Overview, 1: Implementation, 2: NEP & Impact
+
+  // Lightbox state for images
+  const [lightboxIndex, setLightboxIndex] = useState(null);
+
+  // Feedback toast for link copied
+  const [copiedLink, setCopiedLink] = useState(false);
+
+  // Persistence: Bookmarks & Explored IDs
+  const [bookmarks, setBookmarks] = useState(() => {
+    try {
+      const saved = localStorage.getItem("dlf_teacher_bp_bookmarks");
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [explored, setExplored] = useState(() => {
+    try {
+      const saved = localStorage.getItem("dlf_teacher_bp_explored");
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  // Save bookmarks
+  const toggleBookmark = useCallback((id, e) => {
+    if (e) e.stopPropagation();
+    setBookmarks((prev) => {
+      const next = prev.includes(id)
+        ? prev.filter((item) => item !== id)
+        : [...prev, id];
+      try {
+        localStorage.setItem("dlf_teacher_bp_bookmarks", JSON.stringify(next));
+      } catch {
+        // storage quota fallback
+      }
+      return next;
+    });
+  }, []);
+
+  // Mark explored on opening modal
+  const handleOpenPractice = useCallback((practice) => {
+    setSelectedPractice(practice);
+    setActiveTab(0);
+    setLightboxIndex(null);
+    setExplored((prev) => {
+      if (prev.includes(practice.id)) return prev;
+      const next = [...prev, practice.id];
+      try {
+        localStorage.setItem("dlf_teacher_bp_explored", JSON.stringify(next));
+      } catch {
+        // fallback
+      }
+      return next;
+    });
+
+    try {
+      window.history.replaceState(null, "", `#practice-${practice.id}`);
+    } catch {
+      // fallback
+    }
+  }, []);
+
+  const handleClosePractice = useCallback(() => {
+    setSelectedPractice(null);
+    setLightboxIndex(null);
+    try {
+      const cleanUrl = window.location.pathname + window.location.search;
+      window.history.replaceState(null, "", cleanUrl);
+    } catch {
+      // fallback
+    }
+  }, []);
+
+  // Sync hash on initial load
+  useEffect(() => {
+    const handleHash = () => {
+      const hash = window.location.hash;
+      const match = hash.match(/^#practice-(\d+)$/);
+      if (match) {
+        const id = parseInt(match[1], 10);
+        const p = practicesList.find((item) => item.id === id);
+        if (p) {
+          handleOpenPractice(p);
+        }
+      }
+    };
+
+    handleHash();
+    window.addEventListener("hashchange", handleHash);
+    return () => window.removeEventListener("hashchange", handleHash);
+  }, [handleOpenPractice, practicesList]);
+
+  // Keyboard accessibility: ESC closes modal or lightbox
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        if (lightboxIndex !== null) {
+          setLightboxIndex(null);
+        } else if (selectedPractice) {
+          handleClosePractice();
+        }
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [lightboxIndex, selectedPractice, handleClosePractice]);
+
+  // Lock background scroll when modal or lightbox is active
+  useEffect(() => {
+    if (selectedPractice || isAddModalOpen || lightboxIndex !== null) {
+      const originalBodyOverflow = document.body.style.overflow;
+      const originalHtmlOverflow = document.documentElement.style.overflow;
+      document.body.style.overflow = "hidden";
+      document.documentElement.style.overflow = "hidden";
+
+      // Also lock any scrolling main container in layout if present
+      const mainEl = document.querySelector("main") || document.querySelector('[role="main"]');
+      const originalMainOverflow = mainEl ? mainEl.style.overflow : "";
+      if (mainEl) {
+        mainEl.style.overflow = "hidden";
+      }
+
+      return () => {
+        document.body.style.overflow = originalBodyOverflow;
+        document.documentElement.style.overflow = originalHtmlOverflow;
+        if (mainEl) {
+          mainEl.style.overflow = originalMainOverflow;
+        }
+      };
+    }
+  }, [selectedPractice, isAddModalOpen, lightboxIndex]);
+
+  // Copy shareable link
+  const handleCopyLink = useCallback(() => {
+    if (!selectedPractice) return;
+    const url = `${window.location.origin}${window.location.pathname}#practice-${selectedPractice.id}`;
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard
+        .writeText(url)
+        .then(() => {
+          setCopiedLink(true);
+          setTimeout(() => setCopiedLink(false), 2000);
+        })
+        .catch(() => {});
+    }
+  }, [selectedPractice]);
+
+  // Major grades for top quick-filter tabs
+  const MAJOR_GRADES = useMemo(
+    () => [
+      "All Grades",
+      "Pre-primary",
+      "Primary (I–V)",
+      "Middle (VI–VIII)",
+      "Secondary (IX–X)",
+      "Sr. Secondary (XI–XII)",
+      "Whole School",
+    ],
+    []
+  );
+
+  const handleSelectGradeTab = (gradeOpt) => {
+    if (gradeOpt === "All Grades") {
+      setActiveFilters((prev) => ({ ...prev, grade: [] }));
+    } else {
+      setActiveFilters((prev) => {
+        const exists = prev.grade.includes(gradeOpt);
+        return {
+          ...prev,
+          grade: exists
+            ? prev.grade.filter((g) => g !== gradeOpt)
+            : [...prev.grade, gradeOpt],
+        };
+      });
+    }
+  };
+
+  // Toggle filter item
+  const handleToggleFilter = (category, value) => {
+    setActiveFilters((prev) => {
+      const list = prev[category] || [];
+      const exists = list.includes(value);
+      return {
+        ...prev,
+        [category]: exists
+          ? list.filter((item) => item !== value)
+          : [...list, value],
+      };
+    });
+  };
+
+  // Clear all filters
+  const handleClearAllFilters = () => {
+    setActiveFilters({
+      grade: [],
+      pedagogy: [],
+      theme: [],
+      atype: [],
+      nep: [],
+    });
+    setSearchQuery("");
+    setOnlyBookmarks(false);
+  };
+
+  // Check how many active filters
+  const totalActiveFilterCount = useMemo(() => {
+    const fromCats = Object.values(activeFilters).reduce(
+      (acc, arr) => acc + arr.length,
+      0
+    );
+    return fromCats + (onlyBookmarks ? 1 : 0) + (searchQuery.trim() ? 1 : 0);
+  }, [activeFilters, onlyBookmarks, searchQuery]);
+
+  // Filter logic
+  const filteredPractices = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+
+    return practicesList.filter((p) => {
+      // Bookmark filter
+      if (onlyBookmarks && !bookmarks.includes(p.id)) {
+        return false;
+      }
+
+      // Filter groups
+      for (const [key, selectedVals] of Object.entries(activeFilters)) {
+        if (selectedVals.length > 0) {
+          const practiceVals = p[key] || [];
+          const matchesAny = selectedVals.some((val) =>
+            practiceVals.includes(val)
+          );
+          if (!matchesAny) return false;
+        }
+      }
+
+      // Search query across all core fields
+      if (query) {
+        const searchable = [
+          p.title,
+          p.teacher,
+          p.brief,
+          p.lo,
+          p.tlp,
+          p.resources,
+          p.atool_text,
+          p.evid_text,
+          p.remedial_text,
+          p.refs,
+          p.ksf,
+          ...(p.grade || []),
+          ...(p.theme || []),
+          ...(p.pedagogy || []),
+          ...(p.nep || []),
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+
+        if (!searchable.includes(query)) return false;
+      }
+
+      return true;
+    });
+  }, [searchQuery, activeFilters, onlyBookmarks, bookmarks, practicesList]);
+
+  // Counts for each filter option
+  const filterCounts = useMemo(() => {
+    const counts = {};
+    for (const [cat, options] of Object.entries(FILTER_OPTIONS)) {
+      counts[cat] = {};
+      for (const opt of options) {
+        counts[cat][opt] = practicesList.filter((p) =>
+          (p[cat] || []).includes(opt)
+        ).length;
+      }
+    }
+    return counts;
+  }, [practicesList]);
+
+  // Progress metrics
+  const exploredCount = useMemo(() => {
+    return explored.filter((id) => practicesList.some((p) => p.id === id)).length;
+  }, [explored, practicesList]);
+
+  const progressPercent = Math.round(
+    practicesList.length > 0 ? (exploredCount / practicesList.length) * 100 : 0
+  );
+
+  // Split TLP text into structured steps
+  const parsedSteps = useMemo(() => {
+    if (!selectedPractice?.tlp) return [];
+    const tlp = selectedPractice.tlp.trim();
+
+    // Check for explicit double-newlines or step breaks
+    const rawBlocks = tlp.split(/\n\s*\n/).map((b) => b.trim()).filter(Boolean);
+    if (rawBlocks.length >= 2) {
+      return rawBlocks;
+    }
+
+    // Try splitting by numbered list e.g. "1. ", "2. "
+    const lines = tlp.split(/\n/).map((l) => l.trim()).filter(Boolean);
+    if (lines.length >= 3) {
+      return lines;
+    }
+
+    // Fallback: split by sentences
+    const sentences = tlp
+      .split(/(?<=[.!?])\s+/)
+      .map((s) => s.trim())
+      .filter((s) => s.length > 25);
+    return sentences.length > 0 ? sentences : [tlp];
+  }, [selectedPractice]);
+
+  // Parse learning objectives
+  const parsedObjectives = useMemo(() => {
+    if (!selectedPractice?.lo) return [];
+    const raw = selectedPractice.lo
+      .replace(/^Students will be able to:[\s]*/i, "")
+      .trim();
+
+    return raw
+      .split(/\n/)
+      .map((line) => line.replace(/^\d+[.)]\s*/, "").replace(/^•\s*/, "").trim())
+      .filter(Boolean);
+  }, [selectedPractice]);
+
+  // Related practices
+  const relatedPractices = useMemo(() => {
+    if (!selectedPractice) return [];
+    const pThemes = selectedPractice.theme || [];
+    const pGrades = selectedPractice.grade || [];
+
+    return practicesList.filter(
+      (p) =>
+        p.id !== selectedPractice.id &&
+        ((p.theme || []).some((t) => pThemes.includes(t)) ||
+          (p.grade || []).some((g) => pGrades.includes(g)))
+    ).slice(0, 4);
+  }, [selectedPractice, practicesList]);
+
+  const handleAddPractice = async (formData) => {
+    try {
+      const apiResult = await createBestPracticeApi(formData);
+      if (!apiResult || !apiResult.id) {
+        throw new Error("Failed to save best practice to the database.");
+      }
+
+      setPracticesList((prev) => [
+        apiResult,
+        ...(Array.isArray(prev)
+          ? prev.filter((p) => p && p.id !== apiResult.id)
+          : []),
+      ]);
+      handleOpenPractice(apiResult);
+    } catch (err) {
+      console.error("Failed to add best practice:", err);
+      alert("Failed to save best practice to the database. Please check your connection and try again.");
+    }
+  };
+
+  return (
+    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 md:px-8 lg:px-10 py-6 md:py-8 text-[#2D2A26] space-y-6">
+      {/* ── Top Header Section (Naturally Blends with Background) ─ */}
+      <div>
+        <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 pb-6">
+          <div className="max-w-2xl">
+            <h1 className="text-2xl md:text-3xl lg:text-4xl font-extrabold text-[#2D2A26] tracking-tight">
+              Best Practices for Teachers
+            </h1>
+            <p className="mt-2 text-sm md:text-base text-[#5C5852] leading-relaxed">
+              Curated pedagogical practices, classroom strategies, and NEP 2020 aligned learning activities developed and practiced by DLF Public School educators.
+            </p>
+          </div>
+
+          {/* Progress Tracker Card - soft translucent parchment surface */}
+          <div className="bg-white/70 backdrop-blur-xs rounded-2xl p-4 md:p-5 border border-stone-200/80 flex flex-col justify-center min-w-[240px] shadow-2xs">
+            <div className="flex items-center justify-between text-xs font-semibold text-[#4A6741] mb-2">
+              <span className="flex items-center gap-1.5">
+                <Compass className="w-4 h-4" />
+                Explored Repository
+              </span>
+              <span className="font-bold">{progressPercent}%</span>
+            </div>
+            <div className="w-full h-2.5 bg-stone-200/80 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-[#4A6741] rounded-full transition-all duration-500 ease-out"
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
+            <div className="mt-2 text-xs text-[#5C5852] text-right font-medium">
+              {exploredCount} of {practicesList.length} practices reviewed
+            </div>
+          </div>
+        </div>
+
+        {/* ── Search & Actions Bar (Blends Seamlessly with BG) ─── */}
+        <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 pt-2">
+          {/* Search Input */}
+          <div className="relative flex-1 flex items-center">
+            <div className="absolute left-4 inset-y-0 flex items-center pointer-events-none text-stone-400">
+              <Search className="w-4 h-4" />
+            </div>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search practices, teachers, pedagogy, topics, keywords..."
+              className="w-full pl-11 pr-11 py-3 bg-white/90 border border-stone-200/90 rounded-2xl text-sm text-[#2D2A26] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#4A6741]/30 focus:border-[#4A6741] focus:bg-white shadow-2xs transition"
+            />
+            {searchQuery && (
+              <div className="absolute right-3.5 inset-y-0 flex items-center">
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  className="text-gray-400 hover:text-gray-600 p-1 rounded-md"
+                  title="Clear search"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Bookmarks Filter Button */}
+          <button
+            type="button"
+            onClick={() => setOnlyBookmarks((prev) => !prev)}
+            className={`inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl text-sm font-semibold transition border cursor-pointer select-none shadow-2xs ${
+              onlyBookmarks
+                ? "bg-[#4A6741] text-white border-[#4A6741] shadow-xs"
+                : "bg-white/90 text-[#2D2A26] border-stone-200/90 hover:bg-white hover:border-stone-300"
+            }`}
+          >
+            <Bookmark className={`w-4 h-4 ${onlyBookmarks ? "fill-current" : ""}`} />
+            <span>Saved Practices</span>
+            <span
+              className={`px-2 py-0.5 text-xs rounded-full font-bold ${
+                onlyBookmarks
+                  ? "bg-white/20 text-white"
+                  : "bg-stone-100 text-[#5C5852]"
+              }`}
+            >
+              {bookmarks.length}
+            </span>
+          </button>
+
+          {/* Admin Add Best Practice Action */}
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={() => setIsAddModalOpen(true)}
+              className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl text-sm font-semibold bg-[#4A6741] text-white hover:bg-[#2D3E27] transition shadow-xs shrink-0 cursor-pointer select-none"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add Best Practice</span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* ── Top Major Filters & Accordion Toggle Bar ─────────── */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pt-1">
+        {/* Major Filter: Quick Grade Tabs */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 lg:pb-0 scrollbar-none">
+          <span className="text-xs font-bold uppercase tracking-wider text-[#64748B] shrink-0 mr-1 hidden sm:inline-flex items-center gap-1.5">
+            <Layers className="w-3.5 h-3.5 text-[#4A6741]" />
+            <span>Grades:</span>
+          </span>
+
+          {MAJOR_GRADES.map((gradeOpt) => {
+            const isAll = gradeOpt === "All Grades";
+            const isSelected = isAll
+              ? activeFilters.grade.length === 0
+              : activeFilters.grade.includes(gradeOpt);
+            const count = isAll
+              ? practicesList.length
+              : filterCounts.grade[gradeOpt] || 0;
+
+            return (
+              <button
+                key={gradeOpt}
+                type="button"
+                onClick={() => handleSelectGradeTab(gradeOpt)}
+                className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition cursor-pointer select-none border shadow-2xs ${
+                  isSelected
+                    ? "bg-[#4A6741] text-white border-[#4A6741] shadow-xs"
+                    : "bg-white/80 text-[#334155] border-stone-200/80 hover:bg-white hover:border-stone-300"
+                }`}
+              >
+                <span>{gradeOpt}</span>
+                <span
+                  className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                    isSelected
+                      ? "bg-white/20 text-white"
+                      : "bg-stone-100 text-gray-500"
+                  }`}
+                >
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Accordion Expand Button & Quick Reset */}
+        <div className="flex items-center gap-2.5 self-end lg:self-auto shrink-0">
+          {totalActiveFilterCount > 0 && (
+            <button
+              type="button"
+              onClick={handleClearAllFilters}
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-[#4A6741] hover:text-[#2D3E27] hover:bg-[#4A6741]/10 rounded-xl transition cursor-pointer"
+              title="Reset all applied filters"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Reset</span>
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={() => setIsFilterAccordionOpen((prev) => !prev)}
+            aria-expanded={isFilterAccordionOpen}
+            className={`inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition border cursor-pointer select-none shadow-2xs ${
+              isFilterAccordionOpen || totalActiveFilterCount > 0
+                ? "bg-[#4A6741] text-white border-[#4A6741] shadow-xs"
+                : "bg-white/80 text-[#2D2A26] border-stone-200/80 hover:bg-white hover:border-stone-300"
+            }`}
+          >
+            <SlidersHorizontal className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <span>All Filters</span>
+            {totalActiveFilterCount > 0 && (
+              <span
+                className={`px-1.5 py-0.2 text-[11px] rounded-full font-bold ${
+                  isFilterAccordionOpen || totalActiveFilterCount > 0
+                    ? "bg-white/25 text-white"
+                    : "bg-[#4A6741] text-white"
+                }`}
+              >
+                {totalActiveFilterCount}
+              </span>
+            )}
+            <ChevronDown
+              className={`w-3.5 h-3.5 sm:w-4 sm:h-4 transition-transform duration-200 ${
+                isFilterAccordionOpen ? "rotate-180" : ""
+              }`}
+            />
+          </button>
+        </div>
+      </div>
+
+      {/* ── Full-Breadth Filter Accordion (Naturally Blended Panel) ─ */}
+      {isFilterAccordionOpen && (
+        <div className="w-full bg-[#FAF7F2]/90 backdrop-blur-md rounded-2xl border border-[#E5DECE] shadow-sm p-6 sm:p-8 my-5 transition-all animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-5 mb-6 border-b border-stone-200/80 gap-3">
+            <div>
+              <div className="flex items-center gap-2.5">
+                <Filter className="w-4 h-4 text-[#4A6741]" />
+                <h3 className="text-sm font-bold text-[#1E293B] uppercase tracking-wider">
+                  Filter by Pedagogical Dimensions
+                </h3>
+                {totalActiveFilterCount > 0 && (
+                  <span className="px-2.5 py-0.5 text-xs rounded-full font-bold bg-[#4A6741]/10 text-[#4A6741]">
+                    {totalActiveFilterCount} active
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-[#64748B] mt-1">
+                Select multiple attributes across grade levels, pedagogies, themes, and NEP 2020 parameters.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {totalActiveFilterCount > 0 && (
+                <button
+                  type="button"
+                  onClick={handleClearAllFilters}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#4A6741] hover:bg-[#4A6741]/10 rounded-lg transition"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Reset All</span>
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setIsFilterAccordionOpen(false)}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-gray-600 hover:bg-stone-200/60 rounded-lg transition"
+              >
+                <span>Collapse</span>
+                <ChevronUp className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* 4-Column Full-Breadth Grid with Generous Spacing */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            {/* Column 1: Grade Level */}
+            <div>
+              <h4 className="text-xs font-bold uppercase tracking-wider text-[#475569] mb-3.5 pb-1.5 border-b border-stone-200/80 flex items-center justify-between">
+                <span>Grade Level</span>
+                <span className="text-[10px] text-gray-400 font-normal">
+                  {FILTER_OPTIONS.grade.length} options
+                </span>
+              </h4>
+              <div className="space-y-2 max-h-64 overflow-y-auto p-1.5">
+                {FILTER_OPTIONS.grade.map((opt) => (
+                  <FilterOptionRow
+                    key={opt}
+                    label={opt}
+                    count={filterCounts.grade[opt] || 0}
+                    isChecked={activeFilters.grade.includes(opt)}
+                    onToggle={() => handleToggleFilter("grade", opt)}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Column 2: Pedagogical Approach */}
+            <div>
+              <h4 className="text-xs font-bold uppercase tracking-wider text-[#475569] mb-3.5 pb-1.5 border-b border-stone-200/80 flex items-center justify-between">
+                <span>Pedagogy</span>
+                <span className="text-[10px] text-gray-400 font-normal">
+                  {FILTER_OPTIONS.pedagogy.length} options
+                </span>
+              </h4>
+              <div className="space-y-2 max-h-64 overflow-y-auto p-1.5">
+                {FILTER_OPTIONS.pedagogy.map((opt) => (
+                  <FilterOptionRow
+                    key={opt}
+                    label={opt}
+                    count={filterCounts.pedagogy[opt] || 0}
+                    isChecked={activeFilters.pedagogy.includes(opt)}
+                    onToggle={() => handleToggleFilter("pedagogy", opt)}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Column 3: Focus Theme */}
+            <div>
+              <h4 className="text-xs font-bold uppercase tracking-wider text-[#475569] mb-3.5 pb-1.5 border-b border-stone-200/80 flex items-center justify-between">
+                <span>Core Theme</span>
+                <span className="text-[10px] text-gray-400 font-normal">
+                  {FILTER_OPTIONS.theme.length} options
+                </span>
+              </h4>
+              <div className="space-y-2 max-h-64 overflow-y-auto p-1.5">
+                {FILTER_OPTIONS.theme.map((opt) => (
+                  <FilterOptionRow
+                    key={opt}
+                    label={opt}
+                    count={filterCounts.theme[opt] || 0}
+                    isChecked={activeFilters.theme.includes(opt)}
+                    onToggle={() => handleToggleFilter("theme", opt)}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Column 4: Assessment & NEP 2020 */}
+            <div>
+              <h4 className="text-xs font-bold uppercase tracking-wider text-[#475569] mb-3.5 pb-1.5 border-b border-stone-200/80 flex items-center justify-between">
+                <span>NEP & Assessment</span>
+                <span className="text-[10px] text-gray-400 font-normal">
+                  {FILTER_OPTIONS.nep.length + FILTER_OPTIONS.atype.length} options
+                </span>
+              </h4>
+              <div className="space-y-2 max-h-64 overflow-y-auto p-1.5">
+                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider px-1 pt-1 pb-0.5">
+                  NEP 2020 Pillars
+                </div>
+                {FILTER_OPTIONS.nep.map((opt) => (
+                  <FilterOptionRow
+                    key={opt}
+                    label={opt}
+                    count={filterCounts.nep[opt] || 0}
+                    isChecked={activeFilters.nep.includes(opt)}
+                    onToggle={() => handleToggleFilter("nep", opt)}
+                  />
+                ))}
+
+                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider px-1 pt-3 pb-0.5">
+                  Assessment Types
+                </div>
+                {FILTER_OPTIONS.atype.map((opt) => (
+                  <FilterOptionRow
+                    key={opt}
+                    label={opt}
+                    count={filterCounts.atype[opt] || 0}
+                    isChecked={activeFilters.atype.includes(opt)}
+                    onToggle={() => handleToggleFilter("atype", opt)}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Accordion Footer Action */}
+          <div className="mt-6 pt-5 border-t border-stone-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="text-xs text-[#64748B]">
+              {filteredPractices.length === practicesList.length ? (
+                <span>Showing all {practicesList.length} practices</span>
+              ) : (
+                <span>
+                  Filters match <strong className="text-[#1E293B]">{filteredPractices.length}</strong> of {practicesList.length} practices
+                </span>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsFilterAccordionOpen(false)}
+              className="px-5 py-2.5 bg-[#4A6741] text-white rounded-xl text-xs font-semibold hover:bg-[#2D3E27] transition shadow-xs self-end sm:self-auto cursor-pointer"
+            >
+              Done Filtering
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Active Filter Tags & Results Counter Bar ──────────── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 px-1">
+        <div data-testid="results-count" className="text-sm font-semibold text-[#5C5852]">
+          Showing{" "}
+          <span className="text-[#2D2A26] font-bold">
+            {filteredPractices.length}
+          </span>{" "}
+          of {practicesList.length} practices
+        </div>
+
+        {/* Active Filter Chips */}
+        {totalActiveFilterCount > 0 && (
+          <div className="flex items-center flex-wrap gap-2">
+            {onlyBookmarks && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#4A6741]/10 text-[#4A6741] border border-[#4A6741]/25 shadow-2xs">
+                <span>Saved Only</span>
+                <button
+                  type="button"
+                  onClick={() => setOnlyBookmarks(false)}
+                  className="hover:opacity-75 cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </span>
+            )}
+
+            {Object.entries(activeFilters).map(([cat, list]) =>
+              list.map((item) => (
+                <span
+                  key={`${cat}-${item}`}
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-white/90 text-[#2D2A26] border border-stone-200/90 shadow-2xs"
+                >
+                  <span className="truncate max-w-[160px]">{item}</span>
+                  <button
+                    type="button"
+                    onClick={() => handleToggleFilter(cat, item)}
+                    className="hover:opacity-75 cursor-pointer"
+                  >
+                    <X className="w-3.5 h-3.5 text-gray-500" />
+                  </button>
+                </span>
+              ))
+            )}
+
+            <button
+              type="button"
+              onClick={handleClearAllFilters}
+              className="text-xs font-semibold text-[#4A6741] hover:text-[#2D3E27] hover:underline px-2 py-1 cursor-pointer"
+            >
+              Clear all
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* ── Full-Width Cards Grid (No Cramped Second Sidebar) ──── */}
+      {isLoading ? (
+        /* Loading skeleton */
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-7">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="bg-white rounded-2xl border border-stone-200/80 p-6 md:p-7 shadow-2xs animate-pulse">
+              <div className="h-1.5 w-full bg-stone-200 rounded-full mb-5" />
+              <div className="h-4 bg-stone-200 rounded-lg w-2/3 mb-3" />
+              <div className="h-3 bg-stone-100 rounded-lg w-full mb-2" />
+              <div className="h-3 bg-stone-100 rounded-lg w-4/5 mb-5" />
+              <div className="flex gap-2 mt-4">
+                <div className="h-5 bg-stone-100 rounded-full w-20" />
+                <div className="h-5 bg-stone-100 rounded-full w-16" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : loadError ? (
+        /* Error state */
+        <div className="bg-white/80 backdrop-blur-xs rounded-2xl border border-red-200 p-12 text-center shadow-2xs">
+          <div className="w-12 h-12 rounded-full bg-red-50 text-red-500 flex items-center justify-center mx-auto mb-3">
+            <X className="w-6 h-6" />
+          </div>
+          <h3 className="text-base font-bold text-[#2D2A26]">Could not load practices</h3>
+          <p className="mt-1 text-sm text-[#5C5852] max-w-sm mx-auto">{loadError}</p>
+          <button
+            type="button"
+            onClick={() => {
+              setIsLoading(true);
+              setLoadError(null);
+              fetchAllBestPractices()
+                .then((list) => setPracticesList(Array.isArray(list) ? list : []))
+                .catch((err) => setLoadError(err.message))
+                .finally(() => setIsLoading(false));
+            }}
+            className="mt-5 inline-flex items-center gap-2 px-4 py-2 bg-[#4A6741] text-white rounded-xl text-sm font-semibold hover:bg-[#2D3E27] transition shadow-xs cursor-pointer"
+          >
+            <RotateCcw className="w-4 h-4" />
+            <span>Retry</span>
+          </button>
+        </div>
+      ) : filteredPractices.length === 0 ? (
+        <div className="bg-white/80 backdrop-blur-xs rounded-2xl border border-stone-200/90 p-12 text-center shadow-2xs">
+          <div className="w-12 h-12 rounded-full bg-[#F5F0E8] text-[#4A6741] flex items-center justify-center mx-auto mb-3">
+            <Search className="w-6 h-6" />
+          </div>
+          <h3 className="text-base font-bold text-[#2D2A26]">
+            No practices matched your criteria
+          </h3>
+          <p className="mt-1 text-sm text-[#5C5852] max-w-sm mx-auto">
+            Try loosening your filters or search keywords to explore more practices from our repository.
+          </p>
+          <button
+            type="button"
+            onClick={handleClearAllFilters}
+            className="mt-5 inline-flex items-center gap-2 px-4 py-2 bg-[#4A6741] text-white rounded-xl text-sm font-semibold hover:bg-[#2D3E27] transition shadow-xs cursor-pointer"
+          >
+            <RotateCcw className="w-4 h-4" />
+            <span>Reset All Filters</span>
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-7">
+          {filteredPractices.map((practice) => {
+            const isBookmarked = bookmarks.includes(practice.id);
+            const hasExplored = explored.includes(practice.id);
+            const initials = getTeacherInitials(practice.teacher);
+            const primaryTheme = practice.theme?.[0] || "Pedagogy";
+            const themeBadgeStyle = getThemeStyle(primaryTheme);
+
+            return (
+              <div
+                key={practice.id}
+                onClick={() => handleOpenPractice(practice)}
+                className="group bg-white rounded-2xl border border-stone-200/80 hover:border-[#4A6741]/50 p-6 md:p-7 shadow-2xs hover:shadow-md transition-all duration-200 flex flex-col justify-between cursor-pointer relative overflow-hidden"
+              >
+                {/* Subtle Theme Line at Top */}
+                <div
+                  className="absolute top-0 left-0 right-0 h-1.5"
+                  style={{ backgroundColor: themeBadgeStyle.color }}
+                />
+
+                <div>
+                  {/* Top Meta Bar: Theme Pill & Bookmark */}
+                  <div className="flex items-center justify-between gap-3 mb-3">
+                    <span
+                      style={themeBadgeStyle}
+                      className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold border truncate max-w-[220px]"
+                    >
+                      {primaryTheme}
+                    </span>
+
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {hasExplored && (
+                        <span className="text-[11px] font-semibold text-[#4A6741] bg-[#4A6741]/10 px-2 py-0.5 rounded-full inline-flex items-center gap-1">
+                          <Check className="w-3 h-3" />
+                          Reviewed
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={(e) => toggleBookmark(practice.id, e)}
+                        title={isBookmarked ? "Remove Bookmark" : "Save Practice"}
+                        className={`p-1.5 rounded-lg transition ${
+                          isBookmarked
+                            ? "text-[#4A6741] bg-[#4A6741]/10"
+                            : "text-gray-300 hover:text-[#4A6741] hover:bg-gray-100"
+                        }`}
+                      >
+                        <Bookmark
+                          className={`w-4 h-4 ${isBookmarked ? "fill-current" : ""}`}
+                        />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Practice Title */}
+                  <h2 className="text-base md:text-lg font-bold text-[#1E293B] group-hover:text-[#4A6741] transition-colors leading-snug mb-2.5">
+                    {practice.title}
+                  </h2>
+
+                  {/* Teacher & Duration Row */}
+                  <div className="flex items-center justify-between text-xs text-[#64748B] mb-3">
+                    <div className="flex items-center gap-2 min-w-0 pr-2">
+                      <div className="w-6 h-6 rounded-full bg-[#4A6741]/15 text-[#4A6741] font-bold text-[10px] flex items-center justify-center shrink-0">
+                        {initials}
+                      </div>
+                      <span className="truncate font-semibold text-[#334155]">
+                        {practice.teacher}
+                      </span>
+                    </div>
+
+                    {practice.duration && (
+                      <span className="inline-flex items-center gap-1 text-[11px] text-[#64748B] shrink-0 bg-gray-50 px-2 py-0.5 rounded-md border border-gray-100">
+                        <Clock className="w-3 h-3 text-gray-400" />
+                        <span className="truncate max-w-[120px]">{practice.duration}</span>
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Grades & NEP Alignment Badges */}
+                  <div className="flex flex-wrap items-center gap-1.5 mb-3">
+                    {(practice.grade || []).slice(0, 3).map((g) => (
+                      <span
+                        key={g}
+                        className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-blue-50 text-blue-700 border border-blue-200/60"
+                      >
+                        {g}
+                      </span>
+                    ))}
+                    {(practice.grade || []).length > 3 && (
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-gray-100 text-gray-500">
+                        +{practice.grade.length - 3}
+                      </span>
+                    )}
+
+                    {(practice.pedagogy || []).slice(0, 1).map((ped) => (
+                      <span
+                        key={ped}
+                        className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-amber-50 text-amber-900 border border-amber-200/60 truncate max-w-[160px]"
+                      >
+                        {ped}
+                      </span>
+                    ))}
+                  </div>
+
+                  {/* Excerpt Synopsis */}
+                  <p className="text-xs md:text-sm text-[#475569] line-clamp-3 leading-relaxed mb-4">
+                    {practice.brief || "No description available."}
+                  </p>
+                </div>
+
+                {/* Card Footer with Media Counts and Action */}
+                <div className="pt-3.5 border-t border-gray-100 flex items-center justify-between text-xs text-[#64748B]">
+                  <div className="flex items-center gap-2">
+                    {practice.images?.length > 0 && (
+                      <span className="inline-flex items-center gap-1 text-[11px] text-[#475569] bg-gray-50 px-2 py-0.5 rounded-md border border-gray-100">
+                        <ImageIcon className="w-3 h-3 text-[#4A6741]" />
+                        <span>{practice.images.length} photos</span>
+                      </span>
+                    )}
+                    {practice.competency?.length > 0 && (
+                      <span className="inline-flex items-center gap-1 text-[11px] text-[#475569] bg-gray-50 px-2 py-0.5 rounded-md border border-gray-100">
+                        <Target className="w-3 h-3 text-[#4A6741]" />
+                        <span>{practice.competency.length} skills</span>
+                      </span>
+                    )}
+                  </div>
+
+                  <span className="text-[#4A6741] font-semibold text-xs inline-flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                    <span>Explore Plan</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── Practice Detail Modal ────────────────────────────── */}
+      {selectedPractice &&
+        createPortal(
+          <div className="fixed inset-0 z-[1050] overflow-y-auto overscroll-contain flex items-center justify-center p-3 sm:p-6">
+            {/* Backdrop */}
+            <div
+              className="fixed inset-0 bg-[#0F172A]/60 backdrop-blur-sm transition-opacity"
+              onClick={handleClosePractice}
+            />
+
+            {/* Modal Container */}
+            <div
+              role="dialog"
+              aria-modal="true"
+              className="relative w-full max-w-4xl bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] z-10 animate-in fade-in zoom-in-95 duration-200"
+            >
+            {/* Modal Header */}
+            <div className="px-6 py-5 border-b border-gray-200/80 bg-[#F5F0E8]/40 shrink-0">
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2 mb-2">
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#4A6741] text-white">
+                      Practice #{selectedPractice.id}
+                    </span>
+                    {(selectedPractice.grade || []).map((g) => (
+                      <span
+                        key={g}
+                        className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[#1d4ed8]/10 text-[#1d4ed8] border border-[#1d4ed8]/20"
+                      >
+                        {g}
+                      </span>
+                    ))}
+                    {selectedPractice.duration && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-700 border border-amber-500/20">
+                        <Clock className="w-3 h-3" />
+                        {selectedPractice.duration}
+                      </span>
+                    )}
+                  </div>
+
+                  <h2 className="text-xl md:text-2xl font-bold text-[#2D2A26] leading-tight">
+                    {selectedPractice.title}
+                  </h2>
+
+                  <div className="mt-2 flex items-center gap-2 text-xs text-[#5C5852]">
+                    <div className="w-5 h-5 rounded-full bg-[#4A6741]/20 text-[#4A6741] font-bold text-[9px] flex items-center justify-center">
+                      {getTeacherInitials(selectedPractice.teacher)}
+                    </div>
+                    <span>
+                      Developed by{" "}
+                      <strong className="text-[#2D2A26] font-semibold">
+                        {selectedPractice.teacher}
+                      </strong>
+                    </span>
+                  </div>
+                </div>
+
+                {/* Actions & Close */}
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => toggleBookmark(selectedPractice.id)}
+                    className={`p-2 rounded-xl transition ${
+                      bookmarks.includes(selectedPractice.id)
+                        ? "text-[#4A6741] bg-[#4A6741]/10"
+                        : "text-gray-400 hover:text-[#4A6741] hover:bg-gray-100"
+                    }`}
+                    title="Bookmark this practice"
+                  >
+                    <Bookmark
+                      className={`w-4 h-4 ${
+                        bookmarks.includes(selectedPractice.id)
+                          ? "fill-current"
+                          : ""
+                      }`}
+                    />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleCopyLink}
+                    className="p-2 text-gray-400 hover:text-[#4A6741] hover:bg-gray-100 rounded-xl transition relative"
+                    title="Copy share link"
+                  >
+                    {copiedLink ? (
+                      <Check className="w-4 h-4 text-emerald-600" />
+                    ) : (
+                      <Share2 className="w-4 h-4" />
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleClosePractice}
+                    className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition ml-1"
+                    title="Close (Esc)"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Modal Tabs */}
+              <div className="flex items-center gap-2 mt-5 border-b border-gray-200 -mb-5">
+                {[
+                  { label: "Overview", icon: BookOpen },
+                  { label: "Implementation", icon: Compass },
+                  { label: "NEP & Impact", icon: Award },
+                ].map((tab, idx) => {
+                  const IconComp = tab.icon;
+                  const isActive = activeTab === idx;
+                  return (
+                    <button
+                      key={tab.label}
+                      type="button"
+                      onClick={() => setActiveTab(idx)}
+                      className={`inline-flex items-center gap-2 px-4 py-2.5 text-xs font-bold border-b-2 transition-all ${
+                        isActive
+                          ? "border-[#4A6741] text-[#4A6741]"
+                          : "border-transparent text-gray-500 hover:text-gray-800"
+                      }`}
+                    >
+                      <IconComp className="w-3.5 h-3.5" />
+                      <span>{tab.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Modal Scrollable Body */}
+            <div className="p-6 md:p-8 overflow-y-auto overscroll-contain space-y-8 text-sm">
+              {/* TAB 0: OVERVIEW */}
+              {activeTab === 0 && (
+                <div className="space-y-6">
+                  {/* Editorial Brief Callout */}
+                  <div className="bg-[#F5F0E8]/70 border border-[#4A6741]/20 rounded-2xl p-5 md:p-6">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#4A6741] mb-2 flex items-center gap-1.5">
+                      <Sparkles className="w-4 h-4" />
+                      Practice Overview & Core Concept
+                    </h3>
+                    <p className="text-sm md:text-base text-[#2D2A26] leading-relaxed">
+                      {selectedPractice.brief}
+                    </p>
+                  </div>
+
+                  {/* Metadata Matrix */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Grade Level */}
+                    <div className="bg-white border border-gray-200/90 rounded-xl p-4 shadow-sm">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-[#5C5852] mb-2 flex items-center gap-1.5">
+                        <GraduationCap className="w-4 h-4 text-blue-600" />
+                        Target Grade Levels
+                      </h4>
+                      <div className="flex flex-wrap gap-1.5">
+                        {(selectedPractice.grade || []).map((g) => (
+                          <span
+                            key={g}
+                            className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200"
+                          >
+                            {g}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Pedagogical Approach */}
+                    <div className="bg-white border border-gray-200/90 rounded-xl p-4 shadow-sm">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-[#5C5852] mb-2 flex items-center gap-1.5">
+                        <Compass className="w-4 h-4 text-amber-600" />
+                        Pedagogical Approaches
+                      </h4>
+                      <div className="flex flex-wrap gap-1.5">
+                        {(selectedPractice.pedagogy || []).map((p) => (
+                          <span
+                            key={p}
+                            className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-amber-50 text-amber-800 border border-amber-200"
+                          >
+                            {p}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Core Themes */}
+                    <div className="bg-white border border-gray-200/90 rounded-xl p-4 shadow-sm">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-[#5C5852] mb-2 flex items-center gap-1.5">
+                        <Target className="w-4 h-4 text-purple-600" />
+                        Core Themes
+                      </h4>
+                      <div className="flex flex-wrap gap-1.5">
+                        {(selectedPractice.theme || []).map((t) => (
+                          <span
+                            key={t}
+                            style={getThemeStyle(t)}
+                            className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium border"
+                          >
+                            {t}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Competencies */}
+                    <div className="bg-white border border-gray-200/90 rounded-xl p-4 shadow-sm">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-[#5C5852] mb-2 flex items-center gap-1.5">
+                        <Award className="w-4 h-4 text-emerald-600" />
+                        Competencies Developed
+                      </h4>
+                      <div className="flex flex-wrap gap-1.5">
+                        {(selectedPractice.competency || []).map((c) => (
+                          <span
+                            key={c}
+                            className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200"
+                          >
+                            {c}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Related Practices Section */}
+                  {relatedPractices.length > 0 && (
+                    <div className="pt-4 border-t border-gray-200/80">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-[#5C5852] mb-3">
+                        Related Practices in Same Domain
+                      </h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {relatedPractices.map((rel) => (
+                          <div
+                            key={rel.id}
+                            onClick={() => handleOpenPractice(rel)}
+                            className="p-3 rounded-xl border border-gray-200 hover:border-[#4A6741] hover:bg-[#F5F0E8]/40 transition cursor-pointer flex items-center justify-between"
+                          >
+                            <div className="min-w-0 pr-2">
+                              <h5 className="text-xs font-bold text-[#2D2A26] truncate">
+                                {rel.title}
+                              </h5>
+                              <p className="text-[11px] text-[#5C5852] mt-0.5">
+                                {rel.teacher}
+                              </p>
+                            </div>
+                            <ChevronRight className="w-4 h-4 text-[#4A6741] shrink-0" />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* TAB 1: IMPLEMENTATION */}
+              {activeTab === 1 && (
+                <div className="space-y-8">
+                  {/* Quick Stat Pill Bar */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-[#F5F0E8]/60 p-4 rounded-xl border border-[#4A6741]/20">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-lg bg-amber-500/15 text-amber-700 flex items-center justify-center shrink-0">
+                        <Clock className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="text-[11px] font-bold text-gray-500 uppercase">
+                          Recommended Duration
+                        </div>
+                        <div className="text-xs font-bold text-[#2D2A26]">
+                          {selectedPractice.duration || "Not specified"}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-lg bg-[#4A6741]/15 text-[#4A6741] flex items-center justify-center shrink-0">
+                        <Compass className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="text-[11px] font-bold text-gray-500 uppercase">
+                          Primary Approach
+                        </div>
+                        <div className="text-xs font-bold text-[#2D2A26]">
+                          {(selectedPractice.pedagogy || []).join(" • ") ||
+                            "Not specified"}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Learning Objectives */}
+                  <div>
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#4A6741] mb-3 flex items-center gap-1.5">
+                      <Target className="w-4 h-4" />
+                      Learning Objectives
+                    </h3>
+                    <div className="space-y-2">
+                      {parsedObjectives.length > 0 ? (
+                        parsedObjectives.map((obj, i) => (
+                          <div
+                            key={i}
+                            className="flex items-start gap-3 p-3 rounded-xl bg-white border border-gray-200/80 shadow-sm"
+                          >
+                            <span className="w-5 h-5 rounded-full bg-[#4A6741]/10 text-[#4A6741] text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">
+                              {i + 1}
+                            </span>
+                            <span className="text-xs text-[#2D2A26] leading-relaxed">
+                              {obj}
+                            </span>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-xs text-gray-400 italic">
+                          No structured objectives specified.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Step by Step TLP Stepper */}
+                  <div>
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#4A6741] mb-4 flex items-center gap-1.5">
+                      <Layers className="w-4 h-4" />
+                      Step-by-Step Teaching-Learning Process
+                    </h3>
+                    <div className="relative pl-6 space-y-6 before:absolute before:left-2.5 before:top-3 before:bottom-3 before:w-0.5 before:bg-gray-200">
+                      {parsedSteps.map((stepText, idx) => {
+                        const stepHeader =
+                          idx < STEP_LABELS.length
+                            ? STEP_LABELS[idx]
+                            : `Step ${idx + 1}`;
+                        return (
+                          <div key={idx} className="relative">
+                            <span className="absolute -left-6 top-0 w-5 h-5 rounded-full bg-[#4A6741] text-white text-[11px] font-bold flex items-center justify-center shadow-sm">
+                              {idx + 1}
+                            </span>
+                            <div className="bg-white border border-gray-200/90 rounded-xl p-4 shadow-sm ml-2">
+                              <h4 className="text-xs font-bold text-[#4A6741] uppercase tracking-wide mb-1">
+                                {stepHeader}
+                              </h4>
+                              <p className="text-xs text-[#2D2A26] leading-relaxed whitespace-pre-line">
+                                {stepText}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Required Resources */}
+                  <div>
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#4A6741] mb-3 flex items-center gap-1.5">
+                      <BookOpen className="w-4 h-4" />
+                      What You Need (Resources & Materials)
+                    </h3>
+                    <div className="bg-[#F5F0E8]/40 border border-gray-200 rounded-xl p-4 text-xs text-[#2D2A26] leading-relaxed">
+                      {selectedPractice.resources || "Standard classroom resources."}
+                    </div>
+                  </div>
+
+                  {/* Assessment at a Glance */}
+                  <div>
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#4A6741] mb-3 flex items-center gap-1.5">
+                      <CheckCircle2 className="w-4 h-4" />
+                      Assessment & Evidence
+                    </h3>
+                    <div className="bg-white border border-gray-200/90 rounded-xl p-4 shadow-sm space-y-3">
+                      <div className="flex flex-wrap gap-2">
+                        {(selectedPractice.atype || []).map((a) => (
+                          <span
+                            key={a}
+                            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200"
+                          >
+                            <Check className="w-3.5 h-3.5" />
+                            {a}
+                          </span>
+                        ))}
+                      </div>
+                      {selectedPractice.atool_text && (
+                        <div className="text-xs text-[#2D2A26] pt-2 border-t border-gray-100">
+                          <strong className="text-[#5C5852]">Assessment Tools:</strong>{" "}
+                          {selectedPractice.atool_text}
+                        </div>
+                      )}
+                      {selectedPractice.evid_text && (
+                        <div className="text-xs text-[#2D2A26]">
+                          <strong className="text-[#5C5852]">Evidence of Learning:</strong>{" "}
+                          {selectedPractice.evid_text}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Photo Gallery (if available) */}
+                  {selectedPractice.images?.length > 0 && (
+                    <div>
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-[#4A6741] mb-3 flex items-center gap-1.5">
+                        <ImageIcon className="w-4 h-4" />
+                        Classroom Documentation Photos ({selectedPractice.images.length})
+                      </h3>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                        {selectedPractice.images.map((imgSrc, imgIdx) => (
+                          <div
+                            key={imgIdx}
+                            onClick={() => setLightboxIndex(imgIdx)}
+                            className="aspect-square rounded-xl overflow-hidden border border-gray-200 bg-gray-50 cursor-pointer hover:opacity-90 hover:shadow-md transition"
+                          >
+                            <img
+                              src={imgSrc}
+                              alt={`${selectedPractice.title} record ${imgIdx + 1}`}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Video Walkthrough Placeholder */}
+                  <div>
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#4A6741] mb-3 flex items-center gap-1.5">
+                      <Play className="w-4 h-4" />
+                      Video Walkthrough
+                    </h3>
+                    <div className="p-6 rounded-2xl border border-dashed border-gray-300 bg-gray-50 flex flex-col items-center justify-center text-center">
+                      <div className="w-12 h-12 rounded-full bg-[#4A6741]/10 text-[#4A6741] flex items-center justify-center mb-3">
+                        <Play className="w-5 h-5 ml-0.5 fill-current" />
+                      </div>
+                      <h4 className="text-sm font-bold text-[#2D2A26]">
+                        Video walkthrough coming soon
+                      </h4>
+                      <p className="mt-1 text-xs text-[#5C5852] max-w-sm">
+                        A short pedagogical video demonstrating this practice in active classroom settings will be uploaded here.
+                      </p>
+                      <span className="mt-3 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-gray-200 text-gray-700">
+                        In Production
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 2: NEP & IMPACT */}
+              {activeTab === 2 && (
+                <div className="space-y-6">
+                  {/* NEP Alignment Grid */}
+                  <div>
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#4A6741] mb-3 flex items-center gap-1.5">
+                      <Award className="w-4 h-4" />
+                      National Education Policy (NEP 2020) Alignment
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      {FILTER_OPTIONS.nep.map((pillar) => {
+                        const isAligned = (selectedPractice.nep || []).includes(pillar);
+                        return (
+                          <div
+                            key={pillar}
+                            className={`flex items-center gap-3 p-3 rounded-xl border text-xs font-medium transition ${
+                              isAligned
+                                ? "bg-emerald-50/70 border-emerald-200 text-emerald-900"
+                                : "bg-gray-50/50 border-gray-200 text-gray-400"
+                            }`}
+                          >
+                            <CheckCircle2
+                              className={`w-4 h-4 shrink-0 ${
+                                isAligned ? "text-emerald-600" : "text-gray-300"
+                              }`}
+                            />
+                            <span>{pillar}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Inclusivity & Differentiation */}
+                  <div>
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#4A6741] mb-3 flex items-center gap-1.5">
+                      <Info className="w-4 h-4" />
+                      Inclusivity & Differentiation Support
+                    </h3>
+                    <div className="bg-[#F5F0E8]/50 border border-gray-200 rounded-xl p-4 text-xs text-[#2D2A26] leading-relaxed whitespace-pre-line">
+                      {selectedPractice.remedial_text ||
+                        "Support provided through peer collaboration and individualized feedback."}
+                    </div>
+                  </div>
+
+                  {/* Key Success Factors */}
+                  <div>
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#4A6741] mb-3 flex items-center gap-1.5">
+                      <Lightbulb className="w-4 h-4" />
+                      Key Success Factors
+                    </h3>
+                    <div className="space-y-2">
+                      {(selectedPractice.ksf || "")
+                        .split(/\n/)
+                        .map((l) => l.trim().replace(/^•\s*/, ""))
+                        .filter(Boolean)
+                        .map((line, i) => (
+                          <div
+                            key={i}
+                            className="flex items-start gap-3 p-3 rounded-xl bg-white border border-gray-200 shadow-sm text-xs text-[#2D2A26]"
+                          >
+                            <span className="w-5 h-5 rounded-full bg-amber-500/10 text-amber-700 flex items-center justify-center shrink-0 mt-0.5">
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                            </span>
+                            <span className="leading-relaxed">{line}</span>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+
+                  {/* Reference Materials */}
+                  {selectedPractice.refs && selectedPractice.refs !== "NA" && (
+                    <div>
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-[#4A6741] mb-3">
+                        Reference Materials & Links
+                      </h3>
+                      <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 text-xs text-[#2D2A26] leading-relaxed whitespace-pre-line">
+                        {selectedPractice.refs}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Related Practices */}
+                  {relatedPractices.length > 0 && (
+                    <div className="pt-4 border-t border-gray-200/80">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-[#5C5852] mb-3">
+                        Related Practices
+                      </h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {relatedPractices.map((rel) => (
+                          <div
+                            key={rel.id}
+                            onClick={() => handleOpenPractice(rel)}
+                            className="p-3 rounded-xl border border-gray-200 hover:border-[#4A6741] hover:bg-[#F5F0E8]/40 transition cursor-pointer flex items-center justify-between"
+                          >
+                            <div className="min-w-0 pr-2">
+                              <h5 className="text-xs font-bold text-[#2D2A26] truncate">
+                                {rel.title}
+                              </h5>
+                              <p className="text-[11px] text-[#5C5852] mt-0.5">
+                                {rel.teacher}
+                              </p>
+                            </div>
+                            <ChevronRight className="w-4 h-4 text-[#4A6741] shrink-0" />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Modal Sticky Footer */}
+            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex items-center justify-between shrink-0">
+              <div className="text-xs text-[#5C5852]">
+                Tip: Press <kbd className="px-1.5 py-0.5 bg-white border border-gray-300 rounded text-[10px] font-mono shadow-sm">Esc</kbd> to close
+              </div>
+              <button
+                type="button"
+                onClick={handleClosePractice}
+                className="px-5 py-2 bg-[#4A6741] text-white rounded-xl text-xs font-semibold hover:bg-[#2D3E27] transition shadow-sm"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* ── Lightbox Overlay for Photos ─────────────────────── */}
+      {lightboxIndex !== null &&
+        selectedPractice?.images?.[lightboxIndex] &&
+        createPortal(
+          <div className="fixed inset-0 z-[1100] bg-black/90 flex flex-col items-center justify-center p-4">
+            <div className="absolute top-4 right-4 flex items-center gap-3 text-white">
+              <span className="text-xs font-semibold">
+                {lightboxIndex + 1} of {selectedPractice.images.length}
+              </span>
+              <button
+                type="button"
+                onClick={() => setLightboxIndex(null)}
+                className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="relative max-w-4xl max-h-[80vh] flex items-center justify-center">
+              <img
+                src={selectedPractice.images[lightboxIndex]}
+                alt={`Documentation slide ${lightboxIndex + 1}`}
+                className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl"
+              />
+
+              {selectedPractice.images.length > 1 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setLightboxIndex((prev) =>
+                        prev > 0 ? prev - 1 : selectedPractice.images.length - 1
+                      )
+                    }
+                    className="absolute left-2 p-3 rounded-full bg-black/40 text-white hover:bg-black/70 transition"
+                  >
+                    <ChevronLeft className="w-6 h-6" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setLightboxIndex((prev) =>
+                        prev < selectedPractice.images.length - 1 ? prev + 1 : 0
+                      )
+                    }
+                    className="absolute right-2 p-3 rounded-full bg-black/40 text-white hover:bg-black/70 transition"
+                  >
+                    <ChevronRight className="w-6 h-6" />
+                  </button>
+                </>
+              )}
+            </div>
+          </div>,
+          document.body
+        )}
+
+      {/* ── Admin Add Best Practice Modal ───────────────────── */}
+      {isAdmin && (
+        <AddBestPracticeModal
+          isOpen={isAddModalOpen}
+          onClose={() => setIsAddModalOpen(false)}
+          onSubmit={handleAddPractice}
+        />
+      )}
+    </div>
+  );
+}

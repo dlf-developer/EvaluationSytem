@@ -40,6 +40,7 @@ const accountabilityRoutes = require('./routes/accountabilityRoutes');
 const logRoutes = require('./routes/logRoutes');
 const auditLogRoutes = require('./routes/auditLogRoutes');
 const analyticsRoutes = require('./routes/analyticsRoutes');
+const bestPracticeRoutes = require('./routes/bestPracticeRoutes');
 
 const app = express();
 
@@ -77,6 +78,7 @@ app.use('/api/accountability', accountabilityRoutes);
 app.use('/api/logs', logRoutes);
 app.use('/api/audit-logs', auditLogRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/best-practices', bestPracticeRoutes);
 
 app.get('/', (req, res) => {
     return res.json({ message: "hello" });
