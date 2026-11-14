@@ -45,20 +45,17 @@ const TARGETS = [
   {
     key: 'test',
     name: 'Development / Test (EvaluationSytem_test)',
-    uri: devEnv.MONGO_URI || rootEnv.MONGO_URI ||
-         'mongodb+srv://evaluation:dICAG3PDxBgFALDR@cluster0.uvs50.mongodb.net/EvaluationSytem_test?retryWrites=true&w=majority&appName=Cluster0',
+    uri: devEnv.MONGO_URI || rootEnv.MONGO_URI || process.env.MONGO_URI_TEST || process.env.MONGO_URI,
   },
   {
     key: 'dlps',
     name: 'DLPS Production (EvaluationSytem)',
-    uri: dlpsEnv.MONGO_URI ||
-         'mongodb+srv://evaluation:dICAG3PDxBgFALDR@cluster0.uvs50.mongodb.net/EvaluationSytem?retryWrites=true&w=majority&appName=Cluster0',
+    uri: dlpsEnv.MONGO_URI || process.env.MONGO_URI_DLPS,
   },
   {
     key: 'dlws',
     name: 'DLWS Production (evaluationDlws)',
-    uri: dlwsEnv.MONGO_URI ||
-         'mongodb+srv://evaluation:dICAG3PDxBgFALDR@cluster0.uvs50.mongodb.net/evaluationDlws?retryWrites=true&w=majority&appName=Cluster0',
+    uri: dlwsEnv.MONGO_URI || process.env.MONGO_URI_DLWS,
   },
 ];
 
@@ -192,6 +189,10 @@ const selectedTargets = targetArg
 const AccessControl = require('../models/AccessControl');
 
 async function seedTarget(target) {
+  if (!target.uri) {
+    console.log(`⚠️  Skipping ${target.name}: No MONGO_URI specified in environment or env files.\n`);
+    return;
+  }
   console.log(`══════════════════════════════════════════════════════════════`);
   console.log(`🚀  Connecting to: ${target.name}`);
   console.log(`══════════════════════════════════════════════════════════════`);
