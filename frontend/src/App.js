@@ -7,6 +7,7 @@ import { withoutAuthRoute } from "./Utils/helper";
 import { initCuteMalkinTheme, isCuteMalkinThemeActive } from "./Utils/cuteMalkinTheme";
 import CuteBubbleRain from "./Components/CuteBubbleRain";
 import SecurityLockoutModal from "./Components/SecurityLockoutModal";
+import { PermissionsProvider } from "./context/PermissionsContext";
 
 function App() {
   const routing = useRoutes(protect);
@@ -37,12 +38,12 @@ function App() {
   const defaultRouting = useRoutes(defaultProtect);
 
   return (
-    <>
+    <PermissionsProvider>
       <ToastContainer />
       <SecurityLockoutModal />
       {isCuteActive && <CuteBubbleRain />}
       {checkIsWithoutAuthRoute ? defaultRouting : routing}
-    </>
+    </PermissionsProvider>
   );
 }
 

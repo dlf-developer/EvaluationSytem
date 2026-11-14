@@ -12,6 +12,7 @@ import {
   HistoryOutlined,
   BarChartOutlined,
   RiseOutlined,
+  LockOutlined,
 } from "./UI/Icons";
 import { isLocalDev } from "../Utils/env";
 import { getAllTimes, getUserId } from "../Utils/auth";
@@ -86,6 +87,11 @@ export const Menu = {
       route: "/audit-logs",
       icon: <HistoryOutlined />,
     },
+    {
+      name: "Permissions & Access",
+      route: "/permissions",
+      icon: <LockOutlined />,
+    },
     { label: "Resources" },
     {
       name: "Best Practices",
@@ -133,6 +139,12 @@ export const Menu = {
       name: "Accountability Mechanism",
       route: "/accountability",
       icon: <PieChartOutlined />,
+    },
+    { label: "Resources" },
+    {
+      name: "Best Practices",
+      route: "/best-practices",
+      icon: <BookFilled />,
     },
     ...(isLocalDev()
       ? [

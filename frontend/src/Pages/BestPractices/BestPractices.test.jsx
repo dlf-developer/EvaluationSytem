@@ -1,5 +1,6 @@
 import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { MemoryRouter, Routes, Route } from "react-router-dom";
 import BestPractices from "./BestPractices";
 import { getUserId } from "../../Utils/auth";
 import {
@@ -30,6 +31,17 @@ jest.mock("lucide-react", () => {
   );
 });
 
+const renderWithRouter = (initialRoute = "/best-practices") => {
+  return render(
+    <MemoryRouter initialEntries={[initialRoute]}>
+      <Routes>
+        <Route path="/best-practices" element={<BestPractices />} />
+        <Route path="/best-practices/:id" element={<BestPractices />} />
+      </Routes>
+    </MemoryRouter>
+  );
+};
+
 describe("BestPractices Component", () => {
   beforeEach(() => {
     localStorage.clear();
@@ -48,7 +60,7 @@ describe("BestPractices Component", () => {
   });
 
   test("renders Best Practices header, search input, and practices list", async () => {
-    render(<BestPractices />);
+    renderWithRouter();
 
     expect(
       screen.getByRole("heading", { name: "Best Practices for Teachers" })
@@ -71,7 +83,7 @@ describe("BestPractices Component", () => {
   });
 
   test("filters practices when typing in search input", async () => {
-    render(<BestPractices />);
+    renderWithRouter();
 
     await waitFor(() => {
       expect(
@@ -91,8 +103,8 @@ describe("BestPractices Component", () => {
     ).not.toBeInTheDocument();
   });
 
-  test("opens detail modal when a practice card is clicked, and switches tabs", async () => {
-    render(<BestPractices />);
+  test("opens full-page detail view when a practice card is clicked, displaying rich pedagogical information without modal constraints, and can navigate back", async () => {
+    renderWithRouter();
 
     await waitFor(() => {
       expect(
@@ -105,43 +117,46 @@ describe("BestPractices Component", () => {
     );
     fireEvent.click(cardTitle);
 
+    // Full page detail is rendered (not a modal dialog)
     await waitFor(() => {
-      expect(screen.getByRole("dialog")).toBeInTheDocument();
+      expect(screen.getByTestId("best-practice-detail")).toBeInTheDocument();
     });
 
+    // Verify all key sections are visible directly on one full page
     expect(screen.getByText("Target Grade Levels")).toBeInTheDocument();
-
-    // Switch to Implementation tab
-    const implTab = screen.getByRole("button", { name: /implementation/i });
-    fireEvent.click(implTab);
-
     expect(
       screen.getByText("Step-by-Step Teaching-Learning Process")
     ).toBeInTheDocument();
     expect(
       screen.getByText("What You Need (Resources & Materials)")
     ).toBeInTheDocument();
-
-    // Switch to NEP & Impact tab
-    const nepTab = screen.getByRole("button", { name: /nep & impact/i });
-    fireEvent.click(nepTab);
-
     expect(
       screen.getByText("National Education Policy (NEP 2020) Alignment")
     ).toBeInTheDocument();
-    expect(screen.getByText("Key Success Factors")).toBeInTheDocument();
 
-    // Close modal via Done button
-    const doneBtn = screen.getByRole("button", { name: "Done" });
-    fireEvent.click(doneBtn);
+    // Navigate back to the repository list
+    const backBtn = screen.getByRole("button", { name: /back to best practices/i });
+    fireEvent.click(backBtn);
 
     await waitFor(() => {
-      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("best-practice-detail")).not.toBeInTheDocument();
+      expect(screen.getByTestId("results-count")).toBeInTheDocument();
     });
   });
 
+  test("supports direct deep-linking via /best-practices/:id route to open full page directly", async () => {
+    renderWithRouter("/best-practices/3");
+
+    await waitFor(() => {
+      expect(screen.getByTestId("best-practice-detail")).toBeInTheDocument();
+      expect(screen.getByText("As I Leave DLF Public School")).toBeInTheDocument();
+    });
+
+    expect(screen.getByText("Monika Verma")).toBeInTheDocument();
+  });
+
   test("toggles bookmarks and filters by saved practices", async () => {
-    render(<BestPractices />);
+    renderWithRouter();
 
     await waitFor(() => {
       expect(
@@ -168,7 +183,7 @@ describe("BestPractices Component", () => {
   });
 
   test("toggles full-breadth accordion filter when All Filters button is clicked", async () => {
-    render(<BestPractices />);
+    renderWithRouter();
 
     await waitFor(() => {
       expect(screen.getByTestId("results-count")).toBeInTheDocument();
@@ -198,7 +213,7 @@ describe("BestPractices Component", () => {
   });
 
   test("filters practices using top major grade tabs", async () => {
-    render(<BestPractices />);
+    renderWithRouter();
 
     await waitFor(() => {
       expect(screen.getByTestId("results-count")).toBeInTheDocument();
@@ -226,7 +241,7 @@ describe("BestPractices Component", () => {
   test("admin can see Add Best Practice button, open form, and publish a new practice", async () => {
     getUserId.mockReturnValue({ access: "Superadmin" });
 
-    render(<BestPractices />);
+    renderWithRouter();
 
     await waitFor(() => {
       expect(screen.getByTestId("results-count")).toBeInTheDocument();
@@ -275,8 +290,9 @@ describe("BestPractices Component", () => {
     });
     fireEvent.click(publishBtn);
 
-    // Should immediately add and open the new practice modal & list item
+    // Should immediately open the new practice full page view
     await waitFor(() => {
+      expect(screen.getByTestId("best-practice-detail")).toBeInTheDocument();
       const titles = screen.getAllByText("Innovative Math Lab Diagnostics");
       expect(titles.length).toBeGreaterThanOrEqual(1);
       const authors = screen.getAllByText("Rohit Sharma");

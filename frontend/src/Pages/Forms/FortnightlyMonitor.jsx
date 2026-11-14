@@ -12,6 +12,7 @@ import { getUserId } from "../../Utils/auth";
 import SmartTable from "../../Components/SmartTable";
 import { getFortnightlyColumns } from "../../Components/SmartTable/tableColumns";
 import { axiosInstanceToken } from "../../redux/instence";
+import { usePermissions } from "../../context/PermissionsContext";
 
 function FortnightlyMonitor() {
   const Role = getUserId()?.access;
@@ -230,11 +231,14 @@ function FortnightlyMonitor() {
     }
   };
 
+  const { canPerform } = usePermissions();
+  const canDelete = canPerform("fortnightly", "canDelete");
+
   const columns = useMemo(() => {
     const baseCols = getFortnightlyColumns({
       data: CombinedData,
       currentUserRole,
-      onDelete: handleDeleteClick,
+      onDelete: canDelete ? handleDeleteClick : null,
     });
     return baseCols.map((col) => {
       if (col.key === "className" && filterOptions?.classes?.length > 0) {

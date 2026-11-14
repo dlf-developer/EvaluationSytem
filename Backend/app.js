@@ -41,6 +41,7 @@ const logRoutes = require('./routes/logRoutes');
 const auditLogRoutes = require('./routes/auditLogRoutes');
 const analyticsRoutes = require('./routes/analyticsRoutes');
 const bestPracticeRoutes = require('./routes/bestPracticeRoutes');
+const permissionRoutes = require('./routes/permissionRoutes');
 
 const app = express();
 
@@ -79,6 +80,7 @@ app.use('/api/logs', logRoutes);
 app.use('/api/audit-logs', auditLogRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/best-practices', bestPracticeRoutes);
+app.use('/api/permissions', permissionRoutes);
 
 app.get('/', (req, res) => {
     return res.json({ message: "hello" });

@@ -12,6 +12,7 @@ import { UserRole } from "../../config/config";
 import SmartTable from "../../Components/SmartTable";
 import { getNotebookColumns } from "../../Components/SmartTable/tableColumns";
 import { axiosInstanceToken } from "../../redux/instence";
+import { usePermissions } from "../../context/PermissionsContext";
 
 function Notebook() {
   const navigate = useNavigate();
@@ -266,11 +267,14 @@ function Notebook() {
     }
   };
 
+  const { canPerform } = usePermissions();
+  const canDelete = canPerform("notebook", "canDelete");
+
   const columns = useMemo(() => {
     const baseCols = getNotebookColumns({
       data: CombinedData,
       currentUserRole,
-      onDelete: handleDeleteClick,
+      onDelete: canDelete ? handleDeleteClick : null,
     });
 
     return baseCols.map((col) => {

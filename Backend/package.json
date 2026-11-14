@@ -7,6 +7,8 @@
     "start": "nodemon server.js",
     "start:dev": "NODE_ENV=development nodemon server.js",
     "start:prod": "NODE_ENV=production node server.js",
+    "seed:best-practices": "node scripts/seedBestPractices.js",
+    "seed:permissions": "node scripts/seedPermissions.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

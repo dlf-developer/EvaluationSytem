@@ -29,6 +29,7 @@ import { Link } from "react-router-dom";
 import { columnsCreate } from "../../Components/Data";
 import SmartTable from "../../Components/SmartTable";
 import { getUserColumns } from "../../Components/SmartTable/tableColumns";
+import { usePermissions } from "../../context/PermissionsContext";
 
 function Users() {
   const [open, setOpen] = useState(false);
@@ -82,10 +83,19 @@ function Users() {
     setIsEditModalOpen(true);
   };
 
+  const { canPerform } = usePermissions();
+  const userCanEdit = canPerform("users", "canEdit");
+  const userCanDelete = canPerform("users", "canDelete");
+
   const columns = useMemo(
-    () => getUserColumns({ onEdit: handleEditUser, onDelete: DeleteUserRow }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    []
+    () =>
+      getUserColumns({
+        onEdit: handleEditUser,
+        onDelete: DeleteUserRow,
+        canEdit: userCanEdit,
+        canDelete: userCanDelete,
+      }),
+    [userCanEdit, userCanDelete]
   );
 
   const generateRandomString = (length = 8) => {

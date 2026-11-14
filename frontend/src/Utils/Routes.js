@@ -64,6 +64,7 @@ import AccountabilityReport from "../Pages/Reports/AccountabilityReport";
 import AuditLogs from "../Pages/Admin/AuditLogs";
 import ExecutiveAnalytics from "../Pages/Analytics/ExecutiveAnalytics";
 import TeacherPortfolio from "../Pages/Teachers/TeacherPortfolio";
+import PermissionsManagement from "../Pages/Admin/PermissionsManagement";
 
 const role = getUserId()?.access;
 const isLoggedIn = getToken() !== null ? getToken() : null;
@@ -150,6 +151,7 @@ const protects = {
         },
         { path: "/my-portfolio", element: <TeacherPortfolio /> },
         { path: "/best-practices", element: <BestPractices /> },
+        { path: "/best-practices/:id", element: <BestPractices /> },
         { path: "*", element: <NotFound404 /> },
       ],
     },
@@ -243,8 +245,10 @@ const protects = {
         { path: "/accountability/report/:id", element: <AccountabilityReport /> },
         { path: "/class-section", element: <ClassSectionPage /> },
         { path: "/audit-logs", element: <AuditLogs /> },
+        { path: "/permissions", element: <PermissionsManagement /> },
         { path: "/analytics-insights", element: <ExecutiveAnalytics /> },
         { path: "/best-practices", element: <BestPractices /> },
+        { path: "/best-practices/:id", element: <BestPractices /> },
         { path: "*", element: <NotFound404 /> },
       ],
     },
@@ -350,6 +354,8 @@ const protects = {
         { path: "/accountability/:id", element: <AccountabilityForm /> },
         { path: "/accountability/report/:id", element: <AccountabilityReport /> },
         { path: "/analytics-insights", element: <ExecutiveAnalytics /> },
+        { path: "/best-practices", element: <BestPractices /> },
+        { path: "/best-practices/:id", element: <BestPractices /> },
         { path: "*", element: <NotFound404 /> },
       ],
     },

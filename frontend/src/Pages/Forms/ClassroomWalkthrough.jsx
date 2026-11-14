@@ -12,6 +12,7 @@ import { getUserId } from "../../Utils/auth";
 import SmartTable from "../../Components/SmartTable";
 import { getClassroomColumns } from "../../Components/SmartTable/tableColumns";
 import { axiosInstanceToken } from "../../redux/instence";
+import { usePermissions } from "../../context/PermissionsContext";
 
 function ClassroomWalkthrough() {
   const navigate = useNavigate();
@@ -246,11 +247,14 @@ function ClassroomWalkthrough() {
     }
   };
 
+  const { canPerform } = usePermissions();
+  const canDelete = canPerform("walkthrough", "canDelete");
+
   const columns = useMemo(() => {
     const baseCols = getClassroomColumns({
       data: GetForms || [],
       currentUserRole,
-      onDelete: handleDeleteClick,
+      onDelete: canDelete ? handleDeleteClick : null,
     });
     return baseCols.map((col) => {
       if (col.key === "className" && filterOptions?.classes?.length > 0) {

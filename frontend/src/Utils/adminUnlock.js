@@ -1,5 +1,5 @@
 // Secret Admin PIN Unlock Engine
-// Allows Superadmin to access Audit Logs and Admin Analytics in Production and Dev
+// Allows Superadmin to access Permissions Management, Audit Logs, and Admin Analytics
 export const ADMIN_SECRET_PIN = "1111";
 export const ADMIN_UNLOCK_STORAGE_KEY = "admin_features_unlocked_pin";
 
@@ -21,3 +21,7 @@ export const setAdminFeaturesUnlocked = (unlocked) => {
   );
 };
 
+export const verifyPinMatch = (enteredPin) => {
+  if (!enteredPin) return false;
+  return String(enteredPin).trim() === ADMIN_SECRET_PIN;
+};

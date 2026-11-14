@@ -10,6 +10,7 @@ import { getUserId } from "../../Utils/auth";
 import SmartTable from "../../Components/SmartTable";
 import { message, Modal } from "../../Components/UI";
 import { getWeeklyColumns } from "../../Components/SmartTable/tableColumns";
+import { usePermissions } from "../../context/PermissionsContext";
 
 function Weely4Page() {
   const dispatch = useDispatch();
@@ -178,10 +179,18 @@ function Weely4Page() {
     });
   };
 
+  const { canPerform } = usePermissions();
+  const canDelete = canPerform("weekly", "canDelete");
+
   const columns = useMemo(
-    () => getWeeklyColumns({ data: CombinedData, currentUserRole, onDelete: handleDelete }),
+    () =>
+      getWeeklyColumns({
+        data: CombinedData,
+        currentUserRole,
+        onDelete: canDelete ? handleDelete : null,
+      }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [CombinedData, currentUserRole]
+    [CombinedData, currentUserRole, canDelete]
   );
 
   return (

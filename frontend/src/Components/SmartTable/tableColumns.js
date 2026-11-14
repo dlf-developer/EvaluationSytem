@@ -1130,7 +1130,12 @@ export const getWeeklyColumns = ({ data = [], currentUserRole, onDelete }) => [
 // ─────────────────────────────────────────────────────────────────────────────
 // 5. USERS TABLE (Admin)
 // ─────────────────────────────────────────────────────────────────────────────
-export const getUserColumns = ({ onEdit, onDelete }) => [
+export const getUserColumns = ({
+  onEdit,
+  onDelete,
+  canEdit = true,
+  canDelete = true,
+}) => [
   {
     title: "Employee ID",
     key: "employeeId",
@@ -1275,7 +1280,7 @@ export const getUserColumns = ({ onEdit, onDelete }) => [
     width: "240px",
     render: (_, record) => (
       <Stack direction="row" spacing={2} align="center">
-        {onEdit && (
+        {onEdit && canEdit && (
           <Button
             size="sm"
             variant="ghost"
@@ -1298,17 +1303,19 @@ export const getUserColumns = ({ onEdit, onDelete }) => [
             View
           </Button>
         </Link>
-        <Button
-          size="sm"
-          variant="ghost"
-          colorScheme="red"
-          color="red.600"
-          _hover={{ bg: "red.50" }}
-          leftIcon={<DeleteFilled />}
-          onClick={() => onDelete(record?._id)}
-        >
-          Delete
-        </Button>
+        {onDelete && canDelete && (
+          <Button
+            size="sm"
+            variant="ghost"
+            colorScheme="red"
+            color="red.600"
+            _hover={{ bg: "red.50" }}
+            leftIcon={<DeleteFilled />}
+            onClick={() => onDelete(record?._id)}
+          >
+            Delete
+          </Button>
+        )}
       </Stack>
     ),
   },

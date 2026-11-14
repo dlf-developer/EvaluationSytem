@@ -26,6 +26,7 @@ import {
   Sparkles,
   History,
   BookOpenCheck,
+  Lock,
 } from "lucide-react";
 import {
   Box,
@@ -42,6 +43,7 @@ import {
   Tooltip,
 } from "@chakra-ui/react";
 import { useSessionPicker, SESSIONS } from "../hooks/useSessionPicker";
+import { usePermissions } from "../context/PermissionsContext";
 
 const iconMap = {
   Dashboard: LayoutDashboard,
@@ -63,6 +65,7 @@ const iconMap = {
   "Analytics & Insights": BarChart3,
   "Analytics & Insights (Dev)": BarChart3,
   "Audit Logs": History,
+  "Permissions & Access": Lock,
   "Growth Portfolio (Dev)": Sparkles,
   "Best Practices": BookOpenCheck,
   "Best Practices for Teachers": BookOpenCheck,
@@ -78,6 +81,7 @@ function Sidebar({ collapsed, onCloseDrawer }) {
   const isDev = isDevOrLocalEnv();
   const isAdmin = Role === "Superadmin";
   const [isAdminUnlocked, setIsAdminUnlocked] = useState(() => isAdminFeaturesUnlocked());
+  const { hasTabAccess } = usePermissions();
 
   useEffect(() => {
     const handleAdminUnlock = (e) => {
@@ -91,45 +95,67 @@ function Sidebar({ collapsed, onCloseDrawer }) {
 
   const menuItems = useMemo(() => {
     const rawItems = Menu[Role] || [];
+    let filtered = rawItems;
 
     if (isAdmin) {
-      // If unlocked with PIN 1111: show everything (Audit Logs + Admin Analytics)
-      if (isAdminUnlocked) return rawItems;
-
-      // Until unlocked: strictly hide both Audit Logs and Admin Analytics
-      return rawItems.filter(
-        (item) =>
-          item.route !== "/audit-logs" &&
-          item.route !== "/analytics-insights" &&
-          !item.label?.toLowerCase().includes("audit") &&
-          !item.label?.toLowerCase().includes("intelligence") &&
-          !item.name?.toLowerCase().includes("audit") &&
-          !item.name?.toLowerCase().includes("analytics")
-      );
+      // If not unlocked with PIN 1111: strictly hide Audit Logs, Admin Analytics, and Permissions & Access
+      if (!isAdminUnlocked) {
+        filtered = filtered.filter(
+          (item) =>
+            item.route !== "/audit-logs" &&
+            item.route !== "/analytics-insights" &&
+            item.route !== "/permissions" &&
+            !item.label?.toLowerCase().includes("audit") &&
+            !item.label?.toLowerCase().includes("intelligence") &&
+            !item.name?.toLowerCase().includes("audit") &&
+            !item.name?.toLowerCase().includes("analytics") &&
+            !item.name?.toLowerCase().includes("permissions")
+        );
+      }
+    } else if (Role === "Observer") {
+      if (!isDev) {
+        filtered = filtered.filter(
+          (item) =>
+            item.route !== "/analytics-insights" &&
+            !item.label?.toLowerCase().includes("(dev)") &&
+            !item.name?.toLowerCase().includes("(dev)")
+        );
+      }
+    } else if (Role === "Teacher") {
+      if (!isDev) {
+        filtered = filtered.filter(
+          (item) =>
+            item.route !== "/my-portfolio" &&
+            !item.label?.toLowerCase().includes("(dev)") &&
+            !item.name?.toLowerCase().includes("(dev)")
+        );
+      }
     }
 
-    if (Role === "Observer") {
-      if (isDev) return rawItems;
-      return rawItems.filter(
-        (item) =>
-          item.route !== "/analytics-insights" &&
-          !item.label?.toLowerCase().includes("(dev)") &&
-          !item.name?.toLowerCase().includes("(dev)")
-      );
+    // Apply dynamic permission-based access control (if tab is disabled for user/role, hide it)
+    if (typeof hasTabAccess === "function") {
+      filtered = filtered.filter((item) => {
+        if (!item.route) return true; // section labels are checked below
+        return hasTabAccess(item.route);
+      });
     }
 
-    if (Role === "Teacher") {
-      if (isDev) return rawItems;
-      return rawItems.filter(
-        (item) =>
-          item.route !== "/my-portfolio" &&
-          !item.label?.toLowerCase().includes("(dev)") &&
-          !item.name?.toLowerCase().includes("(dev)")
-      );
+    // Clean up empty section headers (if no items follow a label, prune it)
+    const cleaned = [];
+    for (let i = 0; i < filtered.length; i++) {
+      const curr = filtered[i];
+      if (curr.label) {
+        const hasNextItems = filtered.slice(i + 1).some((next) => !next.label);
+        if (hasNextItems) {
+          cleaned.push(curr);
+        }
+      } else {
+        cleaned.push(curr);
+      }
     }
 
-    return rawItems;
-  }, [Role, isDev, isAdmin, isAdminUnlocked]);
+    return cleaned;
+  }, [Role, isDev, isAdmin, isAdminUnlocked, hasTabAccess]);
   const { session, changeSession, loading } = useSessionPicker();
   const [isCute, setIsCute] = useState(() => isCuteMalkinThemeActive());
 

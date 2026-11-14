@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middleware/authMiddleware');
 const sessionMiddleware = require('../middleware/sessionMiddleware');
+const checkPermission = require('../middleware/checkPermission');
 const {
   createForm,
   getObserverDashboard,
@@ -35,9 +36,9 @@ router.get('/fortnightly-monitor',authMiddleware, sessionMiddleware, getUserForm
 router.get('/fortnightly-monitor/oberver/get',authMiddleware, sessionMiddleware, GetObserverForm01);
 router.get('/fortnightly-monitor/:id',authMiddleware, getSingleuserForm);
 router.put('/fortnightly-monitor/:id',authMiddleware, FormFill);
-router.put('/fortnightly-monitor/update/:id',authMiddleware, EditUpdate);
-router.post('/fortnightly-monitor/form-initiation',authMiddleware, FormInitiation);
-router.get('/fortnightly-monitor/get/all',authMiddleware, sessionMiddleware, GetFormOneAdmin);
-router.delete('/fortnightly-monitor/delete/:id', authMiddleware, deleteFormOne);
+router.put('/fortnightly-monitor/update/:id', authMiddleware, checkPermission('fortnightly', 'canEdit'), EditUpdate);
+router.post('/fortnightly-monitor/form-initiation', authMiddleware, checkPermission('fortnightly', 'canCreate'), FormInitiation);
+router.get('/fortnightly-monitor/get/all', authMiddleware, sessionMiddleware, GetFormOneAdmin);
+router.delete('/fortnightly-monitor/delete/:id', authMiddleware, checkPermission('fortnightly', 'canDelete'), deleteFormOne);
 
 module.exports = router;

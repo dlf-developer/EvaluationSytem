@@ -29,6 +29,7 @@ import { UserRole } from "../../config/config";
 import { getUserId } from "../../Utils/auth";
 import SmartTable from "../../Components/SmartTable";
 import { getCoScholasticColumns } from "../../Components/SmartTable/tableColumns";
+import { usePermissions } from "../../context/PermissionsContext";
 
 function CoScholasticPage() {
   const navigate = useNavigate();
@@ -258,15 +259,18 @@ function CoScholasticPage() {
     }
   };
 
+  const { canPerform } = usePermissions();
+  const canDelete = canPerform("coScholastic", "canDelete");
+
   const columns = useMemo(
     () =>
       getCoScholasticColumns({
         data: GetForms || [],
         filterOptions,
         currentUserRole,
-        onDelete: handleDeleteClick,
+        onDelete: canDelete ? handleDeleteClick : null,
       }),
-    [GetForms, filterOptions, currentUserRole]
+    [GetForms, filterOptions, currentUserRole, canDelete]
   );
 
   return (
