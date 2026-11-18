@@ -30,6 +30,7 @@ function TC_Notebook() {
   const [formData, setFormData] = useState({});
   const [sectionState, setSectionState] = useState([]);
   const [newData, setNewData] = useState();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const FormId = useParams()?.id;
 
   const { isLoading, formDataList } = useSelector((state) => state?.notebook);
@@ -297,7 +298,7 @@ function TC_Notebook() {
         <Form.Item
           name={[...name, "answer"]}
           label={
-            <Text fontWeight="600" color="gray.700" fontSize="md" mb={2}>
+            <Text as="span" fontWeight="600" color="gray.700" fontSize="md" display="inline">
               {question}
             </Text>
           }
@@ -471,27 +472,36 @@ function TC_Notebook() {
   };
 
   const handleSubmit = async (data) => {
-    let finalClassName = data.className;
-    
-    // Convert string class name back to _id if needed
-    if (finalClassName && newData?.length > 0) {
-      const classObj = newData.find((c) => c.className === finalClassName);
-      if (classObj) {
-        finalClassName = classObj._id;
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      let finalClassName = data.className;
+      
+      // Convert string class name back to _id if needed
+      if (finalClassName && newData?.length > 0) {
+        const classObj = newData.find((c) => c.className === finalClassName);
+        if (classObj) {
+          finalClassName = classObj._id;
+        }
       }
-    }
 
-    const payload = {
-      data: { ...data, className: finalClassName, isDraft: false, isTeacherComplete: true, currentStep: 2 },
-      id: FormId,
-    };
+      const payload = {
+        data: { ...data, className: finalClassName, isDraft: false, isTeacherComplete: true, currentStep: 2 },
+        id: FormId,
+      };
 
-    const response = await dispatch(EditNoteBook(payload));
-    if (response?.payload && response?.payload?.success) {
-      message.success(response?.payload?.message || "Form submitted successfully!");
-      navigate(`/notebook-checking-proforma/report/${FormId}`);
-    } else {
-      message.error(response?.payload?.message || response?.error?.message || "Failed to submit form.");
+      const response = await dispatch(EditNoteBook(payload));
+      if (response?.payload && response?.payload?.success) {
+        message.success(response?.payload?.message || "Form submitted successfully!");
+        navigate(`/notebook-checking-proforma/report/${FormId}`);
+      } else {
+        message.error(response?.payload?.message || response?.error?.message || "Failed to submit form.");
+        setIsSubmitting(false);
+      }
+    } catch (err) {
+      console.error("Submit error:", err);
+      message.error("Failed to submit form.");
+      setIsSubmitting(false);
     }
   };
 
@@ -766,6 +776,8 @@ function TC_Notebook() {
                     size="large"
                     type="primary"
                     onClick={handleNext}
+                    loading={isSubmitting}
+                    disabled={isSubmitting}
                     style={{
                       borderRadius: "8px",
                       boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
@@ -774,7 +786,7 @@ function TC_Notebook() {
                       border: "none",
                     }}
                   >
-                    {currStep < steps.length - 1 ? "Next Step →" : "Submit Evaluation"}
+                    {currStep < steps.length - 1 ? "Next Step →" : (isSubmitting ? "Submitting…" : "Submit Evaluation")}
                   </Button>
                 </Flex>
               </Flex>

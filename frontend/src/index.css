@@ -112,33 +112,47 @@ color: #4f6f52 !important;
 }
 
 /* ── Global Form Label & Asterisk Typography Reset ── */
-label {
+label,
+.ant-form-item-label > label {
   display: block !important;
-  margin-bottom: 3px !important;
-  line-height: 1.25 !important;
+  margin-bottom: 4px !important;
+  line-height: 1.35 !important;
 }
 
+label *,
 label p,
-label .chakra-text {
+label div,
+label h1,
+label h2,
+label h3,
+label h4,
+label h5,
+label h6,
+label span,
+label .chakra-text,
+label [class*="chakra-text"],
+label .question-label {
+  display: inline !important;
   margin: 0 !important;
   margin-bottom: 0 !important;
-  display: inline !important;
   line-height: inherit !important;
-  font-size: inherit !important;
-  font-weight: inherit !important;
+  vertical-align: baseline !important;
 }
 
 label .text-red-500,
 label span.text-red-500,
+label .ant-form-item-required-mark,
+.ant-form-item-required::before,
 .ant-form-item-required::after {
   display: inline !important;
   vertical-align: baseline !important;
   transform: none !important;
   color: #ef4444 !important;
   font-weight: 700 !important;
-  font-size: 13px !important;
+  font-size: 14px !important;
   line-height: 1 !important;
-  margin-left: 2px !important;
+  margin-left: 3px !important;
+  white-space: nowrap !important;
   font-family: SimSun, sans-serif, system-ui !important;
 }
 

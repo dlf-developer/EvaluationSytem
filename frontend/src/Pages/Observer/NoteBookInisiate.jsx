@@ -68,13 +68,25 @@ function NoteBookInisiate() {
   };
 
   const handleSubmit = async (values) => {
-    const singleTeacherId = Array.isArray(values?.teacherIDs)
-      ? values.teacherIDs[0]
-      : values?.teacherIDs;
+    let rawTeachers = values?.teacherIDs;
+    if (rawTeachers === undefined || rawTeachers === null || rawTeachers === "") {
+      rawTeachers = values?.teacherID ? [values.teacherID] : [];
+    } else if (!Array.isArray(rawTeachers)) {
+      rawTeachers = [rawTeachers];
+    }
+
+    const cleanTeachers = rawTeachers
+      .map((t) => (t && typeof t === "object" ? t._id || t.value || t.id : t))
+      .filter((id) => id && typeof id === "string" && id.length === 24);
+
+    if (cleanTeachers.length === 0) {
+      message.error("Please select at least one Teacher!");
+      return;
+    }
 
     const payload = {
       isTeacher: values?.isTeacher || isTeacher,
-      teacherIDs: singleTeacherId ? [singleTeacherId] : [],
+      teacherIDs: cleanTeachers,
       className: values?.className,
       Section: values?.Section,
       Subject: values?.Subject,
@@ -168,16 +180,17 @@ function NoteBookInisiate() {
                 <>
                   <Form.Item
                     className="w-100"
-                    label="Teacher"
+                    label="Teacher(s)"
                     name="teacherIDs"
                     rules={[
-                      { required: true, message: "Please select a Teacher!" },
+                      { required: true, message: "Please select at least one Teacher!" },
                     ]}
                   >
                     <Select
+                      mode="multiple"
                       allowClear
                       showSearch
-                      placeholder="Select a Teacher"
+                      placeholder="Select one or more teachers"
                       options={TeachersList?.filter((t) => t._id !== getUserId()?.id && t?.isActive !== false)?.map((item) => ({
                         value: item._id,
                         label: `${item.name} [${getUserRoleTag(item)}]`,
@@ -342,15 +355,17 @@ function NoteBookInisiate() {
 
                 {isTeacher && (
                   <Form.Item
-                    label="Teacher ID"
-                    name="teacherID"
+                    label="Teacher(s)"
+                    name="teacherIDs"
                     rules={[
-                      { required: true, message: "Please select a Teacher!" },
+                      { required: true, message: "Please select at least one Teacher!" },
                     ]}
                   >
                     <Select
+                      mode="multiple"
                       showSearch
-                      placeholder="Select a Teacher"
+                      allowClear
+                      placeholder="Select one or more teachers"
                       options={TeachersList?.filter((t) => t._id !== getUserId()?.id)?.map((item) => ({
                         value: item._id,
                         label: `${item.name} [${getUserRoleTag(item)}]`,

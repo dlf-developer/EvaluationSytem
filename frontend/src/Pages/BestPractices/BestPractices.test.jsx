@@ -144,6 +144,48 @@ describe("BestPractices Component", () => {
     });
   });
 
+  test("supports high-density tab navigation in Best Practice Detail view with minimal scrolling", async () => {
+    renderWithRouter("/best-practices/3");
+
+    await waitFor(() => {
+      expect(screen.getByTestId("best-practice-detail")).toBeInTheDocument();
+    });
+
+    // Verify Tab 1 (Classroom Delivery) is active by default
+    expect(screen.getByRole("button", { name: /classroom delivery/i })).toBeInTheDocument();
+    expect(screen.getByText("Step-by-Step Teaching-Learning Process")).toBeInTheDocument();
+    expect(screen.getByText("What You Need (Resources & Materials)")).toBeInTheDocument();
+
+    // Switch to Tab 2 (Pedagogy & NEP 2020)
+    const frameworkTab = screen.getByRole("button", { name: /pedagogy & nep 2020/i });
+    fireEvent.click(frameworkTab);
+
+    expect(screen.getByText("Pedagogical Matrix & Competencies")).toBeInTheDocument();
+    expect(screen.getByText(/8 Pillars Active/i)).toBeInTheDocument();
+
+    // Switch to Tab 3 (Assessment & Impact)
+    const assessmentTab = screen.getByRole("button", { name: /assessment & impact/i });
+    fireEvent.click(assessmentTab);
+
+    expect(screen.getByText("Evidence of Learning & Real Classroom Impact")).toBeInTheDocument();
+    expect(screen.getByText("Assessment Strategy & Tools")).toBeInTheDocument();
+
+    // Switch to Tab 4 (Inclusivity & Media)
+    const inclusivityTab = screen.getByRole("button", { name: /inclusivity & media/i });
+    fireEvent.click(inclusivityTab);
+
+    expect(screen.getByText(/Inclusivity & Remedial \/ Differentiated Support/i)).toBeInTheDocument();
+    expect(screen.getByText(/Classroom Documentation & Artifacts/i)).toBeInTheDocument();
+
+    // Switch to All Sections
+    const allTab = screen.getByRole("button", { name: /all sections/i });
+    fireEvent.click(allTab);
+
+    expect(screen.getByText("Step-by-Step Teaching-Learning Process")).toBeInTheDocument();
+    expect(screen.getByText("Pedagogical Matrix & Competencies")).toBeInTheDocument();
+    expect(screen.getByText("Evidence of Learning & Real Classroom Impact")).toBeInTheDocument();
+  });
+
   test("supports direct deep-linking via /best-practices/:id route to open full page directly", async () => {
     renderWithRouter("/best-practices/3");
 
@@ -298,5 +340,34 @@ describe("BestPractices Component", () => {
       const authors = screen.getAllByText("Rohit Sharma");
       expect(authors.length).toBeGreaterThanOrEqual(1);
     });
+  });
+
+  test("renders Best Practice Template download buttons and handles download", async () => {
+    renderWithRouter();
+
+    const docxBtn = screen.getByRole("button", {
+      name: /download best practice template \(\.docx\)/i,
+    });
+    const pdfBtn = screen.getByRole("button", {
+      name: /printable pdf/i,
+    });
+
+    expect(docxBtn).toBeInTheDocument();
+    expect(pdfBtn).toBeInTheDocument();
+
+    const clickSpy = jest.fn();
+    const origCreateElement = document.createElement.bind(document);
+    jest.spyOn(document, "createElement").mockImplementation((tagName) => {
+      const el = origCreateElement(tagName);
+      if (tagName.toLowerCase() === "a") {
+        el.click = clickSpy;
+      }
+      return el;
+    });
+
+    fireEvent.click(docxBtn);
+    expect(clickSpy).toHaveBeenCalled();
+
+    document.createElement.mockRestore();
   });
 });

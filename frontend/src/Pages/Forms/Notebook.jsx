@@ -269,6 +269,7 @@ function Notebook() {
 
   const { canPerform } = usePermissions();
   const canDelete = canPerform("notebook", "canDelete");
+  const canCreate = canPerform("notebook", "canCreate");
 
   const columns = useMemo(() => {
     const baseCols = getNotebookColumns({
@@ -313,7 +314,7 @@ function Notebook() {
         </Box>
 
         <Stack direction="row" spacing={3}>
-          {Role === UserRole[2] && (
+          {canCreate && (Role === UserRole[2] || Role === UserRole[0]) && (
             <Button
               leftIcon={<PlusCircleOutlined />}
               bg="brand.primary"
@@ -326,7 +327,7 @@ function Notebook() {
               Fill New Form
             </Button>
           )}
-          {Role === UserRole[1] && (
+          {canCreate && (Role === UserRole[1] || Role === UserRole[0]) && (
             <Button
               leftIcon={<PlusCircleOutlined />}
               bg="brand.primary"

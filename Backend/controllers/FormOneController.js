@@ -296,12 +296,12 @@ exports.FormInitiation = async (req, res) => {
       })
       .filter((id) => id && typeof id === "string" && mongoose.Types.ObjectId.isValid(id) && id.toString() !== userId.toString());
 
-    const singleTeacherIds = cleanTeacherIds.slice(0, 1);
-    if (singleTeacherIds.length > 0) {
+    const targetTeacherIds = cleanTeacherIds;
+    if (targetTeacherIds.length > 0) {
       const teacherForms = await Promise.all(
-        singleTeacherIds.map(async (teacherId) => {
+        targetTeacherIds.map(async (teacherId) => {
           const teacher = await User.findById(teacherId);
-          if (teacher?.email) {
+          if (teacher) {
             const formData = new Form1({
               userId,
               isTeacher: true,
@@ -338,19 +338,21 @@ exports.FormInitiation = async (req, res) => {
             await notification.save().catch((err) => console.error("Notification save error:", err));
 
             // Send notification email to each initiated teacher
-            try {
-              const route = `fortnightly-monitor/create/${savedForm._id}`;
-              const emailData = formInitiatedEmail({
-                recipientName: teacher.name,
-                initiatorName: userIdName || req?.user?.name || "Observer",
-                formTitle: "Fortnightly Monitor",
-                formRoute: route,
-                className: finalClassName,
-                section,
-              });
-              await sendEmail(teacher.email, emailData.subject, emailData.html);
-            } catch (emailErr) {
-              console.error("Email send error for teacher:", teacher.email, emailErr);
+            if (teacher.email) {
+              try {
+                const route = `fortnightly-monitor/create/${savedForm._id}`;
+                const emailData = formInitiatedEmail({
+                  recipientName: teacher.name,
+                  initiatorName: userIdName || req?.user?.name || "Observer",
+                  formTitle: "Fortnightly Monitor",
+                  formRoute: route,
+                  className: finalClassName,
+                  section,
+                });
+                await sendEmail(teacher.email, emailData.subject, emailData.html);
+              } catch (emailErr) {
+                console.error("Email send error for teacher:", teacher.email, emailErr);
+              }
             }
 
             return savedForm;

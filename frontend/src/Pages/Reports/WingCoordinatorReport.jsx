@@ -13,6 +13,7 @@ import {
 } from "@chakra-ui/react";
 import { LOGO_BASE64, BANNER_BASE64 } from "./logoAssets";
 import WingCoordinatorDoc from "./Documents/WingCoordinatorDoc";
+import { mergeReportWithAttachments } from "../../Utils/pdfMerger";
 import { getAllTimes, getUserId } from "../../Utils/auth";
 import { recordFileDownloadAudit, recordViewAudit } from "../../Utils/auditLogger";
 
@@ -235,6 +236,21 @@ function WingCoordinatorReport() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
+  const [mergedPreviewUrl, setMergedPreviewUrl] = useState(null);
+
+  const getAllAttachments = (reportData) => {
+    const attachments = [];
+    if (Array.isArray(reportData?.report)) {
+      reportData.report.forEach((item) => {
+        if (Array.isArray(item?.files)) {
+          attachments.push(...item.files);
+        } else if (item?.files && typeof item.files === "object") {
+          attachments.push(...Object.values(item.files));
+        }
+      });
+    }
+    return attachments;
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -252,11 +268,53 @@ function WingCoordinatorReport() {
     load();
   }, [dispatch, id]);
 
+  useEffect(() => {
+    let isMounted = true;
+    let objectUrl = null;
+
+    const buildPreview = async () => {
+      if (!data) return;
+      const attachments = getAllAttachments(data);
+      const hasPdfAttachments = attachments.some(
+        (f) =>
+          f?.type === "application/pdf" ||
+          f?.url?.startsWith("data:application/pdf") ||
+          (f?.name || "").toLowerCase().endsWith(".pdf")
+      );
+
+      if (!hasPdfAttachments) {
+        setMergedPreviewUrl(null);
+        return;
+      }
+
+      try {
+        const baseBlob = await ReactPDF.pdf(<WingCoordinatorDoc data={data} />).toBlob();
+        const mergedBlob = await mergeReportWithAttachments(baseBlob, attachments);
+        if (isMounted) {
+          objectUrl = URL.createObjectURL(mergedBlob);
+          setMergedPreviewUrl(objectUrl);
+        }
+      } catch (err) {
+        console.error("Failed to build merged preview:", err);
+      }
+    };
+
+    buildPreview();
+
+    return () => {
+      isMounted = false;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [data]);
+
   const downloadPDF = async () => {
     setDownloading(true);
     try {
-      const blob = await ReactPDF.pdf(<WingCoordinatorDoc data={data} />).toBlob();
-      const url = URL.createObjectURL(blob);
+      const baseBlob = await ReactPDF.pdf(<WingCoordinatorDoc data={data} />).toBlob();
+      const allAttachments = getAllAttachments(data);
+      const mergedBlob = await mergeReportWithAttachments(baseBlob, allAttachments);
+
+      const url = URL.createObjectURL(mergedBlob);
       const link = document.createElement("a");
       link.href = url;
       const pdfName = `Wing-Coordinator-Report-${id}.pdf`;
@@ -267,9 +325,11 @@ function WingCoordinatorReport() {
       recordFileDownloadAudit({
         fileName: pdfName,
         fileType: "PDF",
-        module: "Wing Coordinator Report",
+        module: "Wing Coordinator Report (with Attachments)",
         extraDetails: `Report ID: ${id}`,
       });
+    } catch (err) {
+      console.error("PDF download error:", err);
     } finally {
       setDownloading(false);
     }
@@ -649,11 +709,19 @@ function WingCoordinatorReport() {
                 <Text fontSize="xs" color="gray.400">Scroll to see all pages</Text>
               </Flex>
               <Box borderRadius="xl" overflow="hidden" borderWidth="1px" borderColor="gray.200">
-                {data && (
+                {data && mergedPreviewUrl ? (
+                  <iframe
+                    src={mergedPreviewUrl}
+                    title="Merged Wing Coordinator Report PDF"
+                    width="100%"
+                    height="800px"
+                    style={{ border: "none" }}
+                  />
+                ) : data ? (
                   <PDFViewer key={id} style={{ width: "100%", height: "800px", border: "none" }}>
                     <WingCoordinatorDoc data={data} />
                   </PDFViewer>
-                )}
+                ) : null}
               </Box>
             </Box>
           </>

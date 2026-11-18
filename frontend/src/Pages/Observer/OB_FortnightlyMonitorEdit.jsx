@@ -205,6 +205,8 @@ function OB_FortnightlyMonitorEdit() {
                           name={field?.key}
                           label={
                             <Text
+                              as="span"
+                              display="inline"
                               fontWeight="600"
                               color="gray.700"
                               fontSize="md"

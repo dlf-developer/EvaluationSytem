@@ -18,6 +18,7 @@ const logger = require('./utils/logger');
 const { initProcessMonitor } = require('./utils/processMonitor');
 const requestLogger = require('./middleware/requestLogger');
 const errorHandler = require('./middleware/errorHandler');
+const deduplicateRequests = require('./middleware/deduplicateRequests');
 
 // Initialize process monitoring & crash trap
 initProcessMonitor();
@@ -60,6 +61,7 @@ connectDB();
 // Middleware
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
+app.use(deduplicateRequests());
 
 // Routes
 app.use('/api/auth', authRoutes);

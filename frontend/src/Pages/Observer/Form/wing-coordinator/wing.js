@@ -47,7 +47,8 @@ export const inputsWingDLPS = [
     question: "C.W.S.N Names & Progress",
     type: "table",
     columns: [
-      "Name, Class & Sec",
+      "Name of Student",
+      "Class & Sec.",
       "Identified using PRASHAST Checklists (Y/N)",
       "Receiving Sensorium / Counsellor Intervention (Y/N)",
       "Diagnosis",
@@ -67,7 +68,8 @@ export const inputsWingDLPS = [
     columns: ["Date", "Detention/extra input class?", "Name of the MT/ST/WC", "Name of the Students", "Class & Section", "Name of the subject", "Outcome"],
   },
   {
-    question: "Care Calls Made",
+    question: "Care Calls & Sunshine Calls Made?",
+    legacyQuestions: ["Care Calls Made"],
     type: "table",
     columns: ["Date", "Name of the MT/ST/WC", "Name of the Student", "Class & Section", "Reason", "Outcome"],
     allowFileUpload: true,
@@ -179,7 +181,8 @@ export const inputsWingDLWS = [
     question: "C.W.S.N Names & Progress",
     type: "table",
     columns: [
-      "Name, Class & Sec",
+      "Name of Student",
+      "Class & Sec.",
       "Identified using PRASHAST Checklists (Y/N)",
       "Receiving Sensorium / Counsellor Intervention (Y/N)",
       "Diagnosis",
@@ -199,7 +202,8 @@ export const inputsWingDLWS = [
     columns: ["Date", "Detention/extra input class?", "Name of the MT/ST/WC", "Name of the Students", "Class & Section", "Name of the subject", "Outcome"],
   },
   {
-    question: "Care Calls Made",
+    question: "Care Calls & Sunshine Calls Made?",
+    legacyQuestions: ["Care Calls Made"],
     type: "table",
     columns: ["Date", "Name of the MT/ST/WC", "Name of the Student", "Class & Section", "Reason", "Outcome"],
     allowFileUpload: true,
@@ -341,13 +345,40 @@ export const mergeWingReportItems = (
   return questions.map((inp, idx) => {
     const existing = matchedByIdx[idx] || safeFallback[idx] || null;
     const colCount = Array.isArray(inp.columns) ? inp.columns.length : undefined;
+
+    let tableData = sanitizeTableData(existing?.tableData, colCount);
+
+    // Backward compatibility for C.W.S.N question when transitioning from 6 to 7 columns
+    if (
+      normalizeQuestionTitle(inp.question) === normalizeQuestionTitle("C.W.S.N Names & Progress") &&
+      Array.isArray(tableData)
+    ) {
+      tableData = tableData.map((row) => {
+        if (!row || typeof row !== "object") return row;
+        // If col_5 exists but col_6 is undefined, this was saved in the 6-column format
+        if (row.col_5 !== undefined && row.col_6 === undefined) {
+          return {
+            ...row,
+            col_0: row.col_0 || "",
+            col_1: "", // New separate Class & Sec column
+            col_2: row.col_1 || "",
+            col_3: row.col_2 || "",
+            col_4: row.col_3 || "",
+            col_5: row.col_4 || "",
+            col_6: row.col_5 || "",
+          };
+        }
+        return row;
+      });
+    }
+
     return {
       question: inp.question,
       type: inp.type,
       columns: inp.columns,
       allowFileUpload: inp.allowFileUpload,
       answer: existing?.answer || "",
-      tableData: sanitizeTableData(existing?.tableData, colCount),
+      tableData,
       files: Array.isArray(existing?.files)
         ? existing.files
         : existing?.files && typeof existing.files === "object"

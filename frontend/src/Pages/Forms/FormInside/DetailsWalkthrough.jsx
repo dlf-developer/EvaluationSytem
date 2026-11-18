@@ -560,7 +560,7 @@ function DetailsWalkthrough() {
             <Form.Item
               name={name}
               label={
-                <Text fontSize="sm" fontWeight="600" color="gray.700">
+                <Text as="span" display="inline" fontSize="sm" fontWeight="600" color="gray.700">
                   {label}
                 </Text>
               }

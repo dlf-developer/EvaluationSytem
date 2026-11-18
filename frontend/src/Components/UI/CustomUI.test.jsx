@@ -390,4 +390,42 @@ describe("Custom UI AntD Compatibility Fixes", () => {
     expect(screen.getByText("Right Drawer")).toBeInTheDocument();
     expect(container.querySelector(".right-0")).toBeTruthy();
   });
+
+  test("Form.Item renders required asterisk strictly inline with text and React element labels", () => {
+    const { container } = render(
+      <Form>
+        <Form.Item
+          name="feedback"
+          label={<span className="my-question">I have provided timely and regular feedback.</span>}
+          rules={[{ required: true }]}
+        >
+          <input data-testid="inp1" />
+        </Form.Item>
+        <Form.Item
+          name="className"
+          label="Class Name"
+          rules={[{ required: true }]}
+        >
+          <input data-testid="inp2" />
+        </Form.Item>
+      </Form>
+    );
+
+    const labels = container.querySelectorAll("label");
+    expect(labels.length).toBe(2);
+
+    // Label 1 has question text and asterisk inline inside it
+    const label1 = labels[0];
+    expect(label1).toHaveTextContent("I have provided timely and regular feedback.*");
+    const asterisk1 = label1.querySelector(".text-red-500");
+    expect(asterisk1).toBeInTheDocument();
+    expect(asterisk1.style.display).toBe("inline");
+
+    // Label 2 has string text and asterisk inline inside it
+    const label2 = labels[1];
+    expect(label2).toHaveTextContent("Class Name*");
+    const asterisk2 = label2.querySelector(".text-red-500");
+    expect(asterisk2).toBeInTheDocument();
+    expect(asterisk2.style.display).toBe("inline");
+  });
 });

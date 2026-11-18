@@ -24,20 +24,82 @@ export const Input = forwardRef(
   }
 );
 
-Input.TextArea = forwardRef(
-  ({ rows = 4, className = "", error, ...props }, ref) => {
+export const AutoExpandingTextArea = forwardRef(
+  (
+    {
+      rows = 1,
+      minRows = 1,
+      maxRows = 12,
+      autoSize = true,
+      className = "",
+      error,
+      value,
+      defaultValue,
+      onChange,
+      onInput,
+      style = {},
+      ...props
+    },
+    ref
+  ) => {
+    const innerRef = useRef(null);
+
+    const setMergedRef = (el) => {
+      innerRef.current = el;
+      if (typeof ref === "function") ref(el);
+      else if (ref) ref.current = el;
+    };
+
+    const adjustHeight = () => {
+      const el = innerRef.current;
+      if (!el || !autoSize) return;
+      el.style.height = "auto";
+      const computedMinRows =
+        typeof autoSize === "object" && autoSize.minRows ? autoSize.minRows : minRows;
+      const computedMaxRows =
+        typeof autoSize === "object" && autoSize.maxRows ? autoSize.maxRows : maxRows;
+      const minHeight = computedMinRows * 22 + 10;
+      const maxHeight = computedMaxRows ? computedMaxRows * 22 + 10 : Infinity;
+      const newHeight = Math.min(Math.max(el.scrollHeight, minHeight), maxHeight);
+      el.style.height = `${newHeight}px`;
+      el.style.overflowY = el.scrollHeight > maxHeight ? "auto" : "hidden";
+    };
+
+    useEffect(() => {
+      adjustHeight();
+      const raf = requestAnimationFrame(adjustHeight);
+      return () => cancelAnimationFrame(raf);
+    }, [value, defaultValue]);
+
     return (
       <textarea
-        ref={ref}
+        ref={setMergedRef}
         rows={rows}
-        className={`w-full rounded-lg border bg-white p-3 text-sm text-gray-900 shadow-sm transition-all placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed ${
-          error ? "border-red-500 focus:border-red-500" : "border-gray-300 focus:border-brand-500 hover:border-brand-500"
+        value={value}
+        defaultValue={defaultValue}
+        onChange={(e) => {
+          onChange?.(e);
+          adjustHeight();
+        }}
+        onInput={(e) => {
+          onInput?.(e);
+          adjustHeight();
+        }}
+        style={{
+          ...style,
+          resize: autoSize ? "none" : (style.resize || "vertical"),
+          overflowY: "hidden",
+        }}
+        className={`w-full rounded-lg border bg-white p-2.5 text-sm text-gray-900 shadow-xs transition-colors placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1a4d2e]/15 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed ${
+          error ? "border-red-500 focus:border-red-500" : "border-gray-300 focus:border-[#1a4d2e] hover:border-gray-400"
         } ${className}`}
         {...props}
       />
     );
   }
 );
+
+Input.TextArea = AutoExpandingTextArea;
 
 Input.Password = forwardRef(({ size = "middle", className = "", ...props }, ref) => {
   const [show, setShow] = useState(false);

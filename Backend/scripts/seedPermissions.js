@@ -164,7 +164,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
     documents: {
       fortnightly:       { canView: true, canCreate: true, canEdit: true, canDelete: false, canExport: false },
       walkthrough:       { canView: true, canCreate: false, canEdit: false, canDelete: false, canExport: false },
-      notebook:          { canView: true, canCreate: false, canEdit: true, canDelete: false, canExport: false },
+      notebook:          { canView: true, canCreate: true, canEdit: true, canDelete: false, canExport: false },
       coScholastic:      { canView: true, canCreate: false, canEdit: false, canDelete: false, canExport: false },
       weekly4:           { canView: true, canCreate: true, canEdit: true, canDelete: false, canExport: false },
       wingCoordinator:   { canView: false, canCreate: false, canEdit: false, canDelete: false, canExport: false },

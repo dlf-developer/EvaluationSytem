@@ -289,17 +289,31 @@ export const Form = ({
     }
   }, [activeForm, onValuesChange, initialValues]);
 
+  const isSubmittingRef = useRef(false);
+
   const handleSubmit = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
+    if (isSubmittingRef.current) {
+      console.warn("Form submission already in progress, ignoring duplicate submit.");
+      return;
+    }
+    isSubmittingRef.current = true;
     try {
       const values = await activeForm.validateFields();
-      onFinish?.(values);
+      const result = onFinish?.(values);
+      if (result && typeof result.then === "function") {
+        await result;
+      }
     } catch (err) {
       if (onFinishFailed) {
         onFinishFailed(err);
       } else {
         console.warn("Form validation failed:", err);
       }
+    } finally {
+      setTimeout(() => {
+        isSubmittingRef.current = false;
+      }, 500);
     }
   };
 
@@ -514,6 +528,65 @@ export const FormItem = ({
 
   const isVertical = layout === "vertical" || !layout;
 
+  const renderLabelContent = () => {
+    if (!label) return null;
+
+    const asteriskEl = isRequired ? (
+      <span
+        className="text-red-500 font-bold ml-1 text-xs select-none inline align-baseline"
+        style={{
+          fontFamily: "SimSun, sans-serif, system-ui",
+          lineHeight: "1",
+          display: "inline",
+          verticalAlign: "baseline",
+        }}
+        aria-hidden="true"
+      >
+        *
+      </span>
+    ) : null;
+
+    const tooltipEl = tooltip ? (
+      <span
+        className="text-gray-400 hover:text-gray-600 cursor-help ml-1.5 inline-block align-middle"
+        title={tooltip}
+      >
+        <HelpCircle className="w-3.5 h-3.5 inline" />
+      </span>
+    ) : null;
+
+    if (React.isValidElement(label)) {
+      const existingStyle = label.props?.style || {};
+      const existingClassName = label.props?.className || "";
+      return React.cloneElement(
+        label,
+        {
+          style: {
+            display: "inline",
+            margin: 0,
+            marginBottom: 0,
+            ...existingStyle,
+          },
+          className: `${existingClassName} inline align-baseline`.trim(),
+          as: "span",
+        },
+        <>
+          {label.props?.children}
+          {asteriskEl}
+          {tooltipEl}
+        </>
+      );
+    }
+
+    return (
+      <span style={{ display: "inline", verticalAlign: "baseline" }}>
+        {label}
+        {asteriskEl}
+        {tooltipEl}
+      </span>
+    );
+  };
+
   return (
     <div
       className={`mb-2.5 ${isVertical ? "flex flex-col" : "flex flex-row items-center gap-3"} ${className}`}
@@ -522,31 +595,12 @@ export const FormItem = ({
     >
       {label && (
         <label
-          className={`block text-xs font-semibold text-gray-700 mb-1 leading-tight ${
+          className={`block text-xs font-semibold text-gray-700 mb-1.5 leading-snug ${
             isVertical ? "" : "w-1/3 text-right"
           }`}
+          style={{ display: "block" }}
         >
-          <span>{label}</span>
-          {isRequired && (
-            <span
-              className="text-red-500 font-bold ml-1 text-xs select-none inline align-baseline"
-              style={{
-                fontFamily: "SimSun, sans-serif, system-ui",
-                lineHeight: "1",
-              }}
-              aria-hidden="true"
-            >
-              *
-            </span>
-          )}
-          {tooltip && (
-            <span
-              className="text-gray-400 hover:text-gray-600 cursor-help ml-1.5 inline-block align-middle"
-              title={tooltip}
-            >
-              <HelpCircle className="w-3.5 h-3.5 inline" />
-            </span>
-          )}
+          {renderLabelContent()}
         </label>
       )}
       <div className={isVertical ? "w-full" : "w-2/3"}>

@@ -350,6 +350,24 @@ exports.createForm = async (req, res) => {
         .json({ success: false, message: "Class and Section is Required!" });
     }
 
+    // Duplicate submission guard: check if identical form was created by this user within the last 5 seconds
+    if (!isDraftSave) {
+      const recentDuplicate = await Form3.findOne({
+        createdBy: user._id,
+        "grenralDetails.className": finalClassName || null,
+        "grenralDetails.Section": Section || null,
+        "grenralDetails.Subject": Subject || null,
+        createdAt: { $gte: new Date(Date.now() - 5000) },
+      });
+      if (recentDuplicate) {
+        return res.status(200).json({
+          message: "Form already submitted successfully",
+          form: recentDuplicate,
+          status: true,
+        });
+      }
+    }
+
     const newForm = new Form3({
       grenralDetails: {
         NameofObserver: NameofObserver || null,
@@ -447,83 +465,96 @@ exports.createInitiate = async (req, res) => {
       if (classData) finalClassName = classData.className;
     }
 
-    // Extract single teacher ID (each form is strictly individual to ONE teacher)
-    let rawId = teacherID || (Array.isArray(teacherIDs) ? teacherIDs[0] : teacherIDs);
-    if (rawId && typeof rawId === "object") {
-      rawId = rawId._id || rawId.value || rawId.id || null;
-    }
-    const cleanTeacherId = rawId ? String(rawId).trim() : "";
-
-    if (!cleanTeacherId || !mongoose.Types.ObjectId.isValid(cleanTeacherId) || !/^[a-f\d]{24}$/i.test(cleanTeacherId)) {
-      return res.status(400).json({ error: "Please select a valid teacher." });
+    // Extract and sanitize teacher IDs (supports multiple selected teachers)
+    let rawTeacherIds = teacherIDs;
+    if (rawTeacherIds === undefined || rawTeacherIds === null || rawTeacherIds === "") {
+      rawTeacherIds = teacherID ? [teacherID] : [];
+    } else if (!Array.isArray(rawTeacherIds)) {
+      rawTeacherIds = [rawTeacherIds];
     }
 
-    if (userId && cleanTeacherId === userId.toString()) {
-      return res.status(400).json({ error: "You cannot initiate a form to yourself." });
+    const cleanTeacherIds = rawTeacherIds
+      .map((item) => {
+        if (!item) return null;
+        if (typeof item === "object") {
+          return item._id || item.value || item.id || null;
+        }
+        return typeof item === "string" ? item.trim() : String(item).trim();
+      })
+      .filter((id) => id && typeof id === "string" && mongoose.Types.ObjectId.isValid(id) && id.toString() !== (userId ? userId.toString() : ""));
+
+    if (cleanTeacherIds.length === 0) {
+      return res.status(400).json({ error: "Please select at least one valid teacher." });
     }
 
-    const teacher = await User.findById(cleanTeacherId);
-    if (!teacher) {
-      return res.status(404).json({ error: "Selected teacher not found." });
-    }
+    // Create an individual, independent form for each selected teacher
+    const createdForms = await Promise.all(
+      cleanTeacherIds.map(async (cleanTeacherId) => {
+        const teacher = await User.findById(cleanTeacherId);
+        if (!teacher) return null;
 
-    // Create and save exactly one form for this individual teacher
-    const formData = await new Form3({
-      isObserverInitiation: true,
-      teacherID: teacher._id,
-      grenralDetails: {
-        NameofObserver: userId,
-        DateOfObservation: new Date(),
-        className: finalClassName,
-        Section: Section,
-        Subject: Subject,
-      },
-      TeacherForm: {},
-      ObserverForm: {},
-    }).save();
+        const formData = await new Form3({
+          isObserverInitiation: true,
+          teacherID: teacher._id,
+          grenralDetails: {
+            NameofObserver: userId,
+            DateOfObservation: new Date(),
+            className: finalClassName,
+            Section: Section,
+            Subject: Subject,
+          },
+          TeacherForm: {},
+          ObserverForm: {},
+        }).save();
 
-    // The frontend route for BOTH teacher-created and observer-initiated
-    // notebook forms is the same: notebook-checking-proforma/create/:id
-    const route = `notebook-checking-proforma/create/${formData._id}`;
-    if (teacher.email) {
-      const emailData = formInitiatedEmail({
-        recipientName: teacher.name,
-        initiatorName: req.user?.name,
-        formTitle: "Notebook Checking Proforma",
-        formRoute: route,
-        className: finalClassName,
-        section: Section,
-        subject: Subject,
-      });
+        const route = `notebook-checking-proforma/create/${formData._id}`;
+        if (teacher.email) {
+          try {
+            const emailData = formInitiatedEmail({
+              recipientName: teacher.name,
+              initiatorName: req.user?.name,
+              formTitle: "Notebook Checking Proforma",
+              formRoute: route,
+              className: finalClassName,
+              section: Section,
+              subject: Subject,
+            });
+            await sendEmail(teacher.email, emailData.subject, emailData.html);
+          } catch (emailErr) {
+            console.error("Failed to send initiate email:", emailErr);
+          }
+        }
 
-      try {
-        await sendEmail(teacher.email, emailData.subject, emailData.html);
-      } catch (emailErr) {
-        console.error("Failed to send initiate email:", emailErr);
-      }
-    }
+        try {
+          await new notification({
+            title: "You are invited to fill the Notebook Form Initiated",
+            route,
+            reciverId: teacher._id,
+            date: new Date(),
+            status: "unSeen",
+          }).save();
+        } catch (notifErr) {
+          console.error("Failed to create initiate notification:", notifErr);
+        }
 
-    // Create and save the notification
-    try {
-      await new notification({
-        title: "You are invited to fill the Notebook Form Initiated",
-        route: `notebook-checking-proforma/create/${formData._id}`,
-        reciverId: teacher._id,
-        date: new Date(),
-        status: "unSeen",
-      }).save();
-    } catch (notifErr) {
-      console.error("Failed to create initiate notification:", notifErr);
-    }
+        return formData;
+      })
+    );
+
+    const validForms = createdForms.filter(Boolean);
 
     recordAuditLog({
       req,
       action: 'CREATE',
       module: 'Notebook Checking',
-      details: `Initiated Notebook Checking form for ${teacher.name} (Class: ${finalClassName || ''} Section: ${Section || ''})`,
+      details: `Initiated Notebook Checking form for ${validForms.length} teacher(s) (Class: ${finalClassName || ''} Section: ${Section || ''})`,
     });
 
-    return res.status(200).json({ message: "Form created successfully", form: [formData], status: true });
+    return res.status(200).json({
+      message: `Form${validForms.length > 1 ? "s" : ""} created successfully`,
+      form: validForms,
+      status: true,
+    });
   } catch (err) {
     console.error("Error in createInitiate:", err);
     return res.status(500).json({ error: "Internal server error." });

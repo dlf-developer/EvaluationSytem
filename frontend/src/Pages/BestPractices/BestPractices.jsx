@@ -28,6 +28,8 @@ import {
   BookOpen,
   Info,
   Plus,
+  Download,
+  FileText,
 } from "lucide-react";
 import {
   THEME_CONFIG,
@@ -515,6 +517,49 @@ export default function BestPractices() {
     }
   };
 
+  // Download official Best Practice Documentation Template (.docx or .pdf)
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const handleDownloadTemplate = async (format = "docx") => {
+    try {
+      setIsDownloading(true);
+      if (format === "docx") {
+        const a = document.createElement("a");
+        a.href = "/templates/DLF_Best_Practice_Template.docx";
+        a.download = "DLF_Best_Practice_Template.docx";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      } else {
+        const [ReactPDFModule, { default: TemplateDoc }] = await Promise.all([
+          import("@react-pdf/renderer"),
+          import("./BestPracticeTemplateDoc"),
+        ]);
+        const ReactPDF = ReactPDFModule.default || ReactPDFModule;
+        const blob = await ReactPDF.pdf(<TemplateDoc />).toBlob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "DLF-Best-Practice-Documentation-Template.pdf";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+    } catch (err) {
+      console.error("Failed to download template:", err);
+      // Fallback: trigger docx download
+      const a = document.createElement("a");
+      a.href = "/templates/DLF_Best_Practice_Template.docx";
+      a.download = "DLF_Best_Practice_Template.docx";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   // ── FULL PAGE DETAIL VIEW (No popup modal / no constrained scrolling) ─────
   if (activePractice) {
     return (
@@ -555,6 +600,31 @@ export default function BestPractices() {
             <p className="mt-2 text-sm md:text-base text-[#5C5852] leading-relaxed">
               Curated pedagogical practices, classroom strategies, and NEP 2020 aligned learning activities developed and practiced by DLF Public School educators.
             </p>
+
+            {/* Download Best Practices Template Actions */}
+            <div className="mt-3.5 flex flex-wrap items-center gap-2.5">
+              <button
+                type="button"
+                onClick={() => handleDownloadTemplate("docx")}
+                disabled={isDownloading}
+                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-[#4A6741] text-white hover:bg-[#3d5635] active:scale-98 shadow-xs transition cursor-pointer select-none disabled:opacity-60"
+                title="Download official editable Word template (.docx)"
+              >
+                <Download className="w-4 h-4" />
+                <span>Download Best Practice Template (.docx)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleDownloadTemplate("pdf")}
+                disabled={isDownloading}
+                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium bg-white/90 text-[#4A6741] border border-[#4A6741]/35 hover:bg-[#4A6741]/8 hover:border-[#4A6741] active:scale-98 shadow-2xs transition cursor-pointer select-none disabled:opacity-60"
+                title="Download printable PDF template"
+              >
+                <FileText className="w-4 h-4" />
+                <span>Printable PDF</span>
+              </button>
+            </div>
           </div>
 
           {/* Progress Tracker Card - soft translucent parchment surface */}

@@ -110,7 +110,7 @@ function OB_WalkthroughEdit() {
       <Form.Item
         name={[...name, "answer"]}
         label={
-          <Text fontWeight="600" color="gray.700" fontSize="md" mb={2}>
+          <Text as="span" display="inline" fontWeight="600" color="gray.700" fontSize="md">
             {label}
           </Text>
         }

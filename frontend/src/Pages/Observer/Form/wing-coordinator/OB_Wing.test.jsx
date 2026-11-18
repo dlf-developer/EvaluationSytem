@@ -19,6 +19,21 @@ jest.mock("axios", () => {
   return mockAxios;
 });
 
+jest.mock("lucide-react", () => {
+  const React = require("react");
+  return new Proxy(
+    {},
+    {
+      get: (target, prop) => {
+        if (prop === "__esModule") return true;
+        return React.forwardRef((props, ref) =>
+          React.createElement("span", { ...props, ref, "data-icon": prop })
+        );
+      },
+    }
+  );
+});
+
 const mockToastFn = jest.fn();
 
 jest.mock("@chakra-ui/react", () => {

@@ -37,6 +37,7 @@ import {
   ReloadOutlined,
   SyncOutlined,
 } from "../../../../Components/UI/Icons";
+import { AutoExpandingTextArea } from "../../../../Components/UI/Inputs";
 
 const FORM_TITLES = [
   { key: "form1", label: "Fortnightly Monitor", color: "green" },
@@ -873,13 +874,13 @@ function OB_Wing() {
 
                   {item.type === "text" ? (
                     <div>
-                      <textarea
+                      <AutoExpandingTextArea
                         value={reportItem.answer || ""}
                         onChange={(e) => updateReportItem(index, { answer: e.target.value })}
                         onBlur={handleAutoSave}
                         placeholder="Enter your response…"
-                        rows={2}
-                        className={`w-full px-3.5 py-2.5 text-sm bg-white border rounded-lg focus:outline-none focus:ring-2 transition-all shadow-sm resize-y ${
+                        minRows={2}
+                        className={`w-full px-3.5 py-2.5 text-sm bg-white border rounded-lg focus:outline-none focus:ring-2 transition-all shadow-xs ${
                           validationErrors[`question_${index}`]
                             ? "border-red-400 focus:ring-red-400"
                             : "border-slate-300 focus:ring-emerald-500 focus:border-transparent"
@@ -901,12 +902,32 @@ function OB_Wing() {
                           </div>
                           {(item.columns || []).map((col, colIdx) => {
                             const isCheckbox = col === "Ticket Raised" || col === "Resolved?";
+                            const totalCols = (item.columns || []).length;
+                            const lower = (col || "").toLowerCase();
+                            const isDate = lower.includes("date");
+                            let widthClass = "w-[180px]";
+                            if (isCheckbox) widthClass = "w-[100px] text-center";
+                            else if (isDate) widthClass = totalCols <= 3 ? "w-[160px] text-left" : "w-[130px] text-left";
+                            else if (totalCols <= 2) widthClass = "w-[420px] text-left";
+                            else if (totalCols === 3) widthClass = "w-[280px] text-left";
+                            else if (
+                              lower.includes("content") ||
+                              lower.includes("highlight") ||
+                              lower.includes("outcome") ||
+                              lower.includes("remark") ||
+                              lower.includes("action plan") ||
+                              lower.includes("feedback") ||
+                              lower.includes("diagnosis")
+                            ) {
+                              widthClass = "w-[240px] text-left";
+                            } else {
+                              widthClass = "w-[180px] text-left";
+                            }
+
                             return (
                               <div
                                 key={colIdx}
-                                className={`text-xs font-bold text-slate-500 ${
-                                  isCheckbox ? "w-[100px] text-center" : "w-[180px] text-left"
-                                }`}
+                                className={`text-xs font-bold text-slate-500 ${widthClass}`}
                               >
                                 {col}
                               </div>
@@ -919,8 +940,8 @@ function OB_Wing() {
                         {tableRows.map((row, rowIndex) => {
                           const safeRow = row && typeof row === "object" ? row : {};
                           return (
-                          <div key={rowIndex} className="flex items-center gap-2 mb-2">
-                            <div className="w-[45px] h-8 flex items-center justify-center text-xs font-semibold text-slate-600 bg-slate-200/70 rounded-md shrink-0">
+                          <div key={rowIndex} className="flex items-start gap-2 mb-2">
+                            <div className="w-[45px] h-8 flex items-center justify-center text-xs font-semibold text-slate-600 bg-slate-200/70 rounded-md shrink-0 mt-0.5">
                               {rowIndex + 1}
                             </div>
 
@@ -929,10 +950,28 @@ function OB_Wing() {
                               const isDate = col.toLowerCase().includes("date");
                               const cellKey = `col_${colIdx}`;
                               const cellVal = safeRow[cellKey];
+                              const totalCols = (item.columns || []).length;
+                              const lower = (col || "").toLowerCase();
+                              let cellWidthClass = "w-[180px]";
+                              if (isCheckbox) cellWidthClass = "w-[100px]";
+                              else if (isDate) cellWidthClass = totalCols <= 3 ? "w-[160px]" : "w-[130px]";
+                              else if (totalCols <= 2) cellWidthClass = "w-[420px]";
+                              else if (totalCols === 3) cellWidthClass = "w-[280px]";
+                              else if (
+                                lower.includes("content") ||
+                                lower.includes("highlight") ||
+                                lower.includes("outcome") ||
+                                lower.includes("remark") ||
+                                lower.includes("action plan") ||
+                                lower.includes("feedback") ||
+                                lower.includes("diagnosis")
+                              ) {
+                                cellWidthClass = "w-[240px]";
+                              }
 
                               if (isCheckbox) {
                                 return (
-                                  <div key={colIdx} className="w-[100px] flex justify-center">
+                                  <div key={colIdx} className={`${cellWidthClass} flex justify-center pt-2`}>
                                     <input
                                       type="checkbox"
                                       checked={!!cellVal}
@@ -948,7 +987,7 @@ function OB_Wing() {
 
                               if (isDate) {
                                 return (
-                                  <div key={colIdx} className="w-[180px]">
+                                  <div key={colIdx} className={cellWidthClass}>
                                     <input
                                       type="date"
                                       value={cellVal || ""}
@@ -963,16 +1002,16 @@ function OB_Wing() {
                               }
 
                               return (
-                                <div key={colIdx} className="w-[180px]">
-                                  <textarea
+                                <div key={colIdx} className={cellWidthClass}>
+                                  <AutoExpandingTextArea
                                     value={cellVal || ""}
                                     onChange={(e) => {
                                       updateTableCell(index, rowIndex, cellKey, e.target.value);
                                     }}
                                     onBlur={handleAutoSave}
                                     placeholder={col}
-                                    rows={1}
-                                    className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-emerald-500 shadow-sm resize-none"
+                                    minRows={1}
+                                    className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-emerald-500 shadow-xs"
                                   />
                                 </div>
                               );
@@ -981,7 +1020,7 @@ function OB_Wing() {
                             <button
                               type="button"
                               onClick={() => removeTableRow(index, rowIndex)}
-                              className="w-8 h-8 flex items-center justify-center text-xs text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
+                              className="w-8 h-8 flex items-center justify-center text-xs text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition-colors mt-0.5"
                               title="Remove row"
                             >
                               ✕

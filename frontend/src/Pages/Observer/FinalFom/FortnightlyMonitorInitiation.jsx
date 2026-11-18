@@ -93,8 +93,7 @@ function FortnightlyMonitorInitiation() {
       })
       .filter((id) => id && id.length === 24);
 
-    const singleTeacherId = cleanTeacherIds[0];
-    const finalTeacherIds = singleTeacherId ? [singleTeacherId] : [];
+    const finalTeacherIds = cleanTeacherIds;
 
     const isCoordSelected = Boolean(values?.isCoordinator || isCoordinator);
     const cleanCoordinatorId =
@@ -103,7 +102,7 @@ function FortnightlyMonitorInitiation() {
         : values?.coordinatorID;
 
     if (!isCoordSelected && finalTeacherIds.length === 0) {
-      message.error("Please select a Teacher!");
+      message.error("Please select at least one Teacher!");
       return;
     }
 
@@ -194,16 +193,17 @@ function FortnightlyMonitorInitiation() {
                 <>
                   <Form.Item
                     className="w-100"
-                    label="Teacher"
+                    label="Teacher(s)"
                     name="teacherIDs"
                     rules={[
-                      { required: true, message: "Please select a Teacher!" },
+                      { required: true, message: "Please select at least one Teacher!" },
                     ]}
                   >
                     <Select
+                      mode="multiple"
                       allowClear
                       showSearch
-                      placeholder="Select a Teacher"
+                      placeholder="Select one or more teachers"
                       options={TeachersList?.filter((t) => t._id !== getUserId()?.id && t?.isActive !== false)?.map((item) => ({
                         value: item._id,
                         label: `${item.name} [${getUserRoleTag(item)}]`,
@@ -345,15 +345,17 @@ function FortnightlyMonitorInitiation() {
 
                 {isTeacher && (
                   <Form.Item
-                    label="Teacher ID"
-                    name="teacherID"
+                    label="Teacher(s)"
+                    name="teacherIDs"
                     rules={[
-                      { required: true, message: "Please select a Teacher!" },
+                      { required: true, message: "Please select at least one Teacher!" },
                     ]}
                   >
                     <Select
+                      mode="multiple"
                       showSearch
-                      placeholder="Select a Teacher"
+                      allowClear
+                      placeholder="Select one or more teachers"
                       options={TeachersList?.filter((t) => t._id !== getUserId()?.id)?.map((item) => ({
                         value: item._id,
                         label: `${item.name} [${getUserRoleTag(item)}]`,

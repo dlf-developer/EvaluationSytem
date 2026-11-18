@@ -41,6 +41,7 @@ const NoteBookDetails = () => {
   const navigate = useNavigate();
   const FormId = useParams()?.id;
   const [savedFormId, setSavedFormId] = useState(FormId || null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { loading, GetObserverLists } = useSelector((state) => state?.user);
   //   const {isLoading,formDataList} = useSelector((state)=>state?.walkThroughForm)
   // Fetch notebook form details
@@ -275,11 +276,7 @@ const NoteBookDetails = () => {
         {/* Answer Field */}
         <Form.Item
           name={[...name, "answer"]}
-          label={
-            <div className="d-flex justify-content-between align-items-center">
-              <h5 className="text-gray mb-0">{question}</h5>
-            </div>
-          }
+          label={<span className="text-gray fw-semibold fs-6">{question}</span>}
           rules={[{ required: true, message: "Please select an answer!" }]}
         >
           <ChoiceScaleSelector options={["1", "2", "3", "N/A"]} size="large" />
@@ -544,43 +541,52 @@ const NoteBookDetails = () => {
   };
 
   const handleSubmit = async (finalData) => {
-    const submissionData = {
-      ...finalData,
-      isDraft: false,
-      isTeacherComplete: true,
-      currentStep: 1,
-    };
-    let data;
-    if (savedFormId) {
-      data = await dispatch(EditNoteBook({ id: savedFormId, data: submissionData }));
-    } else {
-      data = await dispatch(CreateNoteBookForm(submissionData));
-    }
-    const formRecord = data?.payload?.form || data?.payload?.updatedForm;
-    if (data?.payload?.status || data?.payload?.success) {
-      message.success(data?.payload?.message || "Form submitted successfully!");
-      const userInfo = formRecord?.grenralDetails;
-      const activity = {
-        observerMessage: `${getUserId()?.name} has completed the Notebook Checking Proforma Form For ${userInfo?.className} | ${userInfo?.Subject} | ${userInfo?.Section}.`,
-        teacherMessage: `You have completed Notebook Checking Proforma Form For ${userInfo?.className} | ${userInfo?.Subject} | ${userInfo?.Section}..`,
-        route: `/notebook-checking-proforma/report/${formRecord?._id}`,
-        date: new Date(),
-        reciverId: userInfo?.NameofObserver,
-        senderId: getUserId()?.id,
-        fromNo: 3,
-        data: formRecord,
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const submissionData = {
+        ...finalData,
+        isDraft: false,
+        isTeacherComplete: true,
+        currentStep: 1,
       };
-
-      const activitiRecord = await dispatch(CreateActivityApi(activity));
-      if (!activitiRecord?.payload?.success) {
-        message.error("Error on Activity Record");
+      let data;
+      if (savedFormId) {
+        data = await dispatch(EditNoteBook({ id: savedFormId, data: submissionData }));
+      } else {
+        data = await dispatch(CreateNoteBookForm(submissionData));
       }
+      const formRecord = data?.payload?.form || data?.payload?.updatedForm;
+      if (data?.payload?.status || data?.payload?.success) {
+        message.success(data?.payload?.message || "Form submitted successfully!");
+        const userInfo = formRecord?.grenralDetails;
+        const activity = {
+          observerMessage: `${getUserId()?.name} has completed the Notebook Checking Proforma Form For ${userInfo?.className} | ${userInfo?.Subject} | ${userInfo?.Section}.`,
+          teacherMessage: `You have completed Notebook Checking Proforma Form For ${userInfo?.className} | ${userInfo?.Subject} | ${userInfo?.Section}..`,
+          route: `/notebook-checking-proforma/report/${formRecord?._id}`,
+          date: new Date(),
+          reciverId: userInfo?.NameofObserver,
+          senderId: getUserId()?.id,
+          fromNo: 3,
+          data: formRecord,
+        };
 
-      navigate(
-        `/notebook-checking-proforma/report/${formRecord?._id}`,
-      );
-    } else {
-      message.error(data?.payload?.message || data?.error?.message || "Failed to submit form.");
+        const activitiRecord = await dispatch(CreateActivityApi(activity));
+        if (!activitiRecord?.payload?.success) {
+          message.error("Error on Activity Record");
+        }
+
+        navigate(
+          `/notebook-checking-proforma/report/${formRecord?._id}`,
+        );
+      } else {
+        message.error(data?.payload?.message || data?.error?.message || "Failed to submit form.");
+        setIsSubmitting(false);
+      }
+    } catch (err) {
+      console.error("Submit error:", err);
+      message.error("An error occurred while submitting.");
+      setIsSubmitting(false);
     }
   };
 
@@ -754,13 +760,15 @@ const NoteBookDetails = () => {
                       type="primary"
                       size="large"
                       onClick={handleNext}
+                      loading={isSubmitting}
+                      disabled={isSubmitting}
                       style={{
                         borderRadius: "8px",
                         minWidth: "120px",
                         background: "#1a4d2e",
                       }}
                     >
-                      {currStep === steps.length - 1 ? "Submit" : "Next →"}
+                      {currStep === steps.length - 1 ? (isSubmitting ? "Submitting…" : "Submit") : "Next →"}
                     </Button>
                   </Flex>
                 </Flex>

@@ -103,19 +103,53 @@ export const Button = React.forwardRef(
       ? "w-full flex items-center justify-center"
       : "inline-flex items-center justify-center";
 
+    const [isInternalLoading, setIsInternalLoading] = React.useState(false);
+    const lastClickTimeRef = React.useRef(0);
+
+    const handleClick = async (e) => {
+      if (disabled || loading || isInternalLoading) {
+        if (e && e.preventDefault) e.preventDefault();
+        return;
+      }
+
+      // Universal 600ms rapid-click debounce
+      const now = Date.now();
+      if (now - lastClickTimeRef.current < 600) {
+        if (e && e.preventDefault) e.preventDefault();
+        return;
+      }
+      lastClickTimeRef.current = now;
+
+      if (!onClick) return;
+
+      try {
+        const result = onClick(e);
+        if (result && typeof result.then === "function") {
+          setIsInternalLoading(true);
+          await result;
+        }
+      } catch (err) {
+        throw err;
+      } finally {
+        setIsInternalLoading(false);
+      }
+    };
+
+    const isButtonLoading = Boolean(loading || isInternalLoading);
+
     return (
       <button
         ref={ref}
         type={htmlType}
-        disabled={disabled || loading}
-        onClick={onClick}
+        disabled={disabled || isButtonLoading}
+        onClick={handleClick}
         className={`${displayClasses} transition-all duration-150 border focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed select-none ${
           sizeClasses[size] || sizeClasses.middle
         } ${variantClasses} ${className}`}
         style={inlineStyles}
         {...props}
       >
-        {loading ? (
+        {isButtonLoading ? (
           <Loader2 className="w-4 h-4 mr-2 animate-spin text-current shrink-0" />
         ) : icon ? (
           <span

@@ -18,8 +18,56 @@ const processQueue = (error, token = null) => {
   failedQueue = [];
 };
 
+// In-Flight Mutating Request Deduplication Map
+const pendingMutations = new Map();
+
+function getMutationKey(config) {
+  const method = (config.method || 'get').toLowerCase();
+  if (method === 'get' || method === 'head' || method === 'options') return null;
+  const url = config.url || '';
+  if (url.includes('/logs') || url.includes('/refresh')) return null;
+
+  let bodyStr = '';
+  try {
+    if (typeof config.data === 'string') {
+      bodyStr = config.data;
+    } else if (config.data && !(config.data instanceof FormData)) {
+      bodyStr = JSON.stringify(config.data);
+    }
+  } catch (_) {
+    bodyStr = '';
+  }
+  return `${method}:${url}:${bodyStr}`;
+}
+
+function wrapWithDeduplication(instance) {
+  if (!instance || typeof instance.request !== 'function') return;
+  const originalRequest = instance.request.bind(instance);
+
+  instance.request = function (config) {
+    const key = getMutationKey(config);
+    if (!key) {
+      return originalRequest(config);
+    }
+
+    if (pendingMutations.has(key)) {
+      return pendingMutations.get(key);
+    }
+
+    const promise = originalRequest(config).finally(() => {
+      setTimeout(() => {
+        pendingMutations.delete(key);
+      }, 500);
+    });
+
+    pendingMutations.set(key, promise);
+    return promise;
+  };
+}
+
 // Helper to attach logging & security interceptors to an axios instance
 function attachSecurityInterceptors(instance) {
+  wrapWithDeduplication(instance);
   // Request Interceptor: Attach Token & Active Role
   instance.interceptors.request.use(
     (config) => {

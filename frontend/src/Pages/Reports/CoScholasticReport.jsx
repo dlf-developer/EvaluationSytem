@@ -1,14 +1,19 @@
 import React, { useEffect, useState } from "react";
+import ReactPDF from "@react-pdf/renderer";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
 import { GetCoScholasticForm } from "../../redux/Form/coScholasticSlice";
 import { getAllTimes, getUserId } from "../../Utils/auth";
-import { Box, Flex, Heading, Text, VStack, SimpleGrid } from "@chakra-ui/react";
+import { Box, Flex, Heading, Text, VStack, SimpleGrid, Button, Badge } from "@chakra-ui/react";
 import { Spin } from "../../Components/UI";
+import { DownloadOutlined } from "../../Components/UI/Icons";
+import { recordFileDownloadAudit } from "../../Utils/auditLogger";
+import CoScholasticDoc from "./Documents/CoScholasticDoc";
 
 function CoScholasticReport() {
   const dispatch = useDispatch();
   const FormId = useParams()?.id;
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const { isLoading, formDataList } = useSelector(
     (state) => state?.coScholastic,
@@ -19,6 +24,32 @@ function CoScholasticReport() {
       dispatch(GetCoScholasticForm(FormId));
     }
   }, [dispatch, FormId]);
+
+  const handleDownloadPDF = async () => {
+    if (!formDataList) return;
+    setIsDownloading(true);
+    try {
+      const blob = await ReactPDF.pdf(<CoScholasticDoc data={formDataList} />).toBlob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      const fileName = `Co-Scholastic-Report-${FormId || "report"}.pdf`;
+      link.download = fileName;
+      link.click();
+      URL.revokeObjectURL(url);
+
+      recordFileDownloadAudit({
+        fileName,
+        fileType: "PDF",
+        module: "Co-Scholastic Report",
+        extraDetails: `Form ID: ${FormId}`,
+      });
+    } catch (err) {
+      console.error("PDF download failed:", err);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   const MapColor = (Arrmap) => {
     return Arrmap?.answer === "1"
@@ -35,9 +66,30 @@ function CoScholasticReport() {
   return (
     <Box p={{ base: 4, md: 8 }} minH="calc(100vh - 72px)">
       <Box position="relative" maxW="1280px" mx="auto">
-        <Heading size="lg" color="gray.800" mb={6}>
-          Co-Scholastic Classroom Observation Report
-        </Heading>
+        <Flex justify="space-between" align="center" mb={6} flexWrap="wrap" gap={4}>
+          <Box>
+            <Heading size="lg" color="gray.800" mb={1}>
+              Co-Scholastic Classroom Observation Report
+            </Heading>
+            <Text color="gray.500" fontSize="sm">
+              Detailed assessment rubrics, observer feedback, and teacher reflection.
+            </Text>
+          </Box>
+          <Button
+            leftIcon={<DownloadOutlined />}
+            bg="#1a4d2e"
+            color="white"
+            _hover={{ bg: "#133c23" }}
+            size="md"
+            borderRadius="xl"
+            isLoading={isDownloading}
+            loadingText="Generating PDF…"
+            onClick={handleDownloadPDF}
+            px={6}
+          >
+            Download PDF
+          </Button>
+        </Flex>
         {isLoading && (
           <Flex
             justify="center"
@@ -312,6 +364,67 @@ function CoScholasticReport() {
                 </Box>
               ))}
             </VStack>
+          </Box>
+
+          {/* Teacher Reflection Section */}
+          <Box mb={4}>
+            <Flex justify="space-between" align="center" mb={4} flexWrap="wrap" gap={2}>
+              <Heading size="md" color="gray.800">
+                Teacher Reflection & Key Learnings
+              </Heading>
+              {formDataList?.isTeacherCompletes ? (
+                <Badge colorScheme="green" px={3} py={1} borderRadius="full" fontSize="xs" fontWeight="700">
+                  Reflection Completed
+                </Badge>
+              ) : (
+                <Badge colorScheme="orange" px={3} py={1} borderRadius="full" fontSize="xs" fontWeight="700">
+                  Awaiting Teacher Reflection
+                </Badge>
+              )}
+            </Flex>
+
+            {formDataList?.isTeacherCompletes && formDataList?.TeacherFeedback && formDataList.TeacherFeedback.length > 0 ? (
+              <VStack spacing={3} align="stretch">
+                {formDataList.TeacherFeedback.map((item, index) => (
+                  <Box
+                    key={index}
+                    p={5}
+                    bg="#f0fdf4"
+                    borderRadius="lg"
+                    borderWidth="1px"
+                    borderColor="#bbf7d0"
+                  >
+                    <Text color="#166534" fontWeight="600" mb={3} fontSize="sm">
+                      {item?.question || `Reflection Prompt ${index + 1}`}
+                    </Text>
+                    <Text
+                      color="gray.800"
+                      bg="white"
+                      p={3.5}
+                      borderRadius="md"
+                      borderWidth="1px"
+                      borderColor="gray.200"
+                      fontSize="sm"
+                      lineHeight="tall"
+                    >
+                      {item?.answer || "No response provided."}
+                    </Text>
+                  </Box>
+                ))}
+              </VStack>
+            ) : (
+              <Box
+                p={5}
+                bg="#fffbeb"
+                borderRadius="xl"
+                borderWidth="1px"
+                borderColor="#fde68a"
+              >
+                <Text color="#92400e" fontSize="sm" fontWeight="500">
+                  The teacher has not yet submitted their reflection for this observation. Once submitted, their key learnings and reflections will appear here and in the generated PDF report.
+                </Text>
+              </Box>
+            )}
           </Box>
         </Box>
       </Box>

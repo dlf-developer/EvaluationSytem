@@ -722,7 +722,7 @@ function Weekly4Form() {
                   <Box w={{ base: "100%", md: "50%" }}>
                     <Form.Item
                       className="w-100"
-                      label={<Text fontWeight="500">Assign to Teacher</Text>}
+                      label={<Text as="span" display="inline" fontWeight="500">Assign to Teacher</Text>}
                       name="teacherId"
                       rules={[
                         { required: true, message: "Please select a Teacher!" },

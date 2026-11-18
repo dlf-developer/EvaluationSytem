@@ -187,7 +187,7 @@ function ClassSectionPage() {
             layout="vertical"
           >
             <Form.Item
-              label={<Text fontWeight="500">Class Name</Text>}
+              label={<Text as="span" display="inline" fontWeight="500">Class Name</Text>}
               name="className"
               rules={[{ required: true, message: "Please enter the class name" }]}
             >
@@ -356,7 +356,7 @@ function ClassSectionPage() {
           style={{ marginTop: "16px" }}
         >
           <Form.Item
-            label={<Text fontWeight="600" color="gray.700">Class Name</Text>}
+            label={<Text as="span" display="inline" fontWeight="600" color="gray.700">Class Name</Text>}
             name="className"
             rules={[{ required: true, message: "Please enter the class name" }]}
           >
